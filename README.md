@@ -1,115 +1,79 @@
 <div align="center">
   <img src="logo.png" alt="docforge" width="200" />
   <h1>docforge</h1>
+  <p>An AI agent skill that designs and writes a repository's whole documentation set — grounded in the actual source, not invented.</p>
+
+  [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
+  [![Claude Code](https://img.shields.io/badge/works_with-Claude_Code-10b981?style=flat-square)](https://docs.claude.com/claude-code/skills)
+  [![agentskills](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
 </div>
 
-An AI agent skill for designing and generating a repository's documentation set — `docs/` tree, README and ARCHITECTURE, decision records (ADRs), a known-limitations register, a third-party dependency inventory, security policy, API error catalogs, data contracts, and runbooks. Grounds every document in a knowledge-graph analysis of the actual source before writing, so nothing is invented. Host-neutral — works on any git host and never hardcodes one forge's paths.
-
-[![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
-[![Claude Code](https://img.shields.io/badge/works_with-Claude_Code-10b981?style=flat-square)](https://docs.claude.com/claude-code/skills)
-[![agentskills](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
-
 ---
 
-## Installation
+## What it does
 
-Install with [npx skills](https://skills.sh):
+Point it at a repo and it produces the documentation that survives: a `docs/` tree, README and ARCHITECTURE, decision records (ADRs), a known-limitations register, a dependency inventory, security policy, API error catalogs, data contracts, and runbooks.
+
+Two things make the output trustworthy:
+
+- **Grounded in source.** It reads the codebase through a knowledge graph before writing a word, so every claim is verifiable — no invention, no drift.
+- **Host-neutral.** Works on any git host; never hardcodes one forge's paths.
+
+## Install
 
 ```sh
-npx skills add jonaskahn/docforge
+npx skills add jonaskahn/docforge        # this project
+npx skills add jonaskahn/docforge -g -y  # every project
 ```
 
-Install globally so it's available in every project:
+Claude Code and compatible agents load the skill automatically once installed.
 
-```sh
-npx skills add jonaskahn/docforge -g -y
-```
+> **Note:** PromptScript does not support global skill installs, so it is skipped during `-g` installation (`Failed to install 1`). This is expected and does not affect any other agent. To use docforge with PromptScript, install per-project (omit `-g`).
 
-After installing, Claude Code and compatible agents automatically load the skill when you're working on documentation for a repository.
+## Use
 
----
+It activates on its own when you're documenting a repo. Or invoke it directly with `/docforge`, or just describe the job:
 
-## How to Use
+> "Document this repo from scratch — Python API service, Postgres backend"
+>
+> "Audit this repo for diligence before the partner signs"
+>
+> "Generate ADRs from this service's git history"
+>
+> "Add the API-service overlay onto our existing docs/"
 
-The skill activates automatically when context suggests repository documentation work. You can also invoke it directly:
+Only the reference files relevant to your task load into context, so the agent stays fast and focused.
 
-```sh
-/docforge
-```
+## What's inside
 
-Or describe what you need — the agent loads only the reference files relevant to your task:
+| Path | Purpose |
+|---|---|
+| `SKILL.md` | Entry point — non-negotiables, source analysis, tier + overlay selection, workflow, anti-patterns |
+| `references/source-analysis.md` | Build and query the knowledge graph; which command answers which document |
+| `references/docs-tree.md` | Canonical taxonomy — folder rules, full tree, per-file spec |
+| `references/host-neutrality.md` | Language rules so docs outlive any one forge |
+| `references/decision-records.md` | ADR format, numbering, backfilling from history |
+| `references/risk-docs.md` | Limitations register, dependency inventory, security policy |
+| `references/quality-bar.md` | Review checklist and rubric for finished docs |
+| `references/diligence.md` | Multi-repo layer for audits, acquisitions, vendor review |
+| `references/overlay-*.md` | Type overlays — API service, data pipeline, web app, library, infrastructure |
 
-> "Document this repo from scratch — it's a Python API service with a Postgres backend"
+Plus `assets/templates/` (scaffolds for every spine file) and `scripts/` (scaffold a new tree, audit an existing one).
 
-> "Audit this repo for diligence — the design partner wants to see our docs before signing"
+## Contributing
 
-> "Generate ADRs from the git history of this service"
+References live in `skills/docforge/references/`, one topic per file. To change one: fork, edit the `.md`, open a PR.
 
-> "Scaffold a Tier 1 docs tree for this fresh side project"
+To add a reference: create `references/<topic>.md`, then register it in `SKILL.md` and the table above.
 
-> "Add the API service overlay on top of our existing docs/ folder"
+Content is read by an agent, not a human — keep it dense:
 
-> "Run the quality-bar review on the documentation we already have"
+- Lead with the common pattern, not the simplest case
+- One complete, runnable example per concept
+- Gotchas inline, no separate warnings section
+- No intros, no marketing — just the technical substance
 
-The skill loads lazily — only reference files relevant to your current work are pulled into context. This keeps the agent fast and focused.
-
----
-
-## What's Included
-
-Reference | Covers
----|---
-`SKILL.md` | Entry point — non-negotiables, source analysis, tier selection, overlay selection, workflow, root vs `docs/`, anti-patterns
-`references/source-analysis.md` | How to build and query the knowledge graph, and which command answers which document
-`references/docs-tree.md` | Canonical taxonomy, folder naming rules, full tree, per-folder and per-file specification
-`references/host-neutrality.md` | Language rules so generated docs outlive any one forge
-`references/decision-records.md` | ADR format, front matter, numbering, backfilling from history
-`references/risk-docs.md` | Limitations register, dependency inventory, security policy
-`references/quality-bar.md` | Review checklist and rubric for finished documentation
-`references/diligence.md` | Multi-repo portfolio layer for audits, acquisitions, vendor review
-`references/overlay-api-service.md` | API service overlay — routes, data contracts, error catalog
-`references/overlay-data-pipeline.md` | Data pipeline overlay — stages, schedules, lineage, ops runbooks
-`references/overlay-web-app.md` | Web application overlay — routing, state, browser entry, asset pipeline
-`references/overlay-library.md` | Library / SDK overlay — public surface, versioning, examples
-`references/overlay-infrastructure.md` | Infrastructure overlay — Terraform, Pulumi, Helm, Ansible, clusters
-
-Templates in `assets/templates/` provide starting scaffolds for every spine file. Scripts in `scripts/` scaffold a new tree and audit an existing one.
-
----
-
-## How to Improve
-
-### Edit an existing reference
-
-Each file in `skills/docforge/references/` covers one topic. To fix, extend, or update:
-
-1. Fork this repo
-2. Edit the relevant `.md` file
-3. Keep content dense and practical — this is consumed by an AI agent, not a human reader
-4. Open a pull request
-
-### Add a new reference file
-
-1. Create `skills/docforge/references/<topic>.md`
-2. Add an entry under "Loading Files" / "Reference map" in `skills/docforge/SKILL.md`
-3. Add a one-line description under "Available Guidance" / the README's "What's Included" table
-
-### Content style guide
-
-- Start with the most common pattern, not the simplest case
-- Include at least one complete, runnable example per concept
-- Note gotchas inline — don't separate them into a warnings section
-- No introductory sentences, no marketing language — just the technical substance
-
-### Reporting issues
-
-If the skill gives wrong, outdated, or missing guidance, open an issue describing:
-
-- What you asked the agent to do
-- What the skill produced
-- What the correct answer should be
-
----
+Wrong or missing guidance? Open an issue with what you asked, what the skill produced, and what it should have said.
 
 ## License
 
