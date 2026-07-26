@@ -19,7 +19,7 @@ docforge_provenance:
 
 **Value:** {{the business or user outcome, one sentence}}
 **Status:** {{shipped (vX.Y) / in progress / planned / deprecated (sunset date)}}
-**Owns:** {{flow(s) implementing it}} — see [process-flows.md](../business-analyst/process-flows.md#{{flow-slug}}) or [architecture overview](../../architecture/overview.md)
+**Owns:** {{flow(s) implementing it}} — see [process-flows.md](../business-analyst/process-flows.md#{{flow-slug}}) or [architecture overview](../../architecture/high-level.md)
 **Depends on:** {{other features or external services this needs}}
 
 <!-- Repeat per feature. One `sections` entry per feature. -->

@@ -65,19 +65,35 @@ What the graph is good for, and what it is not:
 
 Run the query when you reach the document, not all at once up front — answers gathered early go stale in your context and tempt you into writing from memory.
 
-### `architecture/overview.md` — the code map
+### `architecture/high-level.md` and `low-level.md` — the two-altitude map
 
-The graph is the primary source. Take the module inventory and layer assignment from it, then deepen the significant modules:
+The graph is the primary source for both. `high-level.md` takes the module inventory, layer
+assignment and boundaries straight from the graph — breadth, kept stable. `low-level.md` and
+the `concepts/<subsystem>/` deep-dives need depth, and depth comes from `/understand-explain`,
+which here is **required, not optional** — it is the engine for every L2/L3 layer:
 
 ```
 /understand-explain src/<module>
 ```
 
-For **invariants** — the absences that a reader cannot recover from the code — the edge list is what makes them provable. If nothing in `core/` has an outbound edge to `adapters/`, that is an invariant worth stating, and you have evidence for it rather than a belief. Confirm the intent before asserting it:
+Run it per significant subsystem, and treat its output as evidence for a behavioural
+description — never paste its code excerpts through. For **invariants** — the absences that a
+reader cannot recover from the code — the edge list is what makes them provable. If nothing in
+`core/` has an outbound edge to `adapters/`, that is an invariant worth stating, and you have
+evidence for it rather than a belief. Confirm the intent before asserting it:
 
 ```
 /understand-chat Does anything under core/ import from adapters/, or perform I/O directly?
 ```
+
+### `flows/<flow>/` — aligned flow folders
+
+Enumerate the flows first — `/understand-domain` returns the domains, flows and steps, and
+that list *is* the set of flow folders to build. For each flow, source the README's plain
+steps from `/understand-domain`, the `business-analyst.md` rules from
+`/understand-chat "what business rules gate <flow>"`, and the `engineering.md` mechanism from
+`/understand-explain <flow module>`. See `depth-and-audience.md` for the full command-to-cell
+mapping and `document-composition.md` for what goes in the README versus a subfile.
 
 ### `architecture/data-flow.md`
 

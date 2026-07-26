@@ -51,7 +51,7 @@ An explicit map from the questions a reviewer will ask to the artifacts that ans
 
 | Review area | Question | Evidence |
 |---|---|---|
-| Architecture | How is the system structured? | `system-context.md`; each repo's `docs/architecture/overview.md` |
+| Architecture | How is the system structured? | `system-context.md`; each repo's `docs/architecture/high-level.md` |
 | Architecture | Why is it structured that way? | `decisions/`; each repo's `docs/architecture/decisions/` |
 | Code quality | What are the standards and are they enforced? | Each repo's `docs/engineering/conventions.md`; CI configuration |
 | Testing | What is tested and how well? | Each repo's `docs/engineering/testing.md`; coverage reports at <location> |

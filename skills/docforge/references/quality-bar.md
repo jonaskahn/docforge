@@ -64,6 +64,16 @@ Each targets one audience. A documentation set that fails any of them fails for 
 - [ ] Documents that go stale carry a `_Last reviewed: YYYY-MM-DD_` line
 - [ ] No secret, credential, internal hostname or personal name-as-contact appears anywhere
 
+### Durability and composition
+
+- [ ] **Durability:** would a same-behaviour refactor (rename, extract, move) falsify this document? If yes, it is written too close to the code — rewrite at flow/behaviour level
+- [ ] **No code:** no pasted code or code-like snippets in prose (except value *shape* in `errors.md`/`configuration.md`); no line-number links; no claim anchored to an internal/private symbol
+- [ ] **No duplication:** every fact stated once; the same sentence does not appear in two files; definitions live only in `glossary.md`
+- [ ] **Completeness:** every aligned topic `README.md` stands alone — each subfile fact is summarized and linked from it, nothing dropped
+- [ ] **Notices common:** every warning, critical constraint or irreversible behaviour appears in the topic `README.md`, not only in an audience subfile
+- [ ] **Readable common layer:** each `README.md` is plain-language, jargon glossed or linked; internals pushed to subfiles
+- [ ] **No empty audience subfile:** a `business-analyst.md` / `engineering.md` / `product-owner.md` exists only where real depth exists
+
 ## Automated checks worth adding to CI
 
 Documentation decays silently unless something objects. The cheap wins, in rough order of value per effort:
@@ -78,8 +88,10 @@ Documentation decays silently unless something objects. The cheap wins, in rough
 ## Anti-patterns to check for explicitly
 
 - **Templated husk**: correct headings, no content. Delete the section or fill it; an empty heading is a false promise.
-- **Rationale in the code map**: opinions in `architecture/overview.md` make it churn. Move them to a decision record.
+- **Rationale in the code map**: opinions in `architecture/high-level.md` make it churn. Move them to a decision record.
 - **The everything document**: a 2,000-line README nobody reads past line 40.
 - **Aspirational documentation**: describing the target architecture as current.
 - **Silent staleness**: no review dates anywhere, so a reader cannot judge what to trust.
 - **Duplicated truth**: the same fact in the root README, the docs index and the product overview, already diverging.
+- **Prose bound to code**: a claim anchored to a private symbol or a line number, so a routine rename falsifies the document. Write at the behaviour level instead.
+- **Notice stranded in a subfile**: a warning that only the engineering deep-dive carries, invisible to a reader who stops at the topic README.

@@ -36,13 +36,29 @@ docs/
 │   ├── README.md
 │   ├── overview.md                 ▲ what it does, who for, why it exists
 │   ├── capabilities.md             ● feature catalog in business language
-│   └── roadmap.md                  ● direction + explicit not-yet-supported list
+│   ├── roadmap.md                  ● direction + explicit not-yet-supported list
+│   ├── business-analyst/           (audience overlay) audience-specific BA documents
+│   └── product-owner/              (audience overlay) audience-specific PO documents
+│
+├── flows/                          ● aligned topic folders, one per business flow
+│   ├── README.md                   ● index of every flow
+│   └── <flow>/                     ● document-as-folder (see document-composition.md)
+│       ├── README.md               ● common: L0 what+why, L1 flow plain, all notices
+│       ├── business-analyst.md     ● BA depth: rules, thresholds, exceptions (if any)
+│       ├── engineering.md          ● engineering depth: mechanism, failure modes (if any)
+│       └── product-owner.md        ● PO depth: value, metrics (if any)
 │
 ├── architecture/                   ▲ engineers, technical reviewers
-│   ├── README.md
-│   ├── overview.md                 ▲ the code map — highest-leverage document here
+│   ├── README.md                   ▲ index — routes to high-level / low-level / concepts
+│   ├── high-level.md               ▲ system context, building blocks, boundaries (C4 L1–L2)
+│   ├── low-level.md                ● component decomposition, data model (C4 L3)
 │   ├── data-flow.md                ● how information moves, end to end
 │   ├── dependencies.md             ● third-party inventory + integration contracts
+│   ├── tech-debt.md                ● known shortcuts, cost, remediation
+│   ├── constraints.md              ● hard architectural limits, ceilings, non-goals
+│   ├── concepts/                   ● deep-dive subsystems, one folder each
+│   │   ├── README.md
+│   │   └── <subsystem>/            ● document-as-folder: README + engineering.md
 │   ├── decisions/                  ● ADRs
 │   │   ├── README.md               ● index with status column
 │   │   └── 0001-<slug>.md
@@ -90,7 +106,9 @@ docs/
 
 **`product/`** — Written for someone who will never read the code. No jargon without a gloss, no implementation detail, no code blocks except example inputs and outputs a customer would recognize. If a sentence requires knowing the stack to parse, it belongs in `architecture/`.
 
-**`architecture/`** — The system as built. Describes structure, boundaries, and flows that change once or twice a year. Rationale goes in `decisions/`; anything that churns per release belongs in `reference/` or is generated.
+**`flows/`** — Aligned topic folders, one per business flow (`/understand-domain` enumerates them). Each is a document-as-folder: a plain `README.md` every audience reads, plus per-reader deep-dive subfiles created only where real depth exists. The shared body and every critical notice live in the README; depth lives in the subfiles. See `document-composition.md`.
+
+**`architecture/`** — The system as built, at two altitudes. `high-level.md` is the stable map — system context, building blocks, boundaries — that changes once or twice a year. `low-level.md` and `concepts/<subsystem>/` carry component decomposition and deep mechanism on their own, faster lifecycle. `tech-debt.md` and `constraints.md` record shortcuts and hard limits respectively (distinct from `reference/limitations.md`, which is feature gaps). Rationale goes in `decisions/`; anything that churns per release belongs in `reference/` or is generated.
 
 **`engineering/`** — Everything a contributor does before their first merge. The test of `setup.md` is literal: follow it on a clean machine and the repo runs. If a step depends on credentials or access, say exactly who grants it.
 
@@ -114,33 +132,39 @@ The single entry point. Its job is routing, not content. Include: one-line repo 
 
 Answers three questions in this order: what problem this solves, who has that problem, and where this component sits relative to the rest of the system. Two to five paragraphs. If the repo is one of several, link to the portfolio-level system context.
 
-### `docs/architecture/overview.md` — the code map
+### `docs/architecture/high-level.md` and `low-level.md` — the two-altitude map
 
-The highest-leverage document in the tree, and the one most often written badly. Structure:
+The code map, split by altitude so the stable part does not churn with the volatile part.
+Templates: `architecture-high-level.md`, `architecture-low-level.md`.
 
-```markdown
-# Architecture
-One paragraph: the problem this repo solves, at the highest level of abstraction.
-
-## Bird's eye view
-Two or three paragraphs tracing how data and control move from input to output.
-A reader should be able to draw the box diagram from this section alone.
-
-## Code map
-### `src/<module>/`
-What it does, in one to three sentences. Key types: `Foo`, `Bar`.
-**Boundary:** what crosses in and out, if this is a trust or API boundary.
-**Invariant:** what is deliberately absent or enforced.
-
-## Cross-cutting concerns
-Where configuration, error handling, logging, authentication and persistence live.
-```
+- **`high-level.md`** — system context, the major building blocks and their responsibilities,
+  the boundaries between them, and how data and control move end to end. The "part of a
+  business" view: what this system is and what it borders. A reader should be able to draw the
+  box diagram from it. Restrict it to what changes once or twice a year.
+- **`low-level.md`** — component decomposition beneath the building blocks, the data model
+  described (not dumped from schema), and an index into `concepts/<subsystem>/` for the
+  subsystems that earn a full deep-dive.
 
 Three techniques make the difference:
 
-- **Name modules and types as symbols, do not link them.** `src/ingest/` and `Foo` are greppable and never go stale; a line-number link rots on the next refactor.
-- **State invariants explicitly.** These are the facts a reader cannot recover by reading code, because they are usually the *absence* of something: "nothing under `core/` performs I/O", "the model layer never imports from the view layer", "handlers never touch the database directly". Absences are invisible in a codebase and expensive to rediscover after someone violates one.
-- **Restrict yourself to what changes once or twice a year.** If it moves faster, it does not belong here — it will be wrong within a quarter and will teach readers to distrust the document.
+- **Reference by file/module path and describe behaviour; do not paste code or link symbols.**
+  `src/ingest/` locates a thing durably; a private function name or line-number link rots on
+  the next refactor. Describe what the logic does, not the branch that implements it. (See
+  the durability rules in `document-composition.md`.)
+- **State invariants explicitly.** These are the facts a reader cannot recover by reading
+  code, because they are usually the *absence* of something: "nothing under `core/` performs
+  I/O", "the model layer never imports from the view layer", "handlers never touch the
+  database directly". Absences are invisible in a codebase and expensive to rediscover after
+  someone violates one.
+- **Keep depth out of `high-level.md`.** Mechanism, algorithm and failure modes belong in
+  `low-level.md` or a `concepts/<subsystem>/engineering.md` deep-dive, on their own lifecycle.
+
+### `docs/flows/<flow>/README.md` — an aligned topic document
+
+The common document for one business flow: L0 (what and why), L1 (how it flows, in plain
+language), every critical notice, and a one-line gist plus link for each deep-dive subfile.
+It must stand alone — a reader who never opens a subfile still understands the flow. Template:
+`topic-readme.md`. Full mechanics in `document-composition.md`.
 
 ### `docs/engineering/setup.md`
 

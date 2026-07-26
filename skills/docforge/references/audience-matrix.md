@@ -1,68 +1,74 @@
-# Audience matrix — isolation, combination, ownership
+# Audience matrix — classes, ownership, and the BA/PO split
 
-Purpose: decide which folder a fact lives in when more than one audience could plausibly want it, and when to generate audiences together versus separately.
+Purpose: decide, for any document or fact, which of three classes it belongs to and which
+folder owns it — so a subject read by several audiences is written once, not re-stated in
+parallel per-audience folders. Read `document-composition.md` for the mechanics (the
+document-as-folder pattern, the invariants, the durability rules) and `depth-and-audience.md`
+for how deep each reader goes.
 
-## Why BA and PO are separate overlays, not one
+## Three classes of document
 
-Business Analyst and Product Owner get conflated because both sit "between business and engineering," but they answer different questions and read documents in a different order:
+Every document is one of these. The class follows from a single question: **does more than
+one audience need this exact fact?**
+
+| Class | Serves | Structure | Examples |
+|---|---|---|---|
+| **Aligned** — write once, many read | 2+ audiences need the same subject | Topic folder: common `README.md` + audience deep-dive subfiles | flow folders (`flows/<flow>/`), architecture concept folders, `product/overview.md`, `reference/limitations.md` |
+| **Audience-specific** — one reader | exactly one audience | A plain document in that audience's folder | PO `success-metrics.md`, `release-notes.md`; BA `requirements-traceability.md`; `engineering/setup.md`; `operations/runbooks/`; `security/threat-model.md` |
+| **Shared-fact spine** — single source | everyone, as lookup not narrative | One document, stated once, linked everywhere | `reference/glossary.md`, `architecture/dependencies.md`, `reference/configuration.md` |
+
+**Decision rule (per document and per section):**
+- More than one audience needs this exact fact? **No** → audience-specific document. **Yes** → continue.
+- Is it a lookup fact (term, value, code)? **Yes** → shared-fact spine. **No** → aligned topic folder.
+- Is it a warning or critical constraint? → the topic `README.md` regardless, per invariant 2.
+
+This keeps the single-reader documents where they belong, and adds the **aligned** middle
+class so a subject three audiences care about is written once — not re-framed in three
+folders that then drift apart.
+
+## Why BA and PO stay distinct
+
+Business Analyst and Product Owner both sit "between business and engineering," so they get
+merged into one "business" folder. They read different things in a different order:
 
 | Question | BA | PO |
 |---|---|---|
 | What does the business rule precisely say? | Yes — primary artifact | No — cares that it exists, not its exact logic |
-| Why does this requirement exist, with traceability to a stakeholder ask? | Yes | Only at epic level |
-| Is this feature worth building, has it paid off? | No | Yes — primary question |
+| Why does this requirement exist, traceable to a stakeholder ask? | Yes | Only at epic level |
+| Is this feature worth building; has it paid off? | No | Yes — primary question |
 | What ships next, and in what order? | No | Yes |
-| What can a customer expect right now, in plain language? | No (that's `product/overview.md`) | Yes, framed as release notes |
+| What can a customer expect right now, in plain language? | No (that is `product/overview.md`) | Yes, as release notes |
 
-Treat them as genuinely separate readers with separate document sets. One "business" folder written for an average of both readers serves neither well.
+So they are separate readers with separate **audience-specific** documents — and, inside an
+aligned flow folder, separate deep-dive subfiles (`business-analyst.md`, `product-owner.md`).
+One folder averaged across both serves neither.
 
-## Isolated generation (default)
+## Fact ownership
 
-Whenever the request names one audience, produce only that overlay's folder. Do not create the other, do not stub it with placeholders, and reference it only in a single closing line of the produced folder's `README.md`: "If Product Owner documentation is also needed, see `../product-owner/`."
+When a fact could plausibly live in more than one place, this table decides the single owner.
+Everywhere else links to it; nothing is pasted twice.
 
-## Combined generation
-
-Trigger only on an explicit multi-audience request — "docs for BA and PO," "align documentation for the whole product team." When combining:
-
-1. Build both folders in full.
-2. Assign single ownership for every fact both audiences need, using the table below, and cross-link the non-owning folder to it. Never paste the same paragraph into both.
-
-| Fact | Owner | Cross-link from |
+| Fact | Owner | Linked from |
 |---|---|---|
-| Business rule definition (the exact logic — thresholds, eligibility conditions) | BA `business-rules.md` | PO `feature-catalog.md` links to the rule; does not restate it |
-| Feature exists and what it is for | PO `feature-catalog.md` | BA `requirements-traceability.md` links to the feature it traces to |
-| Domain term definition | `docs/reference/glossary.md` (spine) | Both BA and PO link here; neither restates a definition |
-| Process/flow steps and decision points | BA `process-flows.md` | PO `feature-catalog.md` links for readers who want the mechanics |
-| Success metric / KPI target | PO `success-metrics.md` | BA doesn't need this — omit, don't cross-link |
-| Roadmap timing | `docs/product/roadmap.md` (spine) | PO `product-owner/README.md` links; does not duplicate the dated table |
+| Business rule logic (thresholds, eligibility, exceptions) | flow folder `business-analyst.md` | PO subfile links; does not restate |
+| Feature exists and what it is for | flow folder `README.md` (L0) + PO `feature-catalog.md` for the catalog view | BA traceability links to the feature |
+| Domain term definition | `reference/glossary.md` (spine) | every document links; none restates |
+| Flow steps and decision points | flow folder `README.md` (L1, plain) | subfiles link for depth |
+| Feature mechanism (how it runs) | flow folder `engineering.md` | README carries a one-line gist + link |
+| Success metric / KPI target | PO `success-metrics.md` | BA does not need it — omit, don't cross-link |
+| Roadmap timing | `product/roadmap.md` (spine) | PO README links; does not duplicate the dated table |
+| Warning / critical constraint | topic `README.md` (invariant 2) | subfile may expand it |
 
-3. Combined mode still produces two separate provenance manifest entries — combination governs prose cross-linking only, never provenance tracking. See `provenance-tracking.md`.
+## When to build audience depth at all
 
-## Where the folders sit
+- Build a `business-analyst.md` deep-dive (or the audience-specific BA documents) when the
+  codebase encodes non-trivial business logic — validation rules, approval thresholds,
+  eligibility conditions, pricing — that a non-engineer would otherwise read source to find.
+- Build PO depth when the repo ships user-facing features with an independent release
+  lifecycle someone actively plans against.
+- Skip either, and say so explicitly, when the repo is pure infrastructure or a library with
+  no embedded business logic and no independent release cadence. An unrequested, empty
+  audience file is the same anti-pattern as an unfilled scaffold.
 
-```
-docs/product/
-├── overview.md              spine — unchanged by the audience overlays
-├── capabilities.md          spine — unchanged by the audience overlays
-├── roadmap.md               spine — unchanged by the audience overlays
-├── business-analyst/        BA overlay
-│   ├── README.md
-│   ├── business-rules.md
-│   ├── process-flows.md
-│   └── requirements-traceability.md
-└── product-owner/           PO overlay
-    ├── README.md
-    ├── feature-catalog.md
-    ├── success-metrics.md
-    └── release-notes.md
-```
-
-Both are subject-area folders — singular names, consistent with docforge's own naming rule: `business-analyst/`, not `business-analysts/` or the internal shorthand `ba/` a new reader won't recognize on sight.
-
-## Deciding whether a repo needs these overlays at all
-
-Build the **BA overlay** when the codebase encodes non-trivial business logic — validation rules, approval thresholds, eligibility conditions, pricing or discount logic — that a non-engineer would otherwise have to read source to find.
-
-Build the **PO overlay** when the repo ships user-facing features with an independent release lifecycle (planned → building → shipped → deprecated) that someone actively plans against.
-
-Skip either overlay, and say so explicitly, when the repo is pure infrastructure or a library with no embedded business logic and no independent release cadence — an unrequested, empty overlay is the same anti-pattern as an unfilled scaffold.
+Provenance is tracked per document and per section regardless of class — see
+`provenance-tracking.md`. Alignment governs prose (write once, link) not provenance.

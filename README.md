@@ -61,7 +61,9 @@ Only the reference files relevant to your task load into context, so the agent s
 | `references/decision-records.md` | ADR format, numbering, backfilling from history |
 | `references/risk-docs.md` | Limitations register, dependency inventory, security policy |
 | `references/quality-bar.md` | Review checklist and rubric for finished docs |
-| `references/audience-matrix.md` | Isolated vs. combined BA/PO overlays, and which folder owns which fact |
+| `references/document-composition.md` | One topic, many readers — the document-as-folder pattern, no-loss/notice invariants, durability rules (no code, no duplication) |
+| `references/depth-and-audience.md` | The depth ladder (L0–L3), which reader reads which depth, and which understand-anything command feeds each |
+| `references/audience-matrix.md` | The three document classes (aligned / audience-specific / shared-fact spine), the BA/PO split, and which folder owns which fact |
 | `references/diligence.md` | Multi-repo portfolio layer for audits, acquisitions, vendor review |
 | `references/diligence-collection.md` | Discover the repo collection and gap-check every member first |
 | `references/overlay-*.md` | Type overlays (API service, data pipeline, web app, library, infrastructure) and audience overlays (business-analyst, product-owner) |

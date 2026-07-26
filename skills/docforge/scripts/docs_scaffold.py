@@ -42,9 +42,14 @@ SPINE: list[tuple[str, int, str | None]] = [
     ("docs/product/overview.md", 1, None),
     ("docs/product/capabilities.md", 2, None),
     ("docs/product/roadmap.md", 2, None),
-    ("docs/architecture/overview.md", 1, "architecture-overview.md"),
+    ("docs/flows/README.md", 1, None),
+    ("docs/architecture/high-level.md", 1, "architecture-high-level.md"),
+    ("docs/architecture/low-level.md", 2, "architecture-low-level.md"),
     ("docs/architecture/data-flow.md", 2, None),
     ("docs/architecture/dependencies.md", 2, "dependencies.md"),
+    ("docs/architecture/tech-debt.md", 2, "tech-debt.md"),
+    ("docs/architecture/constraints.md", 2, "constraints.md"),
+    ("docs/architecture/concepts/README.md", 2, None),
     ("docs/architecture/decisions/0001-record-architecture-decisions.md", 2, "adr.md"),
     ("docs/engineering/setup.md", 1, "setup.md"),
     ("docs/engineering/testing.md", 1, None),
@@ -124,7 +129,9 @@ OVERLAYS: dict[str, list[tuple[str, str | None]]] = {
 
 FOLDER_BLURBS = {
     "docs/product": "What this does and why it exists — written for business readers.",
-    "docs/architecture": "How the system is built, and why.",
+    "docs/flows": "One folder per business flow. Each has a plain README plus per-reader deep-dive subfiles.",
+    "docs/architecture": "How the system is built, and why — high-level map, low-level detail, concepts, decisions.",
+    "docs/architecture/concepts": "Deep-dive subsystems. One folder each: a common README plus an engineering deep-dive.",
     "docs/architecture/decisions": "Architecture decision records. Append-only; superseded records keep their number.",
     "docs/architecture/contracts": "Data contracts for every dataset consumed or published.",
     "docs/engineering": "Setup, testing, conventions and release — everything a contributor needs.",
@@ -269,7 +276,8 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
                 findings["forge leakage"].append(f"{rel}: {', '.join(sorted(hits))}")
 
         volatile = ("limitations", "dependencies", "setup", "configuration",
-                    "overview", "runbook")
+                    "overview", "high-level", "low-level", "tech-debt",
+                    "constraints", "runbook")
         if (any(v in rel for v in volatile) and not rel.endswith("README.md")
                 and "Last reviewed" not in text):
             findings["no review date"].append(rel)

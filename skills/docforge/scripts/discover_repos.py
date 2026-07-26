@@ -6,7 +6,7 @@ repo detected on disk that ISN'T declared in .gitmodules (vendored copies,
 git-subtree merges, manually cloned submodules).
 
 For each repo found, reports whether it already has a docforge baseline
-(docs/architecture/overview.md) and/or a docforge provenance manifest
+(docs/architecture/high-level.md) and/or a docforge provenance manifest
 (.docforge/manifest.json), so the caller knows which repos need
 generation before a diligence portfolio layer is built on top of them.
 
@@ -72,7 +72,8 @@ def find_nested_repos(root: Path, excludes: set) -> list:
 
 
 def docforge_status(repo_path: Path) -> str:
-    has_overview = (repo_path / "docs" / "architecture" / "overview.md").exists()
+    arch = repo_path / "docs" / "architecture"
+    has_overview = (arch / "high-level.md").exists() or (arch / "overview.md").exists()
     has_manifest = (repo_path / ".docforge" / "manifest.json").exists()
     if has_manifest:
         return "docforge baseline + provenance"

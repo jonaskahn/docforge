@@ -16,7 +16,7 @@ Distinct from the spine's `capabilities.md`: that file states what the product d
 ### Feature: <name>
 **Value:** <the business or user outcome, one sentence>
 **Status:** shipped (vX.Y) / in progress / planned / deprecated (sunset date)
-**Owns:** <which flow(s) implement it — link to `business-analyst/process-flows.md` if that overlay exists, otherwise to `architecture/overview.md`>
+**Owns:** <which flow(s) implement it — link to `business-analyst/process-flows.md` if that overlay exists, otherwise to `architecture/high-level.md`>
 **Depends on:** <other features or external services this needs>
 ```
 

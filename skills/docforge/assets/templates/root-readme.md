@@ -26,7 +26,7 @@ Everything lives in [`docs/`](docs/README.md). Start where you fit:
 | You are | Start here |
 |---|---|
 | New to the project | [docs/product/overview.md](docs/product/overview.md) |
-| A new engineer | [docs/architecture/overview.md](docs/architecture/overview.md) |
+| A new engineer | [docs/architecture/high-level.md](docs/architecture/high-level.md) |
 | Using this as a consumer | [docs/product/quickstart.md](docs/product/quickstart.md) |
 | Reviewing risk or security | [docs/security/](docs/security/README.md) · [docs/architecture/dependencies.md](docs/architecture/dependencies.md) |
 

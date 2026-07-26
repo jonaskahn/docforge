@@ -28,7 +28,7 @@ Even outside a formal diligence job, run the same discovery check before generat
 
 For each repo the discovery step returns:
 
-1. Look for `.docforge/manifest.json` and `docs/architecture/overview.md`.
+1. Look for `.docforge/manifest.json` and `docs/architecture/high-level.md`.
    - Both present → this repo already has a docforge baseline. Run `check_provenance.py` against it as usual (see `provenance-tracking.md`) rather than treating it as new.
    - Either missing → this repo has never been through docforge. **Generate its baseline first** — the full Step 1–6 workflow, plus the BA/PO audience overlays (Step 3) if that documentation is in scope for the review — before the collection is considered ready for the portfolio layer.
 2. Do not proceed to `docs-portfolio/` with a known gap in the collection. An unreviewed repo silently included looks assessed when it was not, which is worse than one honestly flagged as missing.

@@ -10,7 +10,7 @@
 | You are | Read |
 |---|---|
 | New to the project | [product/overview.md](product/overview.md) |
-| A new engineer | [architecture/overview.md](architecture/overview.md) → [engineering/setup.md](engineering/setup.md) |
+| A new engineer | [architecture/high-level.md](architecture/high-level.md) → [engineering/setup.md](engineering/setup.md) |
 | Consuming this service | [product/quickstart.md](product/quickstart.md) → [reference/](reference/README.md) |
 | On call | [operations/](operations/README.md) |
 | Reviewing risk | [security/](security/README.md) · [architecture/dependencies.md](architecture/dependencies.md) · [reference/limitations.md](reference/limitations.md) |

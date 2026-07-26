@@ -136,7 +136,7 @@ def modules(nodes: list, limit: int) -> None:
             print(f"      {summaries[mod]}")
     if len(counts) > limit:
         print(f"  ... {len(counts) - limit} more (raise --limit)")
-    print("\n  Seeds the code map in docs/architecture/overview.md. Confirm each\n"
+    print("\n  Seeds the code map in docs/architecture/high-level.md. Confirm each\n"
           "  module's purpose with /understand-explain before describing it.")
 
 

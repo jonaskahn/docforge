@@ -40,6 +40,6 @@ Expected output:
 
 ## Next
 
-- Understand the codebase: [../architecture/overview.md](../architecture/overview.md)
+- Understand the codebase: [../architecture/high-level.md](../architecture/high-level.md)
 - Run the tests: [testing.md](testing.md)
 - Make a change: [../contributing/README.md](../contributing/README.md)

@@ -11,13 +11,14 @@ Three rules organize every decision here. **Separate documents that change once 
 
 ## Non-negotiables
 
-Five rules that hold regardless of tier, repo type, ecosystem, or audience. Violating them is what makes documentation rot.
+Six rules that hold regardless of tier, repo type, ecosystem, or audience. Violating them is what makes documentation rot.
 
 1. **Never invent.** Every claim must be traceable to the knowledge graph, to code, to config, to commit history, or to something the user told you. If a fact is needed but unknown, write a visible placeholder — `> TODO(owner): confirm retry policy for the ingest stage` — rather than a plausible guess. A confidently wrong doc costs more than a missing one, because readers stop trusting the whole set.
 2. **Analyse before writing.** The knowledge graph is a precondition, not an optimization. See "Source analysis" below and `references/source-analysis.md`.
 3. **Host-neutral by default.** Nothing in generated prose names a specific forge. Write "the issue tracker", "the CI pipeline", "a merge request or pull request". Forge-specific paths are confined to the one place described in `references/host-neutrality.md`.
 4. **Everything lives under `docs/`.** Repo root carries only the handful of files that ecosystem tooling and package registries look for by convention, and those are thin pointers into `docs/`. See "Root vs docs/" below.
 5. **Stamp provenance in the same pass you write.** Every generated document records the specific source files (by git blob hash) each section draws from. Staleness is later decided by hash comparison, never by re-reading and re-guessing; a change in one recorded file regenerates the section that cites it, not the whole document. See `references/provenance-tracking.md`.
+6. **Write for durability, not for the current code.** Describe what the logic *does* at the flow and behaviour level; a same-behaviour refactor must not falsify a document. Never paste code, never link a line number, never anchor a claim to an internal symbol a rename would break — reference files and modules by path instead. State every fact once and link to it; never duplicate it across documents or audience folders. See `references/document-composition.md`.
 
 ## Source analysis — run this first
 
@@ -40,17 +41,23 @@ Then, whenever a document needs a fact the graph does not already state, query r
 
 | You are about to write | Get the facts from |
 |---|---|
-| `architecture/overview.md` (code map, layers, invariants) | the graph itself, plus `/understand-explain <path>` per significant module |
+| `architecture/high-level.md` (context, blocks, boundaries) | the graph itself — module map, layers, edges |
+| `architecture/low-level.md`, `architecture/concepts/<subsystem>/` (deep mechanism) | `/understand-explain <path>` per significant subsystem — **required** for depth, not optional |
 | `architecture/data-flow.md` | `/understand-domain` for flows and steps; `/understand-chat` for a specific path |
+| `flows/<flow>/README.md` (plain steps, L1) | `/understand-domain` — enumerate flows first; each flow is a folder |
+| `flows/<flow>/business-analyst.md` (rules) | `/understand-chat "what business rules gate <flow>"` |
+| `flows/<flow>/engineering.md` (mechanism) | `/understand-explain <flow module>` |
 | `product/overview.md`, `capabilities.md` | `/understand-domain` — business domains in the code's own terms |
-| `product/business-analyst/*` (rules, flows, traceability) | `/understand-domain` per flow, then `/understand-chat "what business rules gate <flow>"` |
-| `product/product-owner/*` (features, metrics, release notes) | `/understand-domain` for the feature set; `git log` merge commits for release framing |
+| `product/product-owner/*` (metrics, release notes) | `/understand-domain` for the feature set; `/understand-diff` and `git log` merge commits for release framing |
 | `engineering/setup.md` | `/understand-onboard`, then verify every command by running it |
 | `architecture/dependencies.md` | graph import edges, then `/understand-chat` for failure handling per integration |
+| `architecture/tech-debt.md`, `constraints.md` | `/understand-chat` for TODO/FIXME clusters, hard-coded bounds, scale ceilings; `git log` for why |
 | `reference/configuration.md` | `/understand-chat "which environment variables does this read, and where"` |
 | `reference/limitations.md` | `/understand-chat` for unhandled cases, TODO and FIXME clusters, hard-coded bounds |
 | Decision records | `/understand-chat "why …"` cross-checked against `git log` |
 | Any overlay document (routes, error codes, datasets) | targeted `/understand-chat` questions — see the overlay reference |
+
+Full depth-to-command mapping in `references/depth-and-audience.md`.
 
 Two habits make this pay off. **Ask narrow questions** — "which modules write to the database, and through what" retrieves cleanly where "explain the architecture" returns prose you then have to verify. And **treat the answers as evidence, not as prose to paste**: they are a source to write from, in the document's own voice and structure.
 
@@ -67,6 +74,7 @@ Run the analysis above, then fill the gaps it does not cover:
 - **What documentation already exists** — an existing `README`, `docs/`, wiki exports, comments that read like design notes, ADR-ish files. Existing content is evidence about what people needed to write down; migrate it, do not replace it.
 - **Operational reality** — CI config, container and deploy manifests, and the environment variables the code actually reads.
 - **History for the "why"** — `git log` on architecturally significant paths, and merge commits with substantive messages. This is where backfilled decision records come from, and it is the one thing the graph cannot supply.
+- **Business flows** — run `/understand-domain` to enumerate the domains, flows and steps in the code's own terms. That list *is* the set of aligned folders to build under `docs/flows/` — never hand-type it, since the point of the analysis is to surface flows a writer would miss. See `references/document-composition.md`.
 - **Child repos** — before any multi-repo work, and as a cheap sanity check otherwise, run `python scripts/discover_repos.py --root <path>`. It reports declared submodules and, more importantly, nested repos present on disk but *not* declared in `.gitmodules` (vendored copies, `git subtree` merges, hand-cloned submodules). For single-repo work this just confirms scope; for diligence it is load-bearing — see Step 2 and `references/diligence-collection.md`.
 
 ### Step 2 — Choose a tier
@@ -75,7 +83,7 @@ Documentation weight should be proportionate to team size and external scrutiny;
 
 | Tier | When it fits | What gets built |
 |---|---|---|
-| **1 — Spine** | Any repo. Small teams, internal tools, early projects | Root pointers, `docs/README.md` index, `docs/architecture/overview.md`, `docs/engineering/setup.md`, `docs/reference/limitations.md`, `CHANGELOG` |
+| **1 — Spine** | Any repo. Small teams, internal tools, early projects | Root pointers, `docs/README.md` index, `docs/architecture/high-level.md`, `docs/engineering/setup.md`, `docs/reference/limitations.md`, `CHANGELOG` |
 | **2 — Diligence** | Repo has external consumers, paying customers, or a compliance or audit surface | Tier 1 + `docs/architecture/decisions/`, `docs/architecture/dependencies.md`, `docs/security/`, `docs/operations/runbooks/`, contribution docs |
 | **3 — Portfolio** | Several repos reviewed as one system; fundraising, acquisition, vendor assessment | Tier 2 across every repo + a cross-repo portfolio layer (`references/diligence.md`) |
 
@@ -106,7 +114,7 @@ Repos frequently match two type overlays (an API that also runs scheduled jobs).
 | Business Analyst (BA) | business rules, process flows, requirements traceability | `docs/product/business-analyst/` | `references/overlay-business-analyst.md` |
 | Product Owner (PO) | feature value, release framing, success metrics | `docs/product/product-owner/` | `references/overlay-product-owner.md` |
 
-Audience overlays behave differently from type overlays: **isolated by default** — name one audience, produce only that folder — and **combined only on an explicit multi-audience request** ("docs for BA and PO", "align docs for the product team"), where each fact is owned once and cross-linked, never pasted into both folders. Do not produce an unrequested audience folder; an empty overlay is the same anti-pattern as an unfilled scaffold. The isolation/combination rules and the fact-ownership table live in `references/audience-matrix.md`.
+Audience content follows the three-class model in `references/audience-matrix.md`: a subject two or more audiences share is written **once** as an aligned topic folder — a `flows/<flow>/` or `architecture/concepts/<subsystem>/` document-as-folder, with a common `README.md` plus per-reader deep-dive subfiles — while genuinely single-reader material stays in that audience's own folder (`product/business-analyst/`, `product/product-owner/`). Every fact is owned once and linked, never pasted into two folders. Do not produce an unrequested audience folder or an empty deep-dive subfile; an empty overlay is the same anti-pattern as an unfilled scaffold. Read `references/audience-matrix.md`, `references/document-composition.md` and `references/depth-and-audience.md` before writing any flow or audience content.
 
 ### Step 4 — Build the tree
 
@@ -121,12 +129,13 @@ Either way, the templates are starting points, not output. A scaffold left full 
 
 Later documents cite earlier ones, so order matters:
 
-1. `docs/architecture/overview.md` — the code map, built from the graph. Everything else references it.
-2. `docs/README.md` — the index, once you know what it indexes.
-3. Root `README.md` — the audience router, written after the "front door" set because it summarizes the others.
-4. Overlay documents — data contracts, error catalog, route map, BA business rules and process flows, PO feature catalog, whichever apply.
-5. Risk documents — limitations register, dependency inventory, security policy.
-6. Decision records — backfill the load-bearing choices found in history.
+1. `docs/architecture/high-level.md` — the stable map, built from the graph. Everything else references it. Then `low-level.md` and `architecture/concepts/<subsystem>/` deep-dives for the significant subsystems.
+2. `docs/flows/<flow>/` — the aligned flow folders: common `README.md` first (plain steps, notices), then the audience deep-dive subfiles where depth exists.
+3. `docs/README.md` — the index, once you know what it indexes.
+4. Root `README.md` — the audience router, written after the "front door" set because it summarizes the others.
+5. Overlay and audience-specific documents — data contracts, error catalog, route map, BA requirements-traceability, PO feature catalog and metrics, whichever apply.
+6. Risk documents — `reference/limitations.md`, `architecture/tech-debt.md`, `architecture/constraints.md`, dependency inventory, security policy.
+7. Decision records — backfill the load-bearing choices found in history.
 
 **Stamp provenance as you write, not afterward.** The source files you just read to write a section *are* its provenance, so record them then — each document gets the frontmatter block and the source-files-per-section list described in `references/provenance-tracking.md`, aggregated into `.docforge/manifest.json`. Retrofitting hashes as a cleanup pass invites guessing about which files a section actually drew from.
 
@@ -178,10 +187,16 @@ Full specification in `references/docs-tree.md`. The shape:
 └── docs/
     ├── README.md              # index and audience router — the one entry point
     ├── product/               # for business readers and external consumers
-    │   ├── business-analyst/  # (audience overlay) business rules, flows, traceability
-    │   └── product-owner/     # (audience overlay) feature value, metrics, release notes
+    │   ├── business-analyst/  # (audience overlay) single-reader BA documents
+    │   └── product-owner/     # (audience overlay) single-reader PO documents
+    ├── flows/                 # aligned topic folders — one per business flow
+    │   └── <flow>/            # common README + per-reader deep-dive subfiles
     ├── architecture/          # for engineers and technical reviewers
-    │   ├── overview.md        # the code map
+    │   ├── high-level.md      # system context, building blocks, boundaries (stable map)
+    │   ├── low-level.md       # component decomposition, data model
+    │   ├── concepts/          # deep-dive subsystems, one folder each
+    │   ├── tech-debt.md       # known shortcuts + remediation
+    │   ├── constraints.md     # hard architectural limits and non-goals
     │   ├── decisions/         # ADRs — the durable "why"
     │   └── dependencies.md    # third-party inventory and integration contracts
     ├── engineering/           # for contributors: setup, testing, conventions
@@ -199,7 +214,10 @@ The taxonomy is a floor, not a ceiling. If the repo already carries directories 
 
 - **The scaffold dump.** Twenty files of unfilled headings. Worse than nothing: it signals documentation exists when it does not, and readers stop checking.
 - **Writing before analysing.** A code map produced from directory names describes a plausible system rather than this one, and every downstream document inherits the error.
-- **Rationale in the code map.** `architecture/overview.md` says *what is where*; ADRs say *why it was chosen*. Mixing them makes the code map churn every time an opinion changes.
+- **Rationale in the code map.** `architecture/high-level.md` says *what is where*; ADRs say *why it was chosen*. Mixing them makes the map churn every time an opinion changes.
+- **Prose bound to code.** A claim anchored to a private symbol or a line number, so a routine rename falsifies the document. Describe behaviour and reference files by path instead.
+- **Notice stranded in a subfile.** A warning that only an audience deep-dive carries, invisible to a reader who stops at the topic `README.md`. Critical notices belong in the common README.
+- **Same subject in two audience folders.** The definition of drift. Write it once in the owning document; link from the other.
 - **Hidden limitations.** Burying known issues protects nobody and reads as evasion under scrutiny. A frank limitations register reads as competence.
 - **Hand-written API reference.** Generate it from the source of truth (spec, schema, type annotations). Hand-written reference drifts within one sprint.
 - **Forge lock-in in prose.** "Open a GitHub issue" in a doc that outlives the migration to a self-hosted forge.
@@ -221,7 +239,9 @@ Load only what the current task needs.
 | `references/decision-records.md` | Writing or backfilling ADRs |
 | `references/risk-docs.md` | Writing limitations, dependencies, or security documents |
 | `references/quality-bar.md` | Before presenting anything — review checklist and rubric |
-| `references/audience-matrix.md` | Deciding isolated vs. combined audience overlays, and which folder owns which fact |
+| `references/audience-matrix.md` | The three document classes (aligned / audience-specific / shared-fact spine), the BA/PO split, and which folder owns which fact |
+| `references/document-composition.md` | Always when writing flow or audience content — the document-as-folder pattern, the two invariants, and the durability rules (no code, no duplication, write at the slowest layer) |
+| `references/depth-and-audience.md` | The depth ladder (L0–L3), which reader consumes which depth, and which understand-anything command feeds which cell |
 | `references/overlay-business-analyst.md` | Writing anything under `docs/product/business-analyst/` |
 | `references/overlay-product-owner.md` | Writing anything under `docs/product/product-owner/` |
 | `references/diligence.md` | Multi-repo portfolios, audits, acquisitions, vendor review — the portfolio layer |
