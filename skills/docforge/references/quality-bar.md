@@ -24,14 +24,15 @@ Each targets one audience. A documentation set that fails any of them fails for 
 - [ ] File and module paths referenced in the code map exist
 - [ ] External services listed are actually called by this code
 - [ ] Nothing describes intended architecture as though it were shipped
-- [ ] Every unverifiable claim carries a visible `> TODO(owner): …` rather than a plausible guess
+- [ ] Every derivable fact is written in full — nothing retrievable from the graph/source/config/history was left for a human to author
+- [ ] The only fill-markers remaining are typed `<UPPER_SNAKE>` tokens standing in for genuinely external values (contact, on-call, prod URL, org SLA, owner, roadmap date); no `{{…}}` scaffold markers and no punted `TODO` sections survive
 
 ### Grounding
 
 - [ ] A knowledge graph was built or refreshed before writing, and the code map came from it
 - [ ] Modules named in the code map exist as nodes in the graph
 - [ ] Stated invariants are supported by absent edges, not by assumption
-- [ ] Where the graph was unavailable, the response says so and placeholders were widened accordingly
+- [ ] Where the graph was unavailable, the response says so; content still came from direct inspection, and only genuinely external values fell back to typed tokens
 
 ### Structure
 
@@ -79,7 +80,7 @@ Each targets one audience. A documentation set that fails any of them fails for 
 Documentation decays silently unless something objects. The cheap wins, in rough order of value per effort:
 
 1. **Link checking** on every change — catches the most common decay.
-2. **Placeholder detection** — fail if `TODO(owner)` or template markers survive into the default branch beyond an agreed grace period.
+2. **Scaffold-marker detection** — fail on any `{{…}}` template marker or punted `TODO` in the default branch: those mean a section was left unwritten. Typed `<UPPER_SNAKE>` tokens are exempt (they are intentional human-fill slots); optionally warn if one survives past an agreed grace period so external facts do get filled in.
 3. **Forge-name grep** outside `docs/contributing/`.
 4. **Spec validation** — if an API spec is generated, verify it regenerates identically to what is committed.
 5. **Config drift** — compare documented environment variables against those the code reads.

@@ -1,6 +1,6 @@
 {
   "name": "docforge",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Design and generate a repository's documentation set — docs/ tree, README, two-altitude architecture (high-level map, low-level detail, deep-dive concepts), tech-debt and constraints registers, decision records, dependency inventory, security policy, error catalogs, runbooks, plus aligned per-flow topic folders and Business Analyst and Product Owner audience depth. One topic, many readers: a shared plain README with per-reader deep-dive subfiles, written once with no duplication and at a durability level that survives code refactors. Grounded in a knowledge-graph analysis of the actual source, with git-hash provenance so staleness is checked, not guessed. Host-neutral, with multi-repo collection discovery for diligence.",
   "author": {
     "name": "Jonas Kahn",

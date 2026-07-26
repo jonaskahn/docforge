@@ -4,16 +4,16 @@
 
 | Version | Supported |
 |---|---|
-| {{2.x}} | yes |
-| {{1.x}} | security fixes until {{YYYY-MM-DD}} |
+| {{current major, e.g. 2.x — derive from tags/releases}} | yes |
+| {{previous major}} | security fixes until <SUPPORT_END_DATE> |
 
 ## Reporting a vulnerability
 
-Report privately to **{{security@example.com}}**. Please do not open a public issue.
+Report privately to **<SECURITY_CONTACT>**. Please do not open a public issue.
 
-- We acknowledge reports within **{{N}} business days**.
-- We aim to provide an initial assessment within **{{N}} days**.
-- We follow a **{{N}}-day** coordinated disclosure timeline.
+- We acknowledge reports within **<ACK_SLA_DAYS>** business days.
+- We aim to provide an initial assessment within **<ASSESSMENT_SLA_DAYS>** days.
+- We follow a **<DISCLOSURE_DAYS>-day** coordinated disclosure timeline.
 - We credit reporters who wish to be named.
 
 Please include: what you found, how to reproduce it, the impact you believe it has,

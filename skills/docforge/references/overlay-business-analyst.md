@@ -47,7 +47,7 @@ Maps requirement → implementation → verification — the file a BA opens whe
 |---|---|---|---|---|
 | | link to `business-rules.md#rule` | `symbol` | test file/name, or "none — flag" | implemented / partial / not started |
 
-If the original requirement wording isn't recoverable from any connected source (no ticket system, no discussion history), do not invent stakeholder language — write the requirement as inferred from the code and mark the row `> TODO(owner): confirm original requirement wording`.
+If the original requirement wording isn't recoverable from any connected source (no ticket system, no discussion history), do not invent stakeholder language — write the requirement as inferred from the code and mark only the unrecoverable wording with a typed token, e.g. append `<ORIGINAL_REQ_WORDING>` to the row. The rule, its code location and its tests are all derivable and must be written in full; only the original phrasing is the external unknown.
 
 ## Non-negotiable specific to this overlay
 

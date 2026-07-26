@@ -9,7 +9,7 @@ _Last reviewed: {{YYYY-MM-DD}}_ · Expect roughly **{{N}} minutes** for a first 
 | {{runtime}} | {{exact version or range}} | {{how to install}} |
 | {{tool}} | {{version}} | |
 
-Access you will need, and who grants it: {{credential or system}} — {{role/team}}.
+Access you will need, and who grants it: {{credential or system}} — <ACCESS_GRANTOR>.
 
 ## Steps
 

@@ -1,6 +1,6 @@
 # Runbook: {{symptom as the pager reports it}}
 
-_Last reviewed: {{YYYY-MM-DD}}_ · **Severity:** {{level}} · **Owner:** {{team}}
+_Last reviewed: {{YYYY-MM-DD}}_ · **Severity:** {{level}} · **Owner:** <TEAM_OWNER>
 
 ## Symptoms
 
@@ -38,7 +38,7 @@ Stop the bleeding first; diagnose afterwards.
 
 ## Escalate
 
-If unresolved after {{N}} minutes, escalate to {{role/team}} via {{channel}}.
+If unresolved after {{N}} minutes, escalate to <ESCALATION_OWNER> via <ESCALATION_CHANNEL>.
 
 ## Prevention
 

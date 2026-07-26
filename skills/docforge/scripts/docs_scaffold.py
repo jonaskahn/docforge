@@ -6,9 +6,11 @@ Two modes:
   scaffold  create the docs/ tree for a tier and overlays, seeding files from
             assets/templates/ where a template exists
 
-  audit     report what is missing, what is still a placeholder, which internal
-            links are broken, and where forge-specific language has leaked into
-            documents that are supposed to be host-neutral
+  audit     report what is missing, what still holds unfilled {{…}} scaffold
+            markers, which internal links are broken, and where forge-specific
+            language has leaked into documents that are supposed to be
+            host-neutral. Typed <UPPER_SNAKE> human-fill tokens are listed
+            separately and do not count as defects.
 
 Examples
 --------
@@ -146,8 +148,11 @@ FOLDER_BLURBS = {
     "docs/product/product-owner": "Feature value, success metrics and release notes — for a Product Owner.",
 }
 
-PLACEHOLDER = re.compile(r"\{\{[^}]+\}\}")
-TODO = re.compile(r"TODO\(([^)]*)\)")
+PLACEHOLDER = re.compile(r"\{\{[^}]+\}\}")   # {{…}} scaffold marker — must be filled
+TODO = re.compile(r"TODO\(([^)]*)\)")        # retired punt form — treated as a defect
+# Typed human-fill token: <UPPER_SNAKE> standing in for one genuinely external value.
+# These are intentional and expected; they are reported separately, not as defects.
+TOKEN = re.compile(r"<[A-Z][A-Z0-9_]{2,}>")
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 FORGE = re.compile(
     r"\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|"
@@ -214,8 +219,10 @@ def scaffold(repo: Path, tier: int, overlays: list[str], dry_run: bool) -> int:
     print(f"\n{created} created, {skipped} already present.")
     if created and not dry_run:
         print(
-            "\nThese are scaffolds, not deliverables. Fill every section you have "
-            "evidence for and replace or flag the rest before presenting."
+            "\nThese are scaffolds, not deliverables. Write every section you have "
+            "evidence for in full; the only marks that may survive are typed "
+            "<UPPER_SNAKE> tokens for genuinely external facts. No {{…}} marker "
+            "should remain before presenting."
         )
     return 0
 
@@ -237,9 +244,13 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
             files.append(p)
 
     findings: dict[str, list[str]] = {
-        "missing": [], "placeholders": [], "empty": [],
+        "missing": [], "unfilled scaffold": [], "empty": [],
         "broken links": [], "forge leakage": [], "no review date": [],
     }
+    # Informational, not a defect: typed <UPPER_SNAKE> tokens are the sanctioned
+    # human-fill slots for genuinely external facts. Listed so a reviewer knows
+    # exactly what remains to fill, but excluded from the defect total.
+    tokens: list[str] = []
 
     wanted = collect(tier, overlays)
     for rel in sorted(wanted):
@@ -250,9 +261,13 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
         rel = path.relative_to(repo).as_posix()
         text = path.read_text(encoding="utf-8", errors="replace")
 
-        n_ph = len(PLACEHOLDER.findall(text)) + len(TODO.findall(text))
-        if n_ph:
-            findings["placeholders"].append(f"{rel} ({n_ph})")
+        n_scaffold = len(PLACEHOLDER.findall(text)) + len(TODO.findall(text))
+        if n_scaffold:
+            findings["unfilled scaffold"].append(f"{rel} ({n_scaffold})")
+
+        n_token = len(set(TOKEN.findall(text)))
+        if n_token:
+            tokens.append(f"{rel} ({n_token})")
 
         body = "\n".join(
             ln for ln in text.splitlines()
@@ -265,6 +280,8 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
             if target.startswith(("http://", "https://", "mailto:", "#")):
                 continue
             if "{{" in target or "NNNN" in target:  # unfilled template link
+                continue
+            if TOKEN.search(target):  # link points through a human-fill token
                 continue
             resolved = (path.parent / target.split("#")[0]).resolve()
             if not resolved.exists():
@@ -292,10 +309,21 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
         if len(items) > 25:
             print(f"  ... and {len(items) - 25} more")
 
-    print(f"\n{len(files)} documents checked, {total} findings.")
+    if tokens:
+        print(f"\nHUMAN-FILL TOKENS ({len(tokens)})  — not defects; external facts "
+              "for a human to fill in during review")
+        for item in tokens[:25]:
+            print(f"  {item}")
+        if len(tokens) > 25:
+            print(f"  ... and {len(tokens) - 25} more")
+
+    print(f"\n{len(files)} documents checked, {total} defects"
+          + (f", {len(tokens)} files with human-fill tokens." if tokens else "."))
     if not total:
-        print("Clean. Now apply the judgement checks in references/quality-bar.md — "
-              "this script cannot tell you whether the content is true.")
+        print("No defects. Any UNFILLED SCAFFOLD count must be zero before presenting; "
+              "typed <UPPER_SNAKE> tokens are fine to leave for human review. Now apply "
+              "the judgement checks in references/quality-bar.md — this script cannot "
+              "tell you whether the content is true.")
     return 0
 
 

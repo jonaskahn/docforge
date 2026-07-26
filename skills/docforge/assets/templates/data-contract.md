@@ -2,7 +2,7 @@
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
-- **Owner:** {{team or role}}
+- **Owner:** <DATA_OWNER>
 - **Location:** {{table, topic, bucket path, collection}}
 - **Update cadence:** {{schedule}} · **Freshness SLA:** {{target}}
 - **Grain:** one row per {{entity}} per {{period}}

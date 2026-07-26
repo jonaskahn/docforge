@@ -207,6 +207,6 @@ The plugin may not be installed, the source may not be reachable from where you 
 
 **Fall back deliberately.** Read manifests, entry points, directory structure, CI configuration and the largest source files. Use `git log` for history. This is adequate for the spine and thin for anything requiring semantic understanding — invariants, domains, flows.
 
-**Widen the placeholders.** Anything you would have confirmed by asking becomes a `> TODO(owner): …` rather than a confident sentence. Under-claiming is recoverable; over-claiming is not.
+**Still write what direct inspection supports; token only the genuinely external.** Losing the graph costs you semantic depth, not the whole document — read the manifests, entry points and largest source files and write from those. A fact you could have *confirmed by asking a maintainer* (contact, on-call, prod URL, org SLA) becomes a typed `<UPPER_SNAKE>` token; a fact you could have *derived by reading more code* is still yours to derive. Do not downgrade derivable content to a placeholder just because the graph is absent — under-claiming a knowable fact is its own failure. Over-claiming remains the worst outcome.
 
-**Never generate a tree from the repository name.** If you cannot see the source at all, produce the structure as an explicitly labelled scaffold with placeholders throughout, and say that it is one.
+**Never generate a tree from the repository name.** If you cannot see the source at all, produce the structure as an explicitly labelled scaffold and say plainly that it is one — do not present a name-derived guess as a documented system.

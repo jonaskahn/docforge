@@ -2,7 +2,7 @@
 
 > {{one_sentence_what_this_does_and_the_capability_it_delivers}}
 
-**Status:** {{production|beta|experimental}} · **Owner:** {{team}} · **Support:** {{channel}}
+**Status:** {{production|beta|experimental}} · **Owner:** <TEAM_OWNER> · **Support:** <SUPPORT_CHANNEL>
 
 ## What this is
 

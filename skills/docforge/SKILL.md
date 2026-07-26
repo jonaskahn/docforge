@@ -13,7 +13,9 @@ Three rules organize every decision here. **Separate documents that change once 
 
 Six rules that hold regardless of tier, repo type, ecosystem, or audience. Violating them is what makes documentation rot.
 
-1. **Never invent.** Every claim must be traceable to the knowledge graph, to code, to config, to commit history, or to something the user told you. If a fact is needed but unknown, write a visible placeholder — `> TODO(owner): confirm retry policy for the ingest stage` — rather than a plausible guess. A confidently wrong doc costs more than a missing one, because readers stop trusting the whole set.
+1. **Never invent — and never punt what you can derive.** Every claim must be traceable to the knowledge graph, to code, to config, to commit history, or to something the user told you. A confidently wrong doc costs more than a missing one, because readers stop trusting the whole set. But the far more common failure is the opposite: leaving a section for "the team to fill later" when the answer was in the source all along. **You generate the complete set; a human reviews it for accuracy afterward.** So there are exactly two fill states, and no third:
+   - **Derivable** — anything obtainable from the graph, source, config, or history (retry policy, config vars, business rules, failure modes, the flow's steps). Write it *in full*, now. Handing a derivable fact to a human is a defect, not humility. If you are tempted to punt, query the graph again (`references/source-analysis.md`) — the answer is almost always retrievable.
+   - **Externally unknowable** — a fact that lives in no source you can read: a disclosure contact address, an on-call rotation, a production URL, an org-set SLA number, a team/owner name, a roadmap date. Write the entire surrounding sentence and leave only the atomic unknown as a **typed placeholder token** — `<SECURITY_CONTACT>`, `<ONCALL_ROTATION>`, `<PROD_BASE_URL>`, `<SLA_RESPONSE_HOURS>`, `<TEAM_OWNER>`: angle-bracketed, `UPPER_SNAKE_CASE`, semantically named. A token stands in for one *value*, never a paragraph — its shape structurally forbids punting a whole section. Do not use the retired `> TODO(owner): …` prose form; it invited exactly the "team fills this later" scaffold this skill exists to prevent.
 2. **Analyse before writing.** The knowledge graph is a precondition, not an optimization. See "Source analysis" below and `references/source-analysis.md`.
 3. **Host-neutral by default.** Nothing in generated prose names a specific forge. Write "the issue tracker", "the CI pipeline", "a merge request or pull request". Forge-specific paths are confined to the one place described in `references/host-neutrality.md`.
 4. **Everything lives under `docs/`.** Repo root carries only the handful of files that ecosystem tooling and package registries look for by convention, and those are thin pointers into `docs/`. See "Root vs docs/" below.
@@ -123,7 +125,7 @@ Read `references/docs-tree.md` for the canonical taxonomy, folder naming rules, 
 - **Scaffold mechanically** — `python scripts/docs_scaffold.py --repo <path> --tier 2 --overlay api --overlay business-analyst` creates the directories and drops templated files with placeholders in place. Use this when starting from nothing; it is faster and more consistent than writing files by hand.
 - **Write directly** — when the repo already has partial documentation, or when only a few files are needed. Pull templates from `assets/templates/`.
 
-Either way, the templates are starting points, not output. A scaffold left full of placeholders is not a deliverable; fill every section the graph gives you evidence for and flag the rest.
+Either way, the templates are starting points, not output. A scaffold left full of `{{…}}` placeholders is not a deliverable — those markers mean "not yet written," and every one must be replaced with derived content before presenting. The only marks that legitimately survive into a finished document are typed `<UPPER_SNAKE>` tokens standing in for genuinely external facts (non-negotiable 1); everything else you have evidence for, you write.
 
 ### Step 5 — Write the content, in dependency order
 
@@ -213,6 +215,7 @@ The taxonomy is a floor, not a ceiling. If the repo already carries directories 
 ## Anti-patterns
 
 - **The scaffold dump.** Twenty files of unfilled headings. Worse than nothing: it signals documentation exists when it does not, and readers stop checking.
+- **Punting a derivable fact to a human.** "`> TODO: document the retry policy`" when the retry policy is in the source you already analysed. The AI generates the full set; humans review, they do not author. If a fact is retrievable, retrieve it — a token or TODO is only ever for a value that lives in no readable source.
 - **Writing before analysing.** A code map produced from directory names describes a plausible system rather than this one, and every downstream document inherits the error.
 - **Rationale in the code map.** `architecture/high-level.md` says *what is where*; ADRs say *why it was chosen*. Mixing them makes the map churn every time an opinion changes.
 - **Prose bound to code.** A claim anchored to a private symbol or a line number, so a routine rename falsifies the document. Describe behaviour and reference files by path instead.
