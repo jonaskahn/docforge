@@ -107,6 +107,19 @@ OVERLAYS: dict[str, list[tuple[str, str | None]]] = {
         ("docs/reference/resources.md", None),
         ("docs/reference/access.md", None),
     ],
+    "business-analyst": [
+        ("docs/product/business-analyst/README.md", "ba-readme.md"),
+        ("docs/product/business-analyst/business-rules.md", "business-rules.md"),
+        ("docs/product/business-analyst/process-flows.md", "process-flows.md"),
+        ("docs/product/business-analyst/requirements-traceability.md", "requirements-traceability.md"),
+    ],
+    "product-owner": [
+        ("docs/product/product-owner/README.md", "po-readme.md"),
+        ("docs/product/product-owner/feature-catalog.md", "feature-catalog.md"),
+        ("docs/product/product-owner/success-metrics.md", "success-metrics.md"),
+        ("docs/product/product-owner/release-notes.md", "release-notes.md"),
+        ("docs/product/product-owner/backlog-traceability.md", "backlog-traceability.md"),
+    ],
 }
 
 FOLDER_BLURBS = {
@@ -122,6 +135,8 @@ FOLDER_BLURBS = {
     "docs/contributing": "How changes are proposed, reviewed and merged.",
     "docs/contributing/templates": "Host-neutral issue and change templates.",
     "docs/product/migration": "One guide per major version transition.",
+    "docs/product/business-analyst": "Business rules, process flows and requirements traceability — for a Business Analyst.",
+    "docs/product/product-owner": "Feature value, success metrics and release notes — for a Product Owner.",
 }
 
 PLACEHOLDER = re.compile(r"\{\{[^}]+\}\}")

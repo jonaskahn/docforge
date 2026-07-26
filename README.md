@@ -12,12 +12,13 @@
 
 ## What it does
 
-Point it at a repo and it produces the documentation that survives: a `docs/` tree, README and ARCHITECTURE, decision records (ADRs), a known-limitations register, a dependency inventory, security policy, API error catalogs, data contracts, and runbooks.
+Point it at a repo and it produces the documentation that survives: a `docs/` tree, README and ARCHITECTURE, decision records (ADRs), a known-limitations register, a dependency inventory, security policy, API error catalogs, data contracts, and runbooks — plus **Business Analyst and Product Owner audience overlays** when a specific reader is asked for.
 
-Two things make the output trustworthy:
+Three things make the output trustworthy:
 
 - **Grounded in source.** It reads the codebase through a knowledge graph before writing a word, so every claim is verifiable — no invention, no drift.
-- **Host-neutral.** Works on any git host; never hardcodes one forge's paths.
+- **Provenance-tracked.** Each document records the exact source files it draws from by git blob hash, so "has this drifted?" is answered by comparison, not a re-read and a guess — and only the stale section gets rewritten.
+- **Host-neutral.** Works on any git host; never hardcodes one forge's paths. For multi-repo diligence it discovers the full collection first — declared submodules and undeclared nested/vendored repos alike.
 
 ## Install
 
@@ -41,6 +42,10 @@ It activates on its own when you're documenting a repo. Or invoke it directly wi
 > "Generate ADRs from this service's git history"
 >
 > "Add the API-service overlay onto our existing docs/"
+>
+> "Write BA docs for this repo — business rules and process flows"
+>
+> "Which of our generated docs have drifted from the code?"
 
 Only the reference files relevant to your task load into context, so the agent stays fast and focused.
 
@@ -51,14 +56,17 @@ Only the reference files relevant to your task load into context, so the agent s
 | `SKILL.md` | Entry point — non-negotiables, source analysis, tier + overlay selection, workflow, anti-patterns |
 | `references/source-analysis.md` | Build and query the knowledge graph; which command answers which document |
 | `references/docs-tree.md` | Canonical taxonomy — folder rules, full tree, per-file spec |
+| `references/provenance-tracking.md` | Frontmatter schema, manifest format, staleness algorithm, partial rewrites |
 | `references/host-neutrality.md` | Language rules so docs outlive any one forge |
 | `references/decision-records.md` | ADR format, numbering, backfilling from history |
 | `references/risk-docs.md` | Limitations register, dependency inventory, security policy |
 | `references/quality-bar.md` | Review checklist and rubric for finished docs |
-| `references/diligence.md` | Multi-repo layer for audits, acquisitions, vendor review |
-| `references/overlay-*.md` | Type overlays — API service, data pipeline, web app, library, infrastructure |
+| `references/audience-matrix.md` | Isolated vs. combined BA/PO overlays, and which folder owns which fact |
+| `references/diligence.md` | Multi-repo portfolio layer for audits, acquisitions, vendor review |
+| `references/diligence-collection.md` | Discover the repo collection and gap-check every member first |
+| `references/overlay-*.md` | Type overlays (API service, data pipeline, web app, library, infrastructure) and audience overlays (business-analyst, product-owner) |
 
-Plus `assets/templates/` (scaffolds for every spine file) and `scripts/` (scaffold a new tree, audit an existing one).
+Plus `assets/templates/` (scaffolds for every spine and overlay file) and `scripts/` (scaffold a tree, audit it, check provenance, discover child repos).
 
 ## Contributing
 
