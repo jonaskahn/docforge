@@ -128,7 +128,7 @@ Later documents cite earlier ones, so order matters:
 5. Risk documents — limitations register, dependency inventory, security policy.
 6. Decision records — backfill the load-bearing choices found in history.
 
-**Stamp provenance as you write, not afterward.** The source files you just read to write a section *are* its provenance, so record them then — each document gets the frontmatter block and the source-files-per-section list described in `references/provenance-tracking.md`, aggregated into `docs/.docforge/manifest.json`. Retrofitting hashes as a cleanup pass invites guessing about which files a section actually drew from.
+**Stamp provenance as you write, not afterward.** The source files you just read to write a section *are* its provenance, so record them then — each document gets the frontmatter block and the source-files-per-section list described in `references/provenance-tracking.md`, aggregated into `.docforge/manifest.json`. Retrofitting hashes as a cleanup pass invites guessing about which files a section actually drew from.
 
 ### Step 6 — Verify before presenting
 
@@ -142,7 +142,7 @@ For anything the documentation asserts about behaviour, spot-check it against th
 
 When asked to refresh docs that already carry docforge provenance, do not re-read and re-guess. Compare hashes:
 
-1. `python scripts/check_provenance.py --manifest docs/.docforge/manifest.json`.
+1. `python scripts/check_provenance.py --manifest .docforge/manifest.json`.
 2. For every `PARTIAL — <section> stale` result, regenerate only that section — re-run its narrow graph query, replace only that section's prose, re-stamp only its hashes. See "Partial rewrite" in `provenance-tracking.md`.
 3. For every `FRESH` result, leave the file untouched — do not re-open it or bump its timestamp.
 4. For every `MISSING` (a recorded source file no longer exists), do not delete the claim — the logic likely moved rather than vanished. Flag it for a human to confirm.
@@ -173,21 +173,22 @@ Each root stub follows the same shape: the 20% a reader needs immediately, then 
 Full specification in `references/docs-tree.md`. The shape:
 
 ```
-docs/
-├── README.md              # index and audience router — the one entry point
-├── product/               # for business readers and external consumers
-│   ├── business-analyst/  # (audience overlay) business rules, flows, traceability
-│   └── product-owner/     # (audience overlay) feature value, metrics, release notes
-├── architecture/          # for engineers and technical reviewers
-│   ├── overview.md        # the code map
-│   ├── decisions/         # ADRs — the durable "why"
-│   └── dependencies.md    # third-party inventory and integration contracts
-├── engineering/           # for contributors: setup, testing, conventions
-├── operations/            # for whoever is on call: runbooks, observability
-├── reference/             # lookup material: config, errors, limitations, glossary
-├── security/              # threat model, data handling, disclosure process
-├── contributing/          # workflow, review, issue and change templates
-└── .docforge/manifest.json # provenance index — which source files each doc section cites
+<repo root>/
+├── .docforge/manifest.json    # provenance index — which source files each doc section cites
+└── docs/
+    ├── README.md              # index and audience router — the one entry point
+    ├── product/               # for business readers and external consumers
+    │   ├── business-analyst/  # (audience overlay) business rules, flows, traceability
+    │   └── product-owner/     # (audience overlay) feature value, metrics, release notes
+    ├── architecture/          # for engineers and technical reviewers
+    │   ├── overview.md        # the code map
+    │   ├── decisions/         # ADRs — the durable "why"
+    │   └── dependencies.md    # third-party inventory and integration contracts
+    ├── engineering/           # for contributors: setup, testing, conventions
+    ├── operations/            # for whoever is on call: runbooks, observability
+    ├── reference/             # lookup material: config, errors, limitations, glossary
+    ├── security/              # threat model, data handling, disclosure process
+    └── contributing/          # workflow, review, issue and change templates
 ```
 
 Two naming rules prevent most drift: **every folder has a `README.md` acting as its index** (forges render it automatically, so the folder explains itself when browsed), and **folder names are plural nouns for collections** (`decisions/`, `runbooks/`, `contracts/`) **and singular for single-subject areas** (`security/`, `product/`, `business-analyst/`).

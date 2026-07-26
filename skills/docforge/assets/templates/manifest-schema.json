@@ -1,5 +1,5 @@
 {
-  "_comment": "Template for docs/.docforge/manifest.json. Delete this key in real use. Rebuild with `python scripts/check_provenance.py --rebuild-manifest` rather than hand-editing once documents carry frontmatter.",
+  "_comment": "Template for .docforge/manifest.json. Delete this key in real use. Rebuild with `python scripts/check_provenance.py --rebuild-manifest` rather than hand-editing once documents carry frontmatter.",
   "generated_at": "{{ISO-8601 timestamp of the last rebuild}}",
   "documents": {
     "{{docs/product/business-analyst/business-rules.md}}": {

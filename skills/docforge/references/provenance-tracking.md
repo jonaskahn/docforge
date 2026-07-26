@@ -38,7 +38,7 @@ docforge_provenance:
 
 ### 2. The repo-level manifest
 
-`docs/.docforge/manifest.json` aggregates every document's frontmatter into one file, so a full staleness sweep doesn't require opening every document in the tree:
+`.docforge/manifest.json` aggregates every document's frontmatter into one file, so a full staleness sweep doesn't require opening every document in the tree:
 
 ```json
 {
@@ -61,7 +61,7 @@ docforge_provenance:
 }
 ```
 
-Treat per-document frontmatter as the source of truth and the manifest as a derived index — rebuild it with `scripts/check_provenance.py --rebuild-manifest` rather than hand-editing both. Commit `docs/.docforge/manifest.json`; it is small, plain text, and lets a teammate check staleness without re-running any generation.
+Treat per-document frontmatter as the source of truth and the manifest as a derived index — rebuild it with `scripts/check_provenance.py --rebuild-manifest` rather than hand-editing both. Commit `.docforge/manifest.json`; it is small, plain text, and lets a teammate check staleness without re-running any generation.
 
 ## The staleness algorithm
 
@@ -88,7 +88,7 @@ Whole-document regeneration is warranted only when most sections are stale simul
 ## Running the check
 
 ```
-python scripts/check_provenance.py --manifest docs/.docforge/manifest.json
+python scripts/check_provenance.py --manifest .docforge/manifest.json
 ```
 
 Reports one line per document: `FRESH`; `PARTIAL — <section-id> (<path> changed)`; or `STALE — no section granularity recorded` (this last case is for pre-existing docs adopted into the manifest without frontmatter — see below). Add `--flow <name>` to filter to one business flow, `--json` for machine-readable output in a CI check, `--rebuild-manifest` to regenerate the manifest from every document's frontmatter after a manual edit.

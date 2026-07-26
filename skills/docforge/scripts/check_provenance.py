@@ -5,10 +5,10 @@ working-tree content to decide whether a docforge document (or one
 of its sections) needs to be rewritten.
 
 Usage:
-    python check_provenance.py --manifest docs/.docforge/manifest.json
-    python check_provenance.py --manifest docs/.docforge/manifest.json --flow order-approval-threshold
-    python check_provenance.py --manifest docs/.docforge/manifest.json --json
-    python check_provenance.py --rebuild-manifest --docs-dir docs --manifest docs/.docforge/manifest.json
+    python check_provenance.py --manifest .docforge/manifest.json
+    python check_provenance.py --manifest .docforge/manifest.json --flow order-approval-threshold
+    python check_provenance.py --manifest .docforge/manifest.json --json
+    python check_provenance.py --rebuild-manifest --docs-dir docs --manifest .docforge/manifest.json
 
 Exit code is 0 if everything is FRESH, 1 if anything is PARTIAL/STALE/MISSING,
 2 on a usage or IO error — so this can gate a CI job.
@@ -137,7 +137,7 @@ def check(manifest: dict, repo_root: Path, flow_filter: str | None) -> tuple[lis
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--manifest", type=Path, default=Path("docs/.docforge/manifest.json"))
+    ap.add_argument("--manifest", type=Path, default=Path(".docforge/manifest.json"))
     ap.add_argument("--repo-root", type=Path, default=Path("."))
     ap.add_argument("--flow", default=None, help="Limit the check to one section id")
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON")

@@ -1,6 +1,6 @@
 {
   "name": "docforge",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Design and generate a repository's documentation set — docs/ tree, README and ARCHITECTURE, decision records, limitations register, dependency inventory, security policy, error catalogs, data contracts, runbooks, plus Business Analyst and Product Owner audience overlays. Grounded in a knowledge-graph analysis of the actual source, with git-hash provenance so staleness is checked, not guessed. Host-neutral, with multi-repo collection discovery for diligence.",
   "author": {
     "name": "Jonas Kahn",
