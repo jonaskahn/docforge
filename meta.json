@@ -1,0 +1,51 @@
+{
+  "name": "docforge",
+  "version": "0.1.0",
+  "description": "Design and generate a repository's documentation set — docs/ tree, README and ARCHITECTURE, decision records, limitations register, dependency inventory, security policy, error catalogs, data contracts, and runbooks. Grounded in a knowledge-graph analysis of the actual source. Host-neutral.",
+  "author": {
+    "name": "Jonas Kahn",
+    "url": "https://github.com/jonaskahn"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/jonaskahn/docforge",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jonaskahn/docforge.git"
+  },
+  "skills": {
+    "root": "skills/docforge",
+    "entries": [
+      {
+        "id": "docforge",
+        "path": "skills/docforge/SKILL.md",
+        "name": "docforge",
+        "description": "Design and generate a repository's documentation set — the docs/ tree, README and ARCHITECTURE, decision records (ADRs), a known-limitations register, a third-party dependency inventory, security policy, API error catalogs, data contracts and runbooks. Grounds every document in a knowledge-graph analysis of the actual source before writing, so nothing is invented. Host-neutral — works on any git host and never hardcodes one forge's paths.",
+        "tags": [
+          "agent-skill",
+          "agent-skills",
+          "documentation",
+          "docs",
+          "readme",
+          "architecture",
+          "adr",
+          "decision-records",
+          "diligence",
+          "knowledge-graph"
+        ]
+      }
+    ]
+  },
+  "installation": {
+    "command": "npx skills add jonaskahn/docforge",
+    "global_flag": "-g",
+    "yes_flag": "-y"
+  },
+  "agents": [
+    "claude-code",
+    "codex",
+    "opencode",
+    "gemini-cli"
+  ],
+  "format": "agentskills",
+  "format_version": "1.0"
+}

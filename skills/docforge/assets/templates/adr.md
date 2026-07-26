@@ -1,0 +1,33 @@
+# {{NNNN}}. {{Decision stated as an outcome}}
+
+- **Status:** {{proposed|accepted|superseded by [NNNN](NNNN-slug.md)|deprecated}}
+- **Date:** {{YYYY-MM-DD}}
+- **Deciders:** {{roles or names}}
+
+## Context and problem statement
+
+{{What forced a decision, and the constraints that were real at the time. Written
+so it makes sense to someone who joins in two years knowing none of the history.}}
+
+## Considered options
+
+- **{{Option A}}** — {{one line}}
+- **{{Option B}}** — {{one line}}
+- **{{Option C}}** — {{one line}}
+
+## Decision
+
+We chose **{{option}}**, because {{the reasoning that was actually decisive}}.
+
+## Consequences
+
+**Positive:** {{what this buys}}
+
+**Negative:** {{what it costs — name the real trade-off}}
+
+**Neutral:** {{what changes without being better or worse}}
+
+## Revisit if
+
+{{The conditions that should trigger reconsideration: a scale threshold, a
+dependency's end of life, a change in team size or requirements.}}

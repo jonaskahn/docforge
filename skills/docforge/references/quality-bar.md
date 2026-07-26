@@ -1,0 +1,85 @@
+# Quality bar
+
+Run this before presenting anything. The failure mode this guards against is a tree that looks complete — right folders, right filenames, confident prose — while being unusable, unverified, or subtly invented.
+
+## The four tests
+
+Each targets one audience. A documentation set that fails any of them fails for that audience entirely, regardless of how good the rest is.
+
+**1. The onboarding test.** A competent engineer who has never seen this repo starts at the root README and reaches a running local instance without asking a human a question. If any step requires tribal knowledge — an unlisted credential, an undocumented service, a version constraint discovered by failing — `engineering/setup.md` is incomplete.
+
+**2. The location test.** Pick five things a maintainer does regularly: fix a bug in module X, add a configuration value, respond to an alert, add a dependency, change a public interface. For each, can a reader find the relevant document in under a minute starting from `docs/README.md`? If not, the index is decorative or the taxonomy is wrong.
+
+**3. The reviewer test.** Someone assessing this repo for risk asks: what does it depend on, what are its known weaknesses, how is security handled, why is it built this way. Every one of those has an answer at a findable path. "It's in the code" is not an answer; neither is a document that exists but is empty.
+
+**4. The stranger test.** A non-engineer reads `product/overview.md` and can explain what this repo does and why it exists. If they cannot, the document is written for people who already know.
+
+## Verification checklist
+
+### Accuracy — the non-negotiable category
+
+- [ ] Every command shown has been run, or is explicitly marked unverified
+- [ ] Version numbers match the manifest files, not memory
+- [ ] Environment variables were found by searching for their accessor in code, not copied from an old example file
+- [ ] File and module paths referenced in the code map exist
+- [ ] External services listed are actually called by this code
+- [ ] Nothing describes intended architecture as though it were shipped
+- [ ] Every unverifiable claim carries a visible `> TODO(owner): …` rather than a plausible guess
+
+### Grounding
+
+- [ ] A knowledge graph was built or refreshed before writing, and the code map came from it
+- [ ] Modules named in the code map exist as nodes in the graph
+- [ ] Stated invariants are supported by absent edges, not by assumption
+- [ ] Where the graph was unavailable, the response says so and placeholders were widened accordingly
+
+### Structure
+
+- [ ] Every folder has a `README.md`
+- [ ] Every document is reachable from `docs/README.md` in at most two hops
+- [ ] All internal links are relative and resolve
+- [ ] No document sits in a folder whose audience it does not serve
+- [ ] Root files are thin pointers with no content duplicated from `docs/`
+- [ ] Naming follows the conventions in `docs-tree.md` — kebab-case, plural collections, no `misc/`
+
+### Host neutrality
+
+- [ ] No forge name appears in prose outside `docs/contributing/`
+- [ ] Diagrams are Mermaid or committed images, each preceded by a prose description
+- [ ] Callouts use portable blockquote syntax unless a platform commitment is documented
+- [ ] Links are relative, not absolute URLs to the current host
+
+### Completeness for the chosen tier
+
+- [ ] Every file the tier requires exists and is filled, not templated
+- [ ] Overlay documents for the repo's actual type are present
+- [ ] `reference/limitations.md` is not empty — every real system has limitations, and an empty register means nobody looked
+- [ ] Decision records cover the choices a reviewer would ask about
+- [ ] Dependency inventory covers direct runtime dependencies and external services
+
+### Maintainability
+
+- [ ] Nothing hand-written duplicates a machine-readable source of truth
+- [ ] Generated documentation is marked as generated, with the regeneration command
+- [ ] Documents that go stale carry a `_Last reviewed: YYYY-MM-DD_` line
+- [ ] No secret, credential, internal hostname or personal name-as-contact appears anywhere
+
+## Automated checks worth adding to CI
+
+Documentation decays silently unless something objects. The cheap wins, in rough order of value per effort:
+
+1. **Link checking** on every change — catches the most common decay.
+2. **Placeholder detection** — fail if `TODO(owner)` or template markers survive into the default branch beyond an agreed grace period.
+3. **Forge-name grep** outside `docs/contributing/`.
+4. **Spec validation** — if an API spec is generated, verify it regenerates identically to what is committed.
+5. **Config drift** — compare documented environment variables against those the code reads.
+6. **Setup verification** — periodically run the documented setup steps on a clean container. Expensive, and it catches the failure that matters most.
+
+## Anti-patterns to check for explicitly
+
+- **Templated husk**: correct headings, no content. Delete the section or fill it; an empty heading is a false promise.
+- **Rationale in the code map**: opinions in `architecture/overview.md` make it churn. Move them to a decision record.
+- **The everything document**: a 2,000-line README nobody reads past line 40.
+- **Aspirational documentation**: describing the target architecture as current.
+- **Silent staleness**: no review dates anywhere, so a reader cannot judge what to trust.
+- **Duplicated truth**: the same fact in the root README, the docs index and the product overview, already diverging.
