@@ -19,7 +19,7 @@ docforge_provenance:
 ### Rule: {{plain-language rule name}}
 
 **Statement:** {{the rule, in one sentence a business stakeholder would recognize}}
-**Enforced in:** `{{src/module::function}}`
+**Enforced in:** {{the module/file by path — describe the behaviour; never a `module::function` symbol or line number}}
 **Applies to:** {{which flow, which entity}}
 **Exceptions:** {{override conditions, if any — state "none found" rather than omitting the field}}
 **Source:** verified via `/understand-chat "what conditions gate {{rule}}"` against `{{flow-name}}`, {{date}}

@@ -68,7 +68,7 @@ Each targets one audience. A documentation set that fails any of them fails for 
 ### Durability and composition
 
 - [ ] **Durability:** would a same-behaviour refactor (rename, extract, move) falsify this document? If yes, it is written too close to the code — rewrite at flow/behaviour level
-- [ ] **No code:** no pasted code or code-like snippets in prose (except value *shape* in `errors.md`/`configuration.md`); no line-number links; no claim anchored to an internal/private symbol
+- [ ] **No code:** no pasted code or code-like snippets in prose (except value *shape* in `errors.md`/`configuration.md`, and before/after snippets in a library `product/migration/vN-to-vM.md` guide); no line-number links; no claim anchored to an internal/private symbol
 - [ ] **No duplication:** every fact stated once; the same sentence does not appear in two files; definitions live only in `glossary.md`
 - [ ] **Completeness:** every aligned topic `README.md` stands alone — each subfile fact is summarized and linked from it, nothing dropped
 - [ ] **Notices common:** every warning, critical constraint or irreversible behaviour appears in the topic `README.md`, not only in an audience subfile

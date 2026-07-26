@@ -15,7 +15,7 @@ The BA's primary artifact. One entry per rule, sourced from the knowledge graph 
 ```markdown
 ### Rule: <plain-language name>
 **Statement:** <the rule, in one sentence a business stakeholder would recognize>
-**Enforced in:** `src/<module>::<function>` (symbol name, not a line-number link — links rot on refactor)
+**Enforced in:** <the `<module>` module, by path — describe the behaviour; never a private `module::function` symbol or line number, both of which a refactor breaks (durability rule R1 in `document-composition.md`)>
 **Applies to:** <which flow, which entity>
 **Exceptions:** <any override conditions — usually the part a BA most needs and the code most obscures>
 **Source:** verified via `/understand-chat "what conditions gate <rule>"` against `<flow-name>`, <date>
@@ -31,8 +31,8 @@ The business process as actually executed by the system — business-language st
 
 ```markdown
 ### Flow: <business name, e.g. "Order approval">
-1. <step, business language> — enforced by `<symbol>`
-2. <step> — enforced by `<symbol>`
+1. <step, business language> — enforced in the `<module>` module (by path, not a private symbol)
+2. <step> — enforced in the `<module>` module
 ...
 **Decision points:** <where the flow branches, on what business condition — link to the relevant entry in business-rules.md rather than restating it>
 ```

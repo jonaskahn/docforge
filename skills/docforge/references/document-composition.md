@@ -87,9 +87,11 @@ file move — must not falsify any document. If it does, the document was writte
 the code.
 
 **R1 — No code, durable references.**
-- Never paste code or code-like snippets into prose documents. (The only exceptions are
-  `reference/errors.md` and `reference/configuration.md`, which may show a value's *shape* —
-  `sk_live_<32 hex>` — never logic.)
+- Never paste code or code-like snippets into prose documents. Three bounded exceptions:
+  `reference/errors.md` and `reference/configuration.md` may show a value's *shape* —
+  `sk_live_<32 hex>`, never logic; and a library `product/migration/vN-to-vM.md` guide may
+  show before/after snippets, because it documents a frozen version transition rather than
+  live behaviour and the snippet is the migration instruction itself. Nowhere else.
 - Never link a line number, and never hang a claim on an internal or private symbol whose
   rename would break the doc.
 - **Do** name files and modules by path to locate a thing ("handled in the `<module>`

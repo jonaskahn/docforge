@@ -18,7 +18,7 @@ docforge_provenance:
 ### {{Feature}}
 
 **Metric:** {{what's measured}}
-**Instrumented via:** `{{symbol/event name}}`, or "not instrumented — flag"
+**Instrumented via:** {{the emitted `<event/metric name>` — a stable event/metric name is a public contract, never a private symbol; or the `<module>` by path, or "not instrumented — flag"}}
 **Target:** {{only if stated by a stakeholder; omit this line entirely rather than guess}}
 
 <!-- Repeat per feature with a real, checkable metric. Skip features with no

@@ -29,7 +29,8 @@ One entry per feature or epic that has a stated success metric — only where th
 ```markdown
 ### <Feature>
 **Metric:** <what's measured>
-**Instrumented via:** `<symbol/event name>`, or "not instrumented — flag"
+**Instrumented via:** <the emitted `<event/metric name>` — a stable event or metric name is a public contract, safe to cite; never a private `module::function` symbol. If none exists, name the `<module>` and write "not instrumented — flag">
+
 **Target:** <only if stated by a stakeholder; omit the row rather than guess>
 ```
 

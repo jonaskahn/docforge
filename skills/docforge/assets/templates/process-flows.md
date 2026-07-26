@@ -17,8 +17,8 @@ docforge_provenance:
 
 ### Flow: {{business name, e.g. "Order approval"}}
 
-1. {{step, in business language}} — enforced by `{{symbol}}`
-2. {{step}} — enforced by `{{symbol}}`
+1. {{step, in business language}} — enforced in {{the `<module>` by path, not a private symbol}}
+2. {{step}} — enforced in {{the `<module>` by path}}
 3. {{...}}
 
 **Decision points:** {{where the flow branches, and on what business condition}} — see [business-rules.md](./business-rules.md#{{rule-slug}})
