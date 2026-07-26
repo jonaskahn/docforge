@@ -40,13 +40,14 @@ docs/
 │   ├── business-analyst/           (audience overlay) audience-specific BA documents
 │   └── product-owner/              (audience overlay) audience-specific PO documents
 │
-├── flows/                          ● aligned topic folders, one per business flow
+├── flows/                          ● one file per business flow, flat by default
 │   ├── README.md                   ● index of every flow
-│   └── <flow>/                     ● document-as-folder (see document-composition.md)
-│       ├── README.md               ● common: L0 what+why, L1 flow plain, all notices
-│       ├── business-analyst.md     ● BA depth: rules, thresholds, exceptions (if any)
-│       ├── engineering.md          ● engineering depth: mechanism, failure modes (if any)
-│       └── product-owner.md        ● PO depth: value, metrics (if any)
+│   ├── <flow>.md                   ● flat: L0 what+why, L1 flow plain, all notices, diagram
+│   └── <flow>/                     ● promoted only once a subfile below has real content
+│       ├── README.md               ● common: same content the flat file held
+│       ├── business-analyst.md     ● BA depth: rules, thresholds, exceptions (only if written)
+│       ├── engineering.md          ● engineering depth: mechanism, failure modes (only if written)
+│       └── product-owner.md        ● PO depth: value, metrics (only if written)
 │
 ├── architecture/                   ▲ engineers, technical reviewers
 │   ├── README.md                   ▲ index — routes to high-level / low-level / concepts
@@ -56,9 +57,10 @@ docs/
 │   ├── dependencies.md             ● third-party inventory + integration contracts
 │   ├── tech-debt.md                ● known shortcuts, cost, remediation
 │   ├── constraints.md              ● hard architectural limits, ceilings, non-goals
-│   ├── concepts/                   ● deep-dive subsystems, one folder each
+│   ├── concepts/                   ● deep-dive subsystems, flat by default (same rule as flows/)
 │   │   ├── README.md
-│   │   └── <subsystem>/            ● document-as-folder: README + engineering.md
+│   │   ├── <subsystem>.md          ● flat: the whole concept, until a deep-dive is earned
+│   │   └── <subsystem>/            ● promoted only once engineering.md has real content
 │   ├── decisions/                  ● ADRs
 │   │   ├── README.md               ● index with status column
 │   │   └── 0001-<slug>.md
@@ -106,7 +108,7 @@ docs/
 
 **`product/`** — Written for someone who will never read the code. No jargon without a gloss, no implementation detail, no code blocks except example inputs and outputs a customer would recognize. If a sentence requires knowing the stack to parse, it belongs in `architecture/`.
 
-**`flows/`** — Aligned topic folders, one per business flow (`/understand-domain` enumerates them). Each is a document-as-folder: a plain `README.md` every audience reads, plus per-reader deep-dive subfiles created only where real depth exists. The shared body and every critical notice live in the README; depth lives in the subfiles. See `document-composition.md`.
+**`flows/`** — One file per business flow (`/understand-domain` enumerates them — never hand-typed, and gated on `scripts/check_preconditions.py` reporting the domain graph READY). Each flow starts as a flat `<flow>.md`: plain content every audience reads, a diagram once the flow has more than one step, every critical notice. It is promoted to a `<flow>/` folder with `README.md` + per-reader deep-dive subfiles only in the same pass that writes real subfile content — never a folder created ahead of the content that justifies it. See `document-composition.md`.
 
 **`architecture/`** — The system as built, at two altitudes. `high-level.md` is the stable map — system context, building blocks, boundaries — that changes once or twice a year. `low-level.md` and `concepts/<subsystem>/` carry component decomposition and deep mechanism on their own, faster lifecycle. `tech-debt.md` and `constraints.md` record shortcuts and hard limits respectively (distinct from `reference/limitations.md`, which is feature gaps). Rationale goes in `decisions/`; anything that churns per release belongs in `reference/` or is generated.
 
@@ -159,11 +161,13 @@ Three techniques make the difference:
 - **Keep depth out of `high-level.md`.** Mechanism, algorithm and failure modes belong in
   `low-level.md` or a `concepts/<subsystem>/engineering.md` deep-dive, on their own lifecycle.
 
-### `docs/flows/<flow>/README.md` — an aligned topic document
+### `docs/flows/<flow>.md` (or, once promoted, `<flow>/README.md`) — an aligned topic document
 
-The common document for one business flow: L0 (what and why), L1 (how it flows, in plain
-language), every critical notice, and a one-line gist plus link for each deep-dive subfile.
-It must stand alone — a reader who never opens a subfile still understands the flow. Template:
+The document for one business flow: L0 (what and why), L1 (how it flows, in plain language,
+with a Mermaid diagram once there's more than one step or a branch), every critical notice.
+Standalone — a reader who never opens a deep-dive subfile still understands the flow. Only
+promote to a folder with subfiles in the pass that actually writes their content; a folder
+with a README and no subfile, or a link to a subfile that doesn't exist, is a defect. Template:
 `topic-readme.md`. Full mechanics in `document-composition.md`.
 
 ### `docs/engineering/setup.md`

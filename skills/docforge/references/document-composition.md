@@ -10,14 +10,28 @@ capability — not by audience. Because most of a topic is shared, the shared bo
 main document and audience-specific depth is pushed out into subfiles. The document is what
 presents; the audience is a filter on how deep a given reader goes.
 
-## The document-as-folder pattern
+## Flat by default, folder only when earned
 
-Each topic that more than one audience cares about is a **folder**. The common document is
-`README.md`; audience deep-dives are sibling files. This fits the existing rule that every
-folder carries a `README.md` index.
+Each topic that more than one audience cares about — a flow, a subsystem concept — starts as
+a **single flat file**: `flows/<flow>.md` or `architecture/concepts/<subsystem>.md`. This file
+carries everything most topics ever need: L0 (what and why), L1 (how it flows, in plain
+language), every notice, a diagram, error modes. Most topics never earn more than this, and a
+folder built for a topic that never gets a deep-dive is pure overhead — it is also exactly how
+a stale "Go deeper → engineering.md" link ends up pointing at a file nobody wrote.
+
+**Promotion to a folder happens atomically, in the same pass that writes the subfile — or not
+at all.** A topic moves from `<topic>.md` to `<topic>/README.md` + subfile(s) only at the
+moment you are actually producing L2/L3 content for a specific audience. The folder and the
+subfile are created together, in the same edit sequence. Never create the folder, add a "Go
+deeper" link, and leave the target for a later pass — if you are not writing the subfile's
+content right now, do not create the folder and do not reference a file that isn't there.
 
 ```
-<topic>/                       flows/<flow>/  or  architecture/concepts/<subsystem>/
+Flat (default — no deep-dive earned yet):
+flows/login.md                 the whole topic in one file: L0, L1, notices, diagram, errors
+
+Promoted (only once a subfile carries real content):
+flows/signup/                  flows/<flow>/  or  architecture/concepts/<subsystem>/
 ├── README.md          the common document — plain, easy, COMPLETE. Everyone reads it.
 │                        · L0: what it is and why
 │                        · L1: how it flows, in plain language
@@ -28,11 +42,26 @@ folder carries a `README.md` index.
 └── product-owner.md      PO depth — value, metrics, release framing
 ```
 
-- **README carries L0 + L1; subfiles carry L2 + L3.** See `depth-and-audience.md` for the
-  ladder.
-- **A subfile exists only when real depth exists for that reader.** An empty audience file
-  is the scaffold-dump anti-pattern in miniature — omit it, and drop its link.
-- **Templates:** `assets/templates/topic-readme.md` and `assets/templates/audience-deepdive.md`.
+- **README/flat file carries L0 + L1; subfiles carry L2 + L3.** See `depth-and-audience.md`
+  for the ladder.
+- **No promise without content.** A flat file never links to a subfile path that does not
+  exist in this same pass. A subfile exists only when real depth exists for that reader — an
+  empty or dangling audience file is the scaffold-dump anti-pattern in miniature.
+- **Migrating up is mechanical, not incremental.** When a later pass finds real depth an
+  earlier flat file lacked: move `<topic>.md` → `<topic>/README.md` verbatim, write the new
+  subfile with real content, and update the one incoming reference (the flows/concepts index).
+  All of that lands in one pass — there is no valid intermediate state where the folder exists
+  without its subfile.
+- **A folder holding only a README is a defect, not a stage.** If you find one — your own
+  work or inherited — either the promotion happened without content (demote back to a flat
+  file) or the content is simply missing (write it now, in this pass). `docs_scaffold.py
+  --audit` flags this as `folder-only-readme`.
+- **Diagrams are not optional for a flow with more than one step or any branch/error path.**
+  Include a Mermaid sequence or flowchart diagram showing the step order and decision points.
+  The prose above it must still stand alone without the diagram — the diagram supplements,
+  per durability rule R1; it never carries information the prose omits.
+- **Templates:** `assets/templates/topic-readme.md` (used for both the flat file and, once
+  promoted, the folder's `README.md`) and `assets/templates/audience-deepdive.md`.
 
 ## Two invariants
 
@@ -94,8 +123,8 @@ For any document or section, in order:
 2. **Is it a lookup fact (a term, a value, a code) rather than a narrative?**
    - Yes → it belongs in the **shared-fact spine** (`glossary.md`, `configuration.md`,
      `dependencies.md`), stated once, linked from everywhere.
-   - No → it belongs in an **aligned topic folder**: the common part in `README.md`, the
-     per-reader depth in a subfile.
+   - No → it belongs in an **aligned topic**: the flat file if no deep-dive is being written
+     now, or the common `README.md` plus a per-reader subfile once one is.
 3. **Is it a warning or critical constraint?** → it goes in the README regardless of the
    above (invariant 2), with any expansion in the relevant subfile.
 

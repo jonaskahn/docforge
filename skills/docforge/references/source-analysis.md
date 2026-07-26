@@ -86,14 +86,17 @@ evidence for it rather than a belief. Confirm the intent before asserting it:
 /understand-chat Does anything under core/ import from adapters/, or perform I/O directly?
 ```
 
-### `flows/<flow>/` — aligned flow folders
+### `flows/<flow>.md` — aligned flow documents, flat by default
 
-Enumerate the flows first — `/understand-domain` returns the domains, flows and steps, and
-that list *is* the set of flow folders to build. For each flow, source the README's plain
-steps from `/understand-domain`, the `business-analyst.md` rules from
-`/understand-chat "what business rules gate <flow>"`, and the `engineering.md` mechanism from
-`/understand-explain <flow module>`. See `depth-and-audience.md` for the full command-to-cell
-mapping and `document-composition.md` for what goes in the README versus a subfile.
+First confirm `python scripts/check_preconditions.py --repo <path> --need domain` reports
+READY — flows are never enumerated by hand. Then `/understand-domain` returns the domains,
+flows and steps, and that list *is* the set of flow documents to build, one flat `<flow>.md`
+each. For each flow, source the plain steps from `/understand-domain`. Only promote a flow to
+`<flow>/README.md` + subfile in the same pass you also source and write: the
+`business-analyst.md` rules from `/understand-chat "what business rules gate <flow>"`, or the
+`engineering.md` mechanism from `/understand-explain <flow module>`. See `depth-and-audience.md`
+for the full command-to-cell mapping and `document-composition.md` for the flat-file default
+and the atomic promotion rule.
 
 ### `architecture/data-flow.md`
 
@@ -205,7 +208,9 @@ The plugin may not be installed, the source may not be reachable from where you 
 
 **Say so, once, plainly.** "I don't have the knowledge graph for this repo, so the code map is based on direct inspection of <what you read>." The reader needs to know how the claims were sourced.
 
-**Fall back deliberately.** Read manifests, entry points, directory structure, CI configuration and the largest source files. Use `git log` for history. This is adequate for the spine and thin for anything requiring semantic understanding — invariants, domains, flows.
+**Fall back deliberately — for architecture and spine documents only.** Read manifests, entry points, directory structure, CI configuration and the largest source files. Use `git log` for history. This is adequate for `architecture/high-level.md`, `engineering/setup.md`, `reference/limitations.md` and the rest of the spine.
+
+**Flows, `product/overview.md`, `product/capabilities.md`, and BA/PO content have no fallback.** These require the domain graph specifically (`/understand-domain`'s output), not just the knowledge graph, and there is no adequate substitute for it — `scripts/check_preconditions.py --need domain` exists to make this a hard stop rather than a judgment call. If it reports MISSING, do not write these documents from route files, screen names, or inference; tell the user which command to run and wait.
 
 **Still write what direct inspection supports; token only the genuinely external.** Losing the graph costs you semantic depth, not the whole document — read the manifests, entry points and largest source files and write from those. A fact you could have *confirmed by asking a maintainer* (contact, on-call, prod URL, org SLA) becomes a typed `<UPPER_SNAKE>` token; a fact you could have *derived by reading more code* is still yours to derive. Do not downgrade derivable content to a placeholder just because the graph is absent — under-claiming a knowable fact is its own failure. Over-claiming remains the worst outcome.
 

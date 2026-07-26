@@ -7,10 +7,11 @@ Two modes:
             assets/templates/ where a template exists
 
   audit     report what is missing, what still holds unfilled {{…}} scaffold
-            markers, which internal links are broken, and where forge-specific
+            markers, which internal links are broken, where forge-specific
             language has leaked into documents that are supposed to be
-            host-neutral. Typed <UPPER_SNAKE> human-fill tokens are listed
-            separately and do not count as defects.
+            host-neutral, and which flow/concept folders were promoted without
+            a real subfile (folder-only-readme). Typed <UPPER_SNAKE> human-fill
+            tokens are listed separately and do not count as defects.
 
 Examples
 --------
@@ -131,9 +132,9 @@ OVERLAYS: dict[str, list[tuple[str, str | None]]] = {
 
 FOLDER_BLURBS = {
     "docs/product": "What this does and why it exists — written for business readers.",
-    "docs/flows": "One folder per business flow. Each has a plain README plus per-reader deep-dive subfiles.",
+    "docs/flows": "One file per business flow, flat by default; promoted to a folder only once a real per-reader deep-dive is written.",
     "docs/architecture": "How the system is built, and why — high-level map, low-level detail, concepts, decisions.",
-    "docs/architecture/concepts": "Deep-dive subsystems. One folder each: a common README plus an engineering deep-dive.",
+    "docs/architecture/concepts": "Deep-dive subsystems, flat by default; promoted to a folder only once a real engineering deep-dive is written.",
     "docs/architecture/decisions": "Architecture decision records. Append-only; superseded records keep their number.",
     "docs/architecture/contracts": "Data contracts for every dataset consumed or published.",
     "docs/engineering": "Setup, testing, conventions and release — everything a contributor needs.",
@@ -246,6 +247,7 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
     findings: dict[str, list[str]] = {
         "missing": [], "unfilled scaffold": [], "empty": [],
         "broken links": [], "forge leakage": [], "no review date": [],
+        "folder-only-readme": [],
     }
     # Informational, not a defect: typed <UPPER_SNAKE> tokens are the sanctioned
     # human-fill slots for genuinely external facts. Listed so a reviewer knows
@@ -256,6 +258,20 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
     for rel in sorted(wanted):
         if not (repo / rel).exists():
             findings["missing"].append(rel)
+
+    # A flow or concept promoted to a folder but never given a real subfile: the
+    # exact shape that produces a dangling "Go deeper" link. Flat files are the
+    # default and carry no defect; a folder must earn its existence with content.
+    for parent in ("docs/flows", "docs/architecture/concepts"):
+        parent_dir = repo / parent
+        if not parent_dir.is_dir():
+            continue
+        for child in sorted(parent_dir.iterdir()):
+            if not child.is_dir() or child.name.startswith("_"):
+                continue
+            siblings = [p for p in child.glob("*.md") if p.name != "README.md"]
+            if (child / "README.md").exists() and not siblings:
+                findings["folder-only-readme"].append(f"{child.relative_to(repo).as_posix()}/")
 
     for path in files:
         rel = path.relative_to(repo).as_posix()

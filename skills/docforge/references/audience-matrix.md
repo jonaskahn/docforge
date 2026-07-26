@@ -3,7 +3,7 @@
 Purpose: decide, for any document or fact, which of three classes it belongs to and which
 folder owns it — so a subject read by several audiences is written once, not re-stated in
 parallel per-audience folders. Read `document-composition.md` for the mechanics (the
-document-as-folder pattern, the invariants, the durability rules) and `depth-and-audience.md`
+flat-by-default/atomic-promotion pattern, the invariants, the durability rules) and `depth-and-audience.md`
 for how deep each reader goes.
 
 ## Three classes of document
@@ -13,7 +13,7 @@ one audience need this exact fact?**
 
 | Class | Serves | Structure | Examples |
 |---|---|---|---|
-| **Aligned** — write once, many read | 2+ audiences need the same subject | Topic folder: common `README.md` + audience deep-dive subfiles | flow folders (`flows/<flow>/`), architecture concept folders, `product/overview.md`, `reference/limitations.md` |
+| **Aligned** — write once, many read | 2+ audiences need the same subject | Flat file by default (`flows/<flow>.md`); promoted to a topic folder — common `README.md` + audience deep-dive subfiles — only in the pass that writes real subfile content | flow documents, architecture concepts, `product/overview.md`, `reference/limitations.md` |
 | **Audience-specific** — one reader | exactly one audience | A plain document in that audience's folder | PO `success-metrics.md`, `release-notes.md`; BA `requirements-traceability.md`; `engineering/setup.md`; `operations/runbooks/`; `security/threat-model.md` |
 | **Shared-fact spine** — single source | everyone, as lookup not narrative | One document, stated once, linked everywhere | `reference/glossary.md`, `architecture/dependencies.md`, `reference/configuration.md` |
 
@@ -39,8 +39,8 @@ merged into one "business" folder. They read different things in a different ord
 | What ships next, and in what order? | No | Yes |
 | What can a customer expect right now, in plain language? | No (that is `product/overview.md`) | Yes, as release notes |
 
-So they are separate readers with separate **audience-specific** documents — and, inside an
-aligned flow folder, separate deep-dive subfiles (`business-analyst.md`, `product-owner.md`).
+So they are separate readers with separate **audience-specific** documents — and, once a flow
+is promoted to a folder, separate deep-dive subfiles (`business-analyst.md`, `product-owner.md`).
 One folder averaged across both serves neither.
 
 ## Fact ownership
@@ -50,11 +50,11 @@ Everywhere else links to it; nothing is pasted twice.
 
 | Fact | Owner | Linked from |
 |---|---|---|
-| Business rule logic (thresholds, eligibility, exceptions) | flow folder `business-analyst.md` | PO subfile links; does not restate |
-| Feature exists and what it is for | flow folder `README.md` (L0) + PO `feature-catalog.md` for the catalog view | BA traceability links to the feature |
+| Business rule logic (thresholds, eligibility, exceptions) | flow's `business-analyst.md`, once promoted | PO subfile links; does not restate |
+| Feature exists and what it is for | flow document (L0) + PO `feature-catalog.md` for the catalog view | BA traceability links to the feature |
 | Domain term definition | `reference/glossary.md` (spine) | every document links; none restates |
-| Flow steps and decision points | flow folder `README.md` (L1, plain) | subfiles link for depth |
-| Feature mechanism (how it runs) | flow folder `engineering.md` | README carries a one-line gist + link |
+| Flow steps and decision points | flow document (L1, plain) | subfiles link for depth, once promoted |
+| Feature mechanism (how it runs) | flow's `engineering.md`, once promoted | flow document carries a one-line gist + link |
 | Success metric / KPI target | PO `success-metrics.md` | BA does not need it — omit, don't cross-link |
 | Roadmap timing | `product/roadmap.md` (spine) | PO README links; does not duplicate the dated table |
 | Warning / critical constraint | topic `README.md` (invariant 2) | subfile may expand it |
@@ -67,8 +67,10 @@ Everywhere else links to it; nothing is pasted twice.
 - Build PO depth when the repo ships user-facing features with an independent release
   lifecycle someone actively plans against.
 - Skip either, and say so explicitly, when the repo is pure infrastructure or a library with
-  no embedded business logic and no independent release cadence. An unrequested, empty
-  audience file is the same anti-pattern as an unfilled scaffold.
+  no embedded business logic and no independent release cadence. An unrequested, empty, or
+  dangling (linked-but-missing) audience file is the same anti-pattern as an unfilled scaffold.
+- Building a deep-dive means writing it and promoting the flow to a folder in the same pass —
+  never adding the link first and the file later. See `document-composition.md`.
 
 Provenance is tracked per document and per section regardless of class — see
 `provenance-tracking.md`. Alignment governs prose (write once, link) not provenance.

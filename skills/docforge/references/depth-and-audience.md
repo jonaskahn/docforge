@@ -36,10 +36,10 @@ The knowledge graph gives breadth (the map). Depth comes from the deeper command
 | `architecture/low-level.md` (components) | L1–L2 | graph + `/understand-explain <path>` | component decomposition |
 | `architecture/concepts/<subsystem>/engineering.md` | L2–L3 | `/understand-explain <module>` | internals, how it actually works |
 | invariants, failure modes, concurrency | L3 | `/understand-chat "what breaks <x> / concurrency assumptions"` | the absences code can't show |
-| `flows/<flow>/README.md` (steps) | L0–L1 | `/understand-domain` | flow skeleton in business terms |
-| `flows/<flow>/business-analyst.md` (rules) | L1–L2 | `/understand-chat "what business rules gate <flow>"` | thresholds, exceptions |
-| `flows/<flow>/engineering.md` (mechanism) | L2 | `/understand-explain <flow module>` | execution detail |
-| `flows/<flow>/product-owner.md`, PO docs | L0 | `/understand-domain` + `/understand-diff` | feature set, release framing |
+| `flows/<flow>.md` (steps) | L0–L1 | `/understand-domain` | flow skeleton in business terms |
+| `flows/<flow>/business-analyst.md` (rules, once promoted) | L1–L2 | `/understand-chat "what business rules gate <flow>"` | thresholds, exceptions |
+| `flows/<flow>/engineering.md` (mechanism, once promoted) | L2 | `/understand-explain <flow module>` | execution detail |
+| `flows/<flow>/product-owner.md` (once promoted), PO docs | L0 | `/understand-domain` + `/understand-diff` | feature set, release framing |
 | `engineering/setup.md` | how-to | `/understand-onboard` | zero-to-running (verify every command) |
 | `reference/configuration.md`, `limitations.md` | reference | targeted `/understand-chat` | env vars, unhandled cases |
 
@@ -48,7 +48,10 @@ its own depth. See `source-analysis.md` for the full command reference.
 
 ## Discovering the flows
 
-A topic folder under `docs/flows/` exists per business flow. Enumerate the flows before
-writing them: `/understand-domain` returns the domains, flows and steps in the code's own
-terms — that list *is* the set of flow folders to build. Never hand-type the flow list; the
-point of the analysis is to find the flows a writer would otherwise miss.
+A file under `docs/flows/` exists per business flow — flat by default, `<flow>.md`. Enumerate
+the flows before writing them: `python scripts/check_preconditions.py --repo <path> --need
+domain` must report READY, then `/understand-domain` returns the domains, flows and steps in
+the code's own terms — that list *is* the set of flow documents to build. Never hand-type the
+flow list; the point of the analysis is to find the flows a writer would otherwise miss. A
+flow only becomes a folder (`<flow>/README.md` + subfile) in the same pass its deep-dive
+content is written — see `document-composition.md`.

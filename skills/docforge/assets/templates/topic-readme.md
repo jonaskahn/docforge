@@ -1,5 +1,10 @@
 # {{Topic name — a flow or a subsystem, in business or plain-technical words}}
 
+<!-- This template is used both as a flat file (docs/flows/<flow>.md) and, once a
+     deep-dive subfile is written, as docs/flows/<flow>/README.md. Do not create the
+     folder or the "Go deeper" links below until the linked subfile is written in
+     this same pass — see document-composition.md. -->
+
 _Last reviewed: {{YYYY-MM-DD}}_
 
 {{One or two sentences: what this is and why it exists. Plain language. No code.}}
@@ -24,9 +29,15 @@ a rename would break.}}
 2. {{step}}
 3. {{step}}
 
-{{Optional: one Mermaid diagram of the flow. Prose above must stand without it.}}
+{{Include a Mermaid sequence or flowchart diagram whenever this has more than one step or
+any branch/error path — not optional at that point. Prose above must still stand alone
+without it. Omit only for a genuinely single-step topic.}}
 
 ## Go deeper
+
+<!-- Delete this whole section if no deep-dive is being written right now — a flat file
+     with no "Go deeper" section is correct and complete. Only add a bullet at the exact
+     moment you write its target file in this same pass. -->
 
 Each fact below lives once, in its own file. This section links; it does not restate.
 
@@ -35,5 +46,6 @@ Each fact below lives once, in its own file. This section links; it does not res
 - {{Value, metrics, release framing}} → [product-owner.md](product-owner.md)
 - {{Why it is built this way}} → [{{../../architecture/decisions/NNNN-slug.md}}]({{../../architecture/decisions/}})
 
-_Create a deep-dive file only when real depth exists for that reader. An empty audience
-file is a false promise — omit it and drop its bullet._
+_A bullet here with no corresponding file is a defect, not a placeholder — `docs_scaffold.py
+--audit` will catch it as a broken link. Write the subfile and add the bullet together, or
+add neither._

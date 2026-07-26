@@ -39,6 +39,22 @@ That runs a multi-agent pipeline over the project and writes the graph to `.ua/k
 - **Invocation prefix varies by platform.** Most use `/understand`; Codex uses `$understand`. Where neither is recognized, invoke it in plain language: *"Use the understand skill to analyze this project."*
 - **Read the graph directly** once built. `python scripts/graph_extract.py --graph .ua/knowledge-graph.json --summary` prints the module inventory, layer assignment and external dependency list in a form that seeds the code map and the dependency inventory.
 
+### Hard gate: flows, product overview, and BA/PO content require the domain graph — no fallback
+
+Everything under `docs/flows/`, `product/overview.md`, `product/capabilities.md`, and any BA/PO overlay document is sourced from `/understand-domain`'s output (the domain graph, conventionally `.ua/domain-graph.json`), never hand-typed from route files, folder names, or a plausible guess. This is stricter than non-negotiable 1's general fallback allowance — that fallback (direct inspection when the graph is unavailable) applies to architecture/spine documents, **not** to flows.
+
+Before touching any of those documents:
+
+```
+python scripts/check_preconditions.py --repo <path> --need domain
+```
+
+- If it reports **MISSING knowledge graph** or **MISSING domain graph**, stop. Do not proceed to flow, product, or BA/PO work. Tell the user exactly which command is missing (the script prints it) and wait for it to be run — do not substitute inspection, do not enumerate flows from route definitions as a stand-in.
+- The script cannot verify the understand-anything skill itself is installed — confirm that separately (it should appear in your own skill listing; if `/understand` is not recognized at all, the plugin is absent and installation comes first).
+- Once both files exist, re-run the check after any `/understand` or `/understand-domain` re-run to confirm freshness before writing.
+
+Architecture and spine documents (`high-level.md`, `setup.md`, `limitations.md`, etc.) may still fall back to direct inspection per non-negotiable 1 and §6 of `references/source-analysis.md` when the knowledge graph alone is unavailable — that latitude does not extend to anything the domain graph feeds.
+
 Then, whenever a document needs a fact the graph does not already state, query rather than infer. Full command-to-document mapping in `references/source-analysis.md`; the essentials:
 
 | You are about to write | Get the facts from |
@@ -46,9 +62,9 @@ Then, whenever a document needs a fact the graph does not already state, query r
 | `architecture/high-level.md` (context, blocks, boundaries) | the graph itself — module map, layers, edges |
 | `architecture/low-level.md`, `architecture/concepts/<subsystem>/` (deep mechanism) | `/understand-explain <path>` per significant subsystem — **required** for depth, not optional |
 | `architecture/data-flow.md` | `/understand-domain` for flows and steps; `/understand-chat` for a specific path |
-| `flows/<flow>/README.md` (plain steps, L1) | `/understand-domain` — enumerate flows first; each flow is a folder |
-| `flows/<flow>/business-analyst.md` (rules) | `/understand-chat "what business rules gate <flow>"` |
-| `flows/<flow>/engineering.md` (mechanism) | `/understand-explain <flow module>` |
+| `flows/<flow>.md` (plain steps, L1) | `/understand-domain` — enumerate flows first; each flow is a flat file, promoted to a folder only when a deep-dive is written in the same pass (see `references/document-composition.md`) |
+| `flows/<flow>/business-analyst.md` (rules, once promoted) | `/understand-chat "what business rules gate <flow>"` |
+| `flows/<flow>/engineering.md` (mechanism, once promoted) | `/understand-explain <flow module>` |
 | `product/overview.md`, `capabilities.md` | `/understand-domain` — business domains in the code's own terms |
 | `product/product-owner/*` (metrics, release notes) | `/understand-domain` for the feature set; `/understand-diff` and `git log` merge commits for release framing |
 | `engineering/setup.md` | `/understand-onboard`, then verify every command by running it |
@@ -76,7 +92,7 @@ Run the analysis above, then fill the gaps it does not cover:
 - **What documentation already exists** — an existing `README`, `docs/`, wiki exports, comments that read like design notes, ADR-ish files. Existing content is evidence about what people needed to write down; migrate it, do not replace it.
 - **Operational reality** — CI config, container and deploy manifests, and the environment variables the code actually reads.
 - **History for the "why"** — `git log` on architecturally significant paths, and merge commits with substantive messages. This is where backfilled decision records come from, and it is the one thing the graph cannot supply.
-- **Business flows** — run `/understand-domain` to enumerate the domains, flows and steps in the code's own terms. That list *is* the set of aligned folders to build under `docs/flows/` — never hand-type it, since the point of the analysis is to surface flows a writer would miss. See `references/document-composition.md`.
+- **Business flows** — run `python scripts/check_preconditions.py --repo <path> --need domain` first; it must report READY for both the knowledge graph and the domain graph before you enumerate flows. Then read `/understand-domain`'s output to enumerate the domains, flows and steps in the code's own terms. That list *is* the set of flow documents to build under `docs/flows/` — never hand-type it, since the point of the analysis is to surface flows a writer would miss. Each flow starts as a flat file (`docs/flows/<flow>.md`); it is promoted to a folder only when you write real audience depth for it in the same pass. See `references/document-composition.md`.
 - **Child repos** — before any multi-repo work, and as a cheap sanity check otherwise, run `python scripts/discover_repos.py --root <path>`. It reports declared submodules and, more importantly, nested repos present on disk but *not* declared in `.gitmodules` (vendored copies, `git subtree` merges, hand-cloned submodules). For single-repo work this just confirms scope; for diligence it is load-bearing — see Step 2 and `references/diligence-collection.md`.
 
 ### Step 2 — Choose a tier
@@ -116,7 +132,7 @@ Repos frequently match two type overlays (an API that also runs scheduled jobs).
 | Business Analyst (BA) | business rules, process flows, requirements traceability | `docs/product/business-analyst/` | `references/overlay-business-analyst.md` |
 | Product Owner (PO) | feature value, release framing, success metrics | `docs/product/product-owner/` | `references/overlay-product-owner.md` |
 
-Audience content follows the three-class model in `references/audience-matrix.md`: a subject two or more audiences share is written **once** as an aligned topic folder — a `flows/<flow>/` or `architecture/concepts/<subsystem>/` document-as-folder, with a common `README.md` plus per-reader deep-dive subfiles — while genuinely single-reader material stays in that audience's own folder (`product/business-analyst/`, `product/product-owner/`). Every fact is owned once and linked, never pasted into two folders. Do not produce an unrequested audience folder or an empty deep-dive subfile; an empty overlay is the same anti-pattern as an unfilled scaffold. Read `references/audience-matrix.md`, `references/document-composition.md` and `references/depth-and-audience.md` before writing any flow or audience content.
+Audience content follows the three-class model in `references/audience-matrix.md`: a subject two or more audiences share is written **once**, as an aligned topic — `flows/<flow>.md` or `architecture/concepts/<subsystem>.md` — while genuinely single-reader material stays in that audience's own folder (`product/business-analyst/`, `product/product-owner/`). An aligned topic is a **flat file by default**; it becomes a folder (`<topic>/README.md` + deep-dive subfiles) only at the moment real per-reader depth is written, in the same pass — never a folder with a promised subfile that isn't there yet. Every fact is owned once and linked, never pasted into two folders. Do not produce an unrequested audience folder or an empty deep-dive subfile; an empty or promised-but-missing overlay is the same anti-pattern as an unfilled scaffold. Read `references/audience-matrix.md`, `references/document-composition.md` and `references/depth-and-audience.md` before writing any flow or audience content.
 
 ### Step 4 — Build the tree
 
@@ -131,8 +147,8 @@ Either way, the templates are starting points, not output. A scaffold left full 
 
 Later documents cite earlier ones, so order matters:
 
-1. `docs/architecture/high-level.md` — the stable map, built from the graph. Everything else references it. Then `low-level.md` and `architecture/concepts/<subsystem>/` deep-dives for the significant subsystems.
-2. `docs/flows/<flow>/` — the aligned flow folders: common `README.md` first (plain steps, notices), then the audience deep-dive subfiles where depth exists.
+1. `docs/architecture/high-level.md` — the stable map, built from the graph. Everything else references it. Then `low-level.md` and `architecture/concepts/<subsystem>.md` deep-dives for the significant subsystems (same flat-then-promoted rule as flows).
+2. `docs/flows/<flow>.md` — one flat file per flow: L0, plain-language L1 steps, every notice, a diagram whenever the flow has more than one step or a branch. Promote a specific flow to `docs/flows/<flow>/README.md` + subfile only in the same pass you write that subfile's real content — never split the write across passes.
 3. `docs/README.md` — the index, once you know what it indexes.
 4. Root `README.md` — the audience router, written after the "front door" set because it summarizes the others.
 5. Overlay and audience-specific documents — data contracts, error catalog, route map, BA requirements-traceability, PO feature catalog and metrics, whichever apply.
@@ -191,12 +207,15 @@ Full specification in `references/docs-tree.md`. The shape:
     ├── product/               # for business readers and external consumers
     │   ├── business-analyst/  # (audience overlay) single-reader BA documents
     │   └── product-owner/     # (audience overlay) single-reader PO documents
-    ├── flows/                 # aligned topic folders — one per business flow
-    │   └── <flow>/            # common README + per-reader deep-dive subfiles
+    ├── flows/                 # one per business flow — flat file, promoted to a folder only when a deep-dive is written
+    │   ├── login.md           # flat by default
+    │   └── signup/            # promoted: common README + a real per-reader deep-dive subfile
+    │       ├── README.md
+    │       └── engineering.md
     ├── architecture/          # for engineers and technical reviewers
     │   ├── high-level.md      # system context, building blocks, boundaries (stable map)
     │   ├── low-level.md       # component decomposition, data model
-    │   ├── concepts/          # deep-dive subsystems, one folder each
+    │   ├── concepts/          # deep-dive subsystems — same flat-then-promoted rule as flows
     │   ├── tech-debt.md       # known shortcuts + remediation
     │   ├── constraints.md     # hard architectural limits and non-goals
     │   ├── decisions/         # ADRs — the durable "why"
@@ -220,6 +239,8 @@ The taxonomy is a floor, not a ceiling. If the repo already carries directories 
 - **Rationale in the code map.** `architecture/high-level.md` says *what is where*; ADRs say *why it was chosen*. Mixing them makes the map churn every time an opinion changes.
 - **Prose bound to code.** A claim anchored to a private symbol or a line number, so a routine rename falsifies the document. Describe behaviour and reference files by path instead.
 - **Notice stranded in a subfile.** A warning that only an audience deep-dive carries, invisible to a reader who stops at the topic `README.md`. Critical notices belong in the common README.
+- **A folder promising a deep-dive that isn't there.** A "Go deeper → engineering.md" link, or a folder created for a flow, with no `engineering.md` on disk. Worse than not offering depth at all — it tells the reader analysis happened when it didn't. A topic is a flat file until the moment its subfile is written, in the same pass; if you're not writing that content right now, don't create the folder or the link.
+- **Enumerating flows by hand.** Listing business flows from route files, screen names, or a guess instead of `/understand-domain`'s output. Flows are discovered, not authored — see the hard gate in "Source analysis."
 - **Same subject in two audience folders.** The definition of drift. Write it once in the owning document; link from the other.
 - **Hidden limitations.** Burying known issues protects nobody and reads as evasion under scrutiny. A frank limitations register reads as competence.
 - **Hand-written API reference.** Generate it from the source of truth (spec, schema, type annotations). Hand-written reference drifts within one sprint.
@@ -243,7 +264,7 @@ Load only what the current task needs.
 | `references/risk-docs.md` | Writing limitations, dependencies, or security documents |
 | `references/quality-bar.md` | Before presenting anything — review checklist and rubric |
 | `references/audience-matrix.md` | The three document classes (aligned / audience-specific / shared-fact spine), the BA/PO split, and which folder owns which fact |
-| `references/document-composition.md` | Always when writing flow or audience content — the document-as-folder pattern, the two invariants, and the durability rules (no code, no duplication, write at the slowest layer) |
+| `references/document-composition.md` | Always when writing flow or audience content — the flat-file-by-default and atomic-promotion rule, the two invariants, and the durability rules (no code, no duplication, write at the slowest layer) |
 | `references/depth-and-audience.md` | The depth ladder (L0–L3), which reader consumes which depth, and which understand-anything command feeds which cell |
 | `references/overlay-business-analyst.md` | Writing anything under `docs/product/business-analyst/` |
 | `references/overlay-product-owner.md` | Writing anything under `docs/product/product-owner/` |
@@ -252,6 +273,7 @@ Load only what the current task needs.
 | `references/overlay-*.md` | The repo-type overlay matching the repo (Step 3) |
 
 Templates live in `assets/templates/`. Scripts:
+- `scripts/check_preconditions.py` — gate flow/product/BA/PO work on the knowledge graph and domain graph actually existing; run before Step 1's business-flows bullet
 - `scripts/graph_extract.py` — read the knowledge graph
 - `scripts/docs_scaffold.py` — create and audit the tree
 - `scripts/check_provenance.py` — recompute git blob hashes for every file recorded in the manifest; report `FRESH` / `PARTIAL` / `MISSING` per document and section

@@ -74,6 +74,10 @@ Each targets one audience. A documentation set that fails any of them fails for 
 - [ ] **Notices common:** every warning, critical constraint or irreversible behaviour appears in the topic `README.md`, not only in an audience subfile
 - [ ] **Readable common layer:** each `README.md` is plain-language, jargon glossed or linked; internals pushed to subfiles
 - [ ] **No empty audience subfile:** a `business-analyst.md` / `engineering.md` / `product-owner.md` exists only where real depth exists
+- [ ] **Flat by default:** every `flows/<flow>` and `architecture/concepts/<subsystem>` is a flat file unless it currently carries at least one real subfile; no folder holds only a `README.md`
+- [ ] **No dangling deep-dive:** no flat file or topic `README.md` links to a sibling subfile that does not exist on disk right now
+- [ ] **Flows sourced from the domain graph:** `docs/flows/`, `product/overview.md`, `product/capabilities.md` and BA/PO content trace to `/understand-domain` output, confirmed present via `scripts/check_preconditions.py --need domain` — never hand-typed from route files or folder names
+- [ ] **Diagrammed:** every flow with more than one step or a branch/error path carries a Mermaid diagram; prose still stands alone without it
 
 ## Automated checks worth adding to CI
 
@@ -81,10 +85,11 @@ Documentation decays silently unless something objects. The cheap wins, in rough
 
 1. **Link checking** on every change — catches the most common decay.
 2. **Scaffold-marker detection** — fail on any `{{…}}` template marker or punted `TODO` in the default branch: those mean a section was left unwritten. Typed `<UPPER_SNAKE>` tokens are exempt (they are intentional human-fill slots); optionally warn if one survives past an agreed grace period so external facts do get filled in.
-3. **Forge-name grep** outside `docs/contributing/`.
-4. **Spec validation** — if an API spec is generated, verify it regenerates identically to what is committed.
-5. **Config drift** — compare documented environment variables against those the code reads.
-6. **Setup verification** — periodically run the documented setup steps on a clean container. Expensive, and it catches the failure that matters most.
+3. **Folder-only-readme detection** — fail if any `flows/<flow>/` or `architecture/concepts/<subsystem>/` directory contains a `README.md` and no other `.md` sibling; that shape means a promotion happened without a subfile. `docs_scaffold.py --audit` reports this as `folder-only-readme`.
+4. **Forge-name grep** outside `docs/contributing/`.
+5. **Spec validation** — if an API spec is generated, verify it regenerates identically to what is committed.
+6. **Config drift** — compare documented environment variables against those the code reads.
+7. **Setup verification** — periodically run the documented setup steps on a clean container. Expensive, and it catches the failure that matters most.
 
 ## Anti-patterns to check for explicitly
 
@@ -96,3 +101,6 @@ Documentation decays silently unless something objects. The cheap wins, in rough
 - **Duplicated truth**: the same fact in the root README, the docs index and the product overview, already diverging.
 - **Prose bound to code**: a claim anchored to a private symbol or a line number, so a routine rename falsifies the document. Write at the behaviour level instead.
 - **Notice stranded in a subfile**: a warning that only the engineering deep-dive carries, invisible to a reader who stops at the topic README.
+- **Folder-only-readme**: a `flows/<flow>/` or `architecture/concepts/<subsystem>/` containing nothing but `README.md`. Either a promotion happened with no subfile content (demote to a flat file) or a subfile is simply missing (write it).
+- **Dangling deep-dive link**: "documented in the engineering deep-dive" pointing at a file that isn't there. Caught by `docs_scaffold.py --audit`'s broken-links check; treat any hit under `flows/` or `architecture/concepts/` as this specific defect, not a generic typo.
+- **Hand-typed flow list**: flows enumerated from route files, screen names, or memory instead of `/understand-domain`'s output.
