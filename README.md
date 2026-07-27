@@ -1,17 +1,6 @@
 <div align="center">
   <img src="logo.png" alt="docforge" width="200" />
 
-```
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-██                                                    ██
-██   D O C F O R G E             1UP  0.5.1          ██
-██   >> A REPOSITORY DOCUMENTATION QUEST <<          ██
-██                                                    ██
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-```
-
   <p><b>PRESS START</b> — an AI agent skill that designs and writes a repository's whole documentation set, grounded in the actual source. No invented lore.</p>
 
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
@@ -166,11 +155,3 @@ Wrong or missing guidance? Open an issue with what you asked, what the skill pro
 ## ▓▒░ CREDITS ░▒▓
 
 [MIT](LICENSE)
-
-```
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-        T H A N K S   F O R   P L A Y I N G
-              G A M E   O V E R ?  N O.
-              D O C S   N E V E R   E N D.
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-```
