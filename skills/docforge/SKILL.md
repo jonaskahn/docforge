@@ -1,6 +1,6 @@
 ---
 name: docforge
-description: Design and generate a repository's documentation set — the docs/ tree, README and ARCHITECTURE, decision records (ADRs), a known-limitations register, a third-party dependency inventory, security policy, API error catalogs, data contracts and runbooks, plus audience overlays that speak to Business Analyst (BA) and Product Owner (PO) readers. Grounds every document in a knowledge-graph analysis of the actual source before writing, so nothing is invented, and stamps each document with git-hash provenance so staleness is decided by comparison, not by re-guessing. Host-neutral — works on any git host and never hardcodes one forge's paths, and checks for child repos (declared submodules or nested/vendored repos) before any multi-repo review. Use this skill whenever the user mentions documenting a repo or codebase, a docs folder, README or ARCHITECTURE files, ADRs or decision records, onboarding docs, runbooks, known limitations, dependency or licence inventories, technical due diligence or audit readiness, standardizing documentation across several repos, documentation for a Business Analyst or Product Owner, business rules or process flows or requirements traceability, feature catalogs or release notes or success metrics, or whether existing generated docs have drifted from the code — including loose phrasings like "write docs for this project", "our repo has no documentation", "make this repo legible to a new engineer", "docs for BA/PO", "which docs are stale", "should we regenerate this", or "does every repo in here have docs".
+description: Design and generate a repository's documentation set — the docs/ tree, README and ARCHITECTURE, decision records (ADRs), a known-limitations register, a third-party dependency inventory, security policy, API error catalogs, data contracts and runbooks, plus audience overlays that speak to Business Analyst (BA) and Product Owner (PO) readers. Grounds every document in a knowledge-graph analysis of the actual source before writing, so nothing is invented, and stamps each document with git-hash provenance so staleness is decided by comparison, not by re-guessing. Host-neutral — works on any git host and never hardcodes one forge's paths, and checks for child repos (declared submodules or nested/vendored repos) before any multi-repo review. Use this skill whenever the user mentions documenting a repo or codebase, a docs folder, README or ARCHITECTURE files, ADRs or decision records, onboarding docs, runbooks, known limitations, dependency or licence inventories, technical due diligence or audit readiness, standardizing documentation across several repos, documentation for a Business Analyst or Product Owner, business rules or process flows or requirements traceability, feature catalogs or release notes or success metrics, or whether existing generated docs have drifted from the code — including loose phrasings like "write docs for this project", "our repo has no documentation", "make this repo legible to a new engineer", "docs for BA/PO", "which docs are stale", "should we regenerate this", or "does every repo in here have docs". Supports invocation flags to control scope and pacing: `--revise all` / `--revise <area>` (regenerate only stale sections, whole tree or one area), `--auto-accept` (show each plan/part but skip confirmation pauses), `--plan-only` (scaffold + manifest, no content), `--resume` (continue from manifest state), `--status` (print progress only) — see Step 0.
 ---
 
 # Docforge — Repository Documentation Architect
@@ -87,9 +87,24 @@ If the graph is unavailable — the plugin is not installed, or the source is no
 
 ### Step 0 — Interaction mode: structure first, then detail, then write one part at a time
 
-**This cadence is mandatory and never relaxes — not when the user says "just generate everything," not when they say "no need to confirm." Every run, without exception: read enough context to plan, build the plan, show the plan, get confirmation, *then* write. There is no path that skips the plan-and-show step.** A user who asks you not to confirm is asking you not to *interrupt* — you still plan and still show the plan; you may then proceed without waiting only if they explicitly waived the pauses, and even then you write part by part with status tracked, never a silent whole-tree dump.
+**This cadence is mandatory and never relaxes — not when the user says "just generate everything," not when they say "no need to confirm." Every run, without exception: read enough context to plan, build the plan, show the plan, get confirmation, *then* write. There is no path that skips the plan-and-show step.** A user who asks you not to confirm is asking you not to *interrupt* — you still plan and still show the plan; you may then proceed without waiting only if they explicitly waived the pauses (`--auto-accept`, below), and even then you write part by part with status tracked, never a silent whole-tree dump.
 
 If the user named exactly one document ("regenerate the security policy", "just the setup doc"), write that and skip to the relevant step — but still re-ground it first (Step 5). Everything below governs any open-ended request ("document this repo", "our repo has no docs").
+
+#### Invocation flags
+
+These change *scope* or *pacing* — never which non-negotiables apply. A flag can skip a pause; none skips the plan-and-show itself, the re-ground step, or fill-completeness.
+
+| Flag | Effect |
+|---|---|
+| `--revise all` | Skip Gate 1/2 planning (the tree already exists). Run `check_provenance.py` across the full manifest and regenerate every `PARTIAL` section per "Updating existing docs" below. |
+| `--revise <area>` | Same provenance check, scoped to one manifest entry or group — `--revise security`, `--revise flows/checkout`. Only that entry's sections are checked and, if stale, regenerated. |
+| `--auto-accept` | Do not wait at any pause. Gate 1's tree, Gate 2's per-document detail, and each finished part are still displayed in full, in order — only the *wait-for-confirmation* step is skipped, not the display. Written parts are still tracked in the manifest one at a time; a stale or wrong part discovered later is corrected the normal way (re-ground, rewrite that part), not silently. |
+| `--plan-only` | Stop after Gate 2: manifest populated (`planned` status throughout), empty scaffold on disk. No content written this run. |
+| `--resume` | Read `.docforge/manifest.json` and continue from its first `planned` or `in_progress` entry instead of restarting Gate 1. |
+| `--status` | Print `manifest_sync.py status` and stop — no scaffolding, no writing. |
+
+Flags compose: `--revise api --auto-accept` regenerates only the API overlay's stale sections, showing each before moving to the next without pausing. `--auto-accept --plan-only` shows the full plan and populates the manifest without pausing, then stops before content.
 
 **Do the graph analysis (Steps 1–3) before any gate.** You cannot plan a structure you have not grounded, and you cannot detail a document whose facts you have not retrieved.
 
@@ -224,7 +239,7 @@ For anything the documentation asserts about behaviour, spot-check it against th
 
 ## Updating existing docs — check before you rewrite
 
-This section is for docs that **already carry docforge provenance** from a prior run. If the repo instead has hand-written docs that have never been through docforge, that's Step 1's "Migrate pre-existing documentation" — run that first; this section starts from the second run onward.
+This section is for docs that **already carry docforge provenance** from a prior run. If the repo instead has hand-written docs that have never been through docforge, that's Step 1's "Migrate pre-existing documentation" — run that first; this section starts from the second run onward. This is also what `--revise all` / `--revise <area>` (Step 0) invoke — `--revise <area>` just scopes step 1 below to the matching manifest entries instead of the whole file.
 
 When asked to refresh docs that already carry docforge provenance, do not re-read and re-guess. Compare hashes:
 
