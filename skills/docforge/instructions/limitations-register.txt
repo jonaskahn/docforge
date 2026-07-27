@@ -1,0 +1,48 @@
+# Limitations Register Instruction Template
+
+## Purpose
+Document known constraints, unsupported scenarios, and hard bounds.
+
+## Target Audience
+All readers - helps set expectations
+
+## Required Sections
+1. Functional limitations - what this system doesn't do or does incompletely
+2. Performance constraints - latency, throughput, resource bounds
+3. Scalability bounds - data size limits, user count limits, etc.
+4. Known issues - documented bugs or corner cases
+
+## Data Requirements
+- Knowledge graph (required)
+- Direct inspection (for TODOs, FIXMEs in code)
+- Git history (for when limitations were identified)
+
+## Depth Level
+L2 - Specific, measurable constraints
+
+## Template Structure
+- Group limitations by category (functional, perf, scale, known issues)
+- For each limitation:
+  - What the limitation is (specific, not vague)
+  - Impact: what can't you do / what happens
+  - Workaround: if any exists, state it
+  - Tracked in: link to issue tracker if one exists
+  - Root cause: brief explanation why (from code/architecture context)
+
+## Provenance Requirements
+- Tag each limitation with code locations (TODO/FIXME comments, configuration constants)
+- Reference architecture/tech-debt.md for debt items that might inform limitations
+- Record git blob hashes of hardcoded bounds or checks
+
+## Common Pitfalls
+- Don't soften limitations - "might have issues" is not a limitation
+- Don't duplicate with tech-debt.md (tech-debt is "we should fix", limitations is "you should know")
+- Don't omit workarounds if they exist - users will appreciate knowing them
+- Don't assume readers know why a limitation exists - always explain root cause
+- Don't list things that work fine - this is limits, not capabilities
+
+## Notes
+- This is a trust document - be honest and specific
+- Limitations aren't failures - they're design decisions or known gaps
+- Some limits may come from dependencies (call them out)
+- Some may be by-design trade-offs (explain the trade-off)

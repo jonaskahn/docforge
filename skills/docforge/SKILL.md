@@ -24,6 +24,8 @@ Six rules that hold regardless of tier, repo type, ecosystem, or audience. Viola
 
 ## Source analysis — run this first
 
+Every script in `scripts/` ships as both a Python file (`scripts/<name>.py`) and a Node.js file (`scripts/<name>.js`) — same flags, same output, same exit codes, standard-library/built-ins only on either side, no install step. Examples below show the Python form; use `node scripts/<name>.js …` with identical flags if Python 3 is not available (or vice versa). Pick whichever runtime is already on the machine — `python3 --version` / `node --version` to check.
+
 Every document in the tree makes claims about the source. Producing those claims from directory names and file extensions is how documentation ends up describing a system that does not exist. The knowledge graph replaces guessing with retrieval: it gives you the module map, the architectural layers, the call and import edges, the business domains and flows, and a queryable interface for everything the graph does not already state.
 
 **Before any other step**, build or refresh it:
@@ -83,17 +85,42 @@ If the graph is unavailable — the plugin is not installed, or the source is no
 
 ## Workflow
 
-### Step 0 — Interaction mode: when scope is open-ended, plan first, then write part by part
+### Step 0 — Interaction mode: structure first, then detail, then write one part at a time
 
-If the user named exactly what to write ("regenerate the security policy", "just the setup doc"), write that and skip to the relevant step. **Otherwise — any open-ended request ("document this repo", "write docs for the project", "our repo has no docs") — do not silently generate the whole tree in one shot.**
+**This cadence is mandatory and never relaxes — not when the user says "just generate everything," not when they say "no need to confirm." Every run, without exception: read enough context to plan, build the plan, show the plan, get confirmation, *then* write. There is no path that skips the plan-and-show step.** A user who asks you not to confirm is asking you not to *interrupt* — you still plan and still show the plan; you may then proceed without waiting only if they explicitly waived the pauses, and even then you write part by part with status tracked, never a silent whole-tree dump.
 
-1. **Present a plan first — grounded in the analysis, not a generic checklist.** Do the graph analysis (Steps 1–3) *before* the plan: understand the actual code, the knowledge graph, the domain graph's flows, and the business logic, then lay out the ordered set of documentation parts those findings justify — the real subsystems, flows, and domains you found, grouped by area (architecture, flows, product, operations, reference, security, …). One line per part: what it will cover (naming the concrete subsystem/flow, per `references/document-catalog.md`) and why a reader needs it. State the tier and overlays in the same message. Get the user's confirmation on the plan before writing prose.
-2. **Then write one part at a time, in dependency order** (Step 5). For each part, in order:
-   - **Re-ground before you write.** Pull every must-present element for that document (`references/document-catalog.md`) from the knowledge graph, the domain graph, and the code. If a fact the document needs is not yet in the graph, retrieve it — a narrow `/understand-chat`, an `/understand-explain <path>`, or direct inspection — *before* writing, not around it. Never write a part on thin context: if the source genuinely cannot answer a required element, that atomic value becomes a typed `<UPPER_SNAKE>` token (non-negotiable 1), and everything around it is still written in full.
-   - Write to the default depth (deep-dive — see Step 5 and `references/depth-and-audience.md`), stamp provenance as you write, present the finished part, and **pause** for the user to confirm or redirect before starting the next. Fold feedback on part N into parts N+1…
-3. **This cadence never relaxes non-negotiable 1.** Every part you hand over is *complete* — no punted derivable facts, no unfilled `{{…}}` scaffolds, only typed `<UPPER_SNAKE>` tokens for genuinely external values. The confirmation gate governs *scope and ordering*, not fill-completeness. The goal is a reviewable, steerable stream — not a thirty-file dump the user must audit at once, and not a scaffold they must finish.
+If the user named exactly one document ("regenerate the security policy", "just the setup doc"), write that and skip to the relevant step — but still re-ground it first (Step 5). Everything below governs any open-ended request ("document this repo", "our repo has no docs").
 
-When the user explicitly says "just generate everything," honor it: skip the per-part pauses, still present the one-line plan first so they can catch a wrong tier or a missing overlay before you spend the tokens.
+**Do the graph analysis (Steps 1–3) before any gate.** You cannot plan a structure you have not grounded, and you cannot detail a document whose facts you have not retrieved.
+
+**Gate 1 — Structure (empty layout, tracked in metadata).**
+1. **Preview the tree without writing:** `python scripts/docs_scaffold.py --repo <path> --tier <n> --overlay <o> --dry-run`. This prints every file the chosen tier + overlays imply — the layout, no content.
+2. **Present that layout** to the user: the folder tree plus one line per document — name, path, and what it will cover (name the concrete subsystem/flow, per `references/document-catalog.md`). State tier and overlays once at the top. Group by area (architecture, flows, product, operations, reference, security, records).
+3. **Record the plan in `.docforge/manifest.json`** — `python scripts/manifest_sync.py init --repo <path> --tier <n> --name <repo>` writes it with every spine document `status: "planned"`. Add discovered flows and overlay documents with `manifest_sync.py add`. This is the durable tracking record: which documents the plan contains, where each lives, and where each stands. (`.metadata/manifest.json` is the shape it follows.)
+4. **Pause for explicit confirmation of the structure.** The user may add/remove documents, reorder, change tier/overlays, or propose overlays. Fold feedback into the manifest and re-present if the change is significant.
+5. **On confirmation, create the scaffold for real** (drop `--dry-run`). The empty files now exist; the manifest tracks each as `planned`.
+
+**Gate 2 — Content detail (what each document will actually say).**
+Before writing prose, present — per document, in dependency order — what it will contain: the must-present elements from its `references/document-catalog.md` contract, the target depth, and the sources you will draw from. This is where the user steers depth and where you **propose** additions or cuts rather than assuming. Confirm or adjust. For a small set, fold this into Gate 1's presentation; for a large tree, do it per area so the user is never handed everything at once.
+
+**Then — write one part at a time, in dependency order (Step 5).** For each document, in order:
+- Set its manifest status to `in_progress` — `python scripts/manifest_sync.py set --repo <path> --id <id> --status in_progress` — and open a `generation-status.json` runtime entry (`querying` → `writing`).
+- **Re-ground before you write.** Retrieve every must-present element for that document (`references/document-catalog.md`) from the knowledge graph, the domain graph, and the code. If a needed fact is not yet in the graph, query it — a narrow `/understand-chat`, an `/understand-explain <path>`, or direct inspection — *before* writing, not around it. Never write on thin context: if the source genuinely cannot answer a required element, that atomic value becomes a typed `<UPPER_SNAKE>` token (non-negotiable 1); everything around it is still written in full.
+- Write to deep-dive depth (Step 5, `references/depth-and-audience.md`), stamp provenance as you write, set manifest status `generated` (`manifest_sync.py set … --status generated`; runtime `complete`), present the finished part, and **pause** for the user to confirm or redirect before the next. Fold feedback on part N into parts N+1…
+- After the user accepts a part, set its manifest status to `complete`; anything they flag stays `needs_review`. `manifest_sync.py status --repo <path>` prints the plan and the remaining count at any time.
+
+**Fill-completeness never bends (non-negotiable 1).** Every part you hand over is *complete* — no punted derivable facts, no unfilled `{{…}}` scaffolds, only typed `<UPPER_SNAKE>` tokens for genuinely external values. The gates govern *structure, scope, and ordering*; they never license a half-filled document. The goal is a reviewable, steerable stream — not a thirty-file dump the user must audit at once, and not a scaffold they must finish.
+
+#### `.metadata/` templates and the two tracking files
+
+The `.metadata/` directory holds the templates and schemas that drive Step 0. Two of them are *tracking* files you copy into the target repo's `.docforge/` and update as you go — they answer different questions and use different status vocabularies:
+
+- `manifest.json` → the shape of `.docforge/manifest.json`, which `scripts/manifest_sync.py` writes and maintains. The **durable plan and fill-state** of the whole tree: one entry per planned document, its group, path, template, and `status` (`planned` → `in_progress` → `generated` → `needs_review` → `complete`, or `skipped`). This is the record you present at Gate 1 and update (via `manifest_sync.py set`) as each part lands. Also carries per-section provenance once written (see `references/provenance-tracking.md`).
+- `generation-status.json` → the **live session log** while you write: per document `status` (`planned` → `querying` → `writing` → `complete`, or `skipped`), timing, tokens, and any error. Ephemeral; the manifest is the record that outlives the session.
+- `manifest-schema.json` / `status-schema.json` — schemas validating the two above.
+- `document-templates.json` — maps each document type to its instruction file and required data sources (a craft pointer; the content contract is `references/document-catalog.md`). `template-schema.json` validates it.
+
+Manifest document paths must match the taxonomy in `references/docs-tree.md` and what `scripts/docs_scaffold.py` emits — they are the same tree seen from the plan side and the disk side.
 
 ### Step 1 — Build the graph, then read the repo
 
@@ -294,13 +321,14 @@ Load only what the current task needs.
 | `references/diligence-collection.md` | Any multi-repo job — assembling the collection, gap-checking members, recording composition honestly |
 | `references/overlay-*.md` | The repo-type overlay matching the repo (Step 3) |
 
-Templates live in `assets/templates/`. Scripts:
-- `scripts/check_preconditions.py` — gate flow/product/BA/PO work on the knowledge graph and domain graph actually existing; run before Step 1's business-flows bullet
-- `scripts/validate_graphs.py` — the diagnostic probe for when `check_preconditions.py` reports a graph missing but `.ua/` holds data; lists both graph folders' contents with sizes, JSON validity and node/edge counts
-- `scripts/graph_extract.py` — read the knowledge graph
-- `scripts/docs_scaffold.py` — create and audit the tree
-- `scripts/check_provenance.py` — recompute git blob hashes for every file recorded in the manifest; report `FRESH` / `PARTIAL` / `MISSING` per document and section
-- `scripts/discover_repos.py` — walk a root for declared submodules and undeclared nested repos, reporting each member's docforge status so gaps surface before a review, not during it
+Templates live in `assets/templates/`. Scripts (each has a `.py` and an equivalent `.js` — see the note at the top of "Source analysis"):
+- `scripts/check_preconditions.{py,js}` — gate flow/product/BA/PO work on the knowledge graph and domain graph actually existing; run before Step 1's business-flows bullet
+- `scripts/validate_graphs.{py,js}` — the diagnostic probe for when `check_preconditions` reports a graph missing but `.ua/` holds data; lists both graph folders' contents with sizes, JSON validity and node/edge counts
+- `scripts/graph_extract.{py,js}` — read the knowledge graph
+- `scripts/docs_scaffold.{py,js}` — create and audit the tree
+- `scripts/manifest_sync.{py,js}` — create and maintain `.docforge/manifest.json`: `init` the plan (all `planned`), `add` discovered flows/overlays, `set` a document's status as it lands, `status` for a summary
+- `scripts/check_provenance.{py,js}` — recompute git blob hashes for every file recorded in the manifest; report `FRESH` / `PARTIAL` / `MISSING` per document and section
+- `scripts/discover_repos.{py,js}` — walk a root for declared submodules and undeclared nested repos, reporting each member's docforge status so gaps surface before a review, not during it
 
 ---
 

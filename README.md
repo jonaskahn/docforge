@@ -70,6 +70,15 @@ Only the reference files relevant to your task load into context, so the agent s
 
 Plus `assets/templates/` (scaffolds for every spine and overlay file) and `scripts/` (scaffold a tree, audit it, check provenance, discover child repos).
 
+## Requirements
+
+Every script under `scripts/` ships in two equivalent forms — `<name>.py` and `<name>.js` — same flags, same output, same exit codes. Nothing to install: each uses only its runtime's standard library / built-in modules. You need one of:
+
+- **Python 3.9+** (`python3 --version`), or
+- **Node.js 18+** (`node --version`)
+
+`git` on `PATH` is also required (used for blob hashing and submodule discovery). The skill picks whichever runtime is present; if both are, either works.
+
 ## Contributing
 
 References live in `skills/docforge/references/`, one topic per file. To change one: fork, edit the `.md`, open a PR.

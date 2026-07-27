@@ -1,0 +1,44 @@
+# Business Flows Instruction Template
+
+## Purpose
+Document step-by-step execution flows for key business processes.
+
+## Target Audience
+All readers - engineers, ops, business stakeholders
+
+## Required Sections
+1. Flow steps and sequence - numbered steps in order
+2. Actors and system components - who/what participates at each step
+3. Success and failure paths - normal case and exception cases
+
+## Data Requirements
+- Domain graph (REQUIRED - hard gate, no fallback to inspection)
+- Knowledge graph (for implementation details if diving deep)
+
+## Depth Level
+L1 - Plain steps, no deep explanation. Each flow is initially a flat file.
+L2+ - Promoted to folder with per-reader deep-dives only when written in same pass (see document-composition.md)
+
+## Template Structure
+For each flow:
+- One-line summary of what the flow accomplishes
+- Numbered step list showing sequence
+- For each step: what happens, which component(s) involved, success/failure branches
+- Diagram showing flow steps (ASCII or SVG)
+- Reference to specific modules that implement each step
+
+## Provenance Requirements
+- Tag each step with modules implementing it
+- Record which domain graph nodes sourced each flow step
+- Cross-reference to architecture/low-level.md sections that detail mechanism
+
+## Common Pitfalls
+- Don't omit steps because they're "obvious" - user may not know system
+- Don't dive deep into implementation here (that's engineering overlay)
+- Don't conflate different flows into one overly complex doc
+- Don't assume knowledge of business domain - keep business logic explicit
+
+## Notes
+- Each flow stays flat.md until user requests deep-dive in same generation pass
+- If promoting to folder with business-analyst.md and engineering.md overlays, do it immediately in same pass
+- Use clear numbered steps - readability before cleverness

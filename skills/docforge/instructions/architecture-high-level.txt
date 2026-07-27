@@ -1,0 +1,40 @@
+# Architecture High-Level Instruction Template
+
+## Purpose
+Provide a system overview showing major components, boundaries, and how they interact at a block level.
+
+## Target Audience
+All readers - engineers, ops, business stakeholders
+
+## Required Sections
+1. Context and motivation - why this system exists, what problem it solves
+2. System blocks and responsibilities - major components and what each does
+3. External interfaces and dependencies - how it connects to other systems
+4. Key architectural decisions - important structure choices
+
+## Data Requirements
+- Knowledge graph (required)
+- Domain graph (optional, for business context)
+
+## Depth Level
+L2 - Overview level, not implementation details
+
+## Template Structure
+- Start with 1-2 sentence hook about what this system is
+- Use ASCII diagrams or SVG embedded in Markdown for block diagrams
+- Each block should show: name, responsibility, key abstraction level
+- Keep prose concise - diagram does the explaining
+- Reference architecture/data-flow.md for detailed flows (don't duplicate)
+
+## Provenance Requirements
+- Tag each block/section with source files from knowledge graph
+- Record git blob hashes of modules forming each layer
+- Example: "User API service (src/api/user-service/) connects to..."
+
+## Common Pitfalls
+- Avoid implementation details (that's low-level.md)
+- Don't duplicate content from flows/ or product/
+- Don't list every single file, aggregate to module level
+- Don't prescribe which overlay audiences need this - all need it
+
+## Notes

@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Docforge Manifest Schema",
+  "description": "Schema defining the documentation structure and generation plan for a repository",
+  "type": "object",
+  "required": ["version", "project_context", "document_groups"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version"
+    },
+    "generated_at": {
+      "type": ["string", "null"],
+      "description": "ISO 8601 timestamp when manifest was generated"
+    },
+    "project_context": {
+      "type": "object",
+      "required": ["repo_name", "tier", "overlays"],
+      "properties": {
+        "repo_name": {
+          "type": ["string", "null"],
+          "description": "Repository name"
+        },
+        "repo_path": {
+          "type": ["string", "null"],
+          "description": "Full path to repository"
+        },
+        "tier": {
+          "type": ["string", "null"],
+          "enum": ["core", "standard", "extended", null],
+          "description": "Documentation tier (proportionate to team size and scrutiny)"
+        },
+        "overlays": {
+          "type": "array",
+          "description": "Selected audience/domain overlays",
+          "items": {
+            "type": "string",
+            "enum": ["business-analyst", "product-owner", "data-pipeline", "api-service", "web-app", "infrastructure", "library"]
+          }
+        }
+      }
+    },
+    "document_groups": {
+      "type": "array",
+      "description": "Grouped document definitions",
+      "items": {
+        "type": "object",
+        "required": ["group", "documents"],
+        "properties": {
+          "group": {
+            "type": "string",
+            "enum": ["architecture", "flows", "product", "operations", "reference", "security", "records"]
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "type", "path", "status"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Unique document identifier"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Document type (maps to template)"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Output path within docs/ tree"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"],
+                  "description": "Current generation status"
+                },
+                "requires_domain_graph": {
+                  "type": "boolean",
+                  "description": "Must have domain graph to generate"
+                },
+                "requires_knowledge_graph": {
+                  "type": "boolean",
+                  "description": "Must have knowledge graph to generate"
+                },
+                "template": {
+                  "type": "string",
+                  "description": "Template instruction file name"
+                },
+                "provenance_sources": {
+                  "type": "array",
+                  "description": "Git blob hashes of source files",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "total_documents": {
+          "type": "integer"
+        },
+        "completed": {
+          "type": "integer"
+        },
+        "in_progress": {
+          "type": "integer"
+        },
+        "requires_review": {
+          "type": "integer"
+        },
+        "last_updated": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

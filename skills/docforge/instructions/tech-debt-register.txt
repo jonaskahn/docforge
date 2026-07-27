@@ -1,0 +1,50 @@
+# Tech Debt Register Instruction Template
+
+## Purpose
+Document known technical debt, workarounds, and architectural constraints.
+
+## Target Audience
+Engineers planning future work
+
+## Required Sections
+1. Debt items and rationale - what tech debt exists and why it was incurred
+2. Workarounds in place - temporary solutions currently deployed
+3. Hard constraints - architectural decisions that limit future options
+4. Repayment priority - which items should be tackled first
+
+## Data Requirements
+- Knowledge graph (for architecture context)
+- Direct inspection (TODO/FIXME comments, comments explaining workarounds)
+- Git history (for when debt was incurred and why)
+
+## Depth Level
+L2 - Technical detail, but readable to non-experts
+
+## Template Structure
+- Organize by subsystem or priority level
+- For each debt item:
+  - What the debt is (specific module/subsystem)
+  - Why it was incurred (deadline, tradeoff, lack of knowledge at time)
+  - Current impact (what's harder/slower/riskier because of this)
+  - Repayment cost estimate (effort, risk, dependencies)
+  - Blockers (what must happen first before repayment)
+  - Suggested approach (how we might fix it)
+
+## Provenance Requirements
+- Reference specific files/modules containing debt
+- Link to TODO/FIXME comments in code
+- Reference git commits that introduced the debt (with rationale from message)
+- Record architectural implications (from architecture/low-level.md)
+
+## Common Pitfalls
+- Don't confuse limitations with debt (limitations are design choices, debt is accumulated shortcuts)
+- Don't soften language - "needs refactoring" is clearer than "could be improved"
+- Don't propose solutions without understanding tradeoffs - explain costs
+- Don't ignore architectural constraints - they're debt with longer shadows
+- Don't list minor issues - focus on debt that actually slows new work
+
+## Notes
+- Tech debt is not failure - it's deliberate tradeoffs made at time
+- Be honest about why debt was incurred (we often had good reasons)
+- Separate strategic constraints (hard limits) from tactical debt (can be repaid)
+- Link to architecture/limitations.md for related constraints

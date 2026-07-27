@@ -1,0 +1,135 @@
+{
+  "$schema": "manifest-schema.json",
+  "version": "1.0",
+  "generated_at": null,
+  "project_context": {
+    "repo_name": null,
+    "repo_path": null,
+    "tier": null,
+    "overlays": []
+  },
+  "document_groups": [
+    {
+      "group": "architecture",
+      "documents": [
+        {
+          "id": "arch_high_level",
+          "type": "architecture-high-level",
+          "path": "docs/architecture/high-level.md",
+          "status": "planned",
+          "requires_domain_graph": false,
+          "requires_knowledge_graph": true,
+          "template": "architecture-high-level.txt"
+        },
+        {
+          "id": "arch_low_level",
+          "type": "architecture-low-level",
+          "path": "docs/architecture/low-level.md",
+          "status": "planned",
+          "requires_domain_graph": false,
+          "requires_knowledge_graph": true,
+          "template": "architecture-low-level.txt"
+        }
+      ]
+    },
+    {
+      "group": "flows",
+      "documents": []
+    },
+    {
+      "group": "product",
+      "documents": [
+        {
+          "id": "product_overview",
+          "type": "product-overview",
+          "path": "docs/product/overview.md",
+          "status": "planned",
+          "requires_domain_graph": true,
+          "requires_knowledge_graph": true,
+          "template": "product-overview.txt"
+        }
+      ]
+    },
+    {
+      "group": "operations",
+      "documents": [
+        {
+          "id": "setup_guide",
+          "type": "setup-guide",
+          "path": "docs/setup.md",
+          "status": "planned",
+          "requires_domain_graph": false,
+          "requires_knowledge_graph": false,
+          "template": "setup-guide.txt"
+        }
+      ]
+    },
+    {
+      "group": "reference",
+      "documents": [
+        {
+          "id": "limitations",
+          "type": "limitations-register",
+          "path": "docs/reference/limitations.md",
+          "status": "planned",
+          "requires_domain_graph": false,
+          "requires_knowledge_graph": true,
+          "template": "limitations-register.txt"
+        },
+        {
+          "id": "dependencies",
+          "type": "dependencies-inventory",
+          "path": "docs/architecture/dependencies.md",
+          "status": "planned",
+          "requires_domain_graph": false,
+          "requires_knowledge_graph": true,
+          "template": "dependencies-inventory.txt"
+        }
+      ]
+    },
+    {
+      "group": "security",
+      "documents": [
+        {
+          "id": "security_policy",
+          "type": "security-policy",
+          "path": "docs/SECURITY.md",
+          "status": "planned",
+          "requires_domain_graph": false,
+          "requires_knowledge_graph": false,
+          "template": "security-policy.txt"
+        }
+      ]
+    },
+    {
+      "group": "records",
+      "documents": [
+        {
+          "id": "adr_index",
+          "type": "decision-records",
+          "path": "docs/adr/README.md",
+          "status": "planned",
+          "requires_domain_graph": false,
+          "requires_knowledge_graph": false,
+          "template": "decision-records.txt"
+        },
+        {
+          "id": "tech_debt",
+          "type": "tech-debt-register",
+          "path": "docs/reference/tech-debt.md",
+          "status": "planned",
+          "requires_domain_graph": false,
+          "requires_knowledge_graph": true,
+          "template": "tech-debt-register.txt"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "total_documents": 0,
+    "completed": 0,
+    "in_progress": 0,
+    "requires_review": 0,
+    "last_updated": null
+  }
+}

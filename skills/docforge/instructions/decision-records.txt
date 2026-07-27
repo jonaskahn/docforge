@@ -1,0 +1,50 @@
+# Decision Records Instruction Template
+
+## Purpose
+Provide index and template for Architecture Decision Record (ADR) log.
+
+## Target Audience
+Engineers making and reviewing architectural decisions
+
+## Required Sections
+1. Index of decisions - list of all ADRs with date and status
+2. ADR template and format - how to write new ADRs
+3. Archival policy - how decisions are superseded/deprecated
+
+## Data Requirements
+- Git history (for existing decisions if ADRs exist)
+- No other requirements
+
+## Depth Level
+L1 - Index and template; ADRs themselves are deeper
+
+## Template Structure
+- Lead with: "Architecture Decision Records (ADRs) capture major decisions made in this project"
+- Explain why decisions are recorded (helps future contributors understand tradeoffs)
+- Show index table: # | Date | Title | Status (Accepted/Superseded/Deprecated)
+- Provide ADR template:
+  - Title and status
+  - Context: what problem prompted this decision
+  - Decision: what we decided
+  - Rationale: why this choice (not others)
+  - Consequences: what becomes easier/harder as a result
+  - Alternatives considered: what else did we evaluate
+  - Revisit trigger: what would make us reconsider (version bump, scale milestone, etc.)
+
+## Provenance Requirements
+- Link to docs/adr/ directory where ADRs live
+- Reference git commits introducing decisions
+- Cross-reference architecture docs that explain consequences
+
+## Common Pitfalls
+- Don't make ADRs too formal - accessibility matters more than rigor
+- Don't retroactively create ADRs for old decisions (unless already documented)
+- Don't forget to update index when new ADRs are added
+- Don't make ADRs about implementation details - focus on architectural choice
+- Don't confuse ADRs with design docs - ADRs are decisions *already made*
+
+## Notes
+- ADRs are append-only - never rewrite old ones, supersede them
+- Keep them short - 1-2 pages each, longer decisions might not be architectural
+- Link from architecture/low-level.md sections explaining *why* design was chosen
+- Consider dating decisions by commit or release, not calendar date

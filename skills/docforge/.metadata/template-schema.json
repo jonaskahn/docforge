@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Document Templates Schema",
+  "description": "Schema defining document types, templates, and their generation requirements",
+  "type": "object",
+  "required": ["version", "templates"],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "name", "description", "instruction_file", "requires", "sections", "depth", "audience"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Unique document type identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this document covers"
+          },
+          "instruction_file": {
+            "type": "string",
+            "description": "Template instruction file in instructions/"
+          },
+          "requires": {
+            "type": "array",
+            "description": "Required data sources",
+            "items": {
+              "type": "string",
+              "enum": ["knowledge_graph", "domain_graph", "git_history", "manifests"]
+            }
+          },
+          "sections": {
+            "type": "array",
+            "description": "Expected sections/parts",
+            "items": { "type": "string" }
+          },
+          "depth": {
+            "type": "string",
+            "enum": ["L1", "L2", "L3", "L4"],
+            "description": "Default depth level (L1=overview, L4=deep-dive)"
+          },
+          "audience": {
+            "type": "array",
+            "description": "Intended readers",
+            "items": {
+              "type": "string",
+              "enum": ["all", "engineer", "business", "ops"]
+            }
+          },
+          "tier": {
+            "type": "array",
+            "description": "Tiers where this document appears",
+            "items": {
+              "type": "string",
+              "enum": ["core", "standard", "extended"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
