@@ -12,7 +12,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["type", "name", "description", "instruction_file", "requires", "sections", "depth", "audience"],
+        "required": ["type", "name", "description", "instruction_file", "requires", "audience"],
         "properties": {
           "type": {
             "type": "string",
@@ -38,15 +38,9 @@
               "enum": ["knowledge_graph", "domain_graph", "git_history", "manifests"]
             }
           },
-          "sections": {
-            "type": "array",
-            "description": "Expected sections/parts",
-            "items": { "type": "string" }
-          },
-          "depth": {
+          "note": {
             "type": "string",
-            "enum": ["L1", "L2", "L3", "L4"],
-            "description": "Default depth level (L1=overview, L4=deep-dive)"
+            "description": "Optional free-text note"
           },
           "audience": {
             "type": "array",

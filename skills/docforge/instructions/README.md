@@ -14,26 +14,27 @@ is not a gap — the catalog is authoritative for all of them.
 ## By Category
 
 ### Architecture
-- `architecture-high-level.txt` — System overview, blocks, boundaries
-- `architecture-low-level.txt` — Detailed mechanism, subsystem internals
+- `architecture-high-level.md` — System overview, blocks, boundaries
+- `architecture-low-level.md` — Detailed mechanism, subsystem internals
 
 ### Business Flows
-- `flows-template.txt` — Step-by-step business process flows
+- `flows.md` — Step-by-step business process flows
 
 ### Product
-- `product-overview.txt` — Business capabilities and domains
+- `product-overview.md` — Business capabilities and domains, curated narrative
+- `product-capabilities.md` — The exhaustive feature catalog, business language
 
 ### Operations & Onboarding
-- `setup-guide.txt` — Environment setup, installation, verification
+- `setup-guide.md` — Environment setup, installation, verification
 
 ### Reference
-- `limitations-register.txt` — Known constraints and bounds
-- `dependencies-inventory.txt` — External libraries and services
-- `tech-debt-register.txt` — Architectural debt and workarounds
+- `limitations-register.md` — Known constraints and bounds
+- `dependencies-inventory.md` — External libraries and services
+- `tech-debt-register.md` — Architectural debt and workarounds
 
 ### Security & Governance
-- `security-policy.txt` — Vulnerability reporting and contacts
-- `decision-records.txt` — Architecture Decision Record index and format
+- `security-policy.md` — Vulnerability reporting and contacts
+- `decision-records.md` — Architecture Decision Record index and format
 
 ## Template Structure
 
@@ -78,7 +79,7 @@ those come from `references/document-catalog.md` and `references/depth-and-audie
 ## Updating Templates
 
 When a template needs refinement:
-- Edit the `.txt` file directly
+- Edit the `.md` file directly
 - Keep structure: Purpose → Contract pointer → Depth pointer → Data → Template Structure → Provenance → Notes
 - Never add must-present/keep-out/mode/depth prose — fix it in `references/document-catalog.md` or `references/depth-and-audience.md` instead
 - Update version in `.metadata/document-templates.json` if schema changes

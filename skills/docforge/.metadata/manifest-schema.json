@@ -35,7 +35,7 @@
           "description": "Selected audience/domain overlays",
           "items": {
             "type": "string",
-            "enum": ["business-analyst", "product-owner", "data-pipeline", "api-service", "web-app", "infrastructure", "library"]
+            "enum": ["business-analyst", "product-owner", "data-pipeline", "api", "web", "infrastructure", "library"]
           }
         }
       }
@@ -49,7 +49,7 @@
         "properties": {
           "group": {
             "type": "string",
-            "enum": ["architecture", "flows", "product", "operations", "reference", "security", "records"]
+            "enum": ["architecture", "flows", "product", "engineering", "operations", "reference", "security", "contributing", "records"]
           },
           "documents": {
             "type": "array",

@@ -45,7 +45,7 @@ SPINE: list[tuple[str, int, str | None]] = [
     ("docs/product/overview.md", 1, None),
     ("docs/product/capabilities.md", 2, None),
     ("docs/product/roadmap.md", 2, None),
-    ("docs/flows/README.md", 1, None),
+    ("docs/flows/README.md", 2, None),
     ("docs/architecture/high-level.md", 1, "architecture-high-level.md"),
     ("docs/architecture/low-level.md", 2, "architecture-low-level.md"),
     ("docs/architecture/data-flow.md", 2, None),

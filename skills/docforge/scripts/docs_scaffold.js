@@ -42,7 +42,7 @@ const SPINE = [
   ["docs/product/overview.md", 1, null],
   ["docs/product/capabilities.md", 2, null],
   ["docs/product/roadmap.md", 2, null],
-  ["docs/flows/README.md", 1, null],
+  ["docs/flows/README.md", 2, null],
   ["docs/architecture/high-level.md", 1, "architecture-high-level.md"],
   ["docs/architecture/low-level.md", 2, "architecture-low-level.md"],
   ["docs/architecture/data-flow.md", 2, null],

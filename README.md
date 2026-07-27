@@ -67,6 +67,8 @@ Only the reference files relevant to your task load into context, so the agent s
 | `references/diligence.md` | Multi-repo portfolio layer for audits, acquisitions, vendor review |
 | `references/diligence-collection.md` | Discover the repo collection and gap-check every member first |
 | `references/overlay-*.md` | Type overlays (API service, data pipeline, web app, library, infrastructure) and audience overlays (business-analyst, product-owner) |
+| `instructions/*.md` | Writing-craft layer for select document types — layout, data sources, provenance tagging. The content contract itself lives in `references/document-catalog.md`. |
+| `.metadata/` | Manifest and template-tracking schemas that drive the plan-first workflow — copied into a target repo's `.docforge/manifest.json` as the durable, per-document fill-state record. |
 
 Plus `assets/templates/` (scaffolds for every spine and overlay file) and `scripts/` (scaffold a tree, audit it, check provenance, discover child repos).
 

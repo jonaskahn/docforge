@@ -115,7 +115,7 @@ Before writing prose, present — per document, in dependency order — what it 
 
 The `.metadata/` directory holds the templates and schemas that drive Step 0. Two of them are *tracking* files you copy into the target repo's `.docforge/` and update as you go — they answer different questions and use different status vocabularies:
 
-- `manifest.json` → the shape of `.docforge/manifest.json`, which `scripts/manifest_sync.py` writes and maintains. The **durable plan and fill-state** of the whole tree: one entry per planned document, its group, path, template, and `status` (`planned` → `in_progress` → `generated` → `needs_review` → `complete`, or `skipped`). This is the record you present at Gate 1 and update (via `manifest_sync.py set`) as each part lands. Also carries per-section provenance once written (see `references/provenance-tracking.md`).
+- `manifest.json` → the shape of `.docforge/manifest.json`, which `scripts/manifest_sync.py` writes and maintains. The **durable plan and fill-state** of the whole tree: one entry per planned document, its group, path, template, and `status` (`planned` → `in_progress` → `generated` → `needs_review` → `complete`, or `skipped`). This is the record you present at Gate 1 and update (via `manifest_sync.py set`) as each part lands. Also carries per-section provenance once written (see `references/provenance-tracking.md`). Its `project_context.tier` is stored under a different vocabulary than Step 2's table: `1 — Spine` / `2 — Diligence` / `3 — Portfolio` (the CLI's numeric `--tier`) are recorded as the strings `"core"` / `"standard"` / `"extended"` respectively — the same three tiers, spelled differently for storage.
 - `generation-status.json` → the **live session log** while you write: per document `status` (`planned` → `querying` → `writing` → `complete`, or `skipped`), timing, tokens, and any error. Ephemeral; the manifest is the record that outlives the session.
 - `manifest-schema.json` / `status-schema.json` — schemas validating the two above.
 - `document-templates.json` — maps each document type to its instruction file and required data sources (a craft pointer; the content contract is `references/document-catalog.md`). `template-schema.json` validates it.
@@ -128,11 +128,23 @@ Run the analysis above, then fill the gaps it does not cover:
 
 - **Manifests and build files** — `pyproject.toml`, `package.json`, `go.mod`, `Cargo.toml`, `pom.xml`, `*.csproj`. Version pins and dependency ranges come from here, not from the graph.
 - **Repo type signals** — a web framework, an HTTP server, DAG or scheduler definitions, a published package config, infrastructure-as-code, embedded business logic (validation rules, approval thresholds, eligibility conditions). These select your overlays; the graph's layer assignment usually makes them obvious.
-- **What documentation already exists** — an existing `README`, `docs/`, wiki exports, comments that read like design notes, ADR-ish files. Existing content is evidence about what people needed to write down; migrate it, do not replace it.
+- **What documentation already exists** — an existing `README`, `docs/`, wiki exports, comments that read like design notes, ADR-ish files. Existing content is evidence about what people needed to write down; migrate it, do not replace it — see "Migrate pre-existing documentation" immediately below.
 - **Operational reality** — CI config, container and deploy manifests, and the environment variables the code actually reads.
 - **History for the "why"** — `git log` on architecturally significant paths, and merge commits with substantive messages. This is where backfilled decision records come from, and it is the one thing the graph cannot supply.
 - **Business flows** — run `python scripts/check_preconditions.py --repo <path> --need domain` first; it must report READY for both the knowledge graph and the domain graph before you enumerate flows. Then read `/understand-domain`'s output to enumerate the domains, flows and steps in the code's own terms. That list *is* the set of flow documents to build under `docs/flows/` — never hand-type it, since the point of the analysis is to surface flows a writer would miss. Each flow starts as a flat file (`docs/flows/<flow>.md`); it is promoted to a folder only when you write real audience depth for it in the same pass. See `references/document-composition.md`.
 - **Child repos** — before any multi-repo work, and as a cheap sanity check otherwise, run `python scripts/discover_repos.py --root <path>`. It reports declared submodules and, more importantly, nested repos present on disk but *not* declared in `.gitmodules` (vendored copies, `git subtree` merges, hand-cloned submodules). For single-repo work this just confirms scope; for diligence it is load-bearing — see Step 2 and `references/diligence-collection.md`.
+
+#### Migrate pre-existing documentation — before Gate 1, when the repo has any
+
+This is the **first docforge run** against a repo that already has hand-written docs (a `README`, a `docs/` tree, wiki exports, design-note-shaped comments, ADR-ish files) that carry no docforge provenance yet. Do this before Gate 1 presents its tree, so the plan the user confirms already reflects what's carried over, what's net-new, and what's being archived — not a scaffold that silently skips every path that happens to already exist. Full procedure: `references/docs-tree.md` §6 "Migrating an existing docs folder". In brief:
+
+1. **Inventory** every existing document — path, last-modified date, one-line summary of what it covers.
+2. **Classify** each as current-and-accurate / stale-but-salvageable / obsolete.
+3. **Map** surviving documents to their taxonomy slot (`references/docs-tree.md`'s placement table); split a document that serves two audiences rather than filing it under one.
+4. **Leave a forwarding pointer** at any old path something external still links to.
+5. **Archive** genuinely obsolete material under `docs/_archive/<year>/` with a `README.md` explaining nothing inside is maintained — never delete design history outright; `docs_scaffold.py --audit` already excludes `_archive/` from its checks.
+
+This is a distinct scenario from "Updating existing docs" (below): that section refreshes docs that **already carry docforge provenance** from a prior run, using hash comparison. This procedure runs once, on first contact with a repo's own hand-written docs; every later run on the same repo uses the provenance-hash path instead.
 
 ### Step 2 — Choose a tier
 
@@ -211,6 +223,8 @@ Then `python scripts/docs_scaffold.py --repo <path> --audit` to catch dead cross
 For anything the documentation asserts about behaviour, spot-check it against the graph — `/understand-explain <path>` on two or three modules the code map describes is enough to catch a systematic misreading.
 
 ## Updating existing docs — check before you rewrite
+
+This section is for docs that **already carry docforge provenance** from a prior run. If the repo instead has hand-written docs that have never been through docforge, that's Step 1's "Migrate pre-existing documentation" — run that first; this section starts from the second run onward.
 
 When asked to refresh docs that already carry docforge provenance, do not re-read and re-guess. Compare hashes:
 

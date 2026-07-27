@@ -228,20 +228,20 @@ describe behaviour not code (non-negotiable 6), and go deep by default, cutting 
 The repo-type and audience overlays add further documents; each overlay reference (`overlay-*.md`)
 owns the detail. The content contracts research surfaced for the ones most often confused:
 
-### Data contract *(API / data-pipeline overlay)* — `overlay-api-service.md`, `overlay-data-pipeline.md`
-- **Mode:** Reference. Follows the Data Contract Specification.
-- **Must present:** `info` (title, version, status, owner/contact); `servers` (where the data physically lives, access); `models` (schema — tables, fields, types, constraints, per-field checks, examples); `definitions` (reusable semantics for shared business concepts); `terms` (usage, limitations, billing, notice period, licence); `servicelevels` (availability, retention, latency, freshness, frequency, support, backup — each a measurable target); `quality` (executable checks); and explicit versioning of the contract itself.
-- **Keep out:** pipeline/transformation code beyond what a consumer needs; undocumented ad-hoc fields; SLAs stated as aspirations without targets; implicit ownership.
+### Data contract *(data-pipeline overlay)* — `overlay-data-pipeline.md`
+- **Mode:** Reference.
+- **Must present**, per dataset — owner and physical location; update cadence and freshness SLA; grain (one row per what, per what period); schema (column, type, nullable, description, PII); semantics (definitions of anything ambiguous — status values, currency, timezone, late-data handling); quality guarantees (what is enforced, and the negative case stated explicitly); change policy (notice period and channel for breaking changes); known consumers and what breaks for each if the contract changes.
+- **Keep out:** pipeline/transformation code beyond what a consumer needs; undocumented ad-hoc fields; SLAs stated as aspirations without targets; implicit ownership. `overlay-api-service.md` has no equivalent document — an API's own response shapes are the API reference (`reference/api.md`), not a separate data contract.
 
 ### Business rules *(BA overlay)* — `overlay-business-analyst.md`
 - **Mode:** Reference (declarative, business-owned). Follows the Business Rules Manifesto.
-- **Must present:** per rule — a unique ID; a declarative statement in business vocabulary; atomic (one rule) and grounded in defined terms/facts; rationale and source/authority (business-owned, not IT); type (definitional vs behavioural); thresholds/conditions and exceptions expressed as further rules; kept separate from process so one rule spans many flows.
+- **Must present**, per rule — a plain-language rule name (the entry's identifier); a declarative statement in business vocabulary a stakeholder would recognize; where it's enforced (module, by path — behaviour, never a private symbol or line number); which flow/entity it applies to; its exceptions (state "none found" rather than omitting the field); and its source (the `/understand-chat` query and date that verified it). Kept separate from process so one rule spans many flows.
 - **Keep out:** feature descriptions, KPIs, product value (→ PO feature catalog); system-enforcement/implementation detail (→ requirements); rules stated as a solution ("the system shall…") — state the business constraint. Sourced from `/understand-domain` / `/understand-chat`, gated on the domain graph.
 
 ### Requirements traceability matrix *(BA overlay)* — `overlay-business-analyst.md`
 - **Mode:** Reference (links + status, not prose).
-- **Must present:** columns — requirement ID and description; source (stakeholder, rule, spec section); implementation reference (component/module); test-case ID(s), description, verification method; test status and defect ID(s); coverage status and owner. Bidirectional: every requirement traces forward to ≥1 test, every test back to a valid requirement.
-- **Keep out:** narrative rationale (→ requirements/rules docs); design discussion; anything not linkable to an ID. The orphan rows it surfaces (untested requirement, requirement-less test) are the defects it exists to catch.
+- **Must present:** one row per requirement — the requirement in the stakeholder's own wording where recoverable (else inferred from code, with only the unrecoverable phrasing marked by a typed token); the business rule(s) in `business-rules.md` implementing it; the code location; test coverage (file/name, or "none — flag"); and status (implemented / partial / not started).
+- **Keep out:** narrative rationale (→ requirements/rules docs); design discussion; anything not linkable to a rule or code location. The orphan rows it surfaces (untested requirement, unimplemented requirement) are the defects it exists to catch.
 
 ### Feature catalog & success metrics *(PO overlay)* — `overlay-product-owner.md`
 - **Mode:** Reference/Explanation.

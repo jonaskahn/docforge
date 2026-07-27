@@ -1,196 +1,95 @@
 {
   "$schema": "template-schema.json",
-  "version": "1.0",
+  "version": "1.1",
+  "note": "Instruction files are a writing-craft layer only. The complete per-type content contract (must-present, keep-out, Diataxis mode) lives in references/document-catalog.md; depth lives in references/depth-and-audience.md. Do not restate those here.",
   "templates": [
     {
       "type": "architecture-high-level",
       "name": "High-Level Architecture",
       "description": "System overview: blocks, boundaries, major components",
-      "instruction_file": "architecture-high-level.txt",
+      "instruction_file": "architecture-high-level.md",
       "requires": ["knowledge_graph"],
-      "sections": [
-        "Context and motivation",
-        "System blocks and responsibilities",
-        "External interfaces and dependencies",
-        "Key architectural decisions"
-      ],
-      "depth": "L2",
       "audience": ["all"]
     },
     {
       "type": "architecture-low-level",
       "name": "Low-Level Architecture",
       "description": "Detailed mechanism: how major subsystems work",
-      "instruction_file": "architecture-low-level.txt",
+      "instruction_file": "architecture-low-level.md",
       "requires": ["knowledge_graph"],
-      "sections": [
-        "Internal structure per subsystem",
-        "Call and data flow pathways",
-        "Key abstractions and patterns",
-        "Integration points"
-      ],
-      "depth": "L3",
-      "audience": ["engineer"]
-    },
-    {
-      "type": "architecture-concepts",
-      "name": "Concept Deep-Dives",
-      "description": "Deep-dive explanations of critical concepts",
-      "instruction_file": "architecture-concepts.txt",
-      "requires": ["knowledge_graph"],
-      "sections": [
-        "Problem being solved",
-        "Solution approach",
-        "Key algorithms or patterns",
-        "Trade-offs and alternatives"
-      ],
-      "depth": "L4",
       "audience": ["engineer"]
     },
     {
       "type": "flows",
       "name": "Business Flows",
       "description": "Step-by-step execution flows for key business processes",
-      "instruction_file": "flows-template.txt",
+      "instruction_file": "flows.md",
       "requires": ["domain_graph"],
-      "sections": [
-        "Flow steps and sequence",
-        "Actors and system components",
-        "Success and failure paths"
-      ],
-      "depth": "L1",
       "audience": ["all"]
     },
     {
       "type": "product-overview",
       "name": "Product Overview",
       "description": "What the system does from business perspective",
-      "instruction_file": "product-overview.txt",
+      "instruction_file": "product-overview.md",
       "requires": ["domain_graph"],
-      "sections": [
-        "Core business domains",
-        "Key capabilities",
-        "User-visible features"
-      ],
-      "depth": "L1",
       "audience": ["business"]
     },
     {
       "type": "product-capabilities",
-      "name": "Capabilities Catalog",
-      "description": "Feature inventory and cross-references",
-      "instruction_file": "product-capabilities.txt",
+      "name": "Product Capabilities",
+      "description": "Exhaustive feature catalog in business language",
+      "instruction_file": "product-capabilities.md",
       "requires": ["domain_graph"],
-      "sections": [
-        "Feature list by domain",
-        "Capability relationships",
-        "Implementation status"
-      ],
-      "depth": "L2",
-      "audience": ["business", "engineer"]
+      "audience": ["business"]
     },
     {
       "type": "setup-guide",
       "name": "Setup and Installation",
       "description": "Step-by-step environment setup for developers",
-      "instruction_file": "setup-guide.txt",
-      "requires": [],
-      "sections": [
-        "Prerequisites",
-        "Installation steps",
-        "Verification",
-        "Troubleshooting"
-      ],
-      "depth": "L1",
+      "instruction_file": "setup-guide.md",
+      "requires": ["manifests"],
       "audience": ["engineer"]
     },
     {
       "type": "limitations-register",
       "name": "Known Limitations",
       "description": "Documented constraints, unsupported scenarios, hard bounds",
-      "instruction_file": "limitations-register.txt",
-      "requires": ["knowledge_graph"],
-      "sections": [
-        "Functional limitations",
-        "Performance constraints",
-        "Scalability bounds",
-        "Known issues"
-      ],
-      "depth": "L2",
+      "instruction_file": "limitations-register.md",
+      "requires": ["knowledge_graph", "git_history"],
       "audience": ["all"]
     },
     {
       "type": "dependencies-inventory",
       "name": "Third-Party Dependencies",
       "description": "External libraries, services, and their integration points",
-      "instruction_file": "dependencies-inventory.txt",
-      "requires": ["knowledge_graph"],
-      "sections": [
-        "Direct dependencies",
-        "Version constraints",
-        "Failure modes and fallbacks",
-        "License compliance"
-      ],
-      "depth": "L2",
+      "instruction_file": "dependencies-inventory.md",
+      "requires": ["knowledge_graph", "manifests"],
       "audience": ["engineer", "ops"]
     },
     {
       "type": "tech-debt-register",
-      "name": "Tech Debt and Constraints",
-      "description": "Known technical debt, workarounds, and architectural constraints",
-      "instruction_file": "tech-debt-register.txt",
-      "requires": ["knowledge_graph"],
-      "sections": [
-        "Debt items and rationale",
-        "Workarounds in place",
-        "Hard constraints",
-        "Repayment priority"
-      ],
-      "depth": "L2",
+      "name": "Tech Debt Register",
+      "description": "Known technical debt and workarounds (constraints live in their own doc)",
+      "instruction_file": "tech-debt-register.md",
+      "requires": ["knowledge_graph", "git_history"],
       "audience": ["engineer"]
     },
     {
       "type": "security-policy",
       "name": "Security Policy",
       "description": "Security contact, reporting procedures, scope",
-      "instruction_file": "security-policy.txt",
+      "instruction_file": "security-policy.md",
       "requires": [],
-      "sections": [
-        "Reporting contact",
-        "Scope and exclusions",
-        "Response timeline",
-        "Recognition policy"
-      ],
-      "depth": "L1",
       "audience": ["all"]
     },
     {
       "type": "decision-records",
       "name": "Architecture Decision Records",
       "description": "Index and template for immutable decision log",
-      "instruction_file": "decision-records.txt",
-      "requires": [],
-      "sections": [
-        "Index of decisions",
-        "ADR template and format",
-        "Archival policy"
-      ],
-      "depth": "L1",
+      "instruction_file": "decision-records.md",
+      "requires": ["git_history"],
       "audience": ["engineer"]
-    },
-    {
-      "type": "runbooks",
-      "name": "Operational Runbooks",
-      "description": "Step-by-step procedures for on-call and ops",
-      "instruction_file": "runbooks.txt",
-      "requires": [],
-      "sections": [
-        "Common procedures",
-        "Incident response steps",
-        "Escalation contacts"
-      ],
-      "depth": "L2",
-      "audience": ["ops"]
     }
   ]
 }

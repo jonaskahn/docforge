@@ -40,7 +40,7 @@ User-facing changelog, distinct from the root `CHANGELOG.md`, which is commit-le
 
 ## `backlog-traceability.md` (optional)
 
-Only build this file if an issue tracker's IDs actually appear in commit messages or code comments — epic/story ID → feature → code flow, so a PO can answer "what did ticket X actually change" without archaeology. Skip it entirely, rather than fabricate a mapping, if no ticket references exist anywhere in history.
+Only build this file if an issue tracker's IDs actually appear in commit messages or code comments — epic/story ID → feature → code flow, so a PO can answer "what did ticket X actually change" without archaeology. Skip it entirely, rather than fabricate a mapping, if no ticket references exist anywhere in history. `docs_scaffold.py`'s mechanical scaffold seeds this file unconditionally alongside the other product-owner documents (it cannot check history) — if you scaffolded mechanically and no ticket references turn up, delete the file rather than filling it with a fabricated or empty mapping.
 
 ## Non-negotiable specific to this overlay
 
