@@ -172,7 +172,9 @@ If a document plausibly fits two folders, place it where its **primary audience*
 Existing content is evidence about what people actually needed to write down. Treat it accordingly:
 
 1. **Inventory before moving.** List every existing document with its last-modified date and a one-line summary of what it covers.
-2. **Classify**: current and accurate / stale but salvageable / obsolete.
+2. **Classify**: current and accurate / stale but salvageable / obsolete / merge-candidate (duplicate coverage across two or more documents).
 3. **Map** each surviving document to a taxonomy slot using the table above. Split documents that serve two audiences rather than filing them under one.
-4. **Leave forwarding pointers** at old paths for a release cycle if anything external links to them — a one-line file containing the new location.
-5. **Archive rather than delete** genuinely obsolete material: move it under `docs/_archive/<year>/` with a `README.md` explaining that nothing inside is maintained. Deleting design history that someone will want in an audit is a decision you cannot reverse.
+4. **Ask before acting.** Present the classification and get an explicit per-document decision from the user — keep / migrate / merge / archive / delete — before moving or archiving anything. The classification in step 2 is a proposal, not authorization; treat an unconfirmed "obsolete" the same as "current" until the user says otherwise.
+5. **Leave forwarding pointers** at old paths for a release cycle if anything external links to them — a one-line file containing the new location.
+6. **Archive rather than delete** whatever the user confirmed as obsolete: move it under `docs/_archive/<year>/` with a `README.md` explaining that nothing inside is maintained. Only delete outright if the user explicitly said so — deleting design history someone will want in an audit is a decision you cannot reverse.
+7. **Merge** whatever the user confirmed as duplicate coverage into the single surviving document, then archive (not delete) the superseded originals.

@@ -168,10 +168,12 @@ Run the analysis above, then fill the gaps it does not cover:
 This is the **first docforge run** against a repo that already has hand-written docs (a `README`, a `docs/` tree, wiki exports, design-note-shaped comments, ADR-ish files) that carry no docforge provenance yet. Do this before Gate 1 presents its tree, so the plan the user confirms already reflects what's carried over, what's net-new, and what's being archived — not a scaffold that silently skips every path that happens to already exist. Full procedure: `references/docs-tree.md` §6 "Migrating an existing docs folder". In brief:
 
 1. **Inventory** every existing document — path, last-modified date, one-line summary of what it covers.
-2. **Classify** each as current-and-accurate / stale-but-salvageable / obsolete.
+2. **Classify** each as current-and-accurate / stale-but-salvageable / obsolete / **merge-candidate** (two or more documents covering the same ground that should become one).
 3. **Map** surviving documents to their taxonomy slot (`references/docs-tree.md`'s placement table); split a document that serves two audiences rather than filing it under one.
-4. **Leave a forwarding pointer** at any old path something external still links to.
-5. **Archive** genuinely obsolete material under `docs/_archive/<year>/` with a `README.md` explaining nothing inside is maintained — never delete design history outright; `docs_scaffold.py --audit` already excludes `_archive/` from its checks.
+4. **Present the classification to the user and get an explicit decision before touching anything** — one line per old document: keep-in-place / migrate-to-`<slot>` / merge-into-`<target>` / archive / delete-outright. Never auto-archive, auto-merge, or silently drop a document on the strength of your own classification; "obsolete" and "stale" are your proposal, not a verdict the user already gave. Fold this decision into Gate 1's presentation rather than running it as a separate silent pass.
+5. **Leave a forwarding pointer** at any old path something external still links to.
+6. **Archive**, per the user's decision, genuinely obsolete material under `docs/_archive/<year>/` with a `README.md` explaining nothing inside is maintained — never delete design history outright unless the user explicitly says delete; `docs_scaffold.py --audit` already excludes `_archive/` from its checks.
+7. **Merge**, per the user's decision, documents they confirmed as duplicates into the single surviving target, then archive (not delete) the superseded originals so the merge is reversible.
 
 This is a distinct scenario from "Updating existing docs" (below): that section refreshes docs that **already carry docforge provenance** from a prior run, using hash comparison. This procedure runs once, on first contact with a repo's own hand-written docs; every later run on the same repo uses the provenance-hash path instead.
 
@@ -278,6 +280,8 @@ When asked to refresh docs that already carry docforge provenance, do not re-rea
 6. Re-run the checker to confirm every touched document now reports `FRESH`.
 
 A whole-document rewrite is warranted only when most sections are stale at once, or the document's own structure changed (a rule added or removed, not merely modified).
+
+**Before writing any of the above, ask the user what to do with what the refresh makes obsolete.** A refresh routinely surfaces documents the current pass supersedes — a document whose structure changed so much the old file no longer matches the taxonomy slot, two documents a consolidation is about to merge into one, or a file the manifest still lists but the repo no longer needs. Do not silently overwrite, orphan, or delete any of these. Present the list (superseded / merge-candidate / no-longer-needed) and get an explicit keep / archive / merge / delete decision, same as the first-run migration gate above — a refresh is not exempt from that confirmation just because provenance already exists. Archive whatever the user confirms as obsolete under `docs/_archive/<year>/` (never delete outright unless they say so), and only then proceed with steps 1–6.
 
 ## Root vs `docs/`
 
