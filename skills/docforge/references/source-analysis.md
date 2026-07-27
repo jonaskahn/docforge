@@ -10,7 +10,7 @@ Contents:
 3. Command-to-document mapping
 4. Asking good questions
 5. Documenting the graph itself
-6. When the graph is unavailable
+6. External values and tokens, never graphs
 
 ---
 
@@ -37,7 +37,7 @@ A multi-agent pipeline scans the project, extracts files, functions, classes and
 | Non-English output | `/understand --language <en\|zh\|zh-TW\|ja\|ko\|ru>` |
 | Visual exploration | `/understand-dashboard` |
 
-**`/understand` is a skill, not universally a slash command.** Some agents expose it as `/understand`; Codex uses `$understand`; others show no command until the understand-anything skill or plugin is loaded. If no command is recognized, load or enable it the way this agent loads skills (skill listing, plugin registry, an explicit load/`Skill` call) before concluding it is missing, then invoke it — in plain language where no command form exists: *"Use the understand skill to analyze this project."* Only when the plugin is genuinely absent (loading it is not possible here) does §6 apply.
+**`/understand` is a skill, not universally a slash command.** Some agents expose it as `/understand`; Codex uses `$understand`; others show no command until the understand-anything skill or plugin is loaded. If no command is recognized, load or enable it the way this agent loads skills (skill listing, plugin registry, an explicit load/`Skill` call) before concluding it is missing, then invoke it — in plain language where no command form exists: *"Use the understand skill to analyze this project."* If the plugin is genuinely absent (loading it is not possible here), stop per `SKILL.md`'s "Precheck" section — tell the user to install `understand-anything` before anything else runs.
 
 ---
 
@@ -204,16 +204,10 @@ Where this applies, one line in `docs/engineering/setup.md` under a "understandi
 
 ---
 
-## 6. When the graph is unavailable
+## 6. External values and tokens, never graphs
 
-The plugin may not be installed, the source may not be reachable from where you are running, or the user may decline the token cost. In that case:
+**Do not generate or write around a missing graph.** Both the knowledge graph and domain graph are checked at the start of every docforge invocation (see `SKILL.md`'s "Precheck" section). If either is missing, docforge stops and tells the user which command to run — there is no inspection fallback, no adequate substitute, and no scenario in which a docforge run proceeds without both.
 
-**Say so, once, plainly.** "I don't have the knowledge graph for this repo, so the code map is based on direct inspection of <what you read>." The reader needs to know how the claims were sourced.
+**Distinguish between external values and derivable facts.** A fact that lives in code, config, or git history (a retry policy, a business rule, a flow step, a module boundary) is derivable — query the graph or read the source directly to obtain it. A fact that lives nowhere in the repository (a contact address, an SLA number, a roadmap date, a production URL) is external — represent it as a typed `<UPPER_SNAKE_CASE>` token and never downgrade it to a placeholder just because querying might be inconvenient. The distinction is the integrity of the document: over-claiming (saying X when you cannot verify it) is worse than under-claiming (using a token for something genuinely unknowable), and guessing at derivable content while ignoring a graph is the worst of both.
 
-**Fall back deliberately — for architecture and spine documents only.** Read manifests, entry points, directory structure, CI configuration and the largest source files. Use `git log` for history. This is adequate for `architecture/high-level.md`, `engineering/setup.md`, `reference/limitations.md` and the rest of the spine.
-
-**Flows, `product/overview.md`, `product/capabilities.md`, and BA/PO content have no fallback.** These require the domain graph specifically (`/understand-domain`'s output), not just the knowledge graph, and there is no adequate substitute for it — `scripts/check_preconditions.py --need domain` exists to make this a hard stop rather than a judgment call. If it reports MISSING, do not write these documents from route files, screen names, or inference; tell the user which command to run and wait.
-
-**Still write what direct inspection supports; token only the genuinely external.** Losing the graph costs you semantic depth, not the whole document — read the manifests, entry points and largest source files and write from those. A fact you could have *confirmed by asking a maintainer* (contact, on-call, prod URL, org SLA) becomes a typed `<UPPER_SNAKE>` token; a fact you could have *derived by reading more code* is still yours to derive. Do not downgrade derivable content to a placeholder just because the graph is absent — under-claiming a knowable fact is its own failure. Over-claiming remains the worst outcome.
-
-**Never generate a tree from the repository name.** If you cannot see the source at all, produce the structure as an explicitly labelled scaffold and say plainly that it is one — do not present a name-derived guess as a documented system.
+**Do not generate a tree from the repository name.** The knowledge graph surfaces the actual architecture; a name-derived guess is a liability, not helpful. If you cannot access the source at all (the plugin is not installed, the source is not reachable), docforge will not run — it stops at the Precheck step.

@@ -31,10 +31,11 @@ Each targets one audience. A documentation set that fails any of them fails for 
 
 ### Grounding
 
-- [ ] A knowledge graph was built or refreshed before writing, and the code map came from it
+- [ ] The Precheck confirmed both knowledge graph and domain graph exist before this document was written (see `SKILL.md`'s "Precheck" section)
+- [ ] The code map came from the knowledge graph, not from directory names or assumptions
 - [ ] Modules named in the code map exist as nodes in the graph
 - [ ] Stated invariants are supported by absent edges, not by assumption
-- [ ] Where the graph was unavailable, the response says so; content still came from direct inspection, and only genuinely external values fell back to typed tokens
+- [ ] Derivable facts are derived from the graph or code; only genuinely external values use typed `<UPPER_SNAKE>` tokens
 
 ### Structure
 

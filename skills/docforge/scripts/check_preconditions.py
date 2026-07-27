@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Gate flow/domain documentation work on the analysis it depends on.
+"""Gate all docforge documentation work on the analysis it depends on.
 
-Business flows are never hand-typed — they come from the understand-anything
-domain graph. This script is the mechanical half of that rule: it checks the
-two files that pipeline produces and refuses to report READY unless both are
-present. It cannot check whether the understand-anything skill/plugin itself
-is installed (that's a property of the calling agent's environment, not this
-repo's filesystem) — the agent must confirm that separately by checking its
-own skill listing or attempting `/understand`.
+Both the knowledge graph and domain graph are required for every docforge
+invocation — there is no fallback, no inspection substitute. This script checks
+that the two files exist and refuses to report READY unless both are present.
+It cannot check whether the understand-anything skill/plugin itself is installed
+(that's a property of the calling agent's environment, not this repo's filesystem)
+— the agent must confirm that separately by checking its own skill listing or
+attempting `/understand` and `/understand-domain`.
 
 Exit code 0 only when every file required for the requested `--need` scope is
 present. Non-zero otherwise, with a specific remediation command per gap.
@@ -90,9 +90,11 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repo", required=True, type=Path)
     ap.add_argument("--need", choices=["graph", "domain"], default="domain",
-                     help="'graph' checks only the knowledge graph (architecture work); "
-                          "'domain' also checks the domain graph (required for any flow, "
-                          "product/overview, or business-analyst/product-owner work)")
+                     help="'graph' is a partial check (knowledge graph only); 'domain' "
+                          "(the default, recommended for every docforge run) checks both "
+                          "the knowledge graph and domain graph, which are both required "
+                          "for all documentation work — there is no fallback or "
+                          "inspection substitute")
     args = ap.parse_args()
 
     if not args.repo.is_dir():
@@ -132,11 +134,11 @@ def main() -> int:
     if ok:
         print("All required analysis present. Proceed.")
         return 0
-    print("BLOCKED. Do not write flow, product, or BA/PO documentation until every "
+    print("BLOCKED. No documentation of any kind may be written until every "
           "MISSING item above is resolved. Tell the user what is missing and which "
-          "command produces it; do not silently fall back to inspection for this "
-          "scope — that fallback is reserved for architecture/spine documents "
-          "under non-negotiable 1, not for flows.")
+          "command produces it. Both the knowledge graph and domain graph are "
+          "required for all docforge work — there is no inspection fallback or "
+          "substitute for either.")
     return 1
 
 

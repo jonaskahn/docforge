@@ -23,42 +23,49 @@ Six rules that hold regardless of tier, repo type, ecosystem, or audience. Viola
 5. **Stamp provenance in the same pass you write.** Every generated document records the specific source files (by git blob hash) each section draws from. Staleness is later decided by hash comparison, never by re-reading and re-guessing; a change in one recorded file regenerates the section that cites it, not the whole document. See `references/provenance-tracking.md`.
 6. **Write for durability, not for the current code.** Describe what the logic *does* at the flow and behaviour level; a same-behaviour refactor must not falsify a document. Never paste code, never link a line number, never anchor a claim to an internal symbol a rename would break — reference files and modules by path instead. State every fact once and link to it; never duplicate it across documents or audience folders. See `references/document-composition.md`.
 
-## Source analysis — run this first
+## Precheck — mandatory before every invocation
+
+**This runs first, before any other step, every single time.** Both the `understand-anything` skill and both required graph files must be present and ready before docforge proceeds.
 
 Every script in `scripts/` ships as both a Python file (`scripts/<name>.py`) and a Node.js file (`scripts/<name>.js`) — same flags, same output, same exit codes, standard-library/built-ins only on either side, no install step. Examples below show the Python form; use `node scripts/<name>.js …` with identical flags if Python 3 is not available (or vice versa). Pick whichever runtime is already on the machine — `python3 --version` / `node --version` to check.
 
-Every document in the tree makes claims about the source. Producing those claims from directory names and file extensions is how documentation ends up describing a system that does not exist. The knowledge graph replaces guessing with retrieval: it gives you the module map, the architectural layers, the call and import edges, the business domains and flows, and a queryable interface for everything the graph does not already state.
+### Two checks in order:
 
-**Before any other step**, build or refresh it:
+**1. Skill-callable check: `understand-anything:understand` and `understand-anything:understand-domain`**
 
-```
-/understand
-```
+Confirm that both skills appear in your own available-skill listing. The command name varies by agent (slash command `/understand`, Codex `$understand`, or plain language where no command exists: *"use the understand skill"*). If you don't see the skill listed:
+- Try to load it (via Skill tool, plugin registry, or your agent's load/enable mechanism) and re-check the listing.
+- If it remains absent after that, the plugin is not installed.
 
-That runs a multi-agent pipeline over the project and writes the graph to `.ua/knowledge-graph.json` (older projects keep using `.understand-anything/`). Re-runs are incremental — only changed files are re-analysed — so refreshing an existing graph is cheap. Notes that matter in practice:
+**If genuinely absent after load attempt:** Stop. Tell the user to install the `understand-anything` plugin or skill, then return here. Do not take any further docforge step without it.
 
-- **Check for an existing graph first.** If `.ua/knowledge-graph.json` is present and newer than the last substantive commit, use it as is. If it is stale, `/understand` updates it incrementally rather than starting over.
-- **Large repos**: scope the analysis to the part being documented — `/understand src/frontend` — rather than paying for a full pass you do not need. First runs on large codebases consume significant tokens; say so before starting one.
-- **`/understand` is a skill, not universally a slash command.** Some coding agents expose it as `/understand`; Codex uses `$understand`; others surface no command at all until the understand-anything skill or plugin is loaded. Before assuming it is missing, load or enable it the way this agent loads skills (a skill listing, a plugin registry, a `Skill`/load call), then invoke it — in plain language where no command exists: *"Use the understand skill to analyze this project."* A missing command means "not loaded yet," not "not installed"; a genuinely absent plugin is the case in §"When the graph is unavailable".
-- **Read the graph directly** once built. `python scripts/graph_extract.py --graph .ua/knowledge-graph.json --summary` prints the module inventory, layer assignment and external dependency list in a form that seeds the code map and the dependency inventory.
-
-### Hard gate: flows, product overview, and BA/PO content require the domain graph — no fallback
-
-Everything under `docs/flows/`, `product/overview.md`, `product/capabilities.md`, and any BA/PO overlay document is sourced from `/understand-domain`'s output (the domain graph at the project root, conventionally `$PROJECT_ROOT/.ua/domain-graph.json`), never hand-typed from route files, folder names, or a plausible guess. This is stricter than non-negotiable 1's general fallback allowance — that fallback (direct inspection when the graph is unavailable) applies to architecture/spine documents, **not** to flows.
-
-The `agent-context` overlay splits the same way: `AGENTS.md`'s module map and `docs/agents/architecture.md`/`patterns.md`/`testing.md`/`tech-debt.md` need only the knowledge graph (`--need graph`); `docs/agents/flow.md` and the non-stub `glossary.md` variant need the domain graph too (`--need domain`) — same hard gate as flows, no fallback to a hand-typed flow list.
-
-Before touching any of those documents:
+**2. Graph check — one invocation reports both files**
 
 ```
 python scripts/check_preconditions.py --repo <path> --need domain
 ```
 
-- If it reports **MISSING knowledge graph** or **MISSING domain graph**, stop. Do not proceed to flow, product, or BA/PO work. Tell the user exactly which command is missing (the script prints it) and wait for it to be run — do not substitute inspection, do not enumerate flows from route definitions as a stand-in.
-- The script cannot verify the understand-anything skill itself is installed — confirm that separately (it should appear in your own skill listing; if `/understand` is not recognized at all, the plugin is absent and installation comes first).
-- Once both files exist, re-run the check after any `/understand` or `/understand-domain` re-run to confirm freshness before writing.
+This single call reports READY/MISSING for the knowledge graph *and* the domain graph — no need to run it twice. Branch on what it prints:
 
-Architecture and spine documents (`high-level.md`, `setup.md`, `limitations.md`, etc.) may still fall back to direct inspection per non-negotiable 1 and §6 of `references/source-analysis.md` when the knowledge graph alone is unavailable — that latitude does not extend to anything the domain graph feeds.
+- **MISSING knowledge graph:** the user must generate it. **Ask for explicit permission first** before running `/understand` yourself — do not invoke it unprompted. If the user declines, stop and wait. If they agree, run `/understand` (or `/understand <path>` to scope to a subdirectory; large first runs consume tokens — say so before starting), then re-run the check above to confirm READY before continuing to the domain-graph branch.
+- **MISSING domain graph** (knowledge graph READY): **do not offer to run `/understand-domain` yourself** — tell the user they must run it, using the exact command the script prints. Stop and wait; no document of any kind is written until this exists.
+- **READY for both:** Precheck passes. Proceed to Step 1.
+
+### Universal requirement — no fallback
+
+Both `.ua/knowledge-graph.json` and `.ua/domain-graph.json` (or their legacy `.understand-anything/` counterparts) are **required for every docforge invocation**, regardless of tier, scope, or which documents are planned. This means: architecture/spine documents, flow documents, product content, BA/PO overlays, and agent-context files all require the domain graph. No inspection fallback exists for architecture-only work anymore.
+
+### Operational notes on graphs
+
+Every document in the tree makes claims about the source. The knowledge graph replaces guessing with retrieval: it gives you the module map, the architectural layers, the call and import edges, the business domains and flows, and a queryable interface for everything the graph does not already state.
+
+- **Check for existing graphs first.** If `.ua/knowledge-graph.json` and `.ua/domain-graph.json` are both present and newer than the last substantive commit, use them as-is. If either is stale, `/understand` and `/understand-domain` update them incrementally rather than starting over — re-runs are cheap.
+- **Large repos**: scope the analysis to the part being documented — `/understand src/frontend` — rather than paying for a full pass you do not need. First runs on large codebases consume significant tokens; say so before starting one.
+- **After any regeneration**, re-run the Precheck to confirm freshness:
+  ```
+  python scripts/check_preconditions.py --repo <path> --need domain
+  ```
+- **Read the graph directly** once confirmed ready. `python scripts/graph_extract.py --graph .ua/knowledge-graph.json --summary` prints the module inventory, layer assignment and external dependency list in a form that seeds the code map and the dependency inventory.
 
 Then, whenever a document needs a fact the graph does not already state, query rather than infer. Full command-to-document mapping in `references/source-analysis.md`; the essentials:
 
@@ -83,8 +90,6 @@ Then, whenever a document needs a fact the graph does not already state, query r
 Full depth-to-command mapping in `references/depth-and-audience.md`.
 
 Two habits make this pay off. **Ask narrow questions** — "which modules write to the database, and through what" retrieves cleanly where "explain the architecture" returns prose you then have to verify. And **treat the answers as evidence, not as prose to paste**: they are a source to write from, in the document's own voice and structure.
-
-If the graph is unavailable — the plugin is not installed, or the source is not accessible to you — say so plainly and fall back to direct inspection. Do not proceed silently, and do not fabricate a tree from the repo name.
 
 ## Workflow
 
@@ -155,7 +160,7 @@ Run the analysis above, then fill the gaps it does not cover:
 - **What documentation already exists** — an existing `README`, `docs/`, wiki exports, comments that read like design notes, ADR-ish files. Existing content is evidence about what people needed to write down; migrate it, do not replace it — see "Migrate pre-existing documentation" immediately below.
 - **Operational reality** — CI config, container and deploy manifests, and the environment variables the code actually reads.
 - **History for the "why"** — `git log` on architecturally significant paths, and merge commits with substantive messages. This is where backfilled decision records come from, and it is the one thing the graph cannot supply.
-- **Business flows** — run `python scripts/check_preconditions.py --repo <path> --need domain` first; it must report READY for both the knowledge graph and the domain graph before you enumerate flows. Then read `/understand-domain`'s output to enumerate the domains, flows and steps in the code's own terms. That list *is* the set of flow documents to build under `docs/flows/` — never hand-type it, since the point of the analysis is to surface flows a writer would miss. Each flow starts as a flat file (`docs/flows/<flow>.md`); it is promoted to a folder only when you write real audience depth for it in the same pass. See `references/document-composition.md`.
+- **Business flows** — the Precheck already confirms both graphs exist before this step (see "Precheck" above). Read `/understand-domain`'s output to enumerate the domains, flows and steps in the code's own terms. That list *is* the set of flow documents to build under `docs/flows/` — never hand-type it, since the point of the analysis is to surface flows a writer would miss. Each flow starts as a flat file (`docs/flows/<flow>.md`); it is promoted to a folder only when you write real audience depth for it in the same pass. See `references/document-composition.md`.
 - **Child repos** — before any multi-repo work, and as a cheap sanity check otherwise, run `python scripts/discover_repos.py --root <path>`. It reports declared submodules and, more importantly, nested repos present on disk but *not* declared in `.gitmodules` (vendored copies, `git subtree` merges, hand-cloned submodules). For single-repo work this just confirms scope; for diligence it is load-bearing — see Step 2 and `references/diligence-collection.md`.
 
 #### Migrate pre-existing documentation — before Gate 1, when the repo has any
@@ -380,8 +385,8 @@ Load only what the current task needs.
 | `references/diligence-collection.md` | Any multi-repo job — assembling the collection, gap-checking members, recording composition honestly |
 | `references/overlay-*.md` | The repo-type overlay matching the repo (Step 3) |
 
-Templates live in `assets/templates/`. Scripts (each has a `.py` and an equivalent `.js` — see the note at the top of "Source analysis"):
-- `scripts/check_preconditions.{py,js}` — gate flow/product/BA/PO work on the knowledge graph and domain graph actually existing; run before Step 1's business-flows bullet
+Templates live in `assets/templates/`. Scripts (each has a `.py` and an equivalent `.js` — see the note at the top of "Precheck"):
+- `scripts/check_preconditions.{py,js}` — gate all docforge work on both the knowledge graph and domain graph actually existing; run as the first step of every invocation (see "Precheck" above)
 - `scripts/validate_graphs.{py,js}` — the diagnostic probe for when `check_preconditions` reports a graph missing but `.ua/` holds data; lists both graph folders' contents with sizes, JSON validity and node/edge counts
 - `scripts/graph_extract.{py,js}` — read the knowledge graph
 - `scripts/docs_scaffold.{py,js}` — create and audit the tree

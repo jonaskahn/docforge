@@ -75,7 +75,7 @@ Only produced if a `CONVENTIONS.md` already exists in the repo. A distilled, AI-
 
 ## Gating
 
-`AGENTS.md`'s module map, `docs/agents/architecture.md`, `patterns.md`, `testing.md`, `tech-debt.md` need only the knowledge graph — check with `scripts/check_preconditions.py --need graph`. `docs/agents/flow.md` and the full (non-stub) `glossary.md` variant need the domain graph too — `--need domain`, the identical hard gate already governing `docs/flows/` and product content. No fallback to hand-typed flows for this overlay either.
+All documents in this overlay require both the knowledge graph and domain graph (see `SKILL.md`'s "Precheck" section). Check with `scripts/check_preconditions.py --repo <path> --need domain` — both must report READY before any document in this overlay is written. `docs/agents/flow.md` specifically, like `docs/flows/` content, is never hand-typed; it comes from the domain graph.
 
 ## Non-negotiable specific to this overlay
 
