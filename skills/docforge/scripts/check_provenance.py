@@ -23,6 +23,24 @@ from pathlib import Path
 
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
+# Same group vocabulary manifest_sync.py uses, in the same order.
+GROUPS = ["architecture", "flows", "product", "engineering", "operations",
+          "reference", "security", "contributing", "records"]
+
+# Only documents that have actually been written carry provenance; a document
+# still "planned"/"in_progress"/"skipped" is not checked for staleness.
+WRITTEN_STATUSES = {"generated", "needs_review", "complete"}
+
+
+def infer_group(rel: str) -> str:
+    """Best-effort group for a rebuilt document, from its path."""
+    parts = Path(rel).parts
+    if parts and parts[0] == "docs" and len(parts) > 1:
+        return parts[1] if parts[1] in GROUPS else "records"
+    if rel.upper().startswith("SECURITY"):
+        return "security"
+    return "records"
+
 
 def git_hash_object(path: str, repo_root: Path) -> str | None:
     """Content hash of the working-tree file, independent of commit history.
@@ -70,30 +88,67 @@ def extract_frontmatter_yaml_naive(text: str) -> dict | None:
 
 
 def rebuild_manifest(docs_dir: Path, manifest_path: Path) -> None:
-    documents = {}
-    for md_file in docs_dir.rglob("*.md"):
+    """Reconstruct the manifest from every document's frontmatter, in the same
+    document_groups envelope manifest_sync.py writes — so check() reads one shape
+    whether the manifest was built by the plan or rebuilt from disk. Group and id
+    are inferred from the path; type is 'adopted' since frontmatter doesn't record it."""
+    groups: dict[str, list[dict]] = {}
+    count = 0
+    for md_file in sorted(docs_dir.rglob("*.md")):
         text = md_file.read_text(errors="ignore")
         prov = extract_frontmatter_yaml_naive(text)
         if not prov or "_raw" in prov:
             continue
         rel = str(md_file.relative_to(docs_dir.parent))
-        sections = {}
-        for section in prov.get("sections", []):
-            sources = {s["path"]: s["git_blob"] for s in section.get("sources", [])}
-            sections[section["id"]] = {"sources": sources}
-        documents[rel] = {"sections": sections}
+        sections = [
+            {
+                "id": section["id"],
+                "sources": [
+                    {"path": s["path"], "git_blob": s["git_blob"]}
+                    for s in section.get("sources", [])
+                ],
+            }
+            for section in prov.get("sections", [])
+        ]
+        doc = {
+            "id": rel.replace("/", "_").replace(".", "_"),
+            "type": "adopted",
+            "path": rel,
+            "status": "generated",
+            "sections": sections,
+        }
+        groups.setdefault(infer_group(rel), []).append(doc)
+        count += 1
+    ordered = [g for g in GROUPS if g in groups]
+    manifest = {
+        "version": "1.1",
+        "generated_at": None,
+        "project_context": {"repo_name": None, "repo_path": None, "tier": None, "overlays": []},
+        "document_groups": [{"group": g, "documents": groups[g]} for g in ordered],
+        "metadata": {},
+    }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(
-        json.dumps({"generated_at": None, "documents": documents}, indent=2) + "\n"
-    )
-    print(f"rebuilt manifest: {len(documents)} documents -> {manifest_path}")
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    print(f"rebuilt manifest: {count} documents -> {manifest_path}")
+
+
+def iter_documents(manifest: dict):
+    """Yield every document across all groups of the unified manifest envelope."""
+    for group in manifest.get("document_groups", []):
+        for doc in group.get("documents", []):
+            yield doc
 
 
 def check(manifest: dict, repo_root: Path, flow_filter: str | None) -> tuple[list[dict], bool]:
     results = []
     all_fresh = True
-    for doc_path, doc_data in manifest.get("documents", {}).items():
-        sections = doc_data.get("sections", {})
+    for doc in iter_documents(manifest):
+        status = doc.get("status")
+        # Skip documents not yet written — they carry no provenance by design.
+        if status is not None and status not in WRITTEN_STATUSES:
+            continue
+        doc_path = doc.get("path")
+        sections = doc.get("sections", [])
         if not sections:
             results.append({"doc": doc_path, "status": "STALE",
                              "detail": "no section granularity recorded"})
@@ -101,11 +156,14 @@ def check(manifest: dict, repo_root: Path, flow_filter: str | None) -> tuple[lis
             continue
 
         section_statuses = []
-        for section_id, section_data in sections.items():
+        for section in sections:
+            section_id = section.get("id")
             if flow_filter and flow_filter != section_id:
                 continue
             file_statuses = []
-            for src_path, recorded_hash in section_data.get("sources", {}).items():
+            for src in section.get("sources", []):
+                src_path = src.get("path")
+                recorded_hash = src.get("git_blob")
                 current_hash = git_hash_object(src_path, repo_root)
                 if current_hash is None:
                     file_statuses.append(("MISSING", src_path))
@@ -124,12 +182,12 @@ def check(manifest: dict, repo_root: Path, flow_filter: str | None) -> tuple[lis
         else:
             all_fresh = False
             for section_id, bad in section_statuses:
-                for status, path in bad:
+                for file_status, path in bad:
                     results.append({
                         "doc": doc_path,
                         "status": "PARTIAL",
                         "section": section_id,
-                        "file_status": status,
+                        "file_status": file_status,
                         "file": path,
                     })
     return results, all_fresh

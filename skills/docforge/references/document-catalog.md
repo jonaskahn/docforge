@@ -12,6 +12,14 @@ what each part promises to cover; when you write a part (Step 5), this is the ch
 what "complete" means for that document. Depth within each element follows the deep-by-default
 rule in `depth-and-audience.md`; provenance is stamped per `provenance-tracking.md`.
 
+**Each type carries a target depth (an L-level from the ladder in `depth-and-audience.md`).**
+It is the concrete bar the independent per-document audit (`document-audit.md`) checks against:
+a document that lands below its target with a *derivable* shortfall FAILs the completion gate.
+The `Target depth` line on the types below is explicit where depth is the usual failure mode
+(architecture, flows, concepts); for every other type the target is its ladder cell — orientation
+and lookup types sit at L0/L1, and **any subsystem a new engineer must understand to be
+productive defaults to L2/L3**, not a summary.
+
 ---
 
 ## The one rule that governs the whole tree: one document, one mode
@@ -44,11 +52,13 @@ describe behaviour not code (non-negotiable 6), and go deep by default, cutting 
 
 ### `product/overview.md` — what this is and why it exists
 - **Mode:** Explanation.
+- **Target depth:** L0 (orientation for a non-engineer — the stranger test in `quality-bar.md`). Depth here means clarity and completeness of the *why/what/for-whom*, not mechanism; a doc a non-engineer can't use to explain the product is a shortfall even at L0.
 - **Must present:** the problem it solves; who it is for (and implicitly who it is not); the value/outcome that makes it distinct; a one-paragraph plain definition (category + capability); where it sits in the wider system (upstream/downstream neighbours, responsibility boundary); 2–5 representative use cases in business terms; links onward to getting-started, capabilities, architecture.
 - **Keep out:** install/setup steps, CLI, config keys, API signatures, procedures (→ engineering/reference); an exhaustive feature list (→ `capabilities.md`).
 
 ### `product/capabilities.md` — the feature catalog in business language
 - **Mode:** Reference (business-language, not technical).
+- **Target depth:** L0–L1 (one substantive entry per capability; the bar is *coverage* — every domain capability present with its outcome and role — not per-entry mechanism).
 - **Must present:** one entry per capability named in domain language, not code symbols; for each — what it does, the user/business outcome it enables, who uses it (role), the scenario it supports, status where relevant (GA/beta/deprecated) and any edition gating; grouped by domain or user journey with a consistent per-entry shape; cross-links to the how-to and flow docs.
 - **Keep out:** implementation, code structure, API signatures, step-by-step how-to (link out), marketing narrative, roadmap promises. Sourced from `/understand-domain`, never hand-typed — see the hard gate in `SKILL.md`.
 
@@ -63,6 +73,7 @@ describe behaviour not code (non-negotiable 6), and go deep by default, cutting 
 
 ### `flows/<flow>.md` (or, once promoted, `<flow>/README.md`)
 - **Mode:** Explanation + a how-to spine (the flow's steps), kept in the aligned-topic shape of `document-composition.md`.
+- **Target depth:** L1 at the flat-file level (a reader follows the whole flow in plain language). The mechanism (L2) and rules (L1–L2) live in the `engineering.md` / `business-analyst.md` subfiles once promoted — the flat file is *complete* at L1, not shallow, so long as every step and every critical notice is present.
 - **Must present:** L0 (what the flow is and why it matters); L1 (how it runs, in plain language, with a Mermaid diagram once there's more than one step or a branch); every critical notice, inline, visible to a reader who never opens a subfile. Standalone.
 - **Promotion & per-reader depth:** promote to a `<flow>/` folder with `business-analyst.md` / `engineering.md` / `product-owner.md` subfiles only in the same pass their real content is written (`document-composition.md`). Each subfile's contract is the BA / engineering / PO row below.
 - **Keep out:** a folder or "go deeper" link with no subfile behind it; hand-enumerated flows (gated on `/understand-domain` — `SKILL.md`).
@@ -73,22 +84,26 @@ describe behaviour not code (non-negotiable 6), and go deep by default, cutting 
 
 ### `architecture/high-level.md` — the stable map (C4 Context + Container, arc42 §1–4,8)
 - **Mode:** Explanation/Reference (the durable structure).
+- **Target depth:** L1 (the map — context, containers, boundaries, invariants). Deep mechanism is *out* (it belongs in `low-level.md` / `concepts/`), but L1 here still means every container's responsibility and the cross-cutting invariants are stated — a 46-line "what it is" summary that names boxes without their responsibilities or boundaries is a derivable shortfall, not a complete map.
 - **Must present:** system purpose and top 3–5 quality goals; the significant constraints that bound the design; **system context** — the system as one box, the people/roles who use it, the external systems it depends on, and the boundary between them; the **container view** — the deployable/runnable units (services, SPA, databases, queues), each with its responsibility and principal technology, and how they communicate; the solution strategy (top-level approach, not full ADRs); cross-cutting concepts (persistence, security, logging conventions); the **invariants** a reader can't recover from code because they are absences ("nothing under `core/` performs I/O", "handlers never touch the database directly").
 - **Techniques:** reference by file/module path, never by private symbol or line number; a reader should be able to draw the box diagram from the prose; restrict to what changes once or twice a year.
 - **Keep out:** internal component/class decomposition (→ `low-level.md`); request-by-request sequences (→ `data-flow.md`); the full argument for one choice (→ `decisions/`); deep mechanism, algorithms, failure modes (→ `low-level.md` / `concepts/`).
 
 ### `architecture/low-level.md` — component decomposition (C4 Component, arc42 §5)
 - **Mode:** Reference/Explanation.
+- **Target depth:** L1–L2 (components, their interfaces, the data model described; deeper mechanism per subsystem is delegated to `concepts/`).
 - **Must present:** the components inside each building block and their responsibilities, as a whitebox-of-blackboxes hierarchy taken to the depth that helps; provided/required interfaces and contracts of each; the data model *described* (key entities, relationships, ownership) — not dumped from schema; an index into `concepts/<subsystem>/` for subsystems that earn a full deep-dive.
 - **Keep out:** external actors and system-wide context (→ high-level); why a technology was chosen (→ ADR); end-to-end runtime flows (→ data-flow); pasted code.
 
 ### `architecture/data-flow.md` — the runtime view (C4 Dynamic, arc42 §6)
 - **Mode:** Explanation.
+- **Target depth:** L1–L2 (ordered interactions per scenario, with error/operational behaviour along the path).
 - **Must present:** the important behavioural scenarios as **ordered/numbered interactions** — which container or component handles each step from entry point to result; interactions at critical external interfaces; error, exception, and operational behaviour along the path.
 - **Keep out:** a static catalogue of every component (→ low-level); rationale (→ ADR). Cover the interesting and recurring paths, not every possible call.
 
 ### `architecture/concepts/<subsystem>.md` (promoted: `<subsystem>/engineering.md`) — deep mechanism
 - **Mode:** Explanation (L2–L3).
+- **Target depth:** L2–L3 — the deepest bar in the tree. This is where the "orientation masquerading as documentation" failure hits hardest: a concept doc that says what a subsystem *is* without algorithm, invariants and why they hold, concurrency, and failure modes is a derivable shortfall and FAILs the audit.
 - **Must present:** how the subsystem actually works — algorithm, the invariants and *why they hold*, concurrency assumptions, failure modes, trade-offs. This is the default depth for any subsystem a new engineer must understand (`depth-and-audience.md`); `/understand-explain <module>` is the required source, not optional.
 - **Keep out:** whole-system context; pasted code or symbol/line anchors; rationale that belongs in an ADR.
 

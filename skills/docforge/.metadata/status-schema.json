@@ -39,11 +39,6 @@
             "type": ["string", "null"],
             "description": "When this document generation completed"
           },
-          "provenance_sources": {
-            "type": "array",
-            "description": "Git blob hashes of sources used",
-            "items": { "type": "string" }
-          },
           "tokens_used": {
             "type": ["integer", "null"],
             "description": "Token count for generation"

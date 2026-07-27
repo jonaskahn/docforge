@@ -38,30 +38,45 @@ docforge_provenance:
 
 ### 2. The repo-level manifest
 
-`.docforge/manifest.json` aggregates every document's frontmatter into one file, so a full staleness sweep doesn't require opening every document in the tree:
+`.docforge/manifest.json` is one file with two jobs: it is the **durable plan** (`scripts/manifest_sync.py` writes it at Gate 1 — one entry per planned document, grouped, with its status) *and* the **aggregated provenance index**, so a full staleness sweep doesn't require opening every document in the tree. Provenance lives under each document's `sections` array, in the **same envelope** `manifest_sync.py` and `check_provenance.py` both read — there is no second, separate manifest shape:
 
 ```json
 {
+  "version": "1.1",
   "generated_at": "2026-07-26T09:40:00Z",
-  "documents": {
-    "docs/product/business-analyst/business-rules.md": {
-      "sections": {
-        "order-approval-threshold": {
-          "sources": {
-            "src/orders/approval.py": "8f3a1c2b9e4d7061a5c3e0f2b9d4a1c7e6f8b302",
-            "src/config/thresholds.py": "b91e4470d1c2a8f3e5b7091d4a6c2f8e0b1d3a56"
-          }
-        },
-        "refund-eligibility": {
-          "sources": { "src/orders/refunds.py": "4c7d0a112f3b6e9d8c5a2f1e0b7d4c9a6e3f8102" }
+  "project_context": { "repo_name": "my-service", "tier": "standard", "overlays": [] },
+  "document_groups": [
+    {
+      "group": "product",
+      "documents": [
+        {
+          "id": "ba_business_rules",
+          "type": "business-rules",
+          "path": "docs/product/business-analyst/business-rules.md",
+          "status": "complete",
+          "sections": [
+            {
+              "id": "order-approval-threshold",
+              "sources": [
+                { "path": "src/orders/approval.py",     "git_blob": "8f3a1c2b9e4d7061a5c3e0f2b9d4a1c7e6f8b302" },
+                { "path": "src/config/thresholds.py",   "git_blob": "b91e4470d1c2a8f3e5b7091d4a6c2f8e0b1d3a56" }
+              ]
+            },
+            {
+              "id": "refund-eligibility",
+              "sources": [
+                { "path": "src/orders/refunds.py", "git_blob": "4c7d0a112f3b6e9d8c5a2f1e0b7d4c9a6e3f8102" }
+              ]
+            }
+          ]
         }
-      }
+      ]
     }
-  }
+  ]
 }
 ```
 
-Treat per-document frontmatter as the source of truth and the manifest as a derived index — rebuild it with `scripts/check_provenance.py --rebuild-manifest` rather than hand-editing both. Commit `.docforge/manifest.json`; it is small, plain text, and lets a teammate check staleness without re-running any generation.
+The `sections` array mirrors the frontmatter block above exactly (a list of `{id, sources: [{path, git_blob}]}`), so the two never diverge. A document still `planned` or `in_progress` carries an empty `sections` (or none) and is skipped by the staleness sweep. Treat per-document frontmatter as the source of truth and the manifest's `sections` as a derived index — rebuild it with `scripts/check_provenance.py --rebuild-manifest` rather than hand-editing both. Commit `.docforge/manifest.json`; it is small, plain text, and lets a teammate check staleness without re-running any generation.
 
 ## The staleness algorithm
 
@@ -72,7 +87,7 @@ For each `(document, section, file)` triple recorded:
 3. Current hash equals recorded hash → `FRESH` for that file.
 4. Current hash differs → `STALE` for that file, and therefore for the section that cites it.
 
-Roll up per document: `FRESH` only if every section is `FRESH`. A document with one stale section reports as `PARTIAL — section <id> stale (<file> changed)`, not a blanket "stale," so the rewrite step knows exactly what to touch.
+Roll up per document: `FRESH` only if every section is `FRESH`. A document with one stale section reports as `PARTIAL` with the offending `section=<id>` and `<file_status>: <file>` named, not a blanket "stale," so the rewrite step knows exactly what to touch.
 
 ## Partial rewrite
 
@@ -91,7 +106,7 @@ Whole-document regeneration is warranted only when most sections are stale simul
 python scripts/check_provenance.py --manifest .docforge/manifest.json
 ```
 
-Reports one line per document: `FRESH`; `PARTIAL — <section-id> (<path> changed)`; or `STALE — no section granularity recorded` (this last case is for pre-existing docs adopted into the manifest without frontmatter — see below). Add `--flow <name>` to filter to one business flow, `--json` for machine-readable output in a CI check, `--rebuild-manifest` to regenerate the manifest from every document's frontmatter after a manual edit.
+Each written document reports as one of three document-level statuses: `FRESH` (`FRESH    <doc>`); `PARTIAL`, emitted as one line per offending file — `PARTIAL  <doc>  section=<id>  <file_status>: <file>`, where `<file_status>` is `STALE` (content changed) or `MISSING` (source file gone); or `STALE    <doc>  (no section granularity recorded)` for a pre-existing doc adopted into the manifest without section-level frontmatter (see below). Exit code is 0 only if every checked document is `FRESH`. Add `--flow <name>` to filter to one section id, `--json` for machine-readable output in a CI check, `--rebuild-manifest` to regenerate the manifest from every document's frontmatter after a manual edit.
 
 ## Adopting provenance on a pre-existing document
 

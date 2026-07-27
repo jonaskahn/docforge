@@ -37,6 +37,13 @@ more words. Two guards keep depth from becoming churn: write at the flow/behavio
 same-behaviour refactor can't falsify a deep section (non-negotiable 6), and state each fact
 once and link to it — depth is never duplication across audience folders.
 
+**The depth target is enforced, not merely recommended.** Each document type carries a target
+L-level (`document-catalog.md`), and the independent per-document audit (`references/document-audit.md`)
+checks the finished document against it before the document may be marked `complete`. A document that
+lands below its target with a *derivable* shortfall — a subsystem a new engineer must understand left
+at L1 summary when its target is L2/L3 — FAILs the gate and is rewritten, not shipped. This is the
+mechanism that stops "orientation masquerading as documentation" from passing as done.
+
 **Deep by default is not "deep-dive everything."** A subsystem earns an L2/L3 deep-dive by a
 reader *needing* it to be productive, not by existing. Depth goes *down* into what matters, not
 *wide* across every module — going deep on the three load-bearing subsystems while leaving the

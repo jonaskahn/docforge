@@ -22,6 +22,23 @@ const { spawnSync } = require("child_process");
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n/;
 
+// Same group vocabulary manifest_sync.js uses, in the same order.
+const GROUPS = ["architecture", "flows", "product", "engineering", "operations",
+  "reference", "security", "contributing", "records"];
+
+// Only documents that have actually been written carry provenance; a document
+// still "planned"/"in_progress"/"skipped" is not checked for staleness.
+const WRITTEN_STATUSES = new Set(["generated", "needs_review", "complete"]);
+
+function inferGroup(rel) {
+  const parts = rel.split("/");
+  if (parts[0] === "docs" && parts.length > 1) {
+    return GROUPS.includes(parts[1]) ? parts[1] : "records";
+  }
+  if (rel.toUpperCase().startsWith("SECURITY")) return "security";
+  return "records";
+}
+
 function gitHashObject(relPath, repoRoot) {
   const full = path.join(repoRoot, relPath);
   if (!fs.existsSync(full)) return null;
@@ -114,9 +131,14 @@ function walkMdFiles(dir) {
   return out;
 }
 
+// Reconstruct the manifest from every document's frontmatter, in the same
+// document_groups envelope manifest_sync.js writes — so check() reads one shape
+// whether the manifest was built by the plan or rebuilt from disk. Group and id
+// are inferred from the path; type is "adopted" since frontmatter doesn't record it.
 function rebuildManifest(docsDir, manifestPath) {
-  const documents = {};
-  for (const mdFile of walkMdFiles(docsDir)) {
+  const groups = {};
+  let count = 0;
+  for (const mdFile of walkMdFiles(docsDir).sort()) {
     let text;
     try {
       text = fs.readFileSync(mdFile, "utf8");
@@ -126,39 +148,65 @@ function rebuildManifest(docsDir, manifestPath) {
     const prov = extractFrontmatterProvenance(text);
     if (!prov) continue;
     const rel = path.relative(path.dirname(docsDir), mdFile).split(path.sep).join("/");
-    const sections = {};
-    for (const section of prov.sections) {
-      const sources = {};
-      for (const s of section.sources) sources[s.path] = s.git_blob;
-      sections[section.id] = { sources };
-    }
-    documents[rel] = { sections };
+    const sections = prov.sections.map((section) => ({
+      id: section.id,
+      sources: section.sources.map((s) => ({ path: s.path, git_blob: s.git_blob })),
+    }));
+    const doc = {
+      id: rel.replace(/[/.]/g, "_"),
+      type: "adopted",
+      path: rel,
+      status: "generated",
+      sections,
+    };
+    const g = inferGroup(rel);
+    (groups[g] = groups[g] || []).push(doc);
+    count++;
   }
+  const ordered = GROUPS.filter((g) => g in groups);
+  const manifest = {
+    version: "1.1",
+    generated_at: null,
+    project_context: { repo_name: null, repo_path: null, tier: null, overlays: [] },
+    document_groups: ordered.map((g) => ({ group: g, documents: groups[g] })),
+    metadata: {},
+  };
   fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
-  fs.writeFileSync(manifestPath, JSON.stringify({ generated_at: null, documents }, null, 2) + "\n", "utf8");
-  console.log(`rebuilt manifest: ${Object.keys(documents).length} documents -> ${manifestPath}`);
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n", "utf8");
+  console.log(`rebuilt manifest: ${count} documents -> ${manifestPath}`);
+}
+
+function* iterDocuments(manifest) {
+  for (const group of manifest.document_groups || []) {
+    for (const doc of group.documents || []) yield doc;
+  }
 }
 
 function check(manifest, repoRoot, flowFilter) {
   const results = [];
   let allFresh = true;
-  for (const [docPath, docData] of Object.entries(manifest.documents || {})) {
-    const sections = docData.sections || {};
-    if (!Object.keys(sections).length) {
+  for (const doc of iterDocuments(manifest)) {
+    const status = doc.status;
+    // Skip documents not yet written — they carry no provenance by design.
+    if (status !== undefined && status !== null && !WRITTEN_STATUSES.has(status)) continue;
+    const docPath = doc.path;
+    const sections = doc.sections || [];
+    if (!sections.length) {
       results.push({ doc: docPath, status: "STALE", detail: "no section granularity recorded" });
       allFresh = false;
       continue;
     }
 
     const sectionStatuses = [];
-    for (const [sectionId, sectionData] of Object.entries(sections)) {
+    for (const section of sections) {
+      const sectionId = section.id;
       if (flowFilter && flowFilter !== sectionId) continue;
       const fileStatuses = [];
-      for (const [srcPath, recordedHash] of Object.entries(sectionData.sources || {})) {
-        const currentHash = gitHashObject(srcPath, repoRoot);
-        if (currentHash === null) fileStatuses.push(["MISSING", srcPath]);
-        else if (currentHash !== recordedHash) fileStatuses.push(["STALE", srcPath]);
-        else fileStatuses.push(["FRESH", srcPath]);
+      for (const src of section.sources || []) {
+        const currentHash = gitHashObject(src.path, repoRoot);
+        if (currentHash === null) fileStatuses.push(["MISSING", src.path]);
+        else if (currentHash !== src.git_blob) fileStatuses.push(["STALE", src.path]);
+        else fileStatuses.push(["FRESH", src.path]);
       }
       const bad = fileStatuses.filter((f) => f[0] !== "FRESH");
       if (bad.length) sectionStatuses.push([sectionId, bad]);
@@ -169,8 +217,8 @@ function check(manifest, repoRoot, flowFilter) {
     } else {
       allFresh = false;
       for (const [sectionId, bad] of sectionStatuses) {
-        for (const [status, filePath] of bad) {
-          results.push({ doc: docPath, status: "PARTIAL", section: sectionId, file_status: status, file: filePath });
+        for (const [fileStatus, filePath] of bad) {
+          results.push({ doc: docPath, status: "PARTIAL", section: sectionId, file_status: fileStatus, file: filePath });
         }
       }
     }

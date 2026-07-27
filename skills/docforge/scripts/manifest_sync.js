@@ -97,6 +97,10 @@ function makeDoc(id, type, docPath, template, needsKg, needsDg) {
     requires_domain_graph: needsDg,
     requires_knowledge_graph: needsKg,
     template,
+    // Per-section provenance, filled as the document is written and stamped
+    // (each entry: {id: <anchor>, sources: [{path, git_blob}]}).
+    // check_provenance.js reads this to decide staleness; empty while planned.
+    sections: [],
   };
 }
 

@@ -2,6 +2,8 @@
 
 Run this before presenting anything. The failure mode this guards against is a tree that looks complete — right folders, right filenames, confident prose — while being unusable, unverified, or subtly invented.
 
+**Two scopes.** The **per-document** subset of this checklist is run *independently*, per document, by an auditor that did not write it — that is the completion gate defined in `references/document-audit.md`, and it is what advances a document to `complete`. The **whole-tree** items (structure, cross-document reachability, no duplication across files, tier completeness) are the final consistency pass in `SKILL.md` Step 6. Every item below is one or the other; a single-file item is part of the per-document audit.
+
 ## The four tests
 
 Each targets one audience. A documentation set that fails any of them fails for that audience entirely, regardless of how good the rest is.
@@ -49,6 +51,12 @@ Each targets one audience. A documentation set that fails any of them fails for 
 - [ ] Diagrams are Mermaid or committed images, each preceded by a prose description
 - [ ] Callouts use portable blockquote syntax unless a platform commitment is documented
 - [ ] Links are relative, not absolute URLs to the current host
+
+### Depth (per-document — the audit gate)
+
+- [ ] Each document reaches its target depth from the ladder (`document-catalog.md` / `depth-and-audience.md`): a subsystem a new engineer must understand is at L2/L3, not an L1 summary
+- [ ] Any shortfall from the target is genuinely *external* (unknowable from source), not *derivable* — a derivable shortfall is a FAIL that forces a rewrite, never a waiver (`document-audit.md`)
+- [ ] The document keeps to its declared **primary** mode; cross-mode material is sectioned and cross-linked, not blended (a legitimately hybrid type is not a violation)
 
 ### Completeness for the chosen tier
 

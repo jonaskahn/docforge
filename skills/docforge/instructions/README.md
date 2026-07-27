@@ -67,6 +67,10 @@ During Step 0 of docforge generation (see `SKILL.md` for the full gated cadence)
 4. **Write one at a time**, in dependency order, updating manifest status as each lands. For each
    document read **both** its `references/document-catalog.md` entry (the contract) and its
    instruction file here (the craft) before writing
+5. **Audit each document independently before it is `complete`** — a fresh subagent that did not
+   write it checks it against its contract, target depth, and the quality bar
+   (`references/document-audit.md`). A derivable gap FAILs and forces a rewrite; only an external
+   gap (a typed `<UPPER_SNAKE>` token or an explicit waiver) may pass
 
 Templates are instructions *for the AI writing the document*, not scaffolds to fill in. They guide:
 - What data sources to consult

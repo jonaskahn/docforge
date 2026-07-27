@@ -91,6 +91,10 @@ def make_doc(id_: str, type_: str, path: str, template: str | None,
         "requires_domain_graph": needs_dg,
         "requires_knowledge_graph": needs_kg,
         "template": template,
+        # Per-section provenance, filled as the document is written and stamped
+        # (each entry: {"id": <anchor>, "sources": [{"path", "git_blob"}]}).
+        # check_provenance.py reads this to decide staleness; empty while planned.
+        "sections": [],
     }
 
 

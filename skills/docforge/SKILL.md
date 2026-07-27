@@ -98,9 +98,9 @@ These change *scope* or *pacing* — never which non-negotiables apply. A flag c
 
 | Flag | Effect |
 |---|---|
-| `--revise all` | Skip Gate 1/2 planning (the tree already exists). Run `check_provenance.py` across the full manifest and regenerate every `PARTIAL` section per "Updating existing docs" below. |
+| `--revise all` | Skip Gate 1/2 planning (the tree already exists). Run `check_provenance.py` across the full manifest, regenerate every `PARTIAL` section, and re-ground in full any document reporting a document-level `STALE` (adopted, no section granularity) — per "Updating existing docs" below. |
 | `--revise <area>` | Same provenance check, scoped to one manifest entry or group — `--revise security`, `--revise flows/checkout`. Only that entry's sections are checked and, if stale, regenerated. |
-| `--auto-accept` | Do not wait at any pause. Gate 1's tree, Gate 2's per-document detail, and each finished part are still displayed in full, in order — only the *wait-for-confirmation* step is skipped, not the display. Written parts are still tracked in the manifest one at a time; a stale or wrong part discovered later is corrected the normal way (re-ground, rewrite that part), not silently. |
+| `--auto-accept` | Do not wait at any pause. Gate 1's tree, Gate 2's per-document detail, and each finished part are still displayed in full, in order — only the *wait-for-confirmation* step is skipped, not the display. **The independent per-document audit still runs** (it gates `complete`, not the user pause — see Step 0's write loop and `references/document-audit.md`). Written parts are still tracked in the manifest one at a time; a stale or wrong part discovered later is corrected the normal way (re-ground, rewrite that part), not silently. |
 | `--plan-only` | Stop after Gate 2: manifest populated (`planned` status throughout), empty scaffold on disk. No content written this run. |
 | `--resume` | Read `.docforge/manifest.json` and continue from its first `planned` or `in_progress` entry instead of restarting Gate 1. |
 | `--status` | Print `manifest_sync.py status` and stop — no scaffolding, no writing. |
@@ -122,7 +122,12 @@ Before writing prose, present — per document, in dependency order — what it 
 **Then — write one part at a time, in dependency order (Step 5).** For each document, in order:
 - Set its manifest status to `in_progress` — `python scripts/manifest_sync.py set --repo <path> --id <id> --status in_progress` — and open a `generation-status.json` runtime entry (`querying` → `writing`).
 - **Re-ground before you write.** Retrieve every must-present element for that document (`references/document-catalog.md`) from the knowledge graph, the domain graph, and the code. If a needed fact is not yet in the graph, query it — a narrow `/understand-chat`, an `/understand-explain <path>`, or direct inspection — *before* writing, not around it. Never write on thin context: if the source genuinely cannot answer a required element, that atomic value becomes a typed `<UPPER_SNAKE>` token (non-negotiable 1); everything around it is still written in full.
-- Write to deep-dive depth (Step 5, `references/depth-and-audience.md`), stamp provenance as you write, set manifest status `generated` (`manifest_sync.py set … --status generated`; runtime `complete`), present the finished part, and **pause** for the user to confirm or redirect before the next. Fold feedback on part N into parts N+1…
+- Write to deep-dive depth (Step 5, `references/depth-and-audience.md`), stamp provenance as you write, and set manifest status `generated` (`manifest_sync.py set … --status generated`; runtime `complete`). A `generated` document is *written*, not yet *done*.
+- **Audit it independently before presenting it as done (`references/document-audit.md`).** Spawn a **fresh subagent that did not write this document** and give it only artifacts — the finished file, its `document-catalog.md` contract, its target depth, the single-document quality-bar subset, and the sources its frontmatter cites. It returns a structured verdict (`assets/templates/audit-report.md`).
+  - **PASS** — present the finished part *together with its verdict* and **pause** for the user to confirm or redirect before the next. Fold feedback on part N into parts N+1…
+  - **FAIL, derivable gap** — set `needs_review`, re-ground and rewrite that document, then **re-audit**. It is never presented as done while a derivable gap stands, and a derivable gap is never waived to a human.
+  - **FAIL, external gap only** — the atomic unknown becomes a typed `<UPPER_SNAKE>` token (or the user's explicit waiver is recorded), then it PASSes.
+  - This audit is not optional and no flag skips it: `--auto-accept` skips the user's *pause*, never the audit (the same rule that already forbids skipping the plan-and-show).
 - After the user accepts a part, set its manifest status to `complete`; anything they flag stays `needs_review`. `manifest_sync.py status --repo <path>` prints the plan and the remaining count at any time.
 
 **Fill-completeness never bends (non-negotiable 1).** Every part you hand over is *complete* — no punted derivable facts, no unfilled `{{…}}` scaffolds, only typed `<UPPER_SNAKE>` tokens for genuinely external values. The gates govern *structure, scope, and ordering*; they never license a half-filled document. The goal is a reviewable, steerable stream — not a thirty-file dump the user must audit at once, and not a scaffold they must finish.
@@ -132,7 +137,7 @@ Before writing prose, present — per document, in dependency order — what it 
 The `.metadata/` directory holds the templates and schemas that drive Step 0. Two of them are *tracking* files you copy into the target repo's `.docforge/` and update as you go — they answer different questions and use different status vocabularies:
 
 - `manifest.json` → the shape of `.docforge/manifest.json`, which `scripts/manifest_sync.py` writes and maintains. The **durable plan and fill-state** of the whole tree: one entry per planned document, its group, path, template, and `status` (`planned` → `in_progress` → `generated` → `needs_review` → `complete`, or `skipped`). This is the record you present at Gate 1 and update (via `manifest_sync.py set`) as each part lands. Also carries per-section provenance once written (see `references/provenance-tracking.md`). Its `project_context.tier` is stored under a different vocabulary than Step 2's table: `1 — Spine` / `2 — Diligence` / `3 — Portfolio` (the CLI's numeric `--tier`) are recorded as the strings `"core"` / `"standard"` / `"extended"` respectively — the same three tiers, spelled differently for storage.
-- `generation-status.json` → the **live session log** while you write: per document `status` (`planned` → `querying` → `writing` → `complete`, or `skipped`), timing, tokens, and any error. Ephemeral; the manifest is the record that outlives the session.
+- `generation-status.json` → the **live session log** while you write: per document `status` (`planned` → `querying` → `writing` → `complete`, or `skipped`), timing, tokens, and any error. Ephemeral; the manifest is the record that outlives the session. **The token `complete` means different things in the two files** and they must not be equated: runtime-`complete` means "finished writing" (the doc is now `generated` in the manifest and awaits its independent audit); manifest-`complete` is the *later* state a document reaches only after it passes the audit and the user accepts it. Runtime-`complete` therefore maps to manifest-`generated`, never straight to manifest-`complete`.
 - `manifest-schema.json` / `status-schema.json` — schemas validating the two above.
 - `document-templates.json` — maps each document type to its instruction file and required data sources (a craft pointer; the content contract is `references/document-catalog.md`). `template-schema.json` validates it.
 
@@ -166,11 +171,13 @@ This is a distinct scenario from "Updating existing docs" (below): that section 
 
 Documentation weight should be proportionate to team size and external scrutiny; heavy structure on a two-person repo costs more than it returns.
 
-| Tier | When it fits | What gets built |
+The numeric `--tier {1,2,3}` the CLI takes is stored in the manifest as a **string** — `1 → "core"`, `2 → "standard"`, `3 → "extended"` (`project_context.tier`, and the enum in `.metadata/manifest-schema.json`). Same three tiers, one spelling for the command line and one for storage.
+
+| Tier (CLI → stored) | When it fits | What gets built |
 |---|---|---|
-| **1 — Spine** | Any repo. Small teams, internal tools, early projects | Root pointers, `docs/README.md` index, `docs/architecture/high-level.md`, `docs/engineering/setup.md`, `docs/reference/limitations.md`, `CHANGELOG` |
-| **2 — Diligence** | Repo has external consumers, paying customers, or a compliance or audit surface | Tier 1 + `docs/architecture/decisions/`, `docs/architecture/dependencies.md`, `docs/security/`, `docs/operations/runbooks/`, contribution docs |
-| **3 — Portfolio** | Several repos reviewed as one system; fundraising, acquisition, vendor assessment | Tier 2 across every repo + a cross-repo portfolio layer (`references/diligence.md`) |
+| **1 — Spine** (`--tier 1` → `"core"`) | Any repo. Small teams, internal tools, early projects | Root pointers, `docs/README.md` index, `docs/architecture/high-level.md`, `docs/engineering/setup.md`, `docs/reference/limitations.md`, `CHANGELOG` |
+| **2 — Diligence** (`--tier 2` → `"standard"`) | Repo has external consumers, paying customers, or a compliance or audit surface | Tier 1 + `docs/architecture/decisions/`, `docs/architecture/dependencies.md`, `docs/security/`, `docs/operations/runbooks/`, contribution docs |
+| **3 — Portfolio** (`--tier 3` → `"extended"`) | Several repos reviewed as one system; fundraising, acquisition, vendor assessment | Tier 2 across every repo + a cross-repo portfolio layer (`references/diligence.md`) |
 
 State the chosen tier and the reasoning in one sentence before generating. If the user gives a deadline-driven signal ("we're in diligence next month"), invert the order: build the Tier 3 skeleton and the security and dependency documents first, backfill the rest after.
 
@@ -182,22 +189,24 @@ The spine is universal; the overlay is what makes documentation actually useful 
 
 **Repo-type overlays:**
 
-| Signal in the repo | Overlay | Reference |
+The `--overlay` flag value (the literal `docs_scaffold.py`/`manifest_sync.py` accept) is in the middle column — pass that string, not the display name.
+
+| Signal in the repo | Overlay (`--overlay` value) | Reference |
 |---|---|---|
-| DAGs, schedulers, extract/transform/load stages, warehouse targets | Data pipeline | `references/overlay-data-pipeline.md` |
-| HTTP handlers, route definitions, an OpenAPI or gRPC spec, published endpoints | API service | `references/overlay-api-service.md` |
-| Component tree, router, bundler, browser entry point | Web application | `references/overlay-web-app.md` |
-| Published to a package registry, semantic version, public exported surface | Library / SDK | `references/overlay-library.md` |
-| Terraform, Pulumi, Helm, Ansible, cluster manifests | Infrastructure | `references/overlay-infrastructure.md` |
+| DAGs, schedulers, extract/transform/load stages, warehouse targets | Data pipeline — `data-pipeline` | `references/overlay-data-pipeline.md` |
+| HTTP handlers, route definitions, an OpenAPI or gRPC spec, published endpoints | API service — `api` | `references/overlay-api-service.md` |
+| Component tree, router, bundler, browser entry point | Web application — `web` | `references/overlay-web-app.md` |
+| Published to a package registry, semantic version, public exported surface | Library / SDK — `library` | `references/overlay-library.md` |
+| Terraform, Pulumi, Helm, Ansible, cluster manifests | Infrastructure — `infrastructure` | `references/overlay-infrastructure.md` |
 
 Repos frequently match two type overlays (an API that also runs scheduled jobs). Apply both; do not force a single choice.
 
 **Audience overlays** — build these only when a specific reader is asked for, or when the repo clearly warrants one (see each reference's "Applies when"):
 
-| Reader | Cares about | Folder | Reference |
+| Reader (`--overlay` value) | Cares about | Folder | Reference |
 |---|---|---|---|
-| Business Analyst (BA) | business rules, process flows, requirements traceability | `docs/product/business-analyst/` | `references/overlay-business-analyst.md` |
-| Product Owner (PO) | feature value, release framing, success metrics | `docs/product/product-owner/` | `references/overlay-product-owner.md` |
+| Business Analyst (BA) — `business-analyst` | business rules, process flows, requirements traceability | `docs/product/business-analyst/` | `references/overlay-business-analyst.md` |
+| Product Owner (PO) — `product-owner` | feature value, release framing, success metrics | `docs/product/product-owner/` | `references/overlay-product-owner.md` |
 
 Audience content follows the three-class model in `references/audience-matrix.md`: a subject two or more audiences share is written **once**, as an aligned topic — `flows/<flow>.md` or `architecture/concepts/<subsystem>.md` — while genuinely single-reader material stays in that audience's own folder (`product/business-analyst/`, `product/product-owner/`). An aligned topic is a **flat file by default**; it becomes a folder (`<topic>/README.md` + deep-dive subfiles) only at the moment real per-reader depth is written, in the same pass — never a folder with a promised subfile that isn't there yet. Every fact is owned once and linked, never pasted into two folders. Do not produce an unrequested audience folder or an empty deep-dive subfile; an empty or promised-but-missing overlay is the same anti-pattern as an unfilled scaffold. Read `references/audience-matrix.md`, `references/document-composition.md` and `references/depth-and-audience.md` before writing any flow or audience content.
 
@@ -205,14 +214,18 @@ Audience content follows the three-class model in `references/audience-matrix.md
 
 Read `references/docs-tree.md` for the canonical taxonomy, folder naming rules, and what belongs in each file. Then either:
 
-- **Scaffold mechanically** — `python scripts/docs_scaffold.py --repo <path> --tier 2 --overlay api --overlay business-analyst` creates the directories and drops templated files with placeholders in place. Use this when starting from nothing; it is faster and more consistent than writing files by hand.
-- **Write directly** — when the repo already has partial documentation, or when only a few files are needed. Pull templates from `assets/templates/`.
+- **Scaffold mechanically** — `python scripts/docs_scaffold.py --repo <path> --tier 2 --overlay api --overlay business-analyst` creates the directories and drops **scaffold templates** (`assets/templates/`) with `{{…}}` placeholders in place. Use this when starting from nothing; it is faster and more consistent than writing files by hand.
+- **Write directly** — when the repo already has partial documentation, or when only a few files are needed. Pull scaffold templates from `assets/templates/`.
+
+*Two things are called "template" in this skill — keep them distinct.* A **scaffold template** (`assets/templates/*.md`) is a starting-point file with `{{…}}` placeholders that the scaffold drops on disk. An **instruction file** (`instructions/*.md`) is writing-craft guidance for the agent, never written to disk — and it is what the manifest's `template` field and `document-templates.json`'s `instruction_file` point to. They sometimes share a base name (`architecture-high-level.md` exists in both), so resolve the manifest's `template` field against `instructions/`, not `assets/templates/`.
+
+Not every scaffold template is emitted by `docs_scaffold.py`. A few are **hand-pulled** at the moment they're needed rather than at scaffold time: `topic-readme.md` and `audience-deepdive.md` at flow/concept promotion (`references/document-composition.md`), and `repo-inventory.md` for the Tier-3 portfolio layer (`references/diligence-collection.md`). That's expected — reach for them from `assets/templates/` when you write those specific documents.
 
 Either way, the templates are starting points, not output. A scaffold left full of `{{…}}` placeholders is not a deliverable — those markers mean "not yet written," and every one must be replaced with derived content before presenting. The only marks that legitimately survive into a finished document are typed `<UPPER_SNAKE>` tokens standing in for genuinely external facts (non-negotiable 1); everything else you have evidence for, you write.
 
 ### Step 5 — Write the content, in dependency order
 
-**Consult the document catalog for each document before writing it, and re-ground it in the source.** `references/document-catalog.md` is the content contract for every doc type — what it must present, what to keep out (so two documents don't overlap), and the one Diátaxis mode it stays in. Before writing any document — plan-first path or a single explicitly-requested doc — confirm the graph and code actually supply every must-present element, and retrieve what's missing rather than writing around it (the re-ground rule in Step 0 applies to every document, not only the plan-first cadence). **One document, one mode:** a tutorial doesn't explain, a reference doesn't teach, an explanation doesn't enumerate steps; when material spans modes, section and cross-link rather than blend. Orientation documents (the READMEs, `product/overview.md`) are the only ones that summarize across modes, and only as a router that delegates depth.
+**Consult the document catalog for each document before writing it, and re-ground it in the source.** `references/document-catalog.md` is the content contract for every doc type — what it must present, what to keep out (so two documents don't overlap), its primary Diátaxis mode, and its target depth. **Read both layers before writing:** the catalog entry (the *contract*) and, where one exists for that type, its craft guide in `instructions/<type>.md` (the *how to lay it out* — the manifest's `template` field and `.metadata/document-templates.json`'s `instruction_file` name it). The catalog is authoritative for all types; `instructions/` covers only the subset with extra craft guidance, and it never restates the contract. Before writing any document — plan-first path or a single explicitly-requested doc — confirm the graph and code actually supply every must-present element, and retrieve what's missing rather than writing around it (the re-ground rule in Step 0 applies to every document, not only the plan-first cadence). **One document, one primary mode:** each document declares a single *primary* Diátaxis mode and stays in it. Many types are legitimately hybrid — a flow doc explains *and* walks its steps, `high-level.md` is Explanation/Reference — and `document-catalog.md` records each type's primary mode. When material genuinely spans modes, **section it explicitly and cross-link** (steps under a how-to heading, rationale under an explanation heading) rather than blending the prose. Orientation documents (the READMEs, `product/overview.md`) are the only ones that summarize freely across modes, and only as a router that delegates depth.
 
 **Default depth is deep-dive, not orientation.** Within each document's mode, write to the depth that lets a stranger to the repo genuinely understand and approach the subsystem — mechanism, edge cases, failure modes, and the adjacent pieces (what feeds it, what it feeds, what breaks it) that make it self-standing. The only thing you cut is filler, never signal; "detailed" means more useful information, not more words. See `references/depth-and-audience.md` for the depth ladder and the value brake, and non-negotiable 6 for keeping deep sections durable (behaviour-level, no code, no line numbers).
 
@@ -228,15 +241,15 @@ Later documents cite earlier ones, so order matters:
 
 **Stamp provenance as you write, not afterward.** The source files you just read to write a section *are* its provenance, so record them then — each document gets the frontmatter block and the source-files-per-section list described in `references/provenance-tracking.md`, aggregated into `.docforge/manifest.json`. Retrofitting hashes as a cleanup pass invites guessing about which files a section actually drew from.
 
-### Step 6 — Verify before presenting
+### Step 6 — Final whole-tree consistency pass
 
-Run the checklist in `references/quality-bar.md`. Its core test: could a competent engineer who has never seen this repo go from the root README to a running local instance without asking a human a question? If not, the setup documentation is incomplete regardless of how polished the rest looks.
+**Per-document completeness, depth, mode purity, and grounding are already settled** — each document passed its independent audit (`references/document-audit.md`) before it was marked `complete` in the Step 0 write loop. Step 6 is **not** a second per-document review, and it is emphatically not the moment to first check whether a document is deep enough; that gate has already fired, one document at a time. Step 6 is the pass for the checks that are only meaningful **across the whole set**:
 
-Check each document against its `references/document-catalog.md` contract: every must-present element is there, nothing that belongs in another document leaked in, and the document stayed in its one Diátaxis mode.
+- `python scripts/docs_scaffold.py --repo <path> --audit` — dead cross-references between documents, empty templated sections, folder-only-readme promotions, and forge-specific strings that leaked into prose.
+- The **whole-tree** items of `references/quality-bar.md`: the four tests (onboarding, location, reviewer, stranger), index reachability (every document reachable from `docs/README.md` in two hops), and no fact duplicated across two files.
+- The onboarding test specifically: could a competent engineer who has never seen this repo go from the root README to a running local instance without asking a human a question? If not, `engineering/setup.md` is incomplete regardless of how polished the rest looks.
 
-Then `python scripts/docs_scaffold.py --repo <path> --audit` to catch dead cross-references, empty templated sections, and forge-specific strings that leaked into prose.
-
-For anything the documentation asserts about behaviour, spot-check it against the graph — `/understand-explain <path>` on two or three modules the code map describes is enough to catch a systematic misreading.
+If a whole-tree check surfaces a per-document defect the audit somehow missed, fix that document and **re-audit it** — do not patch it silently at the tree level.
 
 ## Updating existing docs — check before you rewrite
 
@@ -245,10 +258,11 @@ This section is for docs that **already carry docforge provenance** from a prior
 When asked to refresh docs that already carry docforge provenance, do not re-read and re-guess. Compare hashes:
 
 1. `python scripts/check_provenance.py --manifest .docforge/manifest.json`.
-2. For every `PARTIAL — <section> stale` result, regenerate only that section — re-run its narrow graph query, replace only that section's prose, re-stamp only its hashes. See "Partial rewrite" in `provenance-tracking.md`.
+2. For every `PARTIAL  <doc>  section=<id>  STALE: <file>` line, regenerate only that section — re-run its narrow graph query, replace only that section's prose, re-stamp only its hashes. See "Partial rewrite" in `provenance-tracking.md`.
 3. For every `FRESH` result, leave the file untouched — do not re-open it or bump its timestamp.
-4. For every `MISSING` (a recorded source file no longer exists), do not delete the claim — the logic likely moved rather than vanished. Flag it for a human to confirm.
-5. Re-run the checker to confirm every touched document now reports `FRESH`.
+4. For a `MISSING` file-status inside a `PARTIAL` line (a recorded source file no longer exists), do not delete the claim — the logic likely moved rather than vanished. Flag it for a human to confirm.
+5. For a document-level `STALE  <doc>  (no section granularity recorded)` — an adopted doc whose frontmatter never recorded section-level provenance — re-ground the whole document, then stamp section-level provenance so future checks are incremental. This is the one case a whole-document pass is correct even when little changed, because there is no finer signal to act on.
+6. Re-run the checker to confirm every touched document now reports `FRESH`.
 
 A whole-document rewrite is warranted only when most sections are stale at once, or the document's own structure changed (a rule added or removed, not merely modified).
 
@@ -310,7 +324,9 @@ The taxonomy is a floor, not a ceiling. If the repo already carries directories 
 
 - **The scaffold dump.** Twenty files of unfilled headings. Worse than nothing: it signals documentation exists when it does not, and readers stop checking.
 - **The silent whole-tree dump.** Generating the entire tree in one shot on an open-ended request, with no plan and no confirmation gate, so the user faces thirty files to audit at once and can't steer before the tokens are spent. Open-ended scope means plan first, then part by part (Step 0).
-- **Orientation masquerading as documentation.** A page that says what a subsystem *is* but never how it works, why it's built that way, what its edge cases and failure modes are. Deep-dive is the default; shallow is only correct for a genuinely trivial part. Cut filler, never signal (`references/depth-and-audience.md`).
+- **Orientation masquerading as documentation.** A page that says what a subsystem *is* but never how it works, why it's built that way, what its edge cases and failure modes are. Deep-dive is the default; shallow is only correct for a genuinely trivial part. Cut filler, never signal (`references/depth-and-audience.md`). This is exactly the defect the per-document audit gate exists to catch (`references/document-audit.md`).
+- **The writer grading its own work.** Marking a document `complete` on the strength of the same agent that wrote it — no independent check. A writer cannot see the gap it never knew to fill, and a same-graph misreading gets re-confirmed rather than caught. Completion is decided by a *fresh* auditor that did not write the document (`references/document-audit.md`), not by the author's confidence.
+- **Batch verification hiding per-doc gaps.** Deferring all checking to one whole-tree pass at the end, so a shallow or ungrounded document is never independently caught before it's marked done. The audit fires **per document, at `generated`, before `complete`**; Step 6 is only the cross-document consistency pass, not the first time depth is checked.
 - **Over-fragmentation / stub sprawl.** Splitting a subject across many thin files a reader must reassemble, or deep-diving every module because the taxonomy has a slot for it. Depth belongs in the *depth of the right documents*, not the *count* of them — prefer the fewest documents that each hold a complete, single-mode subject, and let reader need and tier bound how many exist. A set no human can navigate fails even if every file is accurate.
 - **Punting a derivable fact to a human.** "`> TODO: document the retry policy`" when the retry policy is in the source you already analysed. The AI generates the full set; humans review, they do not author. If a fact is retrievable, retrieve it — a token or TODO is only ever for a value that lives in no readable source.
 - **Writing before analysing.** A code map produced from directory names describes a plausible system rather than this one, and every downstream document inherits the error.
@@ -336,12 +352,14 @@ Load only what the current task needs.
 |---|---|
 | `references/source-analysis.md` | Always — how to build and query the knowledge graph, and which command answers which document |
 | `references/docs-tree.md` | Always — the canonical taxonomy, folder naming, and placement rules |
-| `references/document-catalog.md` | Before writing any document — what each doc type must present and must keep out, its Diátaxis mode, and its source-of-truth |
+| `references/document-catalog.md` | Before writing any document — what each doc type must present and must keep out, its primary Diátaxis mode, its target depth, and its source-of-truth |
+| `instructions/<type>.md` | Alongside the catalog when writing a document of a type that has one — the writing-craft layer (layout, which `/understand-*` feeds it, how to tag provenance); `instructions/README.md` indexes them. Craft only; the contract stays in `document-catalog.md` |
 | `references/provenance-tracking.md` | Always — frontmatter schema, manifest format, the staleness algorithm, partial-rewrite mechanics |
 | `references/host-neutrality.md` | Writing anything that touches issues, reviews, CI, or ownership |
 | `references/decision-records.md` | Writing or backfilling ADRs |
 | `references/risk-docs.md` | Writing limitations, dependencies, or security documents |
-| `references/quality-bar.md` | Before presenting anything — review checklist and rubric |
+| `references/quality-bar.md` | Before presenting anything — the review checklist and rubric (per-document subset + whole-tree items) |
+| `references/document-audit.md` | Before marking any document `complete` — the independent per-document audit protocol, the derivable-vs-external gate, and the verdict schema |
 | `references/audience-matrix.md` | The three document classes (aligned / audience-specific / shared-fact spine), the BA/PO split, and which folder owns which fact |
 | `references/document-composition.md` | Always when writing flow or audience content — the flat-file-by-default and atomic-promotion rule, the two invariants, and the durability rules (no code, no duplication, write at the slowest layer) |
 | `references/depth-and-audience.md` | The depth ladder (L0–L3), which reader consumes which depth, and which understand-anything command feeds which cell |
@@ -357,8 +375,9 @@ Templates live in `assets/templates/`. Scripts (each has a `.py` and an equivale
 - `scripts/graph_extract.{py,js}` — read the knowledge graph
 - `scripts/docs_scaffold.{py,js}` — create and audit the tree
 - `scripts/manifest_sync.{py,js}` — create and maintain `.docforge/manifest.json`: `init` the plan (all `planned`), `add` discovered flows/overlays, `set` a document's status as it lands, `status` for a summary
-- `scripts/check_provenance.{py,js}` — recompute git blob hashes for every file recorded in the manifest; report `FRESH` / `PARTIAL` / `MISSING` per document and section
+- `scripts/check_provenance.{py,js}` — recompute git blob hashes for every source file recorded in the manifest's per-document `sections`. Emits one of three **document-level** statuses: `FRESH`; `PARTIAL` (one line per offending file — `PARTIAL  <doc>  section=<id>  <file_status>: <file>`, where `<file_status>` is `STALE` for a changed file or `MISSING` for a deleted one); or a document-level `STALE  <doc>  (no section granularity recorded)` for an adopted doc without section-level frontmatter. `MISSING` is never a document-level result — only a per-file substatus inside a `PARTIAL` line. Exit 0 only if every checked document is `FRESH`; documents still `planned`/`in_progress` are skipped
 - `scripts/discover_repos.{py,js}` — walk a root for declared submodules and undeclared nested repos, reporting each member's docforge status so gaps surface before a review, not during it
+- `scripts/check_document.{py,js}` — mechanical pre-audit of one document (`--file <path>`): flags `{{…}}` markers, empty headings, dead relative links, and any `--require-heading` that's absent; lists typed `<UPPER_SNAKE>` tokens separately as non-defects. Run it before the independent audit (`references/document-audit.md`) so the auditing agent spends effort on judgement, not mechanics
 
 ---
 

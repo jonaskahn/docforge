@@ -28,7 +28,7 @@
         "tier": {
           "type": ["string", "null"],
           "enum": ["core", "standard", "extended", null],
-          "description": "Documentation tier (proportionate to team size and scrutiny)"
+          "description": "Documentation tier, stored as a string. Maps from the CLI's numeric --tier: 1 (Spine) -> 'core', 2 (Diligence) -> 'standard', 3 (Portfolio) -> 'extended'."
         },
         "overlays": {
           "type": "array",
@@ -86,10 +86,36 @@
                   "type": "string",
                   "description": "Template instruction file name"
                 },
-                "provenance_sources": {
+                "sections": {
                   "type": "array",
-                  "description": "Git blob hashes of source files",
-                  "items": { "type": "string" }
+                  "description": "Per-section provenance, aggregated from the document's frontmatter once written. Empty (or absent) for a document still 'planned' or 'in_progress'. Each entry names one heading-anchored section and the source files it draws from; this is what check_provenance.py reads to decide staleness at section granularity.",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "sources"],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Section anchor slug, matching a heading in the document"
+                      },
+                      "sources": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": ["path", "git_blob"],
+                          "properties": {
+                            "path": {
+                              "type": "string",
+                              "description": "Repo-relative path of the source file this section draws from"
+                            },
+                            "git_blob": {
+                              "type": "string",
+                              "description": "`git hash-object <path>` at generation time — content hash, not commit SHA"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
