@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(DROP TABLE*)",
+      "Bash(DROP DATABASE*)",
+      "Bash(TRUNCATE*)",
+      "Write(db/migrations/*)",
+      "Write(.env*)",
+      "Write(*.pem)",
+      "Write(*.key)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{stop_hook_command — lint && test if both exist, whichever one exists alone, or omit the whole hooks block if neither does}}"
+          }
+        ]
+      }
+    ]
+  }
+}

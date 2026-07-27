@@ -49,6 +49,16 @@ docs/
 │       ├── engineering.md          ● engineering depth: mechanism, failure modes (only if written)
 │       └── product-owner.md        ● PO depth: value, metrics (only if written)
 │
+├── agents/                         (audience overlay — the AI coding agent itself)
+│   ├── README.md                   standard folder index (for humans browsing the forge)
+│   ├── architecture.md             brief stub — links to architecture/ for the actual map
+│   ├── patterns.md                 the one file with real content: hotspots, exemplars
+│   ├── glossary.md                 brief stub — links to reference/glossary.md, never redefines
+│   ├── testing.md                  brief stub — links to engineering/testing.md for strategy
+│   ├── tech-debt.md                brief stub — links to architecture/tech-debt.md
+│   ├── flow.md                     brief stub — entry points only, links to flows/ for steps
+│   └── conventions.md              (only if CONVENTIONS.md exists) distilled AI directives
+│
 ├── architecture/                   ▲ engineers, technical reviewers
 │   ├── README.md                   ▲ index — routes to high-level / low-level / concepts
 │   ├── high-level.md               ▲ system context, building blocks, boundaries (C4 L1–L2)
@@ -110,6 +120,8 @@ docs/
 
 **`flows/`** — One file per business flow (`/understand-domain` enumerates them — never hand-typed, and gated on `scripts/check_preconditions.py` reporting the domain graph READY). Each flow starts as a flat `<flow>.md`: plain content every audience reads, a diagram once the flow has more than one step, every critical notice. It is promoted to a `<flow>/` folder with `README.md` + per-reader deep-dive subfiles only in the same pass that writes real subfile content — never a folder created ahead of the content that justifies it. See `document-composition.md`.
 
+**`agents/`** *(agent-context overlay — `overlay-agent-context.md`)* — Written for an AI coding agent's context window, not a person. Every file here is a brief stub linking to the human document that owns the fact, except `patterns.md`, which genuinely has no other home. Gets the standard folder-index `README.md` like any other `docs/` folder (naming rule 3, above), but that index is for humans browsing the forge — the entry kernel an agent actually reads from on demand is root `AGENTS.md` §7, which links straight to the files it needs, not to this folder's index. `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, and `.claude/settings.json` themselves live at the **repo root**, in the same thin-pointer/tooling-config bucket as root `README.md` and `.docforge/` — not under `docs/`. See "Root vs docs/" in `SKILL.md` and `overlay-agent-context.md` for the full file list.
+
 **`architecture/`** — The system as built, at two altitudes. `high-level.md` is the stable map — system context, building blocks, boundaries — that changes once or twice a year. `low-level.md` and `concepts/<subsystem>/` carry component decomposition and deep mechanism on their own, faster lifecycle. `tech-debt.md` and `constraints.md` record shortcuts and hard limits respectively (distinct from `reference/limitations.md`, which is feature gaps). Rationale goes in `decisions/`; anything that churns per release belongs in `reference/` or is generated.
 
 **`engineering/`** — Everything a contributor does before their first merge. The test of `setup.md` is literal: follow it on a clean machine and the repo runs. If a step depends on credentials or access, say exactly who grants it.
@@ -149,6 +161,7 @@ When unsure where a document belongs:
 | What is the exact value/name/code for X? | `reference/` |
 | What could an attacker do, and what data do we hold? | `security/` |
 | How does a change get proposed and reviewed? | `contributing/` |
+| What must an AI coding agent know before it edits this code, within a token budget? | `docs/agents/` (entry kernel: root `AGENTS.md`) |
 
 If a document plausibly fits two folders, place it where its **primary audience** looks first and cross-link from the other. Do not copy it into both.
 

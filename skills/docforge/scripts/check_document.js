@@ -13,6 +13,8 @@
  *     heading or EOF)
  *   * dead relative links (a `](path)` whose target file does    (defect)
  *     not exist on disk)
+ *   * unlinked file mentions (a backtick-quoted path naming a     (defect)
+ *     real file on disk, written as plain text instead of a link)
  *   * missing must-present headings passed via --require-heading (defect)
  *     (repeatable, substring match)
  * Typed `<UPPER_SNAKE>` tokens are reported separately and are NOT defects.
@@ -34,6 +36,9 @@ const SCAFFOLD_RE = /\{\{.*?\}\}/g;
 const TOKEN_RE = /<[A-Z][A-Z0-9_]*>/g;
 const HEADING_RE = /^(#{1,6})\s+(.*\S)\s*$/;
 const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
+// A backtick-quoted path ending in .md — a candidate cross-reference that
+// should be an actual link, not bare text naming the file.
+const MENTION_RE = /`([A-Za-z0-9_./-]+\.md)`/g;
 
 function isExternalLink(target) {
   const t = target.trim();
@@ -92,17 +97,38 @@ function checkDocument(filePath, requireHeadings) {
 
   // dead relative links
   const repoDir = path.dirname(filePath);
+  const linkedTargets = new Set();
   for (let i = 0; i < lines.length; i++) {
     let m;
     LINK_RE.lastIndex = 0;
     while ((m = LINK_RE.exec(lines[i])) !== null) {
       const target = m[1].trim();
+      linkedTargets.add(target.split("#")[0]);
       if (isExternalLink(target)) continue;
       const filePart = target.split("#")[0];
       if (!filePart) continue;
       const resolved = path.resolve(repoDir, filePart);
       if (!fs.existsSync(resolved)) {
         defects.push({ kind: "dead-link", line: i + 1, detail: target });
+      }
+    }
+  }
+
+  // unlinked file mentions: a real file named in backticks, never linked
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let m;
+    MENTION_RE.lastIndex = 0;
+    while ((m = MENTION_RE.exec(line)) !== null) {
+      const target = m[1];
+      const basename = target.split("/").pop();
+      if (linkedTargets.has(target) || linkedTargets.has(basename)) continue;
+      const before = m.index > 0 ? line[m.index - 1] : "";
+      const after = line.slice(m.index + m[0].length, m.index + m[0].length + 2);
+      if (before === "[" && after.startsWith("(")) continue;
+      const resolved = path.resolve(repoDir, target);
+      if (fs.existsSync(resolved)) {
+        defects.push({ kind: "unlinked-mention", line: i + 1, detail: target });
       }
     }
   }

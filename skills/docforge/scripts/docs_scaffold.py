@@ -7,11 +7,13 @@ Two modes:
             assets/templates/ where a template exists
 
   audit     report what is missing, what still holds unfilled {{…}} scaffold
-            markers, which internal links are broken, where forge-specific
-            language has leaked into documents that are supposed to be
-            host-neutral, and which flow/concept folders were promoted without
-            a real subfile (folder-only-readme). Typed <UPPER_SNAKE> human-fill
-            tokens are listed separately and do not count as defects.
+            markers, which internal links are broken, which other generated
+            documents are named in backtick text instead of being linked to
+            (unlinked file mentions), where forge-specific language has
+            leaked into documents that are supposed to be host-neutral, and
+            which flow/concept folders were promoted without a real subfile
+            (folder-only-readme). Typed <UPPER_SNAKE> human-fill tokens are
+            listed separately and do not count as defects.
 
 Examples
 --------
@@ -128,6 +130,22 @@ OVERLAYS: dict[str, list[tuple[str, str | None]]] = {
         ("docs/product/product-owner/release-notes.md", "release-notes.md"),
         ("docs/product/product-owner/backlog-traceability.md", "backlog-traceability.md"),
     ],
+    # AI-agent context files (AGENTS.md kernel + docs/agents/ brief stubs). See
+    # references/overlay-agent-context.md. agents-conventions.md (conditional on an
+    # existing CONVENTIONS.md) and the cross-vendor mirrors are deliberately excluded
+    # here — they're hand-pulled at finalization time, never scaffolded up front.
+    "agent-context": [
+        ("AGENTS.md", "agents-kernel.md"),
+        ("CLAUDE.md", "claude-md.md"),
+        ("CLAUDE.local.md", "claude-local-md.md"),
+        (".claude/settings.json", "claude-settings.json"),
+        ("docs/agents/architecture.md", "agents-architecture.md"),
+        ("docs/agents/patterns.md", "agents-patterns.md"),
+        ("docs/agents/glossary.md", "agents-glossary.md"),
+        ("docs/agents/testing.md", "agents-testing.md"),
+        ("docs/agents/tech-debt.md", "agents-tech-debt.md"),
+        ("docs/agents/flow.md", "agents-flow.md"),
+    ],
 }
 
 FOLDER_BLURBS = {
@@ -147,6 +165,7 @@ FOLDER_BLURBS = {
     "docs/product/migration": "One guide per major version transition.",
     "docs/product/business-analyst": "Business rules, process flows and requirements traceability — for a Business Analyst.",
     "docs/product/product-owner": "Feature value, success metrics and release notes — for a Product Owner.",
+    "docs/agents": "Machine-consumption context for AI coding agents — brief stubs that link to (never restate) the human-facing documents that own each fact. The entry kernel is root AGENTS.md, not this folder's index.",
 }
 
 PLACEHOLDER = re.compile(r"\{\{[^}]+\}\}")   # {{…}} scaffold marker — must be filled
@@ -155,6 +174,9 @@ TODO = re.compile(r"TODO\(([^)]*)\)")        # retired punt form — treated as 
 # These are intentional and expected; they are reported separately, not as defects.
 TOKEN = re.compile(r"<[A-Z][A-Z0-9_]{2,}>")
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+# A backtick-quoted path ending in .md — a candidate cross-reference that
+# should be an actual link, not bare text naming the file.
+MENTION = re.compile(r"`([A-Za-z0-9_./-]+\.md)`")
 FORGE = re.compile(
     r"\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|"
     r"pull request|merge request|github actions|gitlab ci|codeowners)\b",
@@ -239,14 +261,15 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
         return 1
 
     files = sorted(p for p in docs.rglob("*.md") if "_archive" not in p.parts)
-    for extra in ("README.md", "SECURITY.md", "CONTRIBUTING.md"):
+    for extra in ("README.md", "SECURITY.md", "CONTRIBUTING.md", "AGENTS.md", "CLAUDE.md"):
         p = repo / extra
         if p.exists():
             files.append(p)
 
     findings: dict[str, list[str]] = {
         "missing": [], "unfilled scaffold": [], "empty": [],
-        "broken links": [], "forge leakage": [], "no review date": [],
+        "broken links": [], "unlinked file mentions": [],
+        "forge leakage": [], "no review date": [],
         "folder-only-readme": [],
     }
     # Informational, not a defect: typed <UPPER_SNAKE> tokens are the sanctioned
@@ -292,6 +315,7 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
         if len(body) < 120:
             findings["empty"].append(rel)
 
+        linked_targets = {t.split("#")[0] for t in LINK.findall(text)}
         for target in LINK.findall(text):
             if target.startswith(("http://", "https://", "mailto:", "#")):
                 continue
@@ -302,6 +326,20 @@ def audit(repo: Path, tier: int, overlays: list[str]) -> int:
             resolved = (path.parent / target.split("#")[0]).resolve()
             if not resolved.exists():
                 findings["broken links"].append(f"{rel} -> {target}")
+
+        # a real file named in backticks but never actually linked to
+        for line in text.splitlines():
+            for m in MENTION.finditer(line):
+                target = m.group(1)
+                if target in linked_targets or target.split("/")[-1] in linked_targets:
+                    continue
+                before = line[m.start() - 1] if m.start() > 0 else ""
+                after = line[m.end():m.end() + 2]
+                if before == "[" and after.startswith("("):
+                    continue  # `` `file.md` `` used as the label of its own link
+                resolved = (path.parent / target).resolve()
+                if resolved.exists():
+                    findings["unlinked file mentions"].append(f"{rel} -> {target}")
 
         if not rel.startswith(NEUTRAL_ZONE) and rel != "CONTRIBUTING.md":
             hits = {m.group(0).lower() for m in FORGE.finditer(text)}

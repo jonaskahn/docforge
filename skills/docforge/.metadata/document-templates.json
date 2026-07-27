@@ -90,6 +90,78 @@
       "instruction_file": "decision-records.md",
       "requires": ["git_history"],
       "audience": ["engineer"]
+    },
+    {
+      "type": "agents-kernel",
+      "name": "AGENTS.md Kernel",
+      "description": "Root machine-consumption entry point: commands, boundaries, module map, non-obvious conventions, absolute rules, links to docs/agents/ for depth. Hard 100-line cap; self-linted by check_agents_kernel.",
+      "instruction_file": "agents-kernel.md",
+      "requires": ["knowledge_graph", "manifests"],
+      "audience": ["agent"]
+    },
+    {
+      "type": "agents-architecture",
+      "name": "Agent Architecture View",
+      "description": "Brief stub: stack, quick-start, layer names — links to architecture/high-level.md and low-level.md for the actual map and rationale, never restates them",
+      "instruction_file": "agents-kernel.md",
+      "requires": ["knowledge_graph"],
+      "audience": ["agent"]
+    },
+    {
+      "type": "agents-patterns",
+      "name": "Agent Pattern Exemplars",
+      "description": "Complexity hotspots, function exemplars, recurring-import table — has no other home in the human tree, so this is the one docs/agents/ file with real (non-stub) content",
+      "instruction_file": "agents-kernel.md",
+      "requires": ["knowledge_graph"],
+      "audience": ["agent"]
+    },
+    {
+      "type": "agents-glossary",
+      "name": "Agent Glossary View",
+      "description": "Brief stub: a linking view over reference/glossary.md — never redefines a term",
+      "instruction_file": "agents-kernel.md",
+      "requires": ["domain_graph"],
+      "audience": ["agent"]
+    },
+    {
+      "type": "agents-testing",
+      "name": "Agent Testing View",
+      "description": "Brief stub: runner command, layout note, single-test command — links to engineering/testing.md for strategy",
+      "instruction_file": "agents-kernel.md",
+      "requires": ["manifests"],
+      "audience": ["agent"]
+    },
+    {
+      "type": "agents-tech-debt",
+      "name": "Agent Tech-Debt Pointer",
+      "description": "Brief stub linking to architecture/tech-debt.md; real content only for gaps that are genuinely agent-specific and absent there",
+      "instruction_file": "agents-kernel.md",
+      "requires": [],
+      "audience": ["agent"]
+    },
+    {
+      "type": "agents-flow",
+      "name": "Agent Flow View",
+      "description": "Brief stub: entry points and triggers per domain, sourced from the domain graph — links to docs/flows/<flow>.md for actual steps",
+      "instruction_file": "agents-kernel.md",
+      "requires": ["domain_graph"],
+      "audience": ["agent"]
+    },
+    {
+      "type": "agents-conventions",
+      "name": "Agent Conventions",
+      "description": "Existing CONVENTIONS.md distilled into AI-targeted directives — only built if CONVENTIONS.md exists in the repo",
+      "instruction_file": "agents-kernel.md",
+      "requires": [],
+      "audience": ["agent"]
+    },
+    {
+      "type": "claude-settings",
+      "name": "Claude Code Settings",
+      "description": "Machine config: permissions.deny + hooks.Stop, derived from the manifests the same way engineering/setup.md derives its install command. Merged on re-runs, never overwritten.",
+      "instruction_file": "agents-kernel.md",
+      "requires": ["manifests"],
+      "audience": ["agent"]
     }
   ]
 }

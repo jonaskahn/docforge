@@ -267,3 +267,44 @@ owns the detail. The content contracts research surfaced for the ones most often
 - **Mode:** Explanation, user-facing.
 - **Must present:** benefit-framed, audience-appropriate prose for end-users/stakeholders; only the key features, improvements, and resolved UX issues; what's new and *how it helps*, with screenshots/links to feature pages where useful; optionally split technical vs non-technical.
 - **Keep out:** every small fix and internal change, exhaustive version history, raw category lists — that's the changelog. Changelog is complete-technical-for-devs; release notes are curated-benefit-for-users. Never collapse the two.
+
+---
+
+## Agent-context overlay documents *(agent-context overlay)* — `overlay-agent-context.md`
+
+The reader here is an AI coding agent, not a human — see the fourth audience dimension in `audience-matrix.md`. The governing rule across every file below: link to the human document that already owns a fact, never restate it. Depth targets don't apply the usual L0–L3 ladder; each entry states its own bar.
+
+### `AGENTS.md` — the kernel
+- **Mode:** Reference, sui generis — not one of the four Diátaxis modes cleanly, and not on the depth ladder. A hard **≤100-line** structural budget stands in for a depth target.
+- **Must present:** the 7 numbered sections (Commands, Boundaries, Module Map, Architectural Altitude, Non-Obvious Conventions, Absolute Rules, Deeper Context), each with a bold tagline and (except Boundaries/Absolute Rules) a `The test: …` line; an HTML-comment provenance line (see the exception in `provenance-tracking.md`); the closing `Working if: …` line.
+- **Keep out:** architecture rationale (→ `docs/agents/architecture.md`, itself a stub → `architecture/high-level.md`); anything a linked document already states; more than one fenced code block.
+
+### `CLAUDE.md` / `CLAUDE.local.md`
+- **Mode:** n/a — a shim and a stub, not documents.
+- **Must present:** `CLAUDE.md` is exactly `@AGENTS.md`. `CLAUDE.local.md` is the 3-line gitignored preferences stub.
+- **Keep out:** everything else. Neither file is a place to write content.
+
+### `.claude/settings.json`
+- **Mode:** n/a — machine configuration.
+- **Must present:** `permissions.deny` (destructive-command patterns) and, if the manifests expose a lint/test command, `hooks.Stop`.
+- **Keep out:** anything not machine-enforceable. **Merged on re-runs, never overwritten** — the one document type in the tree that isn't regenerate-in-place.
+
+### `docs/agents/architecture.md`, `glossary.md`, `testing.md`, `tech-debt.md`, `flow.md` — brief stubs
+- **Mode:** Reference.
+- **Must present:** a couple of orienting lines plus a link to the human document that owns the subject (`architecture/high-level.md`+`low-level.md`, `reference/glossary.md`, `engineering/testing.md`, `architecture/tech-debt.md`, `docs/flows/<flow>.md` respectively). `flow.md` is gated on the domain graph, same as `docs/flows/`.
+- **Keep out:** any restatement or paraphrase of the linked document's content. Real content only for a fact that is genuinely agent-specific and absent from the link target (e.g. an agent-only footgun in `tech-debt.md`).
+
+### `docs/agents/patterns.md` — the one file with real content
+- **Mode:** Reference.
+- **Must present:** complexity hotspots, function exemplars per layer, a recurring-imports table.
+- **Keep out:** nothing to redirect — this content has no other home in the human tree, so it's written in full here.
+
+### `docs/agents/conventions.md` — conditional
+- **Mode:** Reference.
+- **Must present:** distilled, AI-targeted directives, only when a `CONVENTIONS.md` already exists in the repo.
+- **Keep out:** a verbatim copy of `CONVENTIONS.md`.
+
+### Cross-vendor mirrors (`GEMINI.md`, `.cursor/rules/agents.mdc`, `.github/copilot-instructions.md`, `.codex/instructions.md`, `.windsurf/rules/agents.md`, `.aider.conf.yml`)
+- **Mode:** n/a — generated, not authored.
+- **Must present:** a mechanical derivation of the finished `AGENTS.md` (strip the H1, wrap in the vendor's required format, add a provenance comment) — built only when that vendor's own signal already exists in the repo.
+- **Keep out:** independent content — these are never written by hand, and never speculatively generated for a vendor with no signal in the repo.

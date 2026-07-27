@@ -44,10 +44,10 @@
           },
           "audience": {
             "type": "array",
-            "description": "Intended readers",
+            "description": "Intended readers — 'agent' is the machine-consumption reader class (AI coding agents), distinct from the three human classes",
             "items": {
               "type": "string",
-              "enum": ["all", "engineer", "business", "ops"]
+              "enum": ["all", "engineer", "business", "ops", "agent"]
             }
           },
           "tier": {

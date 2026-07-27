@@ -8,11 +8,13 @@
  *             assets/templates/ where a template exists
  *
  *   audit     report what is missing, what still holds unfilled {{…}} scaffold
- *             markers, which internal links are broken, where forge-specific
- *             language has leaked into documents that are supposed to be
- *             host-neutral, and which flow/concept folders were promoted without
- *             a real subfile (folder-only-readme). Typed <UPPER_SNAKE> human-fill
- *             tokens are listed separately and do not count as defects.
+ *             markers, which internal links are broken, which other generated
+ *             documents are named in backtick text instead of being linked to
+ *             (unlinked file mentions), where forge-specific language has
+ *             leaked into documents that are supposed to be host-neutral, and
+ *             which flow/concept folders were promoted without a real subfile
+ *             (folder-only-readme). Typed <UPPER_SNAKE> human-fill tokens are
+ *             listed separately and do not count as defects.
  *
  * Examples
  * --------
@@ -125,6 +127,22 @@ const OVERLAYS = {
     ["docs/product/product-owner/release-notes.md", "release-notes.md"],
     ["docs/product/product-owner/backlog-traceability.md", "backlog-traceability.md"],
   ],
+  // AI-agent context files (AGENTS.md kernel + docs/agents/ brief stubs). See
+  // references/overlay-agent-context.md. agents-conventions.md (conditional on an
+  // existing CONVENTIONS.md) and the cross-vendor mirrors are deliberately excluded
+  // here — they're hand-pulled at finalization time, never scaffolded up front.
+  "agent-context": [
+    ["AGENTS.md", "agents-kernel.md"],
+    ["CLAUDE.md", "claude-md.md"],
+    ["CLAUDE.local.md", "claude-local-md.md"],
+    [".claude/settings.json", "claude-settings.json"],
+    ["docs/agents/architecture.md", "agents-architecture.md"],
+    ["docs/agents/patterns.md", "agents-patterns.md"],
+    ["docs/agents/glossary.md", "agents-glossary.md"],
+    ["docs/agents/testing.md", "agents-testing.md"],
+    ["docs/agents/tech-debt.md", "agents-tech-debt.md"],
+    ["docs/agents/flow.md", "agents-flow.md"],
+  ],
 };
 
 const FOLDER_BLURBS = {
@@ -144,6 +162,7 @@ const FOLDER_BLURBS = {
   "docs/product/migration": "One guide per major version transition.",
   "docs/product/business-analyst": "Business rules, process flows and requirements traceability — for a Business Analyst.",
   "docs/product/product-owner": "Feature value, success metrics and release notes — for a Product Owner.",
+  "docs/agents": "Machine-consumption context for AI coding agents — brief stubs that link to (never restate) the human-facing documents that own each fact. The entry kernel is root AGENTS.md, not this folder's index.",
 };
 
 const PLACEHOLDER = /\{\{[^}]+\}\}/g; // {{…}} scaffold marker — must be filled
@@ -152,6 +171,9 @@ const TODO = /TODO\(([^)]*)\)/g; // retired punt form — treated as a defect
 // These are intentional and expected; they are reported separately, not as defects.
 const TOKEN = /<[A-Z][A-Z0-9_]{2,}>/g;
 const LINK = /\[[^\]]*\]\(([^)]+)\)/g;
+// A backtick-quoted path ending in .md — a candidate cross-reference that
+// should be an actual link, not bare text naming the file.
+const MENTION = /`([A-Za-z0-9_./-]+\.md)`/g;
 const FORGE = new RegExp(
   "\\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|" +
     "pull request|merge request|github actions|gitlab ci|codeowners)\\b",
@@ -281,7 +303,7 @@ function audit(repo, tier, overlays) {
   }
 
   const files = walkMdFiles(docs);
-  for (const extra of ["README.md", "SECURITY.md", "CONTRIBUTING.md"]) {
+  for (const extra of ["README.md", "SECURITY.md", "CONTRIBUTING.md", "AGENTS.md", "CLAUDE.md"]) {
     const p = path.join(repo, extra);
     if (fs.existsSync(p)) files.push(p);
   }
@@ -291,6 +313,7 @@ function audit(repo, tier, overlays) {
     "unfilled scaffold": [],
     empty: [],
     "broken links": [],
+    "unlinked file mentions": [],
     "forge leakage": [],
     "no review date": [],
     "folder-only-readme": [],
@@ -340,15 +363,33 @@ function audit(repo, tier, overlays) {
     if (body.length < 120) findings.empty.push(rel);
 
     let m;
+    const linkedTargets = new Set();
     LINK.lastIndex = 0;
     while ((m = LINK.exec(text)) !== null) {
       const target = m[1];
+      linkedTargets.add(target.split("#")[0]);
       if (/^(https?:\/\/|mailto:|#)/.test(target)) continue;
       if (target.includes("{{") || target.includes("NNNN")) continue; // unfilled template link
       TOKEN.lastIndex = 0;
       if (TOKEN.test(target)) continue; // link points through a human-fill token
       const resolved = path.resolve(path.dirname(filePath), target.split("#")[0]);
       if (!fs.existsSync(resolved)) findings["broken links"].push(`${rel} -> ${target}`);
+    }
+
+    // a real file named in backticks but never actually linked to
+    for (const line of text.split("\n")) {
+      MENTION.lastIndex = 0;
+      let mm;
+      while ((mm = MENTION.exec(line)) !== null) {
+        const target = mm[1];
+        const basename = target.split("/").pop();
+        if (linkedTargets.has(target) || linkedTargets.has(basename)) continue;
+        const before = mm.index > 0 ? line[mm.index - 1] : "";
+        const after = line.slice(mm.index + mm[0].length, mm.index + mm[0].length + 2);
+        if (before === "[" && after.startsWith("(")) continue; // `` `file.md` `` used as its own link label
+        const resolved = path.resolve(path.dirname(filePath), target);
+        if (fs.existsSync(resolved)) findings["unlinked file mentions"].push(`${rel} -> ${target}`);
+      }
     }
 
     if (!NEUTRAL_ZONE.some((z) => rel.startsWith(z)) && rel !== "CONTRIBUTING.md") {

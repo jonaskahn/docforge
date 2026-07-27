@@ -108,6 +108,16 @@ python scripts/check_provenance.py --manifest .docforge/manifest.json
 
 Each written document reports as one of three document-level statuses: `FRESH` (`FRESH    <doc>`); `PARTIAL`, emitted as one line per offending file — `PARTIAL  <doc>  section=<id>  <file_status>: <file>`, where `<file_status>` is `STALE` (content changed) or `MISSING` (source file gone); or `STALE    <doc>  (no section granularity recorded)` for a pre-existing doc adopted into the manifest without section-level frontmatter (see below). Exit code is 0 only if every checked document is `FRESH`. Add `--flow <name>` to filter to one section id, `--json` for machine-readable output in a CI check, `--rebuild-manifest` to regenerate the manifest from every document's frontmatter after a manual edit.
 
+## Exception: AGENTS.md provenance
+
+`AGENTS.md`'s own format (`overlay-agent-context.md`) forbids a YAML frontmatter block — its mechanical linter requires line 1 to be the `# {{project_name}}` heading — and its 100-line cap makes per-section frontmatter disproportionate to content that is wholesale-regenerated, not incrementally authored. It carries a single HTML-comment provenance line instead, immediately after the opening lines:
+
+```
+<!-- docforge-provenance v{{skill_version}} | graph {{graph_hash_short}} | {{graph_analyzed_date}} | regenerate: re-run the agent-context overlay -->
+```
+
+Tracked in the manifest as one document with a single section (`id: kernel`), sourced from the knowledge-graph snapshot and whichever manifest files (`package.json`, `pyproject.toml`, …) fed the Commands section — not per-heading. `CLAUDE.md` and `CLAUDE.local.md` carry no provenance at all; they're too short and too static to need it (`CLAUDE.md` is a fixed one-liner, `CLAUDE.local.md` is gitignored). Every other `docs/agents/*.md` file carries standard YAML frontmatter like any other document — this exception is scoped to `AGENTS.md`/`CLAUDE.md`/`CLAUDE.local.md` only.
+
 ## Adopting provenance on a pre-existing document
 
 A doc written before this skill existed has no frontmatter. Don't retrofit fabricated hashes as if they'd always been there. Instead: read the document, identify which files its claims currently draw from (or should), stamp *current* hashes as the baseline, and mark `adopted: true` in the frontmatter — so a future reviewer knows the baseline was assigned at adoption time, not at original authorship, and doesn't mistake "no changes detected" for "verified accurate since it was first written."

@@ -13,6 +13,9 @@ Checks, for the single file given:
     the next heading or EOF)
   * dead relative links (a `](path)` or `](path.md#anchor)`
     whose target file does not exist on disk)        (defect)
+  * unlinked file mentions (a backtick-quoted path    (defect)
+    like `` `docs/x.md` `` naming a real file on disk,
+    written as plain text instead of a markdown link)
   * missing must-present headings passed via         (defect)
     --require-heading (repeatable, substring match)
 Typed `<UPPER_SNAKE>` tokens are reported separately and are NOT defects —
@@ -41,6 +44,9 @@ TOKEN_RE = re.compile(r"<[A-Z][A-Z0-9_]*>")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
 # Markdown links whose target is not a URL, mailto, or pure in-page anchor.
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+# A backtick-quoted path ending in .md — a candidate cross-reference that
+# should be an actual link, not bare text naming the file.
+MENTION_RE = re.compile(r"`([A-Za-z0-9_./-]+\.md)`")
 
 
 def is_external_link(target: str) -> bool:
@@ -87,9 +93,11 @@ def check_document(path: Path, require_headings: list[str]) -> dict:
 
     # dead relative links
     repo_dir = path.parent
+    linked_targets: set[str] = set()
     for i, line in enumerate(lines, 1):
         for m in LINK_RE.finditer(line):
             target = m.group(1).strip()
+            linked_targets.add(target.split("#", 1)[0])
             if is_external_link(target):
                 continue
             file_part = target.split("#", 1)[0]
@@ -98,6 +106,20 @@ def check_document(path: Path, require_headings: list[str]) -> dict:
             resolved = (repo_dir / file_part).resolve()
             if not resolved.exists():
                 defects.append({"kind": "dead-link", "line": i, "detail": target})
+
+    # unlinked file mentions: a real file named in backticks, never linked
+    for i, line in enumerate(lines, 1):
+        for m in MENTION_RE.finditer(line):
+            target = m.group(1)
+            if target in linked_targets or target.split("/")[-1] in linked_targets:
+                continue  # this doc already links to it elsewhere
+            before = line[m.start() - 1] if m.start() > 0 else ""
+            after = line[m.end():m.end() + 2]
+            if before == "[" and after.startswith("("):
+                continue  # `` `file.md` `` used as the label of its own link
+            resolved = (repo_dir / target).resolve()
+            if resolved.exists():
+                defects.append({"kind": "unlinked-mention", "line": i, "detail": target})
 
     # required headings (substring match against any heading in the doc)
     for req in require_headings:

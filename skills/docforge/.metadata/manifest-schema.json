@@ -35,7 +35,7 @@
           "description": "Selected audience/domain overlays",
           "items": {
             "type": "string",
-            "enum": ["business-analyst", "product-owner", "data-pipeline", "api", "web", "infrastructure", "library"]
+            "enum": ["business-analyst", "product-owner", "agent-context", "data-pipeline", "api", "web", "infrastructure", "library"]
           }
         }
       }
@@ -49,7 +49,7 @@
         "properties": {
           "group": {
             "type": "string",
-            "enum": ["architecture", "flows", "product", "engineering", "operations", "reference", "security", "contributing", "records"]
+            "enum": ["architecture", "flows", "product", "engineering", "operations", "reference", "security", "contributing", "records", "agent-context"]
           },
           "documents": {
             "type": "array",
@@ -67,7 +67,7 @@
                 },
                 "path": {
                   "type": "string",
-                  "description": "Output path within docs/ tree"
+                  "description": "Output path, repo-relative — normally within docs/, but the agent-context group's root files (AGENTS.md, CLAUDE.md, .claude/settings.json) live at the repo root by tool convention"
                 },
                 "status": {
                   "type": "string",

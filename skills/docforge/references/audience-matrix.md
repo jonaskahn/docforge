@@ -58,6 +58,13 @@ Everywhere else links to it; nothing is pasted twice.
 | Success metric / KPI target | PO `success-metrics.md` | BA does not need it — omit, don't cross-link |
 | Roadmap timing | `product/roadmap.md` (spine) | PO README links; does not duplicate the dated table |
 | Warning / critical constraint | topic `README.md` (invariant 2) | subfile may expand it |
+| Agent-specific non-obvious convention (topology anomaly) | `AGENTS.md` §5 or `docs/agents/patterns.md` | nowhere else — no human document needs it |
+
+## A fourth dimension: machine consumption (the agent-context overlay)
+
+The three classes above sort content by *which human reads it*. The `agent-context` overlay (`overlay-agent-context.md`) answers a different question: *what must an AI coding agent hold in a token-budgeted context window before it edits this code* — not which human, but which consumption modality.
+
+This is not a peer of the three classes; it's orthogonal to all of them. The governing rule is stricter than R2 alone: **`docs/agents/*` never restates a fact a human-facing document already owns — it links to it, briefly.** `docs/agents/tech-debt.md` doesn't re-derive `architecture/tech-debt.md`; it's a stub with a link. `docs/agents/glossary.md` doesn't redefine a term `reference/glossary.md` already owns; it's a filtered linking view. The only facts this dimension genuinely owns are ones no human document does yet — topology-derived non-obvious conventions, and `docs/agents/patterns.md`'s complexity/exemplar content. Everywhere else, the agent-facing file does *less* work than its human counterpart, not a compressed version of the same work.
 
 ## When to build audience depth at all
 

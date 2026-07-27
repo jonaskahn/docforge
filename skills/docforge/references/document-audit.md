@@ -66,8 +66,10 @@ The auditor returns a structured verdict (the artifact in `assets/templates/audi
 
 ## Optional mechanical pre-audit
 
-`scripts/check_document.{py,js}` (if present) runs *before* the agent on one doc path and flags the purely mechanical defects — `{{…}}` markers, empty headings, dead relative links, missing must-present headings for that type — so the agent spends its judgement on depth, grounding, and mode rather than on things a regex catches. It never replaces the agent; a clean mechanical pass is necessary, not sufficient.
+`scripts/check_document.{py,js}` (if present) runs *before* the agent on one doc path and flags the purely mechanical defects — `{{…}}` markers, empty headings, dead relative links, unlinked file mentions (another real document named in backticks but never actually linked to), missing must-present headings for that type — so the agent spends its judgement on depth, grounding, and mode rather than on things a regex catches. It never replaces the agent; a clean mechanical pass is necessary, not sufficient.
+
+For `AGENTS.md` specifically (`agent-context` overlay), also run `scripts/check_agents_kernel.{py,js}` before the agent — it checks the format-specific rubric (100-line cap, tagline/test-sentence shape, negation ratio, dangling `@docs/agents/…` links) that `check_document.py`'s generic checks have no concept of.
 
 ## What this changes about Step 6
 
-Step 6 is no longer the per-document gate — this file is. Step 6 becomes the **final whole-tree consistency pass**: the checks that are only meaningful across the full set — cross-document dead links (`docs_scaffold.py --audit`), duplication across documents, index reachability, forge-name leakage. Per-document completeness, depth, mode, and grounding are settled here, one document at a time, before each is ever marked `complete`.
+Step 6 is no longer the per-document gate — this file is. Step 6 becomes the **final whole-tree consistency pass**: the checks that are only meaningful across the full set — cross-document dead links, unlinked file mentions across the whole tree, duplication across documents, index reachability, forge-name leakage (all via `docs_scaffold.py --audit`). Per-document completeness, depth, mode, and grounding are settled here, one document at a time, before each is ever marked `complete`.

@@ -107,6 +107,14 @@ the code.
 - Domain terms are defined once in `reference/glossary.md`. No document restates a definition.
 - The same subject is never written into two audience subfiles — split by depth or angle,
   never copied.
+- **R2 exception: tool-convention mirrors.** `CLAUDE.md`, `GEMINI.md`, `.cursor/rules/agents.mdc`,
+  `.github/copilot-instructions.md`, `.codex/instructions.md`, `.windsurf/rules/agents.md`
+  (the `agent-context` overlay, `overlay-agent-context.md`) intentionally carry the same content
+  as `AGENTS.md` at N tool-conventional paths. This is sanctioned because each is read by a
+  different *tool*, not a different *human reader* — the same "one canonical source, N derived
+  artifacts" shape `provenance-tracking.md` already uses for `.docforge/manifest.json`. The
+  exception holds only while each mirror is mechanically regenerated from `AGENTS.md`, never
+  independently authored.
 
 **R3 — Durability drives provenance.**
 - Because prose is behaviour-level, a refactor that changes a source file's hash but not its

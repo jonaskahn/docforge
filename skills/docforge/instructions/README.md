@@ -36,6 +36,9 @@ is not a gap — the catalog is authoritative for all of them.
 - `security-policy.md` — Vulnerability reporting and contacts
 - `decision-records.md` — Architecture Decision Record index and format
 
+### AI Agent Context
+- `agents-kernel.md` — AGENTS.md kernel and its docs/agents/ family (agent-context overlay)
+
 ## Template Structure
 
 Each template contains:
