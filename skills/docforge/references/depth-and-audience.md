@@ -22,8 +22,29 @@ Business rules are the one case where a non-engineer wants L1–L2 depth: the ex
 and exceptions go in `business-analyst.md`, not the README, but a plain statement of each
 rule and every critical one's notice stays in the README (invariant 2).
 
-**Depth is selective.** Only architecturally significant, slow-changing subsystems earn an
-L2/L3 deep-dive. Deep-diving every module inflates provenance churn for no reader's benefit.
+**Deep-dive is the default; filler is the only thing cut.** Go as far down as helps a newcomer
+actually understand and approach the subsystem — the *why*, the mechanism, the edge cases, the
+data model, the failure modes, and the related pieces a reader must hold in their head to make
+sense of it. Default to L2/L3 for any subsystem a new engineer has to understand to be
+productive, not only the handful that are "architecturally significant." Add the adjacent
+context that makes a document self-standing (what feeds it, what it feeds, what breaks it) —
+that is the "more aspects, related things" a deep reader needs, not padding.
+
+The single brake is **value, never a quota.** Cut anything that lengthens without helping a
+reader: restating the obvious, narrating the file tree, ceremony, a deep-dive on a trivial or
+fast-churning module no one needs to understand. "Detailed" means *more useful signal*, not
+more words. Two guards keep depth from becoming churn: write at the flow/behaviour level so a
+same-behaviour refactor can't falsify a deep section (non-negotiable 6), and state each fact
+once and link to it — depth is never duplication across audience folders.
+
+**Deep by default is not "deep-dive everything."** A subsystem earns an L2/L3 deep-dive by a
+reader *needing* it to be productive, not by existing. Depth goes *down* into what matters, not
+*wide* across every module — going deep on the three load-bearing subsystems while leaving the
+trivial ones at L1 is correct, and produces a set a human can actually follow. The number of
+documents is bounded the same way: by the tier and by genuine reader need, not by how many
+files the taxonomy *could* hold. When one coherent document covers a subject well, that is the
+right answer — do not split it into many thin files a reader then has to reassemble. Detail
+lives in the *depth of the right documents*, not in the *count* of them.
 
 ## Which understand-anything command feeds which cell
 

@@ -46,6 +46,10 @@ into an operational trigger.
 
 The "Revisit if" section is not in the classic templates and is worth adding. Without it, decisions calcify: nobody knows whether a five-year-old choice is still load-bearing or merely undisturbed.
 
+This template carries Nygard's five canonical parts (title, status, context, decision, consequences) in the fuller MADR shape (problem statement, considered options, named trade-offs). Two MADR fields are worth adding in larger orgs where a decision touches many teams: **Consulted** (who gave two-way input) and **Informed** (who was told one-way), split out from Deciders; and, where a decision needs enforcement, a **Confirmation** line stating how compliance is verified (a lint rule, an architecture test, a review gate). Add them when they carry weight; omit them when Deciders already says everything.
+
+**An ADR is not a design doc.** An ADR records one decision *already made*, compactly and immutably — it is a durable maintenance artifact. A design doc or RFC is a forward-looking, pre-implementation proposal spanning a whole feature, written to drive discussion before building. This skill documents the system as shipped (see the "document what runs, not aspiration" anti-pattern), so it produces ADRs — the record of what was chosen — not design docs. A live design proposal, if one exists, is the *source* you backfill an ADR from once the decision lands, not a document the tree carries.
+
 ## What deserves a record
 
 Write one when a choice is **expensive to reverse**, **not obvious from the code**, or **likely to be questioned later**. Typical: choosing a database, a framework, or a messaging system; defining a tenancy or authentication model; picking a deployment topology; adopting a significant dependency; deliberately *not* doing something (not using an ORM, not sharding yet); accepting known technical debt with a stated repayment condition.

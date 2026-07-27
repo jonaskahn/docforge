@@ -13,7 +13,7 @@ Three rules organize every decision here. **Separate documents that change once 
 
 Six rules that hold regardless of tier, repo type, ecosystem, or audience. Violating them is what makes documentation rot.
 
-1. **Never invent — and never punt what you can derive.** Every claim must be traceable to the knowledge graph, to code, to config, to commit history, or to something the user told you. A confidently wrong doc costs more than a missing one, because readers stop trusting the whole set. But the far more common failure is the opposite: leaving a section for "the team to fill later" when the answer was in the source all along. **You generate the complete set; a human reviews it for accuracy afterward.** So there are exactly two fill states, and no third:
+1. **Never invent — and never punt what you can derive.** Every claim must be traceable to the knowledge graph, to code, to config, to commit history, or to something the user told you. A confidently wrong doc costs more than a missing one, because readers stop trusting the whole set. But the far more common failure is the opposite: leaving a section for "the team to fill later" when the answer was in the source all along. **You generate the complete set; a human reviews it for accuracy afterward.** "Complete" is about fill-state, not delivery cadence: it means no derivable fact is ever punted to a human, whether you write the whole tree at once or part by part under the plan-first cadence (Step 0). So there are exactly two fill states, and no third:
    - **Derivable** — anything obtainable from the graph, source, config, or history (retry policy, config vars, business rules, failure modes, the flow's steps). Write it *in full*, now. Handing a derivable fact to a human is a defect, not humility. If you are tempted to punt, query the graph again (`references/source-analysis.md`) — the answer is almost always retrievable.
    - **Externally unknowable** — a fact that lives in no source you can read: a disclosure contact address, an on-call rotation, a production URL, an org-set SLA number, a team/owner name, a roadmap date. Write the entire surrounding sentence and leave only the atomic unknown as a **typed placeholder token** — `<SECURITY_CONTACT>`, `<ONCALL_ROTATION>`, `<PROD_BASE_URL>`, `<SLA_RESPONSE_HOURS>`, `<TEAM_OWNER>`: angle-bracketed, `UPPER_SNAKE_CASE`, semantically named. A token stands in for one *value*, never a paragraph — its shape structurally forbids punting a whole section. Do not use the retired `> TODO(owner): …` prose form; it invited exactly the "team fills this later" scaffold this skill exists to prevent.
 2. **Analyse before writing.** The knowledge graph is a precondition, not an optimization. See "Source analysis" below and `references/source-analysis.md`.
@@ -83,6 +83,18 @@ If the graph is unavailable — the plugin is not installed, or the source is no
 
 ## Workflow
 
+### Step 0 — Interaction mode: when scope is open-ended, plan first, then write part by part
+
+If the user named exactly what to write ("regenerate the security policy", "just the setup doc"), write that and skip to the relevant step. **Otherwise — any open-ended request ("document this repo", "write docs for the project", "our repo has no docs") — do not silently generate the whole tree in one shot.**
+
+1. **Present a plan first — grounded in the analysis, not a generic checklist.** Do the graph analysis (Steps 1–3) *before* the plan: understand the actual code, the knowledge graph, the domain graph's flows, and the business logic, then lay out the ordered set of documentation parts those findings justify — the real subsystems, flows, and domains you found, grouped by area (architecture, flows, product, operations, reference, security, …). One line per part: what it will cover (naming the concrete subsystem/flow, per `references/document-catalog.md`) and why a reader needs it. State the tier and overlays in the same message. Get the user's confirmation on the plan before writing prose.
+2. **Then write one part at a time, in dependency order** (Step 5). For each part, in order:
+   - **Re-ground before you write.** Pull every must-present element for that document (`references/document-catalog.md`) from the knowledge graph, the domain graph, and the code. If a fact the document needs is not yet in the graph, retrieve it — a narrow `/understand-chat`, an `/understand-explain <path>`, or direct inspection — *before* writing, not around it. Never write a part on thin context: if the source genuinely cannot answer a required element, that atomic value becomes a typed `<UPPER_SNAKE>` token (non-negotiable 1), and everything around it is still written in full.
+   - Write to the default depth (deep-dive — see Step 5 and `references/depth-and-audience.md`), stamp provenance as you write, present the finished part, and **pause** for the user to confirm or redirect before starting the next. Fold feedback on part N into parts N+1…
+3. **This cadence never relaxes non-negotiable 1.** Every part you hand over is *complete* — no punted derivable facts, no unfilled `{{…}}` scaffolds, only typed `<UPPER_SNAKE>` tokens for genuinely external values. The confirmation gate governs *scope and ordering*, not fill-completeness. The goal is a reviewable, steerable stream — not a thirty-file dump the user must audit at once, and not a scaffold they must finish.
+
+When the user explicitly says "just generate everything," honor it: skip the per-part pauses, still present the one-line plan first so they can catch a wrong tier or a missing overlay before you spend the tokens.
+
 ### Step 1 — Build the graph, then read the repo
 
 Run the analysis above, then fill the gaps it does not cover:
@@ -145,6 +157,10 @@ Either way, the templates are starting points, not output. A scaffold left full 
 
 ### Step 5 — Write the content, in dependency order
 
+**Consult the document catalog for each document before writing it, and re-ground it in the source.** `references/document-catalog.md` is the content contract for every doc type — what it must present, what to keep out (so two documents don't overlap), and the one Diátaxis mode it stays in. Before writing any document — plan-first path or a single explicitly-requested doc — confirm the graph and code actually supply every must-present element, and retrieve what's missing rather than writing around it (the re-ground rule in Step 0 applies to every document, not only the plan-first cadence). **One document, one mode:** a tutorial doesn't explain, a reference doesn't teach, an explanation doesn't enumerate steps; when material spans modes, section and cross-link rather than blend. Orientation documents (the READMEs, `product/overview.md`) are the only ones that summarize across modes, and only as a router that delegates depth.
+
+**Default depth is deep-dive, not orientation.** Within each document's mode, write to the depth that lets a stranger to the repo genuinely understand and approach the subsystem — mechanism, edge cases, failure modes, and the adjacent pieces (what feeds it, what it feeds, what breaks it) that make it self-standing. The only thing you cut is filler, never signal; "detailed" means more useful information, not more words. See `references/depth-and-audience.md` for the depth ladder and the value brake, and non-negotiable 6 for keeping deep sections durable (behaviour-level, no code, no line numbers).
+
 Later documents cite earlier ones, so order matters:
 
 1. `docs/architecture/high-level.md` — the stable map, built from the graph. Everything else references it. Then `low-level.md` and `architecture/concepts/<subsystem>.md` deep-dives for the significant subsystems (same flat-then-promoted rule as flows).
@@ -160,6 +176,8 @@ Later documents cite earlier ones, so order matters:
 ### Step 6 — Verify before presenting
 
 Run the checklist in `references/quality-bar.md`. Its core test: could a competent engineer who has never seen this repo go from the root README to a running local instance without asking a human a question? If not, the setup documentation is incomplete regardless of how polished the rest looks.
+
+Check each document against its `references/document-catalog.md` contract: every must-present element is there, nothing that belongs in another document leaked in, and the document stayed in its one Diátaxis mode.
 
 Then `python scripts/docs_scaffold.py --repo <path> --audit` to catch dead cross-references, empty templated sections, and forge-specific strings that leaked into prose.
 
@@ -234,6 +252,9 @@ The taxonomy is a floor, not a ceiling. If the repo already carries directories 
 ## Anti-patterns
 
 - **The scaffold dump.** Twenty files of unfilled headings. Worse than nothing: it signals documentation exists when it does not, and readers stop checking.
+- **The silent whole-tree dump.** Generating the entire tree in one shot on an open-ended request, with no plan and no confirmation gate, so the user faces thirty files to audit at once and can't steer before the tokens are spent. Open-ended scope means plan first, then part by part (Step 0).
+- **Orientation masquerading as documentation.** A page that says what a subsystem *is* but never how it works, why it's built that way, what its edge cases and failure modes are. Deep-dive is the default; shallow is only correct for a genuinely trivial part. Cut filler, never signal (`references/depth-and-audience.md`).
+- **Over-fragmentation / stub sprawl.** Splitting a subject across many thin files a reader must reassemble, or deep-diving every module because the taxonomy has a slot for it. Depth belongs in the *depth of the right documents*, not the *count* of them — prefer the fewest documents that each hold a complete, single-mode subject, and let reader need and tier bound how many exist. A set no human can navigate fails even if every file is accurate.
 - **Punting a derivable fact to a human.** "`> TODO: document the retry policy`" when the retry policy is in the source you already analysed. The AI generates the full set; humans review, they do not author. If a fact is retrievable, retrieve it — a token or TODO is only ever for a value that lives in no readable source.
 - **Writing before analysing.** A code map produced from directory names describes a plausible system rather than this one, and every downstream document inherits the error.
 - **Rationale in the code map.** `architecture/high-level.md` says *what is where*; ADRs say *why it was chosen*. Mixing them makes the map churn every time an opinion changes.
@@ -257,7 +278,8 @@ Load only what the current task needs.
 | File | Read it when |
 |---|---|
 | `references/source-analysis.md` | Always — how to build and query the knowledge graph, and which command answers which document |
-| `references/docs-tree.md` | Always — the canonical taxonomy and per-file specification |
+| `references/docs-tree.md` | Always — the canonical taxonomy, folder naming, and placement rules |
+| `references/document-catalog.md` | Before writing any document — what each doc type must present and must keep out, its Diátaxis mode, and its source-of-truth |
 | `references/provenance-tracking.md` | Always — frontmatter schema, manifest format, the staleness algorithm, partial-rewrite mechanics |
 | `references/host-neutrality.md` | Writing anything that touches issues, reviews, CI, or ownership |
 | `references/decision-records.md` | Writing or backfilling ADRs |

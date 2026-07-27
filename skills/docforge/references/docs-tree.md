@@ -4,7 +4,7 @@ Contents:
 1. Naming rules
 2. The full tree
 3. Per-folder specification
-4. Per-file specification (spine files)
+4. Per-file specification → the document catalog
 5. Placement decision table
 6. Migrating an existing docs folder
 
@@ -124,76 +124,14 @@ docs/
 
 ---
 
-## 4. Per-file specification (spine files)
+## 4. Per-file specification — see the document catalog
 
-### `docs/README.md` — the index
-
-The single entry point. Its job is routing, not content. Include: one-line repo description, a table mapping audience to starting document, then the folder map with one line each. If a reader has to guess which folder to open, this file has failed.
-
-### `docs/product/overview.md`
-
-Answers three questions in this order: what problem this solves, who has that problem, and where this component sits relative to the rest of the system. Two to five paragraphs. If the repo is one of several, link to the portfolio-level system context.
-
-### `docs/architecture/high-level.md` and `low-level.md` — the two-altitude map
-
-The code map, split by altitude so the stable part does not churn with the volatile part.
-Templates: `architecture-high-level.md`, `architecture-low-level.md`.
-
-- **`high-level.md`** — system context, the major building blocks and their responsibilities,
-  the boundaries between them, and how data and control move end to end. The "part of a
-  business" view: what this system is and what it borders. A reader should be able to draw the
-  box diagram from it. Restrict it to what changes once or twice a year.
-- **`low-level.md`** — component decomposition beneath the building blocks, the data model
-  described (not dumped from schema), and an index into `concepts/<subsystem>/` for the
-  subsystems that earn a full deep-dive.
-
-Three techniques make the difference:
-
-- **Reference by file/module path and describe behaviour; do not paste code or link symbols.**
-  `src/ingest/` locates a thing durably; a private function name or line-number link rots on
-  the next refactor. Describe what the logic does, not the branch that implements it. (See
-  the durability rules in `document-composition.md`.)
-- **State invariants explicitly.** These are the facts a reader cannot recover by reading
-  code, because they are usually the *absence* of something: "nothing under `core/` performs
-  I/O", "the model layer never imports from the view layer", "handlers never touch the
-  database directly". Absences are invisible in a codebase and expensive to rediscover after
-  someone violates one.
-- **Keep depth out of `high-level.md`.** Mechanism, algorithm and failure modes belong in
-  `low-level.md` or a `concepts/<subsystem>/engineering.md` deep-dive, on their own lifecycle.
-
-### `docs/flows/<flow>.md` (or, once promoted, `<flow>/README.md`) — an aligned topic document
-
-The document for one business flow: L0 (what and why), L1 (how it flows, in plain language,
-with a Mermaid diagram once there's more than one step or a branch), every critical notice.
-Standalone — a reader who never opens a deep-dive subfile still understands the flow. Only
-promote to a folder with subfiles in the pass that actually writes their content; a folder
-with a README and no subfile, or a link to a subfile that doesn't exist, is a defect. Template:
-`topic-readme.md`. Full mechanics in `document-composition.md`.
-
-### `docs/engineering/setup.md`
-
-Prerequisites with exact versions, then numbered steps, then a verification command whose expected output is shown. Close with a troubleshooting section covering the failures that actually happened to real people. Include the wall-clock time a first run takes so nobody kills a build they think has hung.
-
-### `docs/reference/limitations.md`
-
-See `risk-docs.md` for the full treatment. The shape:
-
-```markdown
-## Known limitations
-| Area | Limitation | Impact | Workaround | Tracking |
-|---|---|---|---|---|
-
-## Known issues
-Defects under investigation, with tracker references.
-
-## Not supported
-Things a reasonable person might expect and will not find. This section
-prevents more wasted hours than any other in the tree.
-```
-
-### `docs/reference/configuration.md`
-
-Every environment variable and configuration key the code actually reads — verify by grepping for the accessor, not by copying an old `.env` file. Columns: name, purpose, required, default, example, and where it is consumed. Never include real secret values; show shape (`sk_live_<32 hex chars>`) instead.
+What each document must present (and must *not*), the one Diátaxis mode it stays in, and its
+source-of-truth live in **`document-catalog.md`** — the single content contract for every doc
+type. This file owns *where a document sits and what it is named*; the catalog owns *what goes
+inside it*. The deep templates for the risk documents are in `risk-docs.md` and for ADRs in
+`decision-records.md`; the catalog cross-links both. Consult the catalog entry for a document
+before writing it, and again in Step 6 to confirm it is complete.
 
 ---
 

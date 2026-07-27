@@ -1,6 +1,8 @@
-# Risk documents — limitations, dependencies, security
+# Risk documents — limitations, dependencies, security, debt and constraints
 
-Three documents carry the risk surface of a repository. They are the ones most often missing, and the ones a technical reviewer opens first. Their shared property: they are uncomfortable to write, which is precisely why their presence is read as a competence signal and their absence as either naivety or concealment.
+These documents carry the risk surface of a repository. They are the ones most often missing, and the ones a technical reviewer opens first. Their shared property: they are uncomfortable to write, which is precisely why their presence is read as a competence signal and their absence as either naivety or concealment.
+
+`document-catalog.md` states the crisp content contract (must-present / keep-out) for each of these; this file holds the deep template and the writing craft. Section 4 draws the line between the three registers that readers most often blur — limitations, technical debt, and constraints.
 
 ---
 
@@ -107,6 +109,7 @@ and failure behaviour, none of which a generated file can supply.
 - **The "if it disappeared" column** is the one that changes conversations. It forces an assessment of concentration risk that a plain package list hides, and it is the question a reviewer will ask anyway.
 - **Licence column, always.** A copyleft dependency in a proprietary product is the kind of finding that stops a transaction. Better found by you.
 - **Generate the exhaustive list, hand-write the judgement.** Enumerating hundreds of transitive dependencies by hand produces a document that is stale on commit. Automate the SBOM; keep this file to the direct dependencies and the assessment.
+- **The generated SBOM carries the NTIA minimum fields.** For every component, top-level and transitive: supplier/author, component name, version, a unique identifier (PURL, CPE, or hash), the dependency relationship, the author of the SBOM data, and a timestamp — emitted in a standard machine-readable format (SPDX or CycloneDX). CycloneDX additionally carries vulnerability and VEX status where relevant. This is the exhaustive layer; the hand-written table above is the judgement layer (criticality, failure handling, "if it disappeared") that no generated file supplies.
 
 ---
 
@@ -135,14 +138,40 @@ credit reporters who wish to be named.
 Full posture: `docs/security/README.md`.
 ```
 
-Commit to an acknowledgement window you can actually meet; a missed SLA in a public policy is worse than a vaguer one honestly stated. Ninety days is the common coordinated-disclosure default.
+Commit to an acknowledgement window you can actually meet; a missed SLA in a public policy is worse than a vaguer one honestly stated. Ninety days is the common coordinated-disclosure default. Where the project publishes a `security.txt` (RFC 9116), it carries at minimum a **Contact** and an **Expires** field, and optionally Encryption, Acknowledgments, Preferred-Languages, Canonical, and Policy — the machine-discoverable pointer to this same policy.
 
 ### `docs/security/threat-model.md`
 
 Keep it proportionate. A workable short form: what is worth protecting (data, credentials, availability, integrity), who might want it (external attacker, malicious user, compromised dependency, insider), where trust boundaries sit (network edge, authentication layer, tenant separation, the boundary between your code and third-party code), what mitigates each risk, and what is explicitly accepted or out of scope. The accepted-risk section is the one reviewers read most carefully — it demonstrates that the analysis was performed rather than assumed.
+
+For repos that warrant more rigour, follow the OWASP four-question frame (*what are we building, what can go wrong, what are we doing about it, did we do a good enough job*) and give it structure: a **data-flow diagram** with the trust boundaries drawn on the flows, then threats enumerated per element with **STRIDE** — Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege — and one response per threat (mitigate / eliminate / transfer / accept) tied to a testable control. Reference the data classifications from `data-handling.md`; do not restate the inventory here.
 
 ### `docs/security/data-handling.md`
 
 What data is collected and why, classification (public / internal / confidential / personal), where it is stored and for how long, who and what can access it, whether it crosses jurisdictions, how deletion requests are honoured, and what is encrypted in transit and at rest. Where a regulatory regime applies, say which and cite the specific obligation rather than gesturing at compliance generally.
 
 **Never place in these files:** credentials or key material, internal hostnames or network topology, unremediated vulnerability details, or the names of individuals as security contacts (use a role address that survives departures).
+
+---
+
+## 4. `architecture/tech-debt.md`, `architecture/constraints.md`, and the line to `reference/limitations.md`
+
+These three registers are constantly conflated, and the conflation is expensive: a constraint logged as debt implies a repayment that can never come; fixable debt logged as a limitation hides a remediable cause behind a "that's just how it is". Keep them distinct by *who can change the thing and whether it is user-visible*.
+
+### `architecture/tech-debt.md` — internal, fixable with effort
+
+A backlog of shortcuts the team took and can pay down. Per item: the shortcut or deferred improvement and **why** it was taken (the deadline, the unknown, the dependency), the area it affects, its **impact × likelihood**, the **interest** it accrues (what not fixing it costs over time), a suggested remedy and rough effort, plus owner and status. This is an engineering to-do list with a cost of delay attached — RAID-register in spirit.
+
+### `architecture/constraints.md` — external, immovable
+
+The fixed boundaries the team **cannot** change and must design within: physical or protocol limits (latency floors, packet sizes), platform or vendor ceilings, regulatory mandates, a mandated technology stack, hard budget or staffing limits. Per constraint: the boundary, its **source**, and its **design implication**. Not a to-do list — there is nothing to pay down, only to respect.
+
+### The litmus
+
+| The thing is… | Register | Is it a to-do? |
+|---|---|---|
+| Fixable by us later | `architecture/tech-debt.md` | Yes — with interest |
+| Unfixable by anyone (physics, law, vendor) | `architecture/constraints.md` | No |
+| Won't/needn't fix, and user-visible | `reference/limitations.md` | Not necessarily |
+
+One question resolves almost every case: *could we fix this with engineering effort?* Yes → tech debt. No, it's imposed from outside → constraint. It's a deliberate boundary a user would bump into → limitation. Never cross-file them: a constraint in the debt register is noise a reader can't action, and debt dressed as a limitation is a defect hidden as a design choice.
