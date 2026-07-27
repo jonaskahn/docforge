@@ -24,6 +24,8 @@ A multi-agent pipeline scans the project, extracts files, functions, classes and
 
 **Check before building.** If `.ua/knowledge-graph.json` already exists and is newer than the last substantive commit, use it as is. If it is stale, re-running is incremental — only changed files are re-analysed — so a refresh is cheap. A first run on a large codebase is not: it analyses everything and consumes tokens accordingly. Tell the user before starting one on a repo of significant size.
 
+**Confirm the graph actually landed.** When `/understand` reports success but a later step still says the graph is missing, the write and the expectation have diverged — verify against the disk rather than re-running blind: `python scripts/validate_graphs.py --repo . --verbose` prints what sits in `.ua/` and `.understand-anything/` (filenames, sizes, JSON validity, node/edge counts), separating a false "not found" from a truncated or absent file. `check_preconditions.py` is the workflow gate; this is the probe for when the gate's answer surprises you.
+
 **Useful invocations:**
 
 | Purpose | Command |
@@ -35,7 +37,7 @@ A multi-agent pipeline scans the project, extracts files, functions, classes and
 | Non-English output | `/understand --language <en\|zh\|zh-TW\|ja\|ko\|ru>` |
 | Visual exploration | `/understand-dashboard` |
 
-**Invocation prefix differs by platform.** Most use `/understand`; Codex uses `$understand`. Where neither is recognized, invoke it in plain language: *"Use the understand skill to analyze this project."* If the skill or plugin is not installed at all, see §6 rather than improvising.
+**`/understand` is a skill, not universally a slash command.** Some agents expose it as `/understand`; Codex uses `$understand`; others show no command until the understand-anything skill or plugin is loaded. If no command is recognized, load or enable it the way this agent loads skills (skill listing, plugin registry, an explicit load/`Skill` call) before concluding it is missing, then invoke it — in plain language where no command form exists: *"Use the understand skill to analyze this project."* Only when the plugin is genuinely absent (loading it is not possible here) does §6 apply.
 
 ---
 

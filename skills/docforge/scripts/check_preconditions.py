@@ -62,6 +62,29 @@ def display(found: Path, repo: Path) -> str:
         return str(found)
 
 
+def show_graph_dirs(repo: Path) -> None:
+    """On a miss, list what the graph folders actually hold so a false 'not
+    found' (folder present, expected file absent or misnamed) is visible at a
+    glance. Points at validate_graphs.py for the full probe."""
+    base = repo.resolve()
+    listed = False
+    for cur in (base, *base.parents):
+        for name in (".ua", ".understand-anything"):
+            d = cur / name
+            if d.is_dir():
+                try:
+                    names = sorted(p.name for p in d.iterdir())
+                except OSError as e:
+                    names = [f"(error listing: {e})"]
+                print(f"  {name}/ exists at {display(d, repo)} — contains: "
+                      f"{', '.join(names) or '(empty)'}")
+                listed = True
+        if (cur / ".git").exists():
+            break
+    if listed:
+        print("  Diagnose: python scripts/validate_graphs.py --repo . --verbose")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -84,8 +107,9 @@ def main() -> int:
     else:
         ok = False
         print("MISSING  knowledge graph  (checked .ua/ and .understand-anything/)")
-        print("  Fix: confirm the understand-anything skill is available in this "
-              "session (check the skill listing, or try invoking it), then run:")
+        show_graph_dirs(args.repo)
+        print("  Fix: confirm the understand-anything skill is loaded in this session "
+              "(check the skill listing, or load/invoke it), then run:")
         print("    /understand")
         print("  Do not proceed to writing documentation from directory names or "
               "guesswork while this is missing.")
@@ -97,6 +121,7 @@ def main() -> int:
         else:
             ok = False
             print("MISSING  domain graph  (checked .ua/ and .understand-anything/)")
+            show_graph_dirs(args.repo)
             print("  Fix: after the knowledge graph exists, run:")
             print("    /understand-domain")
             print("  Business flows, docs/flows/, docs/product/overview.md and the "

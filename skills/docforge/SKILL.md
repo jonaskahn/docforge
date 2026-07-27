@@ -36,7 +36,7 @@ That runs a multi-agent pipeline over the project and writes the graph to `.ua/k
 
 - **Check for an existing graph first.** If `.ua/knowledge-graph.json` is present and newer than the last substantive commit, use it as is. If it is stale, `/understand` updates it incrementally rather than starting over.
 - **Large repos**: scope the analysis to the part being documented — `/understand src/frontend` — rather than paying for a full pass you do not need. First runs on large codebases consume significant tokens; say so before starting one.
-- **Invocation prefix varies by platform.** Most use `/understand`; Codex uses `$understand`. Where neither is recognized, invoke it in plain language: *"Use the understand skill to analyze this project."*
+- **`/understand` is a skill, not universally a slash command.** Some coding agents expose it as `/understand`; Codex uses `$understand`; others surface no command at all until the understand-anything skill or plugin is loaded. Before assuming it is missing, load or enable it the way this agent loads skills (a skill listing, a plugin registry, a `Skill`/load call), then invoke it — in plain language where no command exists: *"Use the understand skill to analyze this project."* A missing command means "not loaded yet," not "not installed"; a genuinely absent plugin is the case in §"When the graph is unavailable".
 - **Read the graph directly** once built. `python scripts/graph_extract.py --graph .ua/knowledge-graph.json --summary` prints the module inventory, layer assignment and external dependency list in a form that seeds the code map and the dependency inventory.
 
 ### Hard gate: flows, product overview, and BA/PO content require the domain graph — no fallback
@@ -274,7 +274,20 @@ Load only what the current task needs.
 
 Templates live in `assets/templates/`. Scripts:
 - `scripts/check_preconditions.py` — gate flow/product/BA/PO work on the knowledge graph and domain graph actually existing; run before Step 1's business-flows bullet
+- `scripts/validate_graphs.py` — the diagnostic probe for when `check_preconditions.py` reports a graph missing but `.ua/` holds data; lists both graph folders' contents with sizes, JSON validity and node/edge counts
 - `scripts/graph_extract.py` — read the knowledge graph
 - `scripts/docs_scaffold.py` — create and audit the tree
 - `scripts/check_provenance.py` — recompute git blob hashes for every file recorded in the manifest; report `FRESH` / `PARTIAL` / `MISSING` per document and section
 - `scripts/discover_repos.py` — walk a root for declared submodules and undeclared nested repos, reporting each member's docforge status so gaps surface before a review, not during it
+
+---
+
+## When a graph "isn't found" but the `.ua/` folder exists
+
+If `check_preconditions.py` or a workflow step reports the graph missing while `.ua/` clearly holds data, the file on disk and the file the step expects have diverged — a partial write, an unreadable JSON, or the wrong filename. Diagnose before re-running anything expensive:
+
+```bash
+python scripts/validate_graphs.py --repo . --verbose
+```
+
+It prints what actually sits in `.ua/` and `.understand-anything/` — filenames, sizes, timestamps, JSON validity, node/edge counts — so a false "not found" separates cleanly from a genuinely absent or truncated graph. Where `check_preconditions.py` is the gate, this is the probe you reach for when the gate's answer surprises you. The two most common causes: `/understand` reported success but wrote nothing (re-run it — the pass is incremental and cheap), or the JSON is truncated from an interrupted write (re-run to rewrite it). Both graph locations and every parent up to the git root are searched, so subdirectory invocation is not the cause.
