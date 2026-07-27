@@ -13,8 +13,10 @@ Typical use:
     python graph_extract.py --graph .ua/knowledge-graph.json --probe
     python graph_extract.py --graph .ua/knowledge-graph.json --modules --deps
 
-If --graph is omitted, .ua/knowledge-graph.json and
-.understand-anything/knowledge-graph.json are tried in that order.
+If --graph is omitted, the graph is located at the repository root —
+$PROJECT_ROOT/.ua/knowledge-graph.json then $PROJECT_ROOT/.understand-anything/knowledge-graph.json —
+by searching the current directory and every parent up to the git root, so it
+works when invoked from a subdirectory.
 
 Standard library only. Output is an inventory to verify, not finished prose.
 """
@@ -28,10 +30,29 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-DEFAULT_PATHS = [
+DEFAULT_RELPATHS = [
     Path(".ua/knowledge-graph.json"),
     Path(".understand-anything/knowledge-graph.json"),
 ]
+
+
+def find_default_graph(start: Path | None = None) -> Path | None:
+    """Locate the graph relative to the repo root, not just the CWD.
+
+    The graph lives at the project root ($PROJECT_ROOT/.ua/knowledge-graph.json).
+    When invoked from a subdirectory a plain CWD-relative lookup reports "not
+    found" even though the file exists at the root, so search the CWD and every
+    ancestor up to (and including) the git root or the filesystem root.
+    """
+    start = (start or Path.cwd()).resolve()
+    for base in (start, *start.parents):
+        for rel in DEFAULT_RELPATHS:
+            candidate = base / rel
+            if candidate.is_file():
+                return candidate
+        if (base / ".git").exists():
+            break  # reached the repo root; do not climb past it
+    return None
 
 # Candidate key names, in preference order. The pipeline's schema may evolve or
 # differ by version, so every lookup is a search rather than an assumption.
@@ -256,10 +277,12 @@ def main() -> int:
 
     path = args.graph
     if path is None:
-        path = next((p for p in DEFAULT_PATHS if p.exists()), None)
+        path = find_default_graph()
         if path is None:
-            sys.exit("No graph found in .ua/ or .understand-anything/. "
-                     "Build one with /understand first.")
+            sys.exit("No graph found in $PROJECT_ROOT/.ua/ or $PROJECT_ROOT/.understand-anything/ "
+                     "(searched the current directory and every parent up to the "
+                     "repo root). Build one with /understand first, or pass "
+                     "--graph <path> explicitly.")
 
     doc = load(path)
     nkey, nodes = find_collection(doc, NODE_KEYS)

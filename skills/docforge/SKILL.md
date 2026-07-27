@@ -41,7 +41,7 @@ That runs a multi-agent pipeline over the project and writes the graph to `.ua/k
 
 ### Hard gate: flows, product overview, and BA/PO content require the domain graph — no fallback
 
-Everything under `docs/flows/`, `product/overview.md`, `product/capabilities.md`, and any BA/PO overlay document is sourced from `/understand-domain`'s output (the domain graph, conventionally `.ua/domain-graph.json`), never hand-typed from route files, folder names, or a plausible guess. This is stricter than non-negotiable 1's general fallback allowance — that fallback (direct inspection when the graph is unavailable) applies to architecture/spine documents, **not** to flows.
+Everything under `docs/flows/`, `product/overview.md`, `product/capabilities.md`, and any BA/PO overlay document is sourced from `/understand-domain`'s output (the domain graph at the project root, conventionally `$PROJECT_ROOT/.ua/domain-graph.json`), never hand-typed from route files, folder names, or a plausible guess. This is stricter than non-negotiable 1's general fallback allowance — that fallback (direct inspection when the graph is unavailable) applies to architecture/spine documents, **not** to flows.
 
 Before touching any of those documents:
 

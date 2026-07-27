@@ -35,11 +35,31 @@ DOMAIN_GRAPH_CANDIDATES = [
 
 
 def find(repo: Path, candidates: list[str]) -> Path | None:
-    for rel in candidates:
-        p = repo / rel
-        if p.is_file():
-            return p
+    """Search the graph at the repo root.
+
+    The graphs live at the project root ($PROJECT_ROOT/.ua/...). If --repo happens to
+    point at a subdirectory, a direct lookup would report "not found" even
+    though the file exists at the root, so search the given directory and every
+    ancestor up to (and including) the git root.
+    """
+    base = repo.resolve()
+    for cur in (base, *base.parents):
+        for rel in candidates:
+            p = cur / rel
+            if p.is_file():
+                return p
+        if (cur / ".git").exists():
+            break  # reached the repo root; do not climb past it
     return None
+
+
+def display(found: Path, repo: Path) -> str:
+    """Path relative to --repo when possible, else absolute (graph may sit at an
+    ancestor when --repo is a subdirectory)."""
+    try:
+        return str(found.relative_to(repo.resolve()))
+    except ValueError:
+        return str(found)
 
 
 def main() -> int:
@@ -60,7 +80,7 @@ def main() -> int:
 
     kg = find(args.repo, KNOWLEDGE_GRAPH_CANDIDATES)
     if kg:
-        print(f"READY  knowledge graph  -> {kg.relative_to(args.repo)}")
+        print(f"READY  knowledge graph  -> {display(kg, args.repo)}")
     else:
         ok = False
         print("MISSING  knowledge graph  (checked .ua/ and .understand-anything/)")
@@ -73,7 +93,7 @@ def main() -> int:
     if args.need == "domain":
         dg = find(args.repo, DOMAIN_GRAPH_CANDIDATES)
         if dg:
-            print(f"READY  domain graph     -> {dg.relative_to(args.repo)}")
+            print(f"READY  domain graph     -> {display(dg, args.repo)}")
         else:
             ok = False
             print("MISSING  domain graph  (checked .ua/ and .understand-anything/)")

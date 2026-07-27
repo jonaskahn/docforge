@@ -20,7 +20,7 @@ Contents:
 /understand
 ```
 
-A multi-agent pipeline scans the project, extracts files, functions, classes and dependencies, and writes the result to `.ua/knowledge-graph.json`. Projects that already carry a `.understand-anything/` directory keep using it — substitute that path where this document says `.ua/`.
+A multi-agent pipeline scans the project, extracts files, functions, classes and dependencies, and writes the result to the project root — `$PROJECT_ROOT/.ua/knowledge-graph.json` (the domain graph lands beside it at `$PROJECT_ROOT/.ua/domain-graph.json`). Projects that already carry a `.understand-anything/` directory keep using it — substitute that path where this document says `.ua/`. Because the graphs live at the root, both helper scripts search the current directory and every parent up to the git root, so they resolve the graph even when invoked from a subdirectory.
 
 **Check before building.** If `.ua/knowledge-graph.json` already exists and is newer than the last substantive commit, use it as is. If it is stale, re-running is incremental — only changed files are re-analysed — so a refresh is cheap. A first run on a large codebase is not: it analyses everything and consumes tokens accordingly. Tell the user before starting one on a repo of significant size.
 
