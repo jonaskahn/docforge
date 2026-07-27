@@ -389,9 +389,15 @@ def main() -> int:
                     help="1 spine, 2 diligence, 3 portfolio (default 2)")
     ap.add_argument("--overlay", action="append", default=[],
                     choices=sorted(OVERLAYS), help="repeatable")
+    ap.add_argument("--no-agent-context", action="store_true",
+                    help="opt out of the agent-context overlay, which is otherwise "
+                         "included by default on every run")
     ap.add_argument("--audit", action="store_true", help="audit instead of scaffold")
     ap.add_argument("--dry-run", action="store_true", help="show what would be created")
     args = ap.parse_args()
+
+    if not args.no_agent_context and "agent-context" not in args.overlay:
+        args.overlay.append("agent-context")
 
     if not args.repo.is_dir():
         print(f"Not a directory: {args.repo}", file=sys.stderr)

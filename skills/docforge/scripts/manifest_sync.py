@@ -45,7 +45,7 @@ MANIFEST_REL = ".docforge/manifest.json"
 
 STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]
 GROUPS = ["architecture", "flows", "product", "engineering", "operations",
-          "reference", "security", "contributing", "records"]
+          "reference", "security", "contributing", "records", "agent-context"]
 
 # Spine plan: the documents a tier implies, keyed to the same paths docs_scaffold.py
 # emits. `template` and `requires_*` are resolved from document-templates.json by type.
@@ -136,6 +136,9 @@ def cmd_init(args) -> int:
     p = manifest_path(args.repo)
     if p.exists() and not args.force:
         sys.exit(f"{p} exists. Pass --force to overwrite.")
+
+    if not args.no_agent_context and "agent-context" not in args.overlay:
+        args.overlay.append("agent-context")
 
     tidx = load_template_index()
     groups: dict[str, list[dict]] = {}
@@ -253,6 +256,9 @@ def main() -> int:
     sp.add_argument("--tier", type=int, default=2, choices=[1, 2, 3])
     sp.add_argument("--name", default=None, help="repo name for project_context")
     sp.add_argument("--overlay", action="append", default=[], help="repeatable overlay name")
+    sp.add_argument("--no-agent-context", action="store_true", dest="no_agent_context",
+                     help="opt out of the agent-context overlay, which is otherwise "
+                          "recorded by default on every init")
     sp.add_argument("--force", action="store_true", help="overwrite an existing manifest")
     sp.set_defaults(func=cmd_init)
 

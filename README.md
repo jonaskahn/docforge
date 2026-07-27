@@ -24,7 +24,7 @@ Point it at a repo and it designs and writes the [`docs/`](skills/docforge/refer
 | **`reference/`** | config keys, a **known-limitations register**, a glossary, and (for API-shaped repos) an **error catalog** |
 | **`security/`** | posture summary, threat model, data handling, disclosure process |
 | **`contributing/`** | workflow, ownership, host-neutral issue/change templates |
-| **AI-agent context** *(opt-in [`agent-context`](skills/docforge/references/overlay-agent-context.md) bonus level)* | a ≤100-line `AGENTS.md` kernel plus `CLAUDE.md`, `.claude/settings.json`, and brief `docs/agents/` stubs that link back to the human docs above instead of re-deriving them. The one exception, `docs/agents/patterns.md`, carries real content because it has no other home |
+| **AI-agent context** *(on by default — [`agent-context`](skills/docforge/references/overlay-agent-context.md) bonus level, opt out with `--no-agent-context`)* | a ≤100-line `AGENTS.md` kernel plus `CLAUDE.md`, `.claude/settings.json`, and brief `docs/agents/` stubs that link back to the human docs above instead of re-deriving them. The one exception, `docs/agents/patterns.md`, carries real content because it has no other home. Written *last*, once every human doc it links to already exists |
 
 ## ▓▒░ POWER-UPS ░▒▓
 
@@ -87,6 +87,7 @@ Every invocation follows the same cadence, defined in [`SKILL.md`](skills/docfor
 | `--plan-only` | Stop after the structure and per-document plan are recorded — no content written |
 | `--resume` | Continue from the manifest's first unfinished entry instead of restarting the plan |
 | `--status` | Print current progress and stop — no scaffolding, no writing |
+| `--no-agent-context` | Opt out of the `agent-context` overlay, which is otherwise scaffolded and written by default on every run |
 
 ## ▓▒░ INVENTORY ░▒▓
 

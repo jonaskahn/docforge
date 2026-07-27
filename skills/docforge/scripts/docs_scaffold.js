@@ -447,12 +447,13 @@ function audit(repo, tier, overlays) {
 }
 
 function parseArgs(argv) {
-  const args = { tier: 2, overlay: [], audit: false, dryRun: false };
+  const args = { tier: 2, overlay: [], noAgentContext: false, audit: false, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--repo") args.repo = argv[++i];
     else if (a === "--tier") args.tier = parseInt(argv[++i], 10);
     else if (a === "--overlay") args.overlay.push(argv[++i]);
+    else if (a === "--no-agent-context") args.noAgentContext = true;
     else if (a === "--audit") args.audit = true;
     else if (a === "--dry-run") args.dryRun = true;
   }
@@ -462,12 +463,15 @@ function parseArgs(argv) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.repo) {
-    console.error("usage: docs_scaffold.js --repo <path> [--tier 1|2|3] [--overlay <name>]... [--audit] [--dry-run]");
+    console.error("usage: docs_scaffold.js --repo <path> [--tier 1|2|3] [--overlay <name>]... [--no-agent-context] [--audit] [--dry-run]");
     return 1;
   }
   if (![1, 2, 3].includes(args.tier)) {
     console.error(`--tier must be 1, 2 or 3, got ${args.tier}`);
     return 1;
+  }
+  if (!args.noAgentContext && !args.overlay.includes("agent-context")) {
+    args.overlay.push("agent-context");
   }
   for (const o of args.overlay) {
     if (!(o in OVERLAYS)) {

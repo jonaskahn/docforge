@@ -106,6 +106,7 @@ These change *scope* or *pacing* — never which non-negotiables apply. A flag c
 | `--plan-only` | Stop after Gate 2: manifest populated (`planned` status throughout), empty scaffold on disk. No content written this run. |
 | `--resume` | Read `.docforge/manifest.json` and continue from its first `planned` or `in_progress` entry instead of restarting Gate 1. |
 | `--status` | Print `manifest_sync.py status` and stop — no scaffolding, no writing. |
+| `--no-agent-context` | Opt out of the `agent-context` overlay (Step 3), which `docs_scaffold.py`/`.js` and `manifest_sync.py`/`.js` otherwise add by default on every run. |
 
 Flags compose: `--revise api --auto-accept` regenerates only the API overlay's stale sections, showing each before moving to the next without pausing. `--auto-accept --plan-only` shows the full plan and populates the manifest without pausing, then stops before content.
 
@@ -203,13 +204,16 @@ The `--overlay` flag value (the literal `docs_scaffold.py`/`manifest_sync.py` ac
 
 Repos frequently match two type overlays (an API that also runs scheduled jobs). Apply both; do not force a single choice.
 
-**Audience overlays** — build these only when a specific reader is asked for, or when the repo clearly warrants one (see each reference's "Applies when"):
+**Human audience overlays** — build these only when a specific reader is asked for, or when the repo clearly warrants one (see each reference's "Applies when"):
 
 | Reader (`--overlay` value) | Cares about | Folder | Reference |
 |---|---|---|---|
 | Business Analyst (BA) — `business-analyst` | business rules, process flows, requirements traceability | `docs/product/business-analyst/` | `references/overlay-business-analyst.md` |
 | Product Owner (PO) — `product-owner` | feature value, release framing, success metrics | `docs/product/product-owner/` | `references/overlay-product-owner.md` |
-| AI Coding Agent — `agent-context` | a token-budgeted orientation kernel, not a human reader | root + `docs/agents/` | `references/overlay-agent-context.md` |
+
+**Agent-context overlay — on by default, every run.** Unlike the two above, `agent-context` (`--overlay` value `agent-context`) is not conditional on a signal or a request — `docs_scaffold.py`/`.js` and `manifest_sync.py`/`.js` add it automatically unless `--no-agent-context` is passed. It produces `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json`, and `docs/agents/` (root + `docs/agents/`, see `references/overlay-agent-context.md`) — a token-budgeted orientation kernel, not a human reader. State it in the Gate 1 tree like any other overlay; only drop it when the user explicitly opts out (pass `--no-agent-context` to both scripts, and say so in the manifest).
+
+**Ordering constraint: agent-context writes last.** Every `docs/agents/*` file and `AGENTS.md`'s "Deeper Context" section are brief stubs that link into the human-facing documents this run produces (`architecture/`, `flows/`, `reference/`, decision records, etc.) — see the overlay reference's "governing rule." Those link targets must exist and be finished before the stub pointing at them is written, or the audit gate (Step 0) fails it as a dangling reference. `manifest_sync.py`'s `GROUPS` list places `agent-context` last for this reason; do not reorder Step 5's write loop to interleave agent-context documents earlier.
 
 Audience content follows the three-class model in `references/audience-matrix.md`: a subject two or more audiences share is written **once**, as an aligned topic — `flows/<flow>.md` or `architecture/concepts/<subsystem>.md` — while genuinely single-reader material stays in that audience's own folder (`product/business-analyst/`, `product/product-owner/`). An aligned topic is a **flat file by default**; it becomes a folder (`<topic>/README.md` + deep-dive subfiles) only at the moment real per-reader depth is written, in the same pass — never a folder with a promised subfile that isn't there yet. Every fact is owned once and linked, never pasted into two folders. Do not produce an unrequested audience folder or an empty deep-dive subfile; an empty or promised-but-missing overlay is the same anti-pattern as an unfilled scaffold. Read `references/audience-matrix.md`, `references/document-composition.md` and `references/depth-and-audience.md` before writing any flow or audience content.
 
@@ -241,6 +245,7 @@ Later documents cite earlier ones, so order matters:
 5. Overlay and audience-specific documents — data contracts, error catalog, route map, BA requirements-traceability, PO feature catalog and metrics, whichever apply.
 6. Risk documents — `reference/limitations.md`, `architecture/tech-debt.md`, `architecture/constraints.md`, dependency inventory, security policy.
 7. Decision records — backfill the load-bearing choices found in history.
+8. **Agent-context overlay, last, always.** `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json`, and `docs/agents/*` — after everything above, since every one of these is a brief stub or module map that links into documents 1–7 (see `references/overlay-agent-context.md`). Writing this earlier produces stubs pointing at documents that don't exist yet; the independent audit (Step 0) catches that as a dangling reference, so don't front-run the order to save a pass. Cross-vendor mirrors (`GEMINI.md`, `.cursor/rules/agents.mdc`, …) are hand-pulled immediately after `AGENTS.md` is finalized, same as today.
 
 **Stamp provenance as you write, not afterward.** The source files you just read to write a section *are* its provenance, so record them then — each document gets the frontmatter block and the source-files-per-section list described in `references/provenance-tracking.md`, aggregated into `.docforge/manifest.json`. Retrofitting hashes as a cleanup pass invites guessing about which files a section actually drew from.
 
@@ -287,7 +292,7 @@ repo-root/
 
 Each root stub follows the same shape: the 20% a reader needs immediately, then an explicit link. Never duplicate content between a root stub and its `docs/` counterpart — duplication is how the two versions start disagreeing.
 
-When the `agent-context` overlay is selected, `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, and `.claude/settings.json` join this root list — the same thin-router shape, aimed at an AI agent instead of a human reader. See `references/overlay-agent-context.md` for the full file set.
+The `agent-context` overlay is on by default (Step 3), so `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, and `.claude/settings.json` join this root list on every run unless the user opts out — the same thin-router shape, aimed at an AI agent instead of a human reader. See `references/overlay-agent-context.md` for the full file set.
 
 ## The `docs/` taxonomy, in brief
 

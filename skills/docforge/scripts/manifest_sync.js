@@ -50,6 +50,7 @@ const GROUPS = [
   "security",
   "contributing",
   "records",
+  "agent-context",
 ];
 
 // Spine plan: the documents a tier implies, keyed to the same paths
@@ -145,6 +146,10 @@ function cmdInit(args) {
   if (fs.existsSync(p) && !args.force) {
     console.error(`${p} exists. Pass --force to overwrite.`);
     process.exit(1);
+  }
+
+  if (!args.noAgentContext && !args.overlay.includes("agent-context")) {
+    args.overlay.push("agent-context");
   }
 
   const tidx = loadTemplateIndex();
@@ -277,6 +282,7 @@ function parseArgs(argv) {
     else if (a === "--tier") args.tier = parseInt(rest[++i], 10);
     else if (a === "--name") args.name = rest[++i];
     else if (a === "--overlay") args.overlay.push(rest[++i]);
+    else if (a === "--no-agent-context") args.noAgentContext = true;
     else if (a === "--force") args.force = true;
     else if (a === "--group") args.group = rest[++i];
     else if (a === "--id") args.id = rest[++i];

@@ -1,6 +1,8 @@
 # Overlay: Agent Context
 
-**Applies when:** the repo is, or will be, worked on by AI coding agents (Claude Code, Cursor, Copilot, Codex, Aider, Windsurf) — ask, or infer from an existing `.cursor/`, `.github/copilot-instructions.md`, or similar signal already in the repo.
+**Applies by default, every run.** Unlike the BA/PO audience overlays, this one is not conditional on asking or on finding a signal — `docs_scaffold.py`/`.js` and `manifest_sync.py`/`.js` add `agent-context` automatically unless the user explicitly opts out (`--no-agent-context` on either script). An existing `.cursor/`, `.github/copilot-instructions.md`, `.codex/`, or `.windsurf/` directory is still meaningful — it decides which cross-vendor mirror to hand-pull (see "Cross-vendor mirrors" below), not whether this overlay runs at all.
+
+**Ordering:** every document in this overlay is written *last*, after every other document the run produces (Step 5 of `SKILL.md`). The kernel and stubs below point into `architecture/`, `flows/`, `reference/`, and `decisions/` — those must exist first or the links are dangling.
 
 This overlay is orthogonal to the repo-type overlays (api/web/library/data-pipeline/infrastructure) and to the BA/PO audience overlays — it can be layered onto any tier, any repo type, any combination of the others. Where those overlays add documents for a *human* reader, this one adds documents for the AI agent itself, at the moment it opens the repo cold.
 
