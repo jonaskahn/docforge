@@ -24,8 +24,8 @@ function validate() {
   const catalog = readJson(path.join(metadata, "catalog.json"));
   const catalogSchema = readJson(path.join(metadata, "catalog-schema.json"));
   const manifestSchema = readJson(path.join(metadata, "manifest-schema.json"));
-  if (catalog.version !== "1.0.0") errors.push("catalog version must be 1.0.0");
-  if ((((catalogSchema.properties || {}).version || {}).const) !== "1.0.0") errors.push("catalog schema version disagrees with catalog");
+  if (catalog.version !== "1.0.2") errors.push("catalog version must be "1.0.2"");
+  if ((((catalogSchema.properties || {}).version || {}).const) !== "1.0.2") errors.push("catalog schema version disagrees with catalog");
   if ((((manifestSchema.properties || {}).version || {}).const) !== "2.0") errors.push("manifest schema must require version 2.0");
   const tiers = new Set(catalog.tiers.map((item) => item.id));
   const overlays = new Set(catalog.overlays.map((item) => item.id));
@@ -93,7 +93,7 @@ function validate() {
   const plugin = readJson(path.join(REPO_ROOT, ".claude-plugin", "plugin.json"));
   const market = readJson(path.join(REPO_ROOT, ".claude-plugin", "marketplace.json")).plugins[0];
   const versions = new Set([meta.version, plugin.version, market.version, catalog.version]);
-  if (versions.size !== 1 || !versions.has("1.0.0")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
+  if (versions.size !== 1 || !versions.has("1.0.2")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
   const skillText = fs.readFileSync(path.join(SKILL_ROOT, "SKILL.md"), "utf8");
   const skillMatch = skillText.match(/^description: (.+)$/m);
   const entryDescription = (((meta.skills || {}).entries || [{}])[0] || {}).description;

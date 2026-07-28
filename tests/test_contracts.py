@@ -54,6 +54,27 @@ def normalized(text: str, roots: list[Path]) -> str:
 
 
 class CatalogSelectionTests(unittest.TestCase):
+    def test_bare_invocation_requires_interactive_scope_intake(self) -> None:
+        skill = (ROOT / "skills" / "docforge" / "SKILL.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("## Bare `/docforge` invocation", skill)
+        self.assertIn("interactive intake", skill)
+        for heading in (
+            "1. What do you want to do?",
+            "2. How much documentation do you need?",
+            "3. Who should the documentation serve?",
+            "4. Which repository shapes should Docforge include?",
+            "5. Which graph source should be primary?",
+            "6. How should Docforge proceed after showing the complete tree?",
+        ):
+            self.assertIn(heading, skill)
+        self.assertIn("Do not initialize a\nmanifest", skill)
+        self.assertIn("Engineers + beginners", skill)
+        self.assertIn("Engineers + Business Analysts + Product Owners", skill)
+        self.assertIn("Engineers + coding agents", skill)
+        self.assertIn("Never write against an undisplayed manifest\nrevision", skill)
+        self.assertIn("/docforge", readme)
+
     def test_each_tier_overlay_selection_has_manifest_indexes(self) -> None:
         overlays = [
             "data-pipeline", "api", "web", "library", "infrastructure",

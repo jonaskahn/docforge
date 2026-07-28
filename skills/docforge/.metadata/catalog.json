@@ -1,6 +1,6 @@
 {
   "$schema": "catalog-schema.json",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "tiers": [
     {"id": "spine", "order": 10},
     {"id": "diligence", "order": 20},

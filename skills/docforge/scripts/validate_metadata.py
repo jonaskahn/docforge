@@ -34,9 +34,9 @@ def validate() -> list[str]:
     catalog = read_json(metadata / "catalog.json")
     catalog_schema = read_json(metadata / "catalog-schema.json")
     manifest_schema = read_json(metadata / "manifest-schema.json")
-    if catalog.get("version") != "1.0.0":
-        errors.append("catalog version must be 1.0.0")
-    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "1.0.0":
+    if catalog.get("version") != "1.0.2":
+        errors.append("catalog version must be "1.0.2"")
+    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "1.0.2":
         errors.append("catalog schema version disagrees with catalog")
     if manifest_schema.get("properties", {}).get("version", {}).get("const") != "2.0":
         errors.append("manifest schema must require version 2.0")
@@ -119,7 +119,7 @@ def validate() -> list[str]:
     plugin = read_json(REPO_ROOT / ".claude-plugin" / "plugin.json")
     market = read_json(REPO_ROOT / ".claude-plugin" / "marketplace.json")["plugins"][0]
     versions = {meta.get("version"), plugin.get("version"), market.get("version"), catalog.get("version")}
-    if versions != {"1.0.0"}:
+    if versions != {"1.0.2"}:
         errors.append(f"release versions disagree: {sorted(str(item) for item in versions)}")
     skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     skill_match = re.search(r"^description: (.+)$", skill_text, re.MULTILINE)

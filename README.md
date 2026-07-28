@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-1.0.0-10b981?style=flat-square)](meta.json)
+  [![Version](https://img.shields.io/badge/version-"1.0.2"-10b981?style=flat-square)](meta.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -74,20 +74,29 @@ Slash-command support depends on the host. Where registered, use `/docforge`; pl
 ### FIRST MISSION
 
 ```text
-Document this repository --plan-only
+/docforge
 ```
 
 Expected result:
 
-1. Docforge checks for a readable code graph.
-2. It reuses the selected provider’s persisted graph and native skill/MCP
-   queries to inventory the repository.
-3. It asks for the graph source, tier, audience overlays, and depth.
-4. It initializes manifest v2 and shows the exact manifest-backed tree plus a
-   one-line content/evidence card for every document.
-5. It stops without creating placeholder documents.
+1. Docforge performs only read-only discovery: repository/manifest state and
+   available graph sources.
+2. It reports detected graph sources and likely repository shapes, then presents
+   an explained selection menu for goal, tier, audience presets, repository
+   shapes, graph source, and review versus auto-accept mode.
+3. It waits for your choices. It does not create a manifest, documents, or a
+   graph index at this stage.
+4. After scope is selected, it reuses the selected provider’s persisted graph
+   and native skill/MCP queries to inventory the repository.
+5. It always shows the exact manifest-backed tree plus a one-line
+   content/evidence card for every document before writing. Auto-accept skips
+   only the pause, not the displayed tree.
+6. If discovery changes the manifest later, it shows the path/requirement delta
+   and refreshed tree before writing continues.
 
-If no code graph exists, Docforge stops and shows the available setup paths instead of guessing from directory names.
+If no code graph exists, Docforge explains the setup choices. It never installs
+or wires a provider automatically, and it requests separate approval before an
+agent runs a repository index build or refresh.
 
 ## ▓▒░ CORE LOOP ░▒▓
 

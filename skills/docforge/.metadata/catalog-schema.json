@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["version", "tiers", "overlays", "groups", "capabilities", "documents"],
   "properties": {
-    "version": {"const": "1.0.0"},
+    "version": {"const": "1.0.2"},
     "tiers": {"type": "array", "items": {"$ref": "#/definitions/namedOrder"}},
     "overlays": {"type": "array", "items": {"$ref": "#/definitions/namedOrder"}},
     "groups": {"type": "array", "items": {"type": "string"}},

@@ -1,7 +1,7 @@
 {
   "name": "docforge",
   "description": "Catalog-driven repository documentation with code-graph grounding, conditional flow evidence, manifest v2 planning and provenance, independent audits, and equivalent Python/Node tools.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": {
     "name": "Jonas Kahn",
     "url": "https://github.com/jonaskahn"
