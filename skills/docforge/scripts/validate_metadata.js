@@ -24,7 +24,7 @@ function validate() {
   const catalog = readJson(path.join(metadata, "catalog.json"));
   const catalogSchema = readJson(path.join(metadata, "catalog-schema.json"));
   const manifestSchema = readJson(path.join(metadata, "manifest-schema.json"));
-  if (catalog.version !== "1.0.2") errors.push("catalog version must be "1.0.2"");
+  if (catalog.version !== "1.0.2") errors.push("catalog version must be 1.0.2");
   if ((((catalogSchema.properties || {}).version || {}).const) !== "1.0.2") errors.push("catalog schema version disagrees with catalog");
   if ((((manifestSchema.properties || {}).version || {}).const) !== "2.0") errors.push("manifest schema must require version 2.0");
   const tiers = new Set(catalog.tiers.map((item) => item.id));

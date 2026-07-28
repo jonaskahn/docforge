@@ -19,75 +19,103 @@ configuration, or archive/delete anything.
 First perform only safe discovery: identify the repository root, check whether
 `.docforge/manifest.json` exists, run the read-only code-graph precheck, and
 inspect manifests/directories for likely repository shapes. Report the detected
-state and recommendations, but never select an audience, overlay, or graph
-source on the user's behalf. Then ask the user to select from the following
-menu, adapting the graph-source choices and repository-shape recommendation to
-the evidence actually detected:
+state and recommendations. Never select an audience or content overlay on the
+user's behalf. When exactly one readable code-graph provider is ready, use it
+as the proposed default and do not ask the user to choose among absent
+providers. This read-only provider selection is not permission to build,
+refresh, install, or configure anything.
 
-```text
-Docforge needs a scope before it can create a plan. Reply with the option
-letters/numbers you want, for example: 1A, 2B, 3C, 4A, 5A, 6B.
+### Scope intake
 
-1. What do you want to do?
-   A. Create a new documentation plan — inspect first, then show the proposed tree.
-   B. Plan only — create/update the manifest and show the tree; write no documents.
-   C. Resume an existing manifest — continue its next eligible document.
-   D. Check status or staleness — read-only progress/drift report.
-   E. Revise an existing area — re-ground stale documentation in a named area.
+Present all applicable unresolved questions together in one intake. Explain in
+plain language why each question matters, then give every choice a short
+consequence so the user can select one answer per question (or multiple answers
+where explicitly allowed). Use native single-select and multi-select controls
+when the host provides them; otherwise use a concise numbered question set with
+lettered options. Do not prescribe an exact screen or require a particular
+combined answer syntax.
 
-2. How much documentation do you need? (for A or B)
-   A. Spine — essential README, product, architecture, setup, testing, configuration, limits.
-   B. Diligence — Spine plus flows, risks, security, operations, dependencies, and ADRs.
-   C. Portfolio — Diligence plus cross-repository diligence under docs-portfolio/.
-   D. Recommend for me — Docforge will inspect and explain its recommendation.
+Ask only what remains unresolved, in this order:
 
-3. Who should the documentation serve? (choose one starting point)
-   A. Engineers + beginners — the default: README, setup, testing, architecture,
-      configuration, and limits for people new to the repository.
-   B. Engineers + Business Analysts + Product Owners — adds process/rules/
-      requirements plus feature value, metrics, and release views.
-   C. Engineers + coding agents — adds AGENTS.md, safe shims/settings, and
-      concise editing context under docs/agents/.
-   D. Everyone — engineers/beginners, BA, PO, and coding-agent views.
-   E. Custom — name any combination of BA, PO, coding agents, and extra readers.
+1. **Goal or action.** For a repository without a manifest, offer creating a
+   new documentation plan or planning without writing. When a manifest exists,
+   also offer resuming it, checking status or staleness, revising a named area,
+   or replacing the plan. Briefly distinguish inspection, planning, writing,
+   and read-only reporting.
+2. **Documentation tier.** For a new or plan-only scope, offer Spine
+   (essential repository documentation), Diligence (Spine plus flows, risks,
+   security, operations, dependencies, and ADRs), Portfolio (Diligence plus
+   `docs-portfolio/` diligence views), or a grounded recommendation that
+   Docforge will explain after inspection.
+3. **Audience starting point.** Offer Engineers + beginners (the default);
+   Engineers + Business Analysts + Product Owners; Engineers + coding agents;
+   Everyone; or a custom audience combination. Explain which reader-specific
+   views each choice adds. This is a starting point, not a bundled tier.
+4. **Repository shape.** Offer the detected recommendation with its evidence,
+   or applicable API/service, web application, library, data pipeline,
+   infrastructure, none, and custom choices. Permit multiple shapes where the
+   repository supports them.
+5. **Graph source, only when unresolved.** With several ready providers, offer
+   only those providers. With no ready provider, explain setup paths and their
+   approval requirements. With exactly one ready provider, record it as the
+   proposed source and skip this question; include it in the final confirmation
+   so the user can still ask to compare or change it.
+6. **Execution mode.** Offer Review (pause after every new or changed tree),
+   Auto-accept (always display trees and updates, then continue without routine
+   conversational pauses), or Plan only (stop after the completed tree and
+   document cards). Explain that Auto-accept never approves installation,
+   configuration, indexing, refreshes, or destructive work.
 
-4. Which repository shapes should Docforge include?
-   A. Use the detected recommendation — Docforge will explain the evidence.
-   B. API/service — endpoint and integration documentation.
-   C. Web application — rendering, state, components, and browser support.
-   D. Library — public surface, compatibility, publishing, and migrations.
-   E. Data pipeline or infrastructure — contracts/lineage or environments/state.
-   F. None or custom — use only the base/audience documentation.
+Collect the applicable answers as one response. If the user supplied one or
+more choices in the original request, retain them and include only unresolved
+questions in the intake. For Resume, Status, or Revise, omit tier, audience,
+and shape questions that the existing manifest already resolves. If the reply
+leaves a material choice missing or ambiguous, ask one concise follow-up
+containing only those unresolved choices.
 
-5. Which graph source should be primary?
-   A. Use the ready source Docforge reports.
-   B. Understand Anything — structural JSON and native domain/flow views.
-   C. GitNexus — LadybugDB structure, processes, context, and impact queries.
-   D. CodeGraph — SQLite-backed source, call paths, routes, and blast radius.
-   E. Help me choose — Docforge will compare the ready/missing choices.
+After resolving the answers, display one confirmation summary containing the
+action, tier, audiences, repository shapes, selected graph provider and its
+code/flow capabilities, and execution mode. Ask whether to continue, edit a
+choice, or cancel. Always wait for explicit confirmation of this intake
+summary, including when Auto-accept was selected. Only after confirmation may
+Docforge initialize or replace a manifest or begin deeper planning. Later
+plan-tree pauses follow the selected execution mode.
 
-6. How should Docforge proceed after showing the complete tree?
-   A. Review mode (default) — wait for approval after every new/changed tree.
-   B. Auto-accept — always show the tree and updates, then continue without
-      conversational pauses. It never approves setup, indexing, or destructive work.
-   C. Plan only — stop after the complete tree and document cards.
-```
+Show only currently valid choices. Do not offer Resume, Status, or Revise when
+no manifest exists, and do not present a provider that needs setup as ready. If
+no code graph is ready, explain that global installation/MCP wiring is user-run
+and that an agent-run repository index build or refresh needs separate explicit
+approval; selecting a setup path is not that approval. If a manifest exists,
+include its tier, overlays, and incomplete count in the first explanation.
+Report existing documentation and candidate repository shapes with a brief
+evidence note, such as an API schema, web framework manifest, library package
+manifest, pipeline configuration, or infrastructure files.
 
-If no code graph is ready, say so before presenting the menu and mark graph
-choices as setup paths, not actions already taken. Explain that global
-installation/MCP wiring is user-run and a repository index build or refresh
-requires a separate explicit approval. Do not treat a menu selection as that
-approval. If a manifest exists, include its tier, overlays, and incomplete
-count in the intake and make options 1C–1E prominent. Also report detected
-graph sources, existing documentation, and candidate repository shapes with a
-short “why detected” note (for example, an API schema, web framework manifest,
-library package manifest, pipeline configuration, or infrastructure files).
+### Provider sufficiency rule
 
-After the user replies, restate the resolved choices and ask only for any
-materially missing value. Explicit requests such as “create diligence API
-documentation” skip answered questions but still ask for any missing scope;
-`--auto-accept` skips only the later plan confirmation, never this missing
-scope intake or side-effect approval.
+Docforge needs one readable `code_graph`, not one index from every supported
+provider. Missing competitors are normal and must not appear in the standard
+intake, plan summary, or readiness table.
+
+- One ready provider: state it once and proceed with it as the proposed
+  default.
+- Several ready providers: list only those ready providers and ask which should
+  be primary.
+- No ready provider: explain the available setup paths and ask the user to
+  choose one.
+- Selected flow-dependent documents: first use the chosen provider's native
+  flow capability; derive provisionally only when it has none.
+
+For example, `.gitnexus/lbug` with indexed Process nodes satisfies both
+`code_graph` and native `flow_graph`. Do not mention absent Understand Anything
+or CodeGraph indexes in that case unless the user asks to compare or switch.
+The all-provider output of `diagnose_graphs` is troubleshooting detail and is
+never the default `/docforge` intake.
+
+Explicit requests such as “create diligence API documentation” skip answered
+questions; present any materially missing scope questions together. The final
+intake confirmation and all side-effect approvals remain mandatory under
+`--auto-accept`.
 
 ## Entry conditions
 
@@ -155,12 +183,10 @@ agent-run. Building or refreshing a repository index requires explicit user
 approval. Global installation, MCP wiring, and restart-requiring setup remain
 user-run.
 
-Do not stop at the readiness flag. Select and use the provider’s native
-retrieval path before planning:
-
-- Understand Anything skills plus its structural/domain JSON;
-- GitNexus skills/MCP over its LadybugDB graph and indexed processes;
-- CodeGraph’s `codegraph_explore` over its SQLite-backed index.
+Do not stop at the readiness flag. Select one ready provider according to the
+provider sufficiency rule and use its native retrieval path before planning.
+Provider-specific dispatch belongs in `references/graph-sources.md`; do not
+present missing competitors during ordinary repository analysis.
 
 Collect a graph-grounded inventory of boundaries, entry points, public
 surfaces, functional areas, candidate flows, tests, configuration, hotspots,

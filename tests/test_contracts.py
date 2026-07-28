@@ -59,21 +59,31 @@ class CatalogSelectionTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("## Bare `/docforge` invocation", skill)
         self.assertIn("interactive intake", skill)
-        for heading in (
-            "1. What do you want to do?",
-            "2. How much documentation do you need?",
-            "3. Who should the documentation serve?",
-            "4. Which repository shapes should Docforge include?",
-            "5. Which graph source should be primary?",
-            "6. How should Docforge proceed after showing the complete tree?",
+        self.assertIn("Present all applicable unresolved questions together", skill)
+        self.assertIn("Collect the applicable answers as one response", skill)
+        for question in (
+            "Goal or action",
+            "Documentation tier",
+            "Audience starting point",
+            "Repository shape",
+            "Graph source, only when unresolved",
+            "Execution mode",
         ):
-            self.assertIn(heading, skill)
+            self.assertIn(question, skill)
+        self.assertIn("Always wait for explicit confirmation", skill)
+        self.assertIn("including when Auto-accept was selected", skill)
+        self.assertNotIn("Ask exactly one applicable question at a time", skill)
+        self.assertNotIn("[1] Starter", skill)
+        self.assertNotIn("Reply with, for example: `2 R`", skill)
         self.assertIn("Do not initialize a\nmanifest", skill)
         self.assertIn("Engineers + beginners", skill)
-        self.assertIn("Engineers + Business Analysts + Product Owners", skill)
-        self.assertIn("Engineers + coding agents", skill)
+        self.assertIn("Missing competitors are normal", skill)
         self.assertIn("Never write against an undisplayed manifest\nrevision", skill)
         self.assertIn("/docforge", readme)
+        self.assertIn("all applicable unresolved scope questions together", readme)
+        self.assertIn("summarizes the complete scope and asks you to", readme)
+        self.assertIn("confirm, edit, or cancel", readme)
+        self.assertIn("Only one readable provider is required", readme)
 
     def test_each_tier_overlay_selection_has_manifest_indexes(self) -> None:
         overlays = [
@@ -319,6 +329,9 @@ class GraphAndStateTests(unittest.TestCase):
                 )
                 self.assertEqual(precheck.returncode, 0, precheck.stderr)
                 self.assertIn("(source: gitnexus, authoritative)", precheck.stdout)
+                self.assertNotIn("CodeGraph", precheck.stdout)
+                self.assertNotIn("Understand", precheck.stdout)
+                self.assertNotIn("MISSING", precheck.stdout)
                 outputs.append(normalized(precheck.stdout, [repo]))
             self.assertEqual(outputs[0], outputs[1])
 

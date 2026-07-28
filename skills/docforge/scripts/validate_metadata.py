@@ -35,7 +35,7 @@ def validate() -> list[str]:
     catalog_schema = read_json(metadata / "catalog-schema.json")
     manifest_schema = read_json(metadata / "manifest-schema.json")
     if catalog.get("version") != "1.0.2":
-        errors.append("catalog version must be "1.0.2"")
+        errors.append("catalog version must be 1.0.2")
     if catalog_schema.get("properties", {}).get("version", {}).get("const") != "1.0.2":
         errors.append("catalog schema version disagrees with catalog")
     if manifest_schema.get("properties", {}).get("version", {}).get("const") != "2.0":

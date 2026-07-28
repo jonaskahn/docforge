@@ -53,8 +53,20 @@ own contract.
 
 ## Selection
 
-Run `precheck_graph --need code` and present every ready source, its artifact,
-and its read mechanism.
+Run `precheck_graph --need code`. One readable provider is sufficient; Docforge
+does not require or benefit from building every supported provider index.
+
+- If exactly one source is ready, select it as the proposed default and report
+  only that source, its artifact, capabilities, and read mechanism.
+- If several sources are ready, present only those ready sources and ask which
+  should be primary.
+- If none are ready, present setup paths for the providers that could satisfy
+  the missing capability.
+
+An absent provider is not a readiness gap when another source already supplies
+`code_graph`. Do not show “not detected,” “not indexed,” or “needs build” rows
+for unused competitors in the standard intake or plan. Show them only for an
+explicit compare/switch request or all-provider diagnostics.
 
 - Prefer Understand Anything when its shareable JSON or native domain/flow
   graph is the main advantage.
@@ -63,10 +75,14 @@ and its read mechanism.
 - Prefer CodeGraph when fast, current structural exploration with returned
   source and call paths is the dominant need.
 
-If several are ready, ask the user which one should be primary and use other
-ready sources as corroboration when useful. Under `--auto-accept`, select the
-first ready provider in registry order, state the choice, and continue. Never
-merge incompatible provider schemas into a synthetic “master graph.”
+If several are ready, use unselected ready sources as corroboration only when
+useful. Under `--auto-accept`, select the first ready provider in registry
+order, state the choice, and continue. Never merge incompatible provider
+schemas into a synthetic “master graph.”
+
+GitNexus with a readable `.gitnexus/lbug` and indexed Process nodes supplies
+both `code_graph` and native `flow_graph`; neither Understand Anything nor
+CodeGraph needs to exist for Docforge to plan and write documents.
 
 ## Preparation and authority
 

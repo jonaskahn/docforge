@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-"1.0.2"-10b981?style=flat-square)](meta.json)
+  [![Version](https://img.shields.io/badge/version-1.0.2-10b981?style=flat-square)](meta.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -81,12 +81,15 @@ Expected result:
 
 1. Docforge performs only read-only discovery: repository/manifest state and
    available graph sources.
-2. It reports detected graph sources and likely repository shapes, then presents
-   an explained selection menu for goal, tier, audience presets, repository
-   shapes, graph source, and review versus auto-accept mode.
-3. It waits for your choices. It does not create a manifest, documents, or a
-   graph index at this stage.
-4. After scope is selected, it reuses the selected provider’s persisted graph
+2. It presents all applicable unresolved scope questions together: goal,
+   documentation tier, audience, repository shape, graph source only when it
+   is unresolved, and execution mode. Each question explains its choices;
+   native selection controls are used when the host provides them.
+3. After you answer the set, it summarizes the complete scope and asks you to
+   confirm, edit, or cancel. This confirmation is required even when
+   Auto-accept is selected. It does not create a manifest, documents, or a
+   graph index during intake.
+4. After you confirm the scope, it reuses the selected provider’s persisted graph
    and native skill/MCP queries to inventory the repository.
 5. It always shows the exact manifest-backed tree plus a one-line
    content/evidence card for every document before writing. Auto-accept skips
@@ -126,6 +129,11 @@ provider’s pre-generated index:
   its MCP/skills or project-local CLI;
 - CodeGraph’s auto-synchronized SQLite index, queried through
   `codegraph_explore` for relevant source, call paths, and blast radius.
+
+Only one readable provider is required. When GitNexus, Understand Anything, or
+CodeGraph is ready, the normal intake reports and uses that provider; absent
+competitor indexes are not gaps and stay hidden unless you request provider
+comparison or troubleshooting.
 
 Only catalog entries declaring `flow_graph` require flow data. They prefer native flow data; when only a code graph is available, Docforge derives a provisional, entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
 
