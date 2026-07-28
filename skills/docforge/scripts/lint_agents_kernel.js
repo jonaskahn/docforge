@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 "use strict";
-/* check_agents_kernel.js — mechanical rubric check for AGENTS.md (agent-context overlay).
+/* lint_agents_kernel.js — mechanical rubric check for AGENTS.md (agent-context overlay).
  *
- * Runs the format-specific checks scripts/check_document.js has no concept of: the
+ * Runs the format-specific checks scripts/lint_document.js has no concept of: the
  * 100-line cap, the 7-numbered-section shape, the tagline/test-sentence convention,
- * and dangling `@docs/agents/...` references. Run alongside check_document.js, which
+ * and dangling `@docs/agents/...` references. Run alongside lint_document.js, which
  * still covers this file's generic checks (scaffold markers, empty headings, dead
  * `[](...)` links, unlinked mentions) — this script never replaces it.
  *
@@ -28,8 +28,8 @@
  *     disk, relative to --repo                                   (defect)
  *
  * Usage:
- *   node check_agents_kernel.js --file AGENTS.md --repo .
- *   node check_agents_kernel.js --file AGENTS.md --repo . --json
+ *   node lint_agents_kernel.js --file AGENTS.md --repo .
+ *   node lint_agents_kernel.js --file AGENTS.md --repo . --json
  *
  * Exit code 0 if no defects, 1 if any defect, 2 on a usage/IO error. Node.js built-ins only.
  */

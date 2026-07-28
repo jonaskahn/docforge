@@ -54,7 +54,7 @@ flows/signup/                  flows/<flow>/  or  architecture/concepts/<subsyst
   without its subfile.
 - **A folder holding only a README is a defect, not a stage.** If you find one — your own
   work or inherited — either the promotion happened without content (demote back to a flat
-  file) or the content is simply missing (write it now, in this pass). `docs_scaffold.py
+  file) or the content is simply missing (write it now, in this pass). `scaffold_docs.py
   --audit` flags this as `folder-only-readme`.
 - **Diagrams are not optional for a flow with more than one step or any branch/error path.**
   Include a Mermaid sequence or flowchart diagram showing the step order and decision points.

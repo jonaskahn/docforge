@@ -1,47 +1,59 @@
 #!/usr/bin/env node
 "use strict";
-/* Gate all docforge documentation work on the analysis it depends on.
+/* Gate docforge documentation work on the graph analysis it depends on —
+ * provider-agnostic, over whatever graph sources are registered in
+ * graph_source_registry.js (understand-anything, GitNexus, and any future source).
  *
- * Both the knowledge graph and domain graph are required for every docforge
- * invocation — there is no fallback, no inspection substitute. This script
- * checks that the two files exist under .ua/ (or the legacy
- * .understand-anything/) and refuses to report READY unless both are
- * present. It does not care which tool produced them.
+ * Two capabilities matter:
  *
- * understand-anything is the default producer, but this script also detects
- * a GitNexus index (.gitnexus/meta.json) and, when the graph is missing but
- * an index exists, points at the GitNexus bridge (graph_source_gitnexus.js
- * build, documented in references/gitnexus-bridge.md) instead of only
- * suggesting /understand. Priority is always: use .ua/*.json if present,
- * regardless of which source could also build it; only fall back to a
- * source-specific build suggestion when the files are actually missing. See
- * references/graph-sources.md for the full capability-to-source dispatch
- * table, and the comment in graph_source_gitnexus.js for why this can't be a
- * fully automatic build (MCP tool calls are agent-mediated, not scriptable).
+ *   code_graph  — the structure/knowledge graph. Universal precondition.
+ *                 Docforge does nothing without one, but *any* single
+ *                 registered source that has built one satisfies it; docforge
+ *                 never fabricates a code graph itself.
  *
- * This script cannot check whether the understand-anything skill/plugin
- * itself is installed (that's a property of the calling agent's
- * environment, not this repo's filesystem) — the agent must confirm that
- * separately by checking its own skill listing or attempting `/understand`
- * and `/understand-domain`.
+ *   flow_graph  — the business-flow/domain graph. Needed only for flow/product/
+ *                 BA-PO/agent-context-flow docs. Resolved native-first (a
+ *                 source that emits flows), else docforge derives a provisional
+ *                 one from the code graph into .docforge/tmp/domain-graph.json
+ *                 (never committed — see derive_flow_graph.js). So flow docs
+ *                 are never hard-blocked while a code graph exists.
  *
- * Exit code 0 only when every file required for the requested --need scope is
- * present. Non-zero otherwise, with a specific remediation command per gap.
+ * This script only inspects the filesystem; the agent confirms whether a
+ * producer plugin/skill is installed using the setup hints printed here.
+ *
+ * When more than one source is ready for the same repo, this reports all of
+ * them (with each one's read mechanism) so the agent can let the user choose —
+ * understand-anything is the recommended default; see SKILL.md Step 0.
+ *
+ * Exit code 0 when the requested --need scope is satisfiable; non-zero
+ * otherwise, with per-source remediation.
  *
  * Usage:
- *   node check_preconditions.js --repo <path> --need graph
- *   node check_preconditions.js --repo <path> --need domain
+ *   node precheck_graph.js --repo <path>              # --need code (default)
+ *   node precheck_graph.js --repo <path> --need flow
  *
  * Node.js built-ins only.
  */
 
 const fs = require("fs");
-const { display, showGraphDirs } = require("./graph_common.js");
-const { detect: gitnexusDetect } = require("./graph_source_gitnexus.js");
-const { detect: uaDetect } = require("./graph_source_ua.js");
+const { relativeDisplayPath, findGraphFile, listKnownGraphDirs } = require("./graph_storage.js");
+const { setupHintsForMissing, resolveAllReady } = require("./graph_source_registry.js");
+
+const DERIVED_FLOW_CANDIDATES = [".docforge/tmp/domain-graph.json"];
+
+// Accept the old capability names as aliases so any stray caller keeps working.
+const NEED_ALIASES = { graph: "code", domain: "flow" };
+
+// How each source's graph is read, keyed by its readMode, for the report.
+const READ_MECHANISM = {
+  json: "JSON on disk — read with read_graph.js",
+  db:
+    "ladybug DB — query via the gitnexus MCP, or offline with " +
+    "graph_source_gitnexus_reader.js",
+};
 
 function parseArgs(argv) {
-  const args = { need: "domain" };
+  const args = { need: "code" };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--repo") args.repo = argv[++i];
@@ -59,63 +71,94 @@ function isDir(p) {
   }
 }
 
-const GITNEXUS_BUILD_CMD =
-  "    node scripts/graph_source_gitnexus.js build --repo <path> " +
-  "--nodes <nodes.json> --edges <edges.json> --processes <processes.json>";
-
-// Print the Fix: block for a missing graph file. Always shows both
-// remediation paths — understand-anything and GitNexus — since either one
-// resolves the gap and the user may already have one but not the other
-// installed. The GitNexus option's exact steps depend on whether an index
-// already exists.
-function printMissingRemediation(repo, gxIndex, { isDomain }) {
-  if (isDomain) {
-    console.log("  Fix (understand-anything): after the knowledge graph exists, run:");
-    console.log("    /understand-domain");
-    console.log(
-      "  Business flows, docs/flows/, docs/product/overview.md and the " +
-        "BA/PO overlays are never hand-typed. Do not enumerate flows from " +
-        "route files or folder names as a substitute for this graph."
-    );
-  } else {
-    console.log(
-      "  Fix (understand-anything): confirm the understand-anything skill is " +
-        "loaded in this session (check the skill listing, or load/invoke it), " +
-        "then run:"
-    );
-    console.log("    /understand");
+function printSetupHints(repo, capability) {
+  for (const [, lines] of setupHintsForMissing(repo, capability)) {
+    for (const line of lines) {
+      console.log(line.startsWith("    ") ? line : `  ${line}`);
+    }
   }
+}
 
-  if (gxIndex) {
+// Report every source that has a code graph ready. True if at least one is.
+function checkCodeGraph(repo) {
+  const ready = resolveAllReady(repo, "code_graph");
+  if (ready.length === 0) {
+    console.log("MISSING  code graph   (no registered source has one built)");
+    listKnownGraphDirs(repo);
+    console.log("  Build a code graph from any one configured source, then re-run. Options:");
+    printSetupHints(repo, "code_graph");
     console.log(
-      `  Fix (GitNexus, index already found at ${display(gxIndex, repo)}): ` +
-        "follow references/gitnexus-bridge.md, then run:"
+      "  Do not write documentation from directory names or guesswork while this is missing."
     );
-    console.log(GITNEXUS_BUILD_CMD);
-  } else {
-    console.log("  Fix (GitNexus, not yet installed/indexed): from the repo root, run:");
-    console.log("    npx gitnexus analyze");
-    console.log("    npx gitnexus setup");
-    console.log("  Then follow references/gitnexus-bridge.md and run:");
-    console.log(GITNEXUS_BUILD_CMD);
+    return false;
   }
-
-  if (!isDomain) {
+  for (const [src, p] of ready) {
+    const mechanism = READ_MECHANISM[src.readMode] || "";
+    const suffix = mechanism ? `  [${mechanism}]` : "";
     console.log(
-      "  Do not proceed to writing documentation from directory names or " +
-        "guesswork while this is missing."
+      `READY    code graph   -> ${relativeDisplayPath(p, repo)}  (source: ${src.name})${suffix}`
     );
   }
+  if (ready.length > 1) {
+    console.log(
+      `  ${ready.length} sources are ready — ask the user which to read ` +
+        "(understand-anything recommended). See SKILL.md Step 0."
+    );
+  }
+  return true;
+}
+
+// Resolve the flow graph. Returns 'native', 'derived', or 'none' and prints a
+// status line. Does not itself decide the exit code.
+function reportFlowGraph(repo) {
+  const ready = resolveAllReady(repo, "flow_graph");
+  if (ready.length > 0) {
+    for (const [src, p] of ready) {
+      console.log(
+        `READY    flow graph   -> ${relativeDisplayPath(p, repo)}  (source: ${src.name}, authoritative)`
+      );
+    }
+    return "native";
+  }
+  const derived = findGraphFile(repo, DERIVED_FLOW_CANDIDATES);
+  if (derived) {
+    console.log(
+      `READY    flow graph   -> ${relativeDisplayPath(derived, repo)}  (docforge-derived, provisional)`
+    );
+    return "derived";
+  }
+  console.log("MISSING  flow graph   (no native flow graph; none derived yet)");
+  return "none";
+}
+
+function printFlowRemediation(repo) {
+  console.log(
+    "  Flows are needed for docs/flows/, docs/product/, BA/PO overlays, and " +
+      "agent-context flow sections. Resolve either way:"
+  );
+  console.log(
+    "  (a) Derive a provisional flow graph from the code graph " +
+      "(see references/domain-derivation.md):"
+  );
+  console.log("    node scripts/derive_flow_graph.js prepare --repo <path>");
+  console.log("    # dispatch the docforge domain analyzer on the emitted context, then");
+  console.log("    node scripts/derive_flow_graph.js write --repo <path> --analysis <analysis.json>");
+  console.log("    # writes .docforge/tmp/domain-graph.json — provisional, never committed");
+  console.log("  (b) Or produce a native (authoritative) flow graph from a source:");
+  printSetupHints(repo, "flow_graph");
 }
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.repo) {
-    console.error("usage: check_preconditions.js --repo <path> [--need graph|domain]");
+    console.error("usage: precheck_graph.js --repo <path> [--need code|flow]");
     return 2;
   }
-  if (!["graph", "domain"].includes(args.need)) {
-    console.error(`--need must be 'graph' or 'domain', got '${args.need}'`);
+  const need = NEED_ALIASES[args.need] || args.need;
+  if (need !== "code" && need !== "flow") {
+    console.error(
+      `--need must be 'code' or 'flow' (or legacy 'graph'/'domain'), got '${args.need}'`
+    );
     return 2;
   }
   if (!isDir(args.repo)) {
@@ -123,45 +166,46 @@ function main() {
     return 2;
   }
 
-  let ok = true;
-  const ua = uaDetect(args.repo);
-
-  const kg = ua.knowledgeGraph;
-  if (kg) {
-    console.log(`READY  knowledge graph  -> ${display(kg, args.repo)}`);
-  } else {
-    ok = false;
-    console.log("MISSING  knowledge graph  (checked .ua/ and .understand-anything/)");
-    showGraphDirs(args.repo);
-    const gx = gitnexusDetect(args.repo);
-    printMissingRemediation(args.repo, gx.index, { isDomain: false });
-  }
-
-  if (args.need === "domain") {
-    const dg = ua.domainGraph;
-    if (dg) {
-      console.log(`READY  domain graph     -> ${display(dg, args.repo)}`);
-    } else {
-      ok = false;
-      console.log("MISSING  domain graph  (checked .ua/ and .understand-anything/)");
-      showGraphDirs(args.repo);
-      const gx = gitnexusDetect(args.repo);
-      printMissingRemediation(args.repo, gx.index, { isDomain: true });
-    }
-  }
+  const codeOk = checkCodeGraph(args.repo);
+  const flowState = need === "flow" || codeOk ? reportFlowGraph(args.repo) : "none";
 
   console.log();
-  if (ok) {
-    console.log("All required analysis present. Proceed.");
+  if (!codeOk) {
+    console.log(
+      "BLOCKED. A code graph is docforge's universal precondition — no " +
+        "documentation of any kind may be written until one exists. Tell the " +
+        "user which source to build it with (options above); docforge never " +
+        "fabricates a code graph itself."
+    );
+    return 1;
+  }
+
+  if (need === "code") {
+    console.log("Code graph present — proceed.");
+    if (flowState === "none") {
+      console.log(
+        "Note: no flow graph yet. Flow/product/BA-PO/agent-context-flow docs " +
+          "will derive one from the code graph when reached (--need flow)."
+      );
+    }
     return 0;
   }
-  console.log(
-    "BLOCKED. No documentation of any kind may be written until every " +
-      "MISSING item above is resolved. Tell the user what is missing and which " +
-      "command produces it. Both the knowledge graph and domain graph are " +
-      "required for all docforge work — there is no inspection fallback or " +
-      "substitute for either."
-  );
+
+  // need === "flow"
+  if (flowState !== "none") {
+    console.log("Code and flow graphs present — proceed.");
+    if (flowState === "derived") {
+      console.log(
+        "Note: flows are docforge-derived (provisional). Confirm business " +
+          "rules against source before asserting them; a native flow graph is " +
+          "authoritative where available."
+      );
+    }
+    return 0;
+  }
+
+  console.log("Code graph present, but flows are required for this plan and none exist yet.");
+  printFlowRemediation(args.repo);
   return 1;
 }
 

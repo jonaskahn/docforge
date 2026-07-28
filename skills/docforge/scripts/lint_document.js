@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-/* check_document.js — mechanical pre-audit of ONE docforge document.
+/* lint_document.js — mechanical pre-audit of ONE docforge document.
  *
  * Runs the purely mechanical checks so the independent audit
  * (references/document-audit.md) spends its judgement on depth, grounding and
@@ -20,10 +20,10 @@
  * Typed `<UPPER_SNAKE>` tokens are reported separately and are NOT defects.
  *
  * Usage:
- *   node check_document.js --file docs/architecture/high-level.md
- *   node check_document.js --file docs/flows/checkout.md \
+ *   node lint_document.js --file docs/architecture/high-level.md
+ *   node lint_document.js --file docs/flows/checkout.md \
  *       --require-heading "## " --require-heading "Steps"
- *   node check_document.js --file docs/x.md --json
+ *   node lint_document.js --file docs/x.md --json
  *
  * Exit code 0 if no defects, 1 if any defect, 2 on a usage/IO error.
  * Node.js built-ins only.

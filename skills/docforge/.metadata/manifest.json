@@ -1,7 +1,7 @@
 {
   "$schema": "manifest-schema.json",
   "version": "1.1",
-  "note": "Template for the durable plan written to <repo>/.docforge/manifest.json during Step 0 Gate 1. Every document paths must match references/docs-tree.md and scripts/docs_scaffold.py. Statuses flow planned -> in_progress -> generated -> needs_review -> complete (or skipped). Once a document is written, its per-section provenance is aggregated into a 'sections' array on that document entry ([{id, sources:[{path, git_blob}]}]) — the same shape check_provenance.py reads; planned entries carry an empty 'sections' or omit it. See references/provenance-tracking.md. The example entries below are illustrative; the real plan is built from the graph analysis and confirmed by the user.",
+  "note": "Template for the durable plan written to <repo>/.docforge/manifest.json during Step 0 Gate 1. Every document paths must match references/docs-tree.md and scripts/scaffold_docs.py. Statuses flow planned -> in_progress -> generated -> needs_review -> complete (or skipped). Once a document is written, its per-section provenance is aggregated into a 'sections' array on that document entry ([{id, sources:[{path, git_blob}]}]) — the same shape check_staleness.py reads; planned entries carry an empty 'sections' or omit it. See references/provenance-tracking.md. The example entries below are illustrative; the real plan is built from the graph analysis and confirmed by the user.",
   "generated_at": null,
   "project_context": {
     "repo_name": null,

@@ -46,7 +46,7 @@ Each targets one audience. A documentation set that fails any of them fails for 
 - [ ] No document sits in a folder whose audience it does not serve
 - [ ] Root files are thin pointers with no content duplicated from `docs/`
 - [ ] Naming follows the conventions in `docs-tree.md` — kebab-case, plural collections, no `misc/`
-- [ ] *(agent-context overlay)* `AGENTS.md` passes `scripts/check_agents_kernel.{py,js}` with zero defects, and every `docs/agents/*` file other than `patterns.md` is a brief stub linking out, not a restatement
+- [ ] *(agent-context overlay)* `AGENTS.md` passes `scripts/lint_agents_kernel.{py,js}` with zero defects, and every `docs/agents/*` file other than `patterns.md` is a brief stub linking out, not a restatement
 
 ### Host neutrality
 
@@ -87,21 +87,21 @@ Each targets one audience. A documentation set that fails any of them fails for 
 - [ ] **No empty audience subfile:** a `business-analyst.md` / `engineering.md` / `product-owner.md` exists only where real depth exists
 - [ ] **Flat by default:** every `flows/<flow>` and `architecture/concepts/<subsystem>` is a flat file unless it currently carries at least one real subfile; no folder holds only a `README.md`
 - [ ] **No dangling deep-dive:** no flat file or topic `README.md` links to a sibling subfile that does not exist on disk right now
-- [ ] **Flows sourced from the domain graph:** `docs/flows/`, `product/overview.md`, `product/capabilities.md` and BA/PO content trace to `/understand-domain` output, confirmed present via `scripts/check_preconditions.py --need domain` — never hand-typed from route files or folder names
+- [ ] **Flows sourced from the domain graph:** `docs/flows/`, `product/overview.md`, `product/capabilities.md` and BA/PO content trace to `/understand-domain` output, confirmed present via `scripts/precheck_graph.py --need domain` — never hand-typed from route files or folder names
 - [ ] **Diagrammed:** every flow with more than one step or a branch/error path carries a Mermaid diagram; prose still stands alone without it
 
 ## Automated checks worth adding to CI
 
 Documentation decays silently unless something objects. The cheap wins, in rough order of value per effort:
 
-1. **Link checking** on every change — catches the most common decay, and (via `docs_scaffold.py --audit`'s `unlinked file mentions`) catches a document naming another one in prose without actually linking to it.
+1. **Link checking** on every change — catches the most common decay, and (via `scaffold_docs.py --audit`'s `unlinked file mentions`) catches a document naming another one in prose without actually linking to it.
 2. **Scaffold-marker detection** — fail on any `{{…}}` template marker or punted `TODO` in the default branch: those mean a section was left unwritten. Typed `<UPPER_SNAKE>` tokens are exempt (they are intentional human-fill slots); optionally warn if one survives past an agreed grace period so external facts do get filled in.
-3. **Folder-only-readme detection** — fail if any `flows/<flow>/` or `architecture/concepts/<subsystem>/` directory contains a `README.md` and no other `.md` sibling; that shape means a promotion happened without a subfile. `docs_scaffold.py --audit` reports this as `folder-only-readme`.
+3. **Folder-only-readme detection** — fail if any `flows/<flow>/` or `architecture/concepts/<subsystem>/` directory contains a `README.md` and no other `.md` sibling; that shape means a promotion happened without a subfile. `scaffold_docs.py --audit` reports this as `folder-only-readme`.
 4. **Forge-name grep** outside `docs/contributing/`.
 5. **Spec validation** — if an API spec is generated, verify it regenerates identically to what is committed.
 6. **Config drift** — compare documented environment variables against those the code reads.
 7. **Setup verification** — periodically run the documented setup steps on a clean container. Expensive, and it catches the failure that matters most.
-8. **Kernel-budget check** *(agent-context overlay only)* — `scripts/check_agents_kernel.{py,js}` on `AGENTS.md`: line-count cap, section shape, dangling `@docs/agents/…` references. Cheap, mechanical, catches the specific way this one document type decays.
+8. **Kernel-budget check** *(agent-context overlay only)* — `scripts/lint_agents_kernel.{py,js}` on `AGENTS.md`: line-count cap, section shape, dangling `@docs/agents/…` references. Cheap, mechanical, catches the specific way this one document type decays.
 
 ## Anti-patterns to check for explicitly
 
@@ -114,7 +114,7 @@ Documentation decays silently unless something objects. The cheap wins, in rough
 - **Prose bound to code**: a claim anchored to a private symbol or a line number, so a routine rename falsifies the document. Write at the behaviour level instead.
 - **Notice stranded in a subfile**: a warning that only the engineering deep-dive carries, invisible to a reader who stops at the topic README.
 - **Folder-only-readme**: a `flows/<flow>/` or `architecture/concepts/<subsystem>/` containing nothing but `README.md`. Either a promotion happened with no subfile content (demote to a flat file) or a subfile is simply missing (write it).
-- **Dangling deep-dive link**: "documented in the engineering deep-dive" pointing at a file that isn't there. Caught by `docs_scaffold.py --audit`'s broken-links check; treat any hit under `flows/` or `architecture/concepts/` as this specific defect, not a generic typo.
-- **Unlinked file mention**: naming another generated document by its filename — in prose or in backticks — without making it a clickable link to the real path. A reader (human or agent) cannot navigate to a mention; they can navigate to a link. Caught by `docs_scaffold.py --audit`'s `unlinked file mentions` and `check_document.py`'s `unlinked-mention` defect.
+- **Dangling deep-dive link**: "documented in the engineering deep-dive" pointing at a file that isn't there. Caught by `scaffold_docs.py --audit`'s broken-links check; treat any hit under `flows/` or `architecture/concepts/` as this specific defect, not a generic typo.
+- **Unlinked file mention**: naming another generated document by its filename — in prose or in backticks — without making it a clickable link to the real path. A reader (human or agent) cannot navigate to a mention; they can navigate to a link. Caught by `scaffold_docs.py --audit`'s `unlinked file mentions` and `lint_document.py`'s `unlinked-mention` defect.
 - **Hand-typed flow list**: flows enumerated from route files, screen names, or memory instead of `/understand-domain`'s output.
 - **Kernel bloat** *(agent-context overlay)*: `AGENTS.md` restating prose that already lives in `architecture/high-level.md` or `docs/agents/architecture.md` instead of linking to it — the same duplicated-truth failure as elsewhere, made worse because it also blows the 100-line budget that makes the kernel usable at all.

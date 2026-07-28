@@ -1,24 +1,49 @@
 # Graph sources — capability dispatch
 
-Docforge reads exactly one thing regardless of source: `.ua/knowledge-graph.json` and `.ua/domain-graph.json` at the project root. Two tools can currently produce them, and this table is the single place that maps "I need capability X" to "run this, for whichever source is active."
+Docforge is **provider-agnostic**: it does not care which tool produced the graph it reads. Every graph producer is a *source* registered in `scripts/graph_source_registry.py`/`.js`; two ship today (Understand-Anything and GitNexus) and more can be added (see `references/adding-a-graph-source.md`). This file is the single place that maps "I need capability X" to "run this, for whichever source is active." Instruction prose everywhere else names **capabilities**, never a specific command — resolve the command here.
 
-**Priority order, always:** if `.ua/*.json` already exists, use it as-is — it does not matter which source built it. Only consult the "how do I build it" row when the graph is genuinely missing. `check_preconditions.py`/`.js` (`scripts/graph_source_ua.py`/`.js`, `scripts/graph_source_gitnexus.py`/`.js`) implement this detection; `references/gitnexus-bridge.md` is the GitNexus build recipe.
+**Naming convention.** Anything specific to one source carries a `graph_source_<name>` (script) / `graph-source-<name>` (reference) **prefix** — `graph_source_gitnexus.py`, `references/graph-source-gitnexus.md`. Source-agnostic pieces carry no marker (`graph_source_registry`, `read_graph`, `precheck_graph`). Adding a source is prefix-in, one registry line, one column here (`references/adding-a-graph-source.md`).
 
-| Capability | understand-anything | GitNexus | Notes |
+## The requirement model
+
+- **Code graph** (structure / modules / layers / call + import edges) is docforge's **universal precondition**. *Any one* registered source that has built one satisfies it. Docforge never fabricates a code graph itself — if none exists, it stops and tells the user which source to build one with. Check: `python scripts/precheck_graph.py --repo <path> --need code`.
+- **Flow graph** (business domains / flows / ordered steps) is needed only for `docs/flows/`, `docs/product/`, the BA/PO overlays, and agent-context flow sections. It is resolved **native-first, else derived**: use a source's flow graph if one exists (understand-anything's domain graph, or GitNexus's native processes); otherwise docforge derives a *provisional* one from the code graph into `.docforge/tmp/domain-graph.json` (never committed — see `references/domain-derivation.md`). So flow docs are never hard-blocked while a code graph exists. Check: `python scripts/precheck_graph.py --repo <path> --need flow`.
+
+## Where the graph lives, and how it is read
+
+There is no single hardcoded store. Each source declares its own location and **read mode**; `precheck_graph` and the readers resolve through the registry, in registry (priority) order:
+
+| Source | Store | Read mode | Code graph | Flow graph |
+|---|---|---|---|---|
+| Understand-Anything | `.ua/` (legacy `.understand-anything/`) | **JSON** — read with `read_graph.py` | `knowledge-graph.json` | `domain-graph.json` |
+| GitNexus | `.gitnexus/lbug` (+ `meta.json`) | **DB** — gitnexus MCP, or `graph_source_gitnexus_reader.py` | the lbug DB (`File`/`Function`/… nodes) | the same DB (native `Process` nodes) |
+| docforge-derived (provisional) | `.docforge/tmp/domain-graph.json` (git-ignored) | JSON | — | derived from the code graph |
+
+A **JSON** source is read offline with `read_graph.py`; a **DB** source is queried via its native interface (for GitNexus: the MCP, or the offline `graph_source_gitnexus_reader.py`) — never through `read_graph.py`, which is JSON-only. `precheck_graph` prints the read mechanism next to each ready source.
+
+## Capability → source dispatch
+
+**Priority order, always:** if the capability is already satisfied on disk, use it — it does not matter which source produced it. Only consult "how do I get it" when it is genuinely missing. When more than one source is ready for the same repo, `precheck_graph` reports all of them; ask the user which to read (understand-anything recommended — see `SKILL.md` Step 0).
+
+| Capability | Understand-Anything | GitNexus | Adding a source |
 |---|---|---|---|
-| Build the initial graph | `/understand` | `references/gitnexus-bridge.md` (Cypher queries → `graph_source_gitnexus.py build`) | Both write the same two files; downstream docs can't tell which ran |
-| Refresh after code changes | `/understand` (incremental) or `/understand --auto-update` | `npx gitnexus analyze`, then re-run the bridge's three queries + `build` | GitNexus's own commit hook re-indexes `.gitnexus/`, but does **not** re-run the bridge — `.ua/*.json` goes stale until the bridge is re-run manually |
-| Scope analysis to a subdirectory | `/understand src/frontend` | not supported — GitNexus always indexes the whole repo | |
-| Stricter graph validation | `/understand --review` | none | |
-| Business domain / flow graph | `/understand-domain` | the bridge's `processes.json` query | GitNexus path is flows-only (no domain grouping) — see "Community clusters" note in `gitnexus-bridge.md` |
-| Deep-dive a symbol (L2/L3 depth) | `/understand-explain <path>` | `context` MCP tool (360-degree symbol view) | `references/depth-and-audience.md` documents the L0–L3 ladder both feed into |
-| Trace an execution flow | `/understand-explain` + graph query | `query` MCP tool (process-grouped code intelligence) | |
-| Blast radius / change impact | inferred from graph edges | `impact` MCP tool | understand-anything has no dedicated command; read edges from `.ua/knowledge-graph.json` directly |
-| Diff a PR / working-tree change | `/understand-diff` | `detect_changes` MCP tool | |
-| Visual exploration | `/understand-dashboard` | none | |
-| Onboarding guide generation | `/understand-onboard` | none | |
-| Read the graph offline (no tool call) | `graph_extract.py --graph .ua/knowledge-graph.json` | same command — the file is source-agnostic once built | |
+| Build the code graph | `/understand` | `npx gitnexus analyze` (+ `npx gitnexus setup` once) — `references/graph-source-gitnexus.md` | your `graph_source_<name>` detect/build |
+| Refresh after code changes | `/understand` (incremental) or `/understand --auto-update` | `npx gitnexus analyze` (re-index; `detect` flags STALE) | per source |
+| Build the flow graph | `/understand-domain` | already native (Process nodes) — nothing to build | if none available, docforge **derives** one — `references/domain-derivation.md` |
+| Read the graph's structure | `read_graph.py --summary` (JSON) | gitnexus MCP `cypher`/`query`, or `graph_source_gitnexus_reader.py --summary` | JSON → `read_graph`; DB → its native reader |
+| Scope analysis to a subdirectory | `/understand src/frontend` | not supported (GitNexus always indexes the whole repo) | per source |
+| Stricter graph validation | `/understand --review` | none | per source |
+| Deep-dive a symbol (L2/L3 depth) | `/understand-explain <path>` | `context` MCP tool (360° symbol view) | `references/depth-and-audience.md` documents the L0–L3 ladder |
+| Enumerate business flows | `/understand-domain` | `query` + `gitnexus://repo/{name}/processes` resource, or `graph_source_gitnexus_reader.py --flows` | derived flow graph |
+| Trace an execution flow | `/understand-explain` + graph query | `gitnexus://repo/{name}/process/{name}` resource | per source |
+| Functional-area / domain grouping | graph layers | `gitnexus://repo/{name}/clusters` (Community nodes, `MEMBER_OF`) | per source |
+| Blast radius / change impact | inferred from graph edges | `impact` MCP tool | read edges from the code graph directly |
+| Diff a PR / working-tree change | `/understand-diff` | `detect_changes` MCP tool | per source |
+| Visual exploration | `/understand-dashboard` | none | per source |
+| Onboarding guide generation | `/understand-onboard` | none | per source |
+
+**Command name varies by agent.** `/understand` is a skill invocation, not universally a slash command — Codex uses `$understand`, some agents take plain language ("use the understand skill"). GitNexus tools are MCP tools (`query`, `context`, `cypher`, …) and resource reads (`gitnexus://…`); its offline counterpart is `graph_source_gitnexus_reader.{py,js}`.
 
 ## Adding a source
 
-See the closing section of `references/gitnexus-bridge.md` — a new `graph_source_<name>.py`/`.js` pair plus one row here and one branch in `check_preconditions.py`/`.js`'s MISSING path is the entire integration surface.
+The whole extension surface is: a `graph_source_<name>.py`/`.js` exposing a `SOURCE` descriptor (with a `read_mode`), one line in `scripts/graph_source_registry.py`/`.js`'s `SOURCES` list, and one column here. Nothing in `precheck_graph` or `read_graph` changes. Full recipe: `references/adding-a-graph-source.md`.

@@ -2,28 +2,44 @@
 "use strict";
 /* Validate and report on graph files at repository root.
  *
- * Helps diagnose "graph not found" false positives when .ua/ folder exists
- * but scripts report graphs missing. Scans for graph files and reports:
- *   - Whether .ua/ folder exists
- *   - What files are inside it
- *   - Whether knowledge-graph.json and domain-graph.json are present
- *   - File sizes and modification times
- *   - Schema structure (nodes count, etc.)
+ * Helps diagnose "graph not found" false positives when a graph folder exists
+ * but scripts report graphs missing. Scans the known store locations — `.ua/`,
+ * legacy `.understand-anything/`, `.gitnexus/` (GitNexus's ladybug DB), and
+ * `.docforge/tmp/` (docforge-derived, provisional) — and reports:
+ *   - which graph folders exist and what they contain
+ *   - whether a code (knowledge) graph and a flow (domain) graph are present
+ *   - file sizes and modification times
+ *   - schema structure (nodes/edges count) for JSON graphs; a note for the
+ *     binary ladybug DB (queried via the gitnexus MCP, not read here)
  *
  * Usage:
- *   node validate_graphs.js --repo <path>
- *   node validate_graphs.js --repo <path> --verbose
+ *   node diagnose_graphs.js --repo <path>
+ *   node diagnose_graphs.js --repo <path> --verbose
  *
  * Node.js built-ins only.
  */
 
 const fs = require("fs");
 const path = require("path");
+const { KNOWN_GRAPH_DIRS } = require("./graph_storage.js");
 
+// code graph is the universal precondition; flow graph is optional (a source
+// emits it, or docforge derives a provisional one into .docforge/tmp/).
+// GitNexus's .gitnexus/lbug is a ladybug DB that serves both capabilities.
 const GRAPH_CANDIDATES = {
-  "knowledge-graph.json": [".ua/knowledge-graph.json", ".understand-anything/knowledge-graph.json"],
-  "domain-graph.json": [".ua/domain-graph.json", ".understand-anything/domain-graph.json"],
+  "code (knowledge) graph": [
+    ".ua/knowledge-graph.json",
+    ".understand-anything/knowledge-graph.json",
+    ".gitnexus/lbug",
+  ],
+  "flow (domain) graph": [
+    ".ua/domain-graph.json",
+    ".understand-anything/domain-graph.json",
+    ".gitnexus/lbug",
+    ".docforge/tmp/domain-graph.json",
+  ],
 };
+const REQUIRED = new Set(["code (knowledge) graph"]);
 
 function parseArgs(argv) {
   const args = { verbose: false };
@@ -76,6 +92,14 @@ function findGraph(repo, candidates) {
 }
 
 function probeGraph(p) {
+  if (path.basename(p) === "lbug") {
+    const stat = fs.statSync(p);
+    return {
+      database: true,
+      size_bytes: stat.size,
+      mtime: new Date(stat.mtimeMs).toISOString(),
+    };
+  }
   try {
     const raw = fs.readFileSync(p, "utf8");
     const data = JSON.parse(raw);
@@ -92,7 +116,7 @@ function probeGraph(p) {
         break;
       }
     }
-    for (const key of ["edges", "links", "relationships"]) {
+    for (const key of ["edges", "links", "relationships", "flows"]) {
       if (Array.isArray(data[key])) {
         info.edge_key = key;
         info.edge_count = data[key].length;
@@ -117,8 +141,9 @@ function fmtMtime(stat) {
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function listDir(dir) {
-  console.log(`Contents of ${path.basename(dir)}/:`);
+function listDir(repo, dir) {
+  const rel = dir.startsWith(repo) ? path.relative(repo, dir) : dir;
+  console.log(`Contents of ${rel}/:`);
   try {
     const items = fs.readdirSync(dir).sort();
     for (const name of items) {
@@ -136,7 +161,7 @@ function listDir(dir) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.repo) {
-    console.error("usage: validate_graphs.js --repo <path> [--verbose]");
+    console.error("usage: diagnose_graphs.js --repo <path> [--verbose]");
     return 2;
   }
   if (!isDir(args.repo)) {
@@ -148,50 +173,62 @@ function main() {
   console.log(`Repository: ${repo}`);
   console.log();
 
-  const uaDir = path.join(repo, ".ua");
-  const uaLegacy = path.join(repo, ".understand-anything");
-  const hasUa = isDir(uaDir);
-  const hasLegacy = isDir(uaLegacy);
-
   console.log("Folder status:");
-  console.log(`  .ua/                     ${hasUa ? " ✓ exists" : " ✗ missing"}`);
-  console.log(`  .understand-anything/    ${hasLegacy ? " ✓ exists" : " ✗ missing"}`);
+  const presentDirs = [];
+  for (const name of KNOWN_GRAPH_DIRS) {
+    const d = path.join(repo, name);
+    const exists = isDir(d);
+    console.log(`  ${(name + "/").padEnd(28)}${exists ? " ✓ exists" : " ✗ missing"}`);
+    if (exists) presentDirs.push(d);
+  }
   console.log();
 
-  if (hasUa) listDir(uaDir);
-  if (hasLegacy) listDir(uaLegacy);
+  for (const d of presentDirs) listDir(repo, d);
 
   console.log("Graph discovery (upward search from repo root):");
-  let allOk = true;
-
+  let codeOk = true;
   for (const [graphName, candidates] of Object.entries(GRAPH_CANDIDATES)) {
+    const tag = REQUIRED.has(graphName) ? "required" : "optional";
     const found = findGraph(repo, candidates);
     if (found) {
       const relPath = found.startsWith(repo) ? path.relative(repo, found) : found;
-      console.log(`  ${graphName.padEnd(25)}  ✓ found at ${relPath}`);
+      console.log(`  ${graphName.padEnd(24)} (${tag})  ✓ found at ${relPath}`);
       if (args.verbose) {
         const info = probeGraph(found);
-        if (info.valid_json) {
+        if (info.database) {
+          console.log(`    - size: ${fmtSize(info.size_bytes)}`);
+          console.log(`    - mtime: ${info.mtime}`);
+          console.log(
+            "    - ladybug DB (binary) — query via the gitnexus MCP or " +
+              "scripts/graph_source_gitnexus_reader.js"
+          );
+        } else if (info.valid_json) {
           console.log(`    - size: ${fmtSize(info.size_bytes)}`);
           console.log(`    - mtime: ${info.mtime}`);
           if (info.node_key) console.log(`    - nodes (${info.node_key}): ${info.node_count ?? "?"}`);
-          if (info.edge_key) console.log(`    - edges (${info.edge_key}): ${info.edge_count ?? "?"}`);
+          if (info.edge_key) console.log(`    - ${info.edge_key}: ${info.edge_count ?? "?"}`);
         } else {
           console.log(`    ⚠ Invalid JSON: ${info.error}`);
         }
       }
     } else {
-      console.log(`  ${graphName.padEnd(25)}  ✗ not found (checked .ua/ and .understand-anything/)`);
-      allOk = false;
+      console.log(`  ${graphName.padEnd(24)} (${tag})  ✗ not found`);
+      if (REQUIRED.has(graphName)) codeOk = false;
     }
   }
 
   console.log();
-  if (allOk) {
-    console.log("✓ All graphs found and accessible.");
+  if (codeOk) {
+    console.log(
+      "✓ Code graph present. (A flow graph is optional — a source may " +
+        "emit one, or docforge derives a provisional one.)"
+    );
     return 0;
   }
-  console.log("✗ Some graphs missing. Run /understand and/or /understand-domain");
+  console.log(
+    "✗ No code graph found. Build one from any configured source — " +
+      "see references/graph-sources.md."
+  );
   return 1;
 }
 

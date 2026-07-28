@@ -38,7 +38,7 @@ docforge_provenance:
 
 ### 2. The repo-level manifest
 
-`.docforge/manifest.json` is one file with two jobs: it is the **durable plan** (`scripts/manifest_sync.py` writes it at Gate 1 — one entry per planned document, grouped, with its status) *and* the **aggregated provenance index**, so a full staleness sweep doesn't require opening every document in the tree. Provenance lives under each document's `sections` array, in the **same envelope** `manifest_sync.py` and `check_provenance.py` both read — there is no second, separate manifest shape:
+`.docforge/manifest.json` is one file with two jobs: it is the **durable plan** (`scripts/manage_manifest.py` writes it at Gate 1 — one entry per planned document, grouped, with its status) *and* the **aggregated provenance index**, so a full staleness sweep doesn't require opening every document in the tree. Provenance lives under each document's `sections` array, in the **same envelope** `manage_manifest.py` and `check_staleness.py` both read — there is no second, separate manifest shape:
 
 ```json
 {
@@ -76,7 +76,7 @@ docforge_provenance:
 }
 ```
 
-The `sections` array mirrors the frontmatter block above exactly (a list of `{id, sources: [{path, git_blob}]}`), so the two never diverge. A document still `planned` or `in_progress` carries an empty `sections` (or none) and is skipped by the staleness sweep. Treat per-document frontmatter as the source of truth and the manifest's `sections` as a derived index — rebuild it with `scripts/check_provenance.py --rebuild-manifest` rather than hand-editing both. Commit `.docforge/manifest.json`; it is small, plain text, and lets a teammate check staleness without re-running any generation.
+The `sections` array mirrors the frontmatter block above exactly (a list of `{id, sources: [{path, git_blob}]}`), so the two never diverge. A document still `planned` or `in_progress` carries an empty `sections` (or none) and is skipped by the staleness sweep. Treat per-document frontmatter as the source of truth and the manifest's `sections` as a derived index — rebuild it with `scripts/check_staleness.py --rebuild-manifest` rather than hand-editing both. Commit `.docforge/manifest.json`; it is small, plain text, and lets a teammate check staleness without re-running any generation.
 
 ## The staleness algorithm
 
@@ -103,7 +103,7 @@ Whole-document regeneration is warranted only when most sections are stale simul
 ## Running the check
 
 ```
-python scripts/check_provenance.py --manifest .docforge/manifest.json
+python scripts/check_staleness.py --manifest .docforge/manifest.json
 ```
 
 Each written document reports as one of three document-level statuses: `FRESH` (`FRESH    <doc>`); `PARTIAL`, emitted as one line per offending file — `PARTIAL  <doc>  section=<id>  <file_status>: <file>`, where `<file_status>` is `STALE` (content changed) or `MISSING` (source file gone); or `STALE    <doc>  (no section granularity recorded)` for a pre-existing doc adopted into the manifest without section-level frontmatter (see below). Exit code is 0 only if every checked document is `FRESH`. Add `--flow <name>` to filter to one section id, `--json` for machine-readable output in a CI check, `--rebuild-manifest` to regenerate the manifest from every document's frontmatter after a manual edit.

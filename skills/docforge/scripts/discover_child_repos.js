@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-/* discover_repos.js — assemble the full repo collection for a docforge
+/* discover_child_repos.js — assemble the full repo collection for a docforge
  * diligence job: the parent, every declared git submodule, and every nested
  * repo detected on disk that ISN'T declared in .gitmodules (vendored copies,
  * git-subtree merges, manually cloned submodules).
@@ -11,9 +11,9 @@
  * generation before a diligence portfolio layer is built on top of them.
  *
  * Usage:
- *   node discover_repos.js --root <parent-repo-path>
- *   node discover_repos.js --root <parent-repo-path> --json
- *   node discover_repos.js --root <parent-repo-path> --exclude node_modules --exclude vendor/cache
+ *   node discover_child_repos.js --root <parent-repo-path>
+ *   node discover_child_repos.js --root <parent-repo-path> --json
+ *   node discover_child_repos.js --root <parent-repo-path> --exclude node_modules --exclude vendor/cache
  *
  * Node.js built-ins only.
  */
@@ -132,7 +132,7 @@ function parseArgs(argv) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.root) {
-    console.error("usage: discover_repos.js --root <path> [--exclude <name>]... [--json]");
+    console.error("usage: discover_child_repos.js --root <path> [--exclude <name>]... [--json]");
     return 2;
   }
   const root = path.resolve(args.root);

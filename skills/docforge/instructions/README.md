@@ -56,14 +56,14 @@ Must-present / keep-out / mode / depth are **never** duplicated here — they ar
 
 ## Using Templates
 
-Scripts referenced below ship as both `.py` and `.js` (`scripts/docs_scaffold.py` /
-`scripts/docs_scaffold.js`, same flags, same output) — use whichever runtime (Python 3 or
+Scripts referenced below ship as both `.py` and `.js` (`scripts/scaffold_docs.py` /
+`scripts/scaffold_docs.js`, same flags, same output) — use whichever runtime (Python 3 or
 Node.js) is available.
 
 During Step 0 of docforge generation (see `SKILL.md` for the full gated cadence):
 1. Build/refresh the knowledge and domain graphs
-2. **Gate 1 — structure:** preview the empty tree (`docs_scaffold.py --dry-run`), present the
-   layout, record it in `.docforge/manifest.json` (`manifest_sync.py init`, all `status: planned`),
+2. **Gate 1 — structure:** preview the empty tree (`scaffold_docs.py --dry-run`), present the
+   layout, record it in `.docforge/manifest.json` (`manage_manifest.py init`, all `status: planned`),
    confirm, then scaffold
 3. **Gate 2 — detail:** per document, present what it will cover (contract + depth + sources),
    confirm or adjust

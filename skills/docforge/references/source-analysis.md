@@ -16,7 +16,7 @@ Contents:
 
 ## 1. Building and refreshing the graph
 
-This section describes the understand-anything path — the default source. If `.ua/*.json` is missing and a GitNexus index already exists for the repo, `references/gitnexus-bridge.md` builds the same two files without needing understand-anything installed; `references/graph-sources.md` has the full per-capability dispatch table across both sources.
+Docforge reads whatever source is active; this section covers the **understand-anything** binding specifically (the recommended default when it is present). It is one source among several — `references/graph-sources.md` is the provider-neutral dispatch table, and `references/graph-source-gitnexus.md` is the GitNexus binding. Resolve the actual command for the active source there; the commands below are understand-anything's.
 
 ```
 /understand
@@ -26,7 +26,7 @@ A multi-agent pipeline scans the project, extracts files, functions, classes and
 
 **Check before building.** If `.ua/knowledge-graph.json` already exists and is newer than the last substantive commit, use it as is. If it is stale, re-running is incremental — only changed files are re-analysed — so a refresh is cheap. A first run on a large codebase is not: it analyses everything and consumes tokens accordingly. Tell the user before starting one on a repo of significant size.
 
-**Confirm the graph actually landed.** When `/understand` reports success but a later step still says the graph is missing, the write and the expectation have diverged — verify against the disk rather than re-running blind: `python scripts/validate_graphs.py --repo . --verbose` prints what sits in `.ua/` and `.understand-anything/` (filenames, sizes, JSON validity, node/edge counts), separating a false "not found" from a truncated or absent file. `check_preconditions.py` is the workflow gate; this is the probe for when the gate's answer surprises you.
+**Confirm the graph actually landed.** When `/understand` reports success but a later step still says the graph is missing, the write and the expectation have diverged — verify against the disk rather than re-running blind: `python scripts/diagnose_graphs.py --repo . --verbose` prints what sits in `.ua/` and `.understand-anything/` (filenames, sizes, JSON validity, node/edge counts), separating a false "not found" from a truncated or absent file. `precheck_graph.py` is the workflow gate; this is the probe for when the gate's answer surprises you.
 
 **Useful invocations:**
 
@@ -41,19 +41,23 @@ A multi-agent pipeline scans the project, extracts files, functions, classes and
 
 **`/understand` is a skill, not universally a slash command.** Some agents expose it as `/understand`; Codex uses `$understand`; others show no command until the understand-anything skill or plugin is loaded. If no command is recognized, load or enable it the way this agent loads skills (skill listing, plugin registry, an explicit load/`Skill` call) before concluding it is missing, then invoke it — in plain language where no command form exists: *"Use the understand skill to analyze this project."*
 
-**If the plugin is genuinely absent, this is not automatically a stop.** Check for a GitNexus index first — `python scripts/graph_source_gitnexus.py detect --repo <path>`. If one exists, build the graph from it instead: `references/gitnexus-bridge.md` (also `references/graph-sources.md` for the full dispatch table). Only stop per `SKILL.md`'s "Precheck" section — tell the user to install `understand-anything` *or* set up GitNexus (`npx gitnexus analyze` then `npx gitnexus setup` — see `references/gitnexus-bridge.md` Step 0) — when neither source is available.
+**If the plugin is genuinely absent, this is not automatically a stop.** Check for a GitNexus index first — `python scripts/graph_source_gitnexus.py detect --repo <path>`. If one exists, read it directly (its ladybug DB satisfies both capabilities — `references/graph-source-gitnexus.md`; the dispatch table is `references/graph-sources.md`). Only stop per `SKILL.md`'s "Precheck" section — tell the user to install `understand-anything` *or* set up GitNexus (`npx gitnexus analyze` then `npx gitnexus setup` — see `references/graph-source-gitnexus.md`) — when neither source is available.
 
 ---
 
 ## 2. Reading the graph directly
 
-The graph is JSON on disk, so you can read it rather than asking questions about it — faster, cheaper, and exact.
+How you read depends on the source's **read mode** (`references/graph-sources.md`):
+
+**JSON source (understand-anything).** The graph is JSON on disk, so read it rather than asking questions about it — faster, cheaper, and exact.
 
 ```bash
-python scripts/graph_extract.py --graph .ua/knowledge-graph.json --summary
+python scripts/read_graph.py --graph .ua/knowledge-graph.json --summary
 ```
 
 The helper probes the file's actual shape before extracting anything and reports what it found: node and edge counts, the layer distribution, the module inventory, and external dependency references. Use `--modules`, `--layers`, `--deps` or `--probe` for narrower output. Because it adapts to the shape it finds rather than assuming one, treat its output as a starting inventory to verify, not as finished prose.
+
+**DB source (GitNexus).** `.gitnexus/lbug` is a ladybug database, not JSON — `read_graph.py` does not read it. Query it via the gitnexus MCP (`cypher`/`query`/`context`), or offline with `python scripts/graph_source_gitnexus_reader.py --repo . --summary`, which prints the same kind of module/area/flow inventory. See `references/graph-source-gitnexus.md`.
 
 What the graph is good for, and what it is not:
 
@@ -94,7 +98,7 @@ evidence for it rather than a belief. Confirm the intent before asserting it:
 
 ### `flows/<flow>.md` — aligned flow documents, flat by default
 
-First confirm `python scripts/check_preconditions.py --repo <path> --need domain` reports
+First confirm `python scripts/precheck_graph.py --repo <path> --need domain` reports
 READY — flows are never enumerated by hand. Then `/understand-domain` returns the domains,
 flows and steps, and that list *is* the set of flow documents to build, one flat `<flow>.md`
 each. For each flow, source the plain steps from `/understand-domain`. Only promote a flow to
@@ -126,7 +130,7 @@ Produces an onboarding guide ordered by dependency. Treat it as a draft: **every
 
 ### `architecture/dependencies.md`
 
-External packages and services appear in the graph as import edges leaving the project's own modules; `scripts/graph_extract.py --deps` collects them. Cross-check against the manifest for versions and ranges, then ask about behaviour, which no static source carries:
+External packages and services appear in the graph as import edges leaving the project's own modules; `scripts/read_graph.py --deps` collects them. Cross-check against the manifest for versions and ranges, then ask about behaviour, which no static source carries:
 
 ```
 /understand-chat For each external service this calls, what are the timeout, retry and fallback behaviours?

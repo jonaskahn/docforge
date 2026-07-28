@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-check_document.py — mechanical pre-audit of ONE docforge document.
+lint_document.py — mechanical pre-audit of ONE docforge document.
 
 Runs the purely mechanical checks so the independent audit
 (references/document-audit.md) spends its judgement on depth, grounding and
@@ -22,10 +22,10 @@ Typed `<UPPER_SNAKE>` tokens are reported separately and are NOT defects —
 they are the intentional stand-ins for genuinely external values.
 
 Usage:
-    python check_document.py --file docs/architecture/high-level.md
-    python check_document.py --file docs/flows/checkout.md \\
+    python lint_document.py --file docs/architecture/high-level.md
+    python lint_document.py --file docs/flows/checkout.md \\
         --require-heading "## " --require-heading "Steps"
-    python check_document.py --file docs/x.md --json
+    python lint_document.py --file docs/x.md --json
 
 Exit code 0 if no defects, 1 if any defect, 2 on a usage/IO error — so it can
 gate a step. Standard library only.
@@ -60,7 +60,7 @@ def is_external_link(target: str) -> bool:
     )
 
 
-def check_document(path: Path, require_headings: list[str]) -> dict:
+def lint_document(path: Path, require_headings: list[str]) -> dict:
     text = path.read_text(encoding="utf-8", errors="ignore")
     lines = text.split("\n")
     defects: list[dict] = []
@@ -142,7 +142,7 @@ def main() -> int:
         print(f"error: not a file: {args.file}", file=sys.stderr)
         return 2
 
-    result = check_document(args.file, args.require_heading)
+    result = lint_document(args.file, args.require_heading)
 
     if args.json:
         print(json.dumps(result, indent=2))

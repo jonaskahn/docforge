@@ -55,7 +55,7 @@ lives in the *depth of the right documents*, not in the *count* of them.
 
 ## Which command feeds which cell
 
-The knowledge graph gives breadth (the map), from whichever source built `.ua/*.json`
+The knowledge graph gives breadth (the map), from whichever source is active
 (`references/graph-sources.md`). Depth comes from the deeper commands — `/understand-explain`
 is the engine for L2/L3 and is required there, not optional; where understand-anything isn't
 the active source, the GitNexus column is the required substitute for the same depth, not an
@@ -63,14 +63,14 @@ optional extra.
 
 | Document / layer | Depth | understand-anything command | GitNexus equivalent | What it yields |
 |---|---|---|---|---|
-| `architecture/high-level.md` (context, blocks) | L1 | `/understand` (the graph) | graph already built via the bridge | module map, layers, boundaries |
+| `architecture/high-level.md` (context, blocks) | L1 | `/understand` (the graph) | the lbug DB (`cypher`/`query`, or the offline reader) | module map, layers, boundaries |
 | `architecture/low-level.md` (components) | L1–L2 | graph + `/understand-explain <path>` | `context` MCP tool | component decomposition |
 | `architecture/concepts/<subsystem>/engineering.md` | L2–L3 | `/understand-explain <module>` | `context` MCP tool | internals, how it actually works |
 | invariants, failure modes, concurrency | L3 | `/understand-chat "what breaks <x> / concurrency assumptions"` | `query` or `cypher` MCP tool | the absences code can't show |
-| `flows/<flow>.md` (steps) | L0–L1 | `/understand-domain` | graph already built via the bridge (flows-only) | flow skeleton in business terms |
+| `flows/<flow>.md` (steps) | L0–L1 | `/understand-domain` | native `Process` nodes (`query`, or the offline reader `--flows`) | flow skeleton in business terms |
 | `flows/<flow>/business-analyst.md` (rules, once promoted) | L1–L2 | `/understand-chat "what business rules gate <flow>"` | `query` MCP tool | thresholds, exceptions |
 | `flows/<flow>/engineering.md` (mechanism, once promoted) | L2 | `/understand-explain <flow module>` | `context` MCP tool | execution detail |
-| `flows/<flow>/product-owner.md` (once promoted), PO docs | L0 | `/understand-domain` + `/understand-diff` | flows-only graph + `detect_changes` MCP tool | feature set, release framing |
+| `flows/<flow>/product-owner.md` (once promoted), PO docs | L0 | `/understand-domain` + `/understand-diff` | native `Process` nodes + `detect_changes` MCP tool | feature set, release framing |
 | `engineering/setup.md` | how-to | `/understand-onboard` | none — write from README/config inspection instead | zero-to-running (verify every command) |
 | `reference/configuration.md`, `limitations.md` | reference | targeted `/understand-chat` | `query` or `cypher` MCP tool | env vars, unhandled cases |
 
@@ -81,7 +81,7 @@ for the complete capability dispatch table.
 ## Discovering the flows
 
 A file under `docs/flows/` exists per business flow — flat by default, `<flow>.md`. Enumerate
-the flows before writing them: `python scripts/check_preconditions.py --repo <path> --need
+the flows before writing them: `python scripts/precheck_graph.py --repo <path> --need
 domain` must report READY, then `/understand-domain` returns the domains, flows and steps in
 the code's own terms — that list *is* the set of flow documents to build. Never hand-type the
 flow list; the point of the analysis is to find the flows a writer would otherwise miss. A

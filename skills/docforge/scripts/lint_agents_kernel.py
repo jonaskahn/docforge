@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-check_agents_kernel.py — mechanical rubric check for AGENTS.md (agent-context overlay).
+lint_agents_kernel.py — mechanical rubric check for AGENTS.md (agent-context overlay).
 
-Runs the format-specific checks scripts/check_document.py has no concept of: the
+Runs the format-specific checks scripts/lint_document.py has no concept of: the
 100-line cap, the 7-numbered-section shape, the tagline/test-sentence convention,
-and dangling `@docs/agents/...` references. Run alongside check_document.py, which
+and dangling `@docs/agents/...` references. Run alongside lint_document.py, which
 still covers this file's generic checks (scaffold markers, empty headings, dead
 `[](...)`  links, unlinked mentions) — this script never replaces it.
 
@@ -28,8 +28,8 @@ Checks, for the single AGENTS.md-shaped file given:
     disk, relative to --repo                                   (defect)
 
 Usage:
-    python check_agents_kernel.py --file AGENTS.md --repo .
-    python check_agents_kernel.py --file AGENTS.md --repo . --json
+    python lint_agents_kernel.py --file AGENTS.md --repo .
+    python lint_agents_kernel.py --file AGENTS.md --repo . --json
 
 Exit code 0 if no defects, 1 if any defect, 2 on a usage/IO error. Standard library only.
 """
@@ -55,7 +55,7 @@ WEAK_PRONOUN_RE = re.compile(r" (you|we|I) ")
 EXEMPT_SECTIONS = ("2", "6")  # Boundaries, Absolute Rules — no "The test:" line required
 
 
-def check_agents_kernel(path: Path, repo: Path) -> dict:
+def lint_agents_kernel(path: Path, repo: Path) -> dict:
     text = path.read_text(encoding="utf-8", errors="ignore")
     lines = text.split("\n")
 
@@ -156,7 +156,7 @@ def main() -> int:
         print(f"error: not a file: {args.file}", file=sys.stderr)
         return 2
 
-    result = check_agents_kernel(args.file, args.repo)
+    result = lint_agents_kernel(args.file, args.repo)
 
     if args.json:
         print(json.dumps(result, indent=2))

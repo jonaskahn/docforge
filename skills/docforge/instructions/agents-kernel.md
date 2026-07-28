@@ -40,7 +40,7 @@ manifests — never a second full documentation set. Budget-first: cut before yo
 
 - Never let a `docs/agents/*` file restate a fact `architecture/`, `reference/`, or
   `engineering/` already owns — link instead. `patterns.md` is the sole exception.
-- Run `scripts/check_agents_kernel.{py,js}` on `AGENTS.md` before presenting it; a clean pass
+- Run `scripts/lint_agents_kernel.{py,js}` on `AGENTS.md` before presenting it; a clean pass
   is necessary, not sufficient — the independent audit (`document-audit.md`) still judges depth
   and duplication.
 - `.claude/settings.json` is merged on re-runs, never overwritten — union `permissions.deny`,

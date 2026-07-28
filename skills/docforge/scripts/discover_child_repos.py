@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-discover_repos.py — assemble the full repo collection for a docforge
+discover_child_repos.py — assemble the full repo collection for a docforge
 diligence job: the parent, every declared git submodule, and every nested
 repo detected on disk that ISN'T declared in .gitmodules (vendored copies,
 git-subtree merges, manually cloned submodules).
@@ -11,9 +11,9 @@ For each repo found, reports whether it already has a docforge baseline
 generation before a diligence portfolio layer is built on top of them.
 
 Usage:
-    python discover_repos.py --root <parent-repo-path>
-    python discover_repos.py --root <parent-repo-path> --json
-    python discover_repos.py --root <parent-repo-path> --exclude node_modules --exclude vendor/cache
+    python discover_child_repos.py --root <parent-repo-path>
+    python discover_child_repos.py --root <parent-repo-path> --json
+    python discover_child_repos.py --root <parent-repo-path> --exclude node_modules --exclude vendor/cache
 """
 
 import argparse

@@ -88,7 +88,7 @@
                 },
                 "sections": {
                   "type": "array",
-                  "description": "Per-section provenance, aggregated from the document's frontmatter once written. Empty (or absent) for a document still 'planned' or 'in_progress'. Each entry names one heading-anchored section and the source files it draws from; this is what check_provenance.py reads to decide staleness at section granularity.",
+                  "description": "Per-section provenance, aggregated from the document's frontmatter once written. Empty (or absent) for a document still 'planned' or 'in_progress'. Each entry names one heading-anchored section and the source files it draws from; this is what check_staleness.py reads to decide staleness at section granularity.",
                   "items": {
                     "type": "object",
                     "required": ["id", "sources"],

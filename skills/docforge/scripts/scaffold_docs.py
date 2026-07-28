@@ -17,9 +17,9 @@ Two modes:
 
 Examples
 --------
-    python docs_scaffold.py --repo ../my-service --tier 2 --overlay api
-    python docs_scaffold.py --repo ../my-service --tier 2 --overlay api --dry-run
-    python docs_scaffold.py --repo ../my-service --audit
+    python scaffold_docs.py --repo ../my-service --tier 2 --overlay api
+    python scaffold_docs.py --repo ../my-service --tier 2 --overlay api --dry-run
+    python scaffold_docs.py --repo ../my-service --audit
 
 Standard library only.
 """

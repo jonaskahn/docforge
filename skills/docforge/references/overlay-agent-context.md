@@ -1,6 +1,6 @@
 # Overlay: Agent Context
 
-**Applies by default, every run.** Unlike the BA/PO audience overlays, this one is not conditional on asking or on finding a signal — `docs_scaffold.py`/`.js` and `manifest_sync.py`/`.js` add `agent-context` automatically unless the user explicitly opts out (`--no-agent-context` on either script). An existing `.cursor/`, `.github/copilot-instructions.md`, `.codex/`, or `.windsurf/` directory is still meaningful — it decides which cross-vendor mirror to hand-pull (see "Cross-vendor mirrors" below), not whether this overlay runs at all.
+**Applies by default, every run.** Unlike the BA/PO audience overlays, this one is not conditional on asking or on finding a signal — `scaffold_docs.py`/`.js` and `manage_manifest.py`/`.js` add `agent-context` automatically unless the user explicitly opts out (`--no-agent-context` on either script). An existing `.cursor/`, `.github/copilot-instructions.md`, `.codex/`, or `.windsurf/` directory is still meaningful — it decides which cross-vendor mirror to hand-pull (see "Cross-vendor mirrors" below), not whether this overlay runs at all.
 
 **Ordering:** every document in this overlay is written *last*, after every other document the run produces (Step 5 of `SKILL.md`). The kernel and stubs below point into `architecture/`, `flows/`, `reference/`, and `decisions/` — those must exist first or the links are dangling.
 
@@ -18,7 +18,7 @@ This is a deliberate, stated departure from how this capability works elsewhere:
 
 ### `AGENTS.md`
 
-The kernel — the one file an agent reads before touching anything else. **Hard cap: 100 lines.** Sui generis: not on the L0–L3 depth ladder, no YAML frontmatter (see the provenance exception in `provenance-tracking.md`), checked by its own mechanical linter (`scripts/check_agents_kernel.{py,js}`), not the general document checklist.
+The kernel — the one file an agent reads before touching anything else. **Hard cap: 100 lines.** Sui generis: not on the L0–L3 depth ladder, no YAML frontmatter (see the provenance exception in `provenance-tracking.md`), checked by its own mechanical linter (`scripts/lint_agents_kernel.{py,js}`), not the general document checklist.
 
 Seven numbered `## ` sections, each opening with a bold one-line tagline and (except Boundaries and Absolute Rules) closing with a `The test: …` sentence that lets a reader verify the section actually holds:
 
@@ -75,8 +75,8 @@ Only produced if a `CONVENTIONS.md` already exists in the repo. A distilled, AI-
 
 ## Gating
 
-All documents in this overlay require both the knowledge graph and domain graph (see `SKILL.md`'s "Precheck" section). Check with `scripts/check_preconditions.py --repo <path> --need domain` — both must report READY before any document in this overlay is written. `docs/agents/flow.md` specifically, like `docs/flows/` content, is never hand-typed; it comes from the domain graph.
+All documents in this overlay require both the knowledge graph and domain graph (see `SKILL.md`'s "Precheck" section). Check with `scripts/precheck_graph.py --repo <path> --need domain` — both must report READY before any document in this overlay is written. `docs/agents/flow.md` specifically, like `docs/flows/` content, is never hand-typed; it comes from the domain graph.
 
 ## Non-negotiable specific to this overlay
 
-Never let `AGENTS.md` exceed its 100-line cap by restating content a linked document already carries. A kernel that duplicates `architecture/high-level.md`'s prose to avoid a link is a **duplicated-truth** defect, made worse by blowing the budget that makes the kernel usable in the first place — run `scripts/check_agents_kernel.{py,js}` before presenting it.
+Never let `AGENTS.md` exceed its 100-line cap by restating content a linked document already carries. A kernel that duplicates `architecture/high-level.md`'s prose to avoid a link is a **duplicated-truth** defect, made worse by blowing the budget that makes the kernel usable in the first place — run `scripts/lint_agents_kernel.{py,js}` before presenting it.

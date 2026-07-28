@@ -10,7 +10,7 @@ A diligence review is adversarial-by-default: the reviewer is specifically looki
 
 Run:
 ```
-python scripts/discover_repos.py --root <parent-repo-path>
+python scripts/discover_child_repos.py --root <parent-repo-path>
 ```
 This returns every repo in scope, in three categories:
 
@@ -29,7 +29,7 @@ Even outside a formal diligence job, run the same discovery check before generat
 For each repo the discovery step returns:
 
 1. Look for `.docforge/manifest.json` and `docs/architecture/high-level.md`.
-   - Both present → this repo already has a docforge baseline. Run `check_provenance.py` against it as usual (see `provenance-tracking.md`) rather than treating it as new.
+   - Both present → this repo already has a docforge baseline. Run `check_staleness.py` against it as usual (see `provenance-tracking.md`) rather than treating it as new.
    - Either missing → this repo has never been through docforge. **Generate its baseline first** — the full Step 1–6 workflow, plus the BA/PO audience overlays (Step 3) if that documentation is in scope for the review — before the collection is considered ready for the portfolio layer.
 2. Do not proceed to `docs-portfolio/` with a known gap in the collection. An unreviewed repo silently included looks assessed when it was not, which is worse than one honestly flagged as missing.
 3. Record every repo's status in `docs-portfolio/repo-inventory.md` (new file, sits beside docforge's `README.md` and `system-context.md` in the portfolio layer) — see the table format below.

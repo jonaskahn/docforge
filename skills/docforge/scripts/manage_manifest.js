@@ -17,16 +17,16 @@
  *   status   print the plan as a table with a status summary.
  *
  * Statuses: planned -> in_progress -> generated -> needs_review -> complete (or skipped).
- * Paths mirror references/docs-tree.md and scripts/docs_scaffold.js exactly.
+ * Paths mirror references/docs-tree.md and scripts/scaffold_docs.js exactly.
  *
  * Examples
  * --------
- *   node manifest_sync.js init   --repo ../my-service --tier 2 --name my-service
- *   node manifest_sync.js add    --repo ../my-service --group flows \
+ *   node manage_manifest.js init   --repo ../my-service --tier 2 --name my-service
+ *   node manage_manifest.js add    --repo ../my-service --group flows \
  *                                 --id flow_checkout --type flows \
  *                                 --path docs/flows/checkout.md --needs-dg
- *   node manifest_sync.js set    --repo ../my-service --id setup_guide --status complete
- *   node manifest_sync.js status --repo ../my-service
+ *   node manage_manifest.js set    --repo ../my-service --id setup_guide --status complete
+ *   node manage_manifest.js status --repo ../my-service
  *
  * Node.js built-ins only.
  */
@@ -54,7 +54,7 @@ const GROUPS = [
 ];
 
 // Spine plan: the documents a tier implies, keyed to the same paths
-// docs_scaffold.js emits. `template` and `requires_*` are resolved from
+// scaffold_docs.js emits. `template` and `requires_*` are resolved from
 // document-templates.json by type. [group, id, type, path, min_tier]
 const SPINE_PLAN = [
   ["architecture", "arch_high_level", "architecture-high-level", "docs/architecture/high-level.md", 1],
@@ -100,7 +100,7 @@ function makeDoc(id, type, docPath, template, needsKg, needsDg) {
     template,
     // Per-section provenance, filled as the document is written and stamped
     // (each entry: {id: <anchor>, sources: [{path, git_blob}]}).
-    // check_provenance.js reads this to decide staleness; empty while planned.
+    // check_staleness.js reads this to decide staleness; empty while planned.
     sections: [],
   };
 }
@@ -310,7 +310,7 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   const validCmds = ["init", "add", "set", "status"];
   if (!validCmds.includes(args.cmd)) {
-    console.error(`usage: manifest_sync.js <${validCmds.join("|")}> --repo <path> [options]`);
+    console.error(`usage: manage_manifest.js <${validCmds.join("|")}> --repo <path> [options]`);
     return 1;
   }
   if (!args.repo) {

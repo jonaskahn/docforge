@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-check_provenance.py — compare recorded git blob hashes against current
+check_staleness.py — compare recorded git blob hashes against current
 working-tree content to decide whether a docforge document (or one
 of its sections) needs to be rewritten.
 
 Usage:
-    python check_provenance.py --manifest .docforge/manifest.json
-    python check_provenance.py --manifest .docforge/manifest.json --flow order-approval-threshold
-    python check_provenance.py --manifest .docforge/manifest.json --json
-    python check_provenance.py --rebuild-manifest --docs-dir docs --manifest .docforge/manifest.json
+    python check_staleness.py --manifest .docforge/manifest.json
+    python check_staleness.py --manifest .docforge/manifest.json --flow order-approval-threshold
+    python check_staleness.py --manifest .docforge/manifest.json --json
+    python check_staleness.py --rebuild-manifest --docs-dir docs --manifest .docforge/manifest.json
 
 Exit code is 0 if everything is FRESH, 1 if anything is PARTIAL/STALE/MISSING,
 2 on a usage or IO error — so this can gate a CI job.
@@ -23,7 +23,7 @@ from pathlib import Path
 
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
-# Same group vocabulary manifest_sync.py uses, in the same order.
+# Same group vocabulary manage_manifest.py uses, in the same order.
 GROUPS = ["architecture", "flows", "product", "engineering", "operations",
           "reference", "security", "contributing", "records"]
 
@@ -89,7 +89,7 @@ def extract_frontmatter_yaml_naive(text: str) -> dict | None:
 
 def rebuild_manifest(docs_dir: Path, manifest_path: Path) -> None:
     """Reconstruct the manifest from every document's frontmatter, in the same
-    document_groups envelope manifest_sync.py writes — so check() reads one shape
+    document_groups envelope manage_manifest.py writes — so check() reads one shape
     whether the manifest was built by the plan or rebuilt from disk. Group and id
     are inferred from the path; type is 'adopted' since frontmatter doesn't record it."""
     groups: dict[str, list[dict]] = {}

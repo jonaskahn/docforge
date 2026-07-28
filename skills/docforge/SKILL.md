@@ -25,43 +25,50 @@ Six rules that hold regardless of tier, repo type, ecosystem, or audience. Viola
 
 ## Precheck — mandatory before every invocation
 
-**This runs first, before any other step, every single time.** Both required graph files must be present and ready before docforge proceeds — from either of two sources, checked in priority order. See `references/graph-sources.md` for the full capability-to-source dispatch table.
+**This runs first, before any other step, every single time.** Docforge is provider-agnostic: it grounds every document in a **code graph** produced by *any one* registered graph source. See `references/graph-sources.md` for the sources that ship today (Understand-Anything, GitNexus), where each stores its graph, and the capability-to-command dispatch table; `references/adding-a-graph-source.md` for how to add one.
 
-Every script in `scripts/` ships as both a Python file (`scripts/<name>.py`) and a Node.js file (`scripts/<name>.js`) — same flags, same output, same exit codes, standard-library/built-ins only on either side, no install step. Examples below show the Python form; use `node scripts/<name>.js …` with identical flags if Python 3 is not available (or vice versa). Pick whichever runtime is already on the machine — `python3 --version` / `node --version` to check.
+Every script in `scripts/` ships as both a Python file (`scripts/<name>.py`) and a Node.js file (`scripts/<name>.js`) — same flags, same output, same exit codes, standard-library/built-ins only, no install step. The **one exception** is `graph_source_gitnexus_reader.{py,js}`, the optional offline reader for GitNexus's ladybug DB, which needs a driver (`@ladybugdb/core` / a ladybug Python binding) — it degrades gracefully when absent, and the gitnexus MCP is the preferred read path anyway. Examples below show the Python form; use `node scripts/<name>.js …` with identical flags if Python 3 is not available (or vice versa). Pick whichever runtime is already on the machine — `python3 --version` / `node --version` to check.
 
-### Run the graph check first — it reports READY/MISSING and, on a miss, which source to build from
+### The requirement model — code graph gates, flow graph is native-else-derived
+
+- **Code graph** (structure, modules, layers, call/import edges) is the **universal precondition** for every docforge invocation, whatever the tier, scope, or planned documents. Any one source that has built one satisfies it. **Docforge never fabricates a code graph itself** — if none exists it stops and tells the user which source to build one with.
+- **Flow graph** (business domains, flows, ordered steps) is required only for `docs/flows/`, `docs/product/`, BA/PO overlays, and agent-context flow sections. It is resolved **native-first, else derived**: use a source's flow graph if present; otherwise docforge derives a *provisional* one from the code graph into `.docforge/tmp/domain-graph.json` (git-ignored, never committed — `references/domain-derivation.md`). So flow docs are never hard-blocked while a code graph exists.
+
+### Run the graph check first — it reports READY/MISSING and, on a miss, how to get it
 
 ```
-python scripts/check_preconditions.py --repo <path> --need domain
+python scripts/precheck_graph.py --repo <path> --need code
 ```
 
-This single call reports READY/MISSING for the knowledge graph *and* the domain graph — no need to run it twice. It checks `.ua/knowledge-graph.json` / `.ua/domain-graph.json` (or their legacy `.understand-anything/` counterparts) regardless of which tool produced them, then branch on what it prints:
+This resolves the code graph across every registered source and reports `READY` (with the source and path) or `MISSING`. Branch on what it prints:
 
-**READY for both:** Precheck passes — proceed to Step 1. Skip the rest of this section entirely; which source built the graph does not matter downstream.
+**READY:** the code graph exists — Precheck passes, proceed to Step 1. The script prints every ready source, its path, and how it is read (a JSON source via `read_graph.py`; GitNexus's ladybug DB via the gitnexus MCP or the offline reader). If **more than one** source is ready for the repo, ask the user which to read — **recommend understand-anything** (offline-readable JSON), noting that GitNexus's lbug can be richer on some repos (native processes) so the choice is informed. Under `--auto-accept`, take the recommended source and say so. Which source you read does not otherwise matter downstream.
 
-**MISSING, and the script's output shows "GitNexus index detected":** a GitNexus index already exists for this repo — building `.ua/*.json` from it is usually cheaper than a first `/understand` run. **Ask for explicit permission first**, same rule as below. If the user agrees, follow `references/gitnexus-bridge.md` end to end (it ends with the same re-check above). If they decline, fall through to the understand-anything path.
+**MISSING:** no source has a code graph built yet. The script prints *every* configured source's setup path, priority-ordered — it does not privilege one tool. Two cases:
+- **A producer is installed** (the understand-anything skill is loadable, or the gitnexus plugin is present): ask the user which source to use, then **load and run it to build the graph**, showing a notice first (a first `/understand` run or a `npx gitnexus analyze` consumes tokens). Under `--auto-accept`, build with the recommended source (understand-anything) after the notice, without waiting. Confirm the exact command against `references/graph-sources.md`; for GitNexus see `references/graph-source-gitnexus.md`.
+- **No producer at all**: **stop.** Tell the user to install understand-anything *or* set up GitNexus (`npx gitnexus analyze` then `npx gitnexus setup`). Do not run a producer command unprompted, and do not write any documentation from directory names while the code graph is missing.
 
-**MISSING, and no GitNexus index exists:** fall back to understand-anything.
-1. **Skill-callable check: `understand-anything:understand` and `understand-anything:understand-domain`.** Confirm that both skills appear in your own available-skill listing. The command name varies by agent (slash command `/understand`, Codex `$understand`, or plain language where no command exists: *"use the understand skill"*). If you don't see the skill listed, try to load it (via Skill tool, plugin registry, or your agent's load/enable mechanism) and re-check the listing.
-   - **If genuinely absent after load attempt:** Stop. Tell the user to install the `understand-anything` plugin *or* set up GitNexus for this repo (`npx gitnexus analyze` to index, `npx gitnexus setup` to connect the editor — see `references/gitnexus-bridge.md` Step 0), then return here. Do not take any further docforge step without one of the two.
-2. **Knowledge graph missing:** the user must generate it. **Ask for explicit permission first** before running `/understand` yourself — do not invoke it unprompted. If the user declines, stop and wait. If they agree, run `/understand` (or `/understand <path>` to scope to a subdirectory; large first runs consume tokens — say so before starting), then re-run the check above to confirm READY before continuing to the domain-graph branch.
-3. **Domain graph missing** (knowledge graph READY): **do not offer to run `/understand-domain` yourself** — tell the user they must run it, using the exact command the script prints. Stop and wait; no document of any kind is written until this exists.
+### Before writing flow-dependent docs
 
-### Universal requirement — no fallback
+When the plan includes `docs/flows/`, `docs/product/`, BA/PO, or agent-context flow content, re-check with:
 
-Both `.ua/knowledge-graph.json` and `.ua/domain-graph.json` (or their legacy `.understand-anything/` counterparts) are **required for every docforge invocation**, regardless of tier, scope, or which documents are planned, and regardless of which of the two sources above built them. This means: architecture/spine documents, flow documents, product content, BA/PO overlays, and agent-context files all require the domain graph. No inspection fallback exists for architecture-only work anymore — "no fallback" means the graph requirement itself can never be skipped, not that only one tool may satisfy it.
+```
+python scripts/precheck_graph.py --repo <path> --need flow
+```
+
+`READY` (native) → proceed. `READY` (docforge-derived) → proceed, but treat flows as **provisional** (confirm business rules against source before asserting them). `MISSING` → either produce a native flow graph from a source, or derive one from the code graph — the script prints both paths; the derivation loop is in `references/domain-derivation.md`.
 
 ### Operational notes on graphs
 
 Every document in the tree makes claims about the source. The knowledge graph replaces guessing with retrieval: it gives you the module map, the architectural layers, the call and import edges, the business domains and flows, and a queryable interface for everything the graph does not already state.
 
-- **Check for existing graphs first.** If `.ua/knowledge-graph.json` and `.ua/domain-graph.json` are both present and newer than the last substantive commit, use them as-is. If either is stale, `/understand` and `/understand-domain` update them incrementally rather than starting over — re-runs are cheap. If the graph came from GitNexus instead, refresh via `references/gitnexus-bridge.md`'s steps (`npx gitnexus analyze` then re-run the bridge) — see `references/graph-sources.md` for the full per-source refresh mapping.
-- **Large repos**: scope the analysis to the part being documented — `/understand src/frontend` — rather than paying for a full pass you do not need. First runs on large codebases consume significant tokens; say so before starting one.
-- **After any regeneration**, re-run the Precheck to confirm freshness:
+- **Check for an existing graph first.** If a code graph is already present and newer than the last substantive commit, use it as-is. Refresh is per source: `references/graph-sources.md` maps "refresh after code changes" to each source's command (understand-anything re-runs incrementally; a GitNexus index is re-analysed with `npx gitnexus analyze`). A docforge-derived flow graph is provisional and regenerated each run, so it is never "stale" in the provenance sense.
+- **Large repos**: scope the analysis to the part being documented where the source supports it (`references/graph-sources.md`, "Scope analysis to a subdirectory") rather than paying for a full pass you do not need. First runs on large codebases consume significant tokens; say so before starting one.
+- **After any regeneration**, re-run the Precheck to confirm freshness (`--need flow` if flow docs are planned):
   ```
-  python scripts/check_preconditions.py --repo <path> --need domain
+  python scripts/precheck_graph.py --repo <path> --need code
   ```
-- **Read the graph directly** once confirmed ready. `python scripts/graph_extract.py --graph .ua/knowledge-graph.json --summary` prints the module inventory, layer assignment and external dependency list in a form that seeds the code map and the dependency inventory.
+- **Read the code graph directly** once confirmed ready, per the source's read mode. For a **JSON** source, `python scripts/read_graph.py --summary` resolves the graph and prints the module inventory, layer assignment and external dependency list. For a **DB** source (GitNexus), read the ladybug DB via the gitnexus MCP (`cypher`/`query`/`context`) or the offline `python scripts/graph_source_gitnexus_reader.py --repo <path> --summary` — same kind of inventory (`references/graph-source-gitnexus.md`).
 
 Then, whenever a document needs a fact the graph does not already state, query rather than infer. Full command-to-document mapping in `references/source-analysis.md`; the essentials:
 
@@ -101,22 +108,33 @@ These change *scope* or *pacing* — never which non-negotiables apply. A flag c
 
 | Flag | Effect |
 |---|---|
-| `--revise all` | Skip Gate 1/2 planning (the tree already exists). Run `check_provenance.py` across the full manifest, regenerate every `PARTIAL` section, and re-ground in full any document reporting a document-level `STALE` (adopted, no section granularity) — per "Updating existing docs" below. |
+| `--revise all` | Skip Gate 1/2 planning (the tree already exists). Run `check_staleness.py` across the full manifest, regenerate every `PARTIAL` section, and re-ground in full any document reporting a document-level `STALE` (adopted, no section granularity) — per "Updating existing docs" below. |
 | `--revise <area>` | Same provenance check, scoped to one manifest entry or group — `--revise security`, `--revise flows/checkout`. Only that entry's sections are checked and, if stale, regenerated. |
-| `--auto-accept` | Do not wait at any pause. Gate 1's tree, Gate 2's per-document detail, and each finished part are still displayed in full, in order — only the *wait-for-confirmation* step is skipped, not the display. **The independent per-document audit still runs** (it gates `complete`, not the user pause — see Step 0's write loop and `references/document-audit.md`). Written parts are still tracked in the manifest one at a time; a stale or wrong part discovered later is corrected the normal way (re-ground, rewrite that part), not silently. |
+| `--auto-accept` | Do not wait at any pause, **and auto-run side-effecting commands** — installing a driver, loading/running an external skill, building a graph — each shown as a **notice** first, then run without waiting (this is the merged `--permit-all` behaviour; there is no separate flag). It also answers the pre-plan questionnaire (below) with the stated defaults. Gate 1's tree, Gate 2's per-document detail, and each finished part are still displayed in full, in order — only the *wait* is skipped, not the display or the notices. **The independent per-document audit still runs** (it gates `complete`, not the user pause — see Step 0's write loop and `references/document-audit.md`). Written parts are still tracked in the manifest one at a time; a stale or wrong part discovered later is corrected the normal way (re-ground, rewrite that part), not silently. Default (no flag) = **ask before any side-effecting command.** |
 | `--plan-only` | Stop after Gate 2: manifest populated (`planned` status throughout), empty scaffold on disk. No content written this run. |
 | `--resume` | Read `.docforge/manifest.json` and continue from its first `planned` or `in_progress` entry instead of restarting Gate 1. |
-| `--status` | Print `manifest_sync.py status` and stop — no scaffolding, no writing. |
-| `--no-agent-context` | Opt out of the `agent-context` overlay (Step 3), which `docs_scaffold.py`/`.js` and `manifest_sync.py`/`.js` otherwise add by default on every run. |
+| `--status` | Print `manage_manifest.py status` and stop — no scaffolding, no writing. |
+| `--no-agent-context` | Opt out of the `agent-context` overlay (Step 3), which `scaffold_docs.py`/`.js` and `manage_manifest.py`/`.js` otherwise add by default on every run. |
 
 Flags compose: `--revise api --auto-accept` regenerates only the API overlay's stale sections, showing each before moving to the next without pausing. `--auto-accept --plan-only` shows the full plan and populates the manifest without pausing, then stops before content.
 
 **Do the graph analysis (Steps 1–3) before any gate.** You cannot plan a structure you have not grounded, and you cannot detail a document whose facts you have not retrieved.
 
+#### Pre-plan questionnaire — ask once, before Gate 1
+
+On an open-ended request, settle four choices up front so the plan the user confirms is the plan they want. Ask them as a small set of questions (not a wall of prose); each maps onto machinery that already exists. Under `--auto-accept`, **skip the questions and use the defaults below**, stating them in a notice.
+
+1. **Source** — resolved at Precheck (above). If more than one code-analysis source is ready, ask which to read; if none is built but a producer is installed, ask which to build with. **Recommend understand-anything.** *(auto default: the recommended ready source, else build with understand-anything.)*
+2. **Tier** — Spine (`--tier 1`), Diligence (`--tier 2`), or Portfolio (`--tier 3`) — how much of the documentation set to build (Step 2 describes each). *(auto default: inferred from team-size/scrutiny signals, as Step 2 already does.)*
+3. **Audience set** — which overlays: **All**, **Default + PO/BA + agents**, **Default + agents**, or a custom pick (Step 3's overlay list). Maps to `--overlay`. *(auto default: **Default + agents** — the spine plus the on-by-default agent-context overlay.)*
+4. **Per-document depth** — the target depth each document is written to (the L0–L3 ladder in `references/depth-and-audience.md`). *(auto default: deep-dive, the standard in Step 5.)*
+
+These feed `--tier` / `--overlay` / the source choice / the depth target. They set *scope and depth*, never the non-negotiables, and they do **not** replace the plan-and-show gate — you still present the tree (Gate 1) and per-document detail (Gate 2) and, unless `--auto-accept`, pause for confirmation.
+
 **Gate 1 — Structure (empty layout, tracked in metadata).**
-1. **Preview the tree without writing:** `python scripts/docs_scaffold.py --repo <path> --tier <n> --overlay <o> --dry-run`. This prints every file the chosen tier + overlays imply — the layout, no content.
+1. **Preview the tree without writing:** `python scripts/scaffold_docs.py --repo <path> --tier <n> --overlay <o> --dry-run`. This prints every file the chosen tier + overlays imply — the layout, no content.
 2. **Present that layout** to the user: the folder tree plus one line per document — name, path, and what it will cover (name the concrete subsystem/flow, per `references/document-catalog.md`). State tier and overlays once at the top. Group by area (architecture, flows, product, operations, reference, security, records).
-3. **Record the plan in `.docforge/manifest.json`** — `python scripts/manifest_sync.py init --repo <path> --tier <n> --name <repo>` writes it with every spine document `status: "planned"`. Add discovered flows and overlay documents with `manifest_sync.py add`. This is the durable tracking record: which documents the plan contains, where each lives, and where each stands. (`.metadata/manifest.json` is the shape it follows.)
+3. **Record the plan in `.docforge/manifest.json`** — `python scripts/manage_manifest.py init --repo <path> --tier <n> --name <repo>` writes it with every spine document `status: "planned"`. Add discovered flows and overlay documents with `manage_manifest.py add`. This is the durable tracking record: which documents the plan contains, where each lives, and where each stands. (`.metadata/manifest.json` is the shape it follows.)
 4. **Pause for explicit confirmation of the structure.** The user may add/remove documents, reorder, change tier/overlays, or propose overlays. Fold feedback into the manifest and re-present if the change is significant.
 5. **On confirmation, create the scaffold for real** (drop `--dry-run`). The empty files now exist; the manifest tracks each as `planned`.
 
@@ -124,15 +142,15 @@ Flags compose: `--revise api --auto-accept` regenerates only the API overlay's s
 Before writing prose, present — per document, in dependency order — what it will contain: the must-present elements from its `references/document-catalog.md` contract, the target depth, and the sources you will draw from. This is where the user steers depth and where you **propose** additions or cuts rather than assuming. Confirm or adjust. For a small set, fold this into Gate 1's presentation; for a large tree, do it per area so the user is never handed everything at once.
 
 **Then — write one part at a time, in dependency order (Step 5).** For each document, in order:
-- Set its manifest status to `in_progress` — `python scripts/manifest_sync.py set --repo <path> --id <id> --status in_progress` — and open a `generation-status.json` runtime entry (`querying` → `writing`).
+- Set its manifest status to `in_progress` — `python scripts/manage_manifest.py set --repo <path> --id <id> --status in_progress` — and open a `generation-status.json` runtime entry (`querying` → `writing`).
 - **Re-ground before you write.** Retrieve every must-present element for that document (`references/document-catalog.md`) from the knowledge graph, the domain graph, and the code. If a needed fact is not yet in the graph, query it — a narrow `/understand-chat`, an `/understand-explain <path>`, or direct inspection — *before* writing, not around it. Never write on thin context: if the source genuinely cannot answer a required element, that atomic value becomes a typed `<UPPER_SNAKE>` token (non-negotiable 1); everything around it is still written in full.
-- Write to deep-dive depth (Step 5, `references/depth-and-audience.md`), stamp provenance as you write, and set manifest status `generated` (`manifest_sync.py set … --status generated`; runtime `complete`). A `generated` document is *written*, not yet *done*.
+- Write to deep-dive depth (Step 5, `references/depth-and-audience.md`), stamp provenance as you write, and set manifest status `generated` (`manage_manifest.py set … --status generated`; runtime `complete`). A `generated` document is *written*, not yet *done*.
 - **Audit it independently before presenting it as done (`references/document-audit.md`).** Spawn a **fresh subagent that did not write this document** and give it only artifacts — the finished file, its `document-catalog.md` contract, its target depth, the single-document quality-bar subset, and the sources its frontmatter cites. It returns a structured verdict (`assets/templates/audit-report.md`).
   - **PASS** — present the finished part *together with its verdict* and **pause** for the user to confirm or redirect before the next. Fold feedback on part N into parts N+1…
   - **FAIL, derivable gap** — set `needs_review`, re-ground and rewrite that document, then **re-audit**. It is never presented as done while a derivable gap stands, and a derivable gap is never waived to a human.
   - **FAIL, external gap only** — the atomic unknown becomes a typed `<UPPER_SNAKE>` token (or the user's explicit waiver is recorded), then it PASSes.
   - This audit is not optional and no flag skips it: `--auto-accept` skips the user's *pause*, never the audit (the same rule that already forbids skipping the plan-and-show).
-- After the user accepts a part, set its manifest status to `complete`; anything they flag stays `needs_review`. `manifest_sync.py status --repo <path>` prints the plan and the remaining count at any time.
+- After the user accepts a part, set its manifest status to `complete`; anything they flag stays `needs_review`. `manage_manifest.py status --repo <path>` prints the plan and the remaining count at any time.
 
 **Fill-completeness never bends (non-negotiable 1).** Every part you hand over is *complete* — no punted derivable facts, no unfilled `{{…}}` scaffolds, only typed `<UPPER_SNAKE>` tokens for genuinely external values. The gates govern *structure, scope, and ordering*; they never license a half-filled document. The goal is a reviewable, steerable stream — not a thirty-file dump the user must audit at once, and not a scaffold they must finish.
 
@@ -140,12 +158,12 @@ Before writing prose, present — per document, in dependency order — what it 
 
 The `.metadata/` directory holds the templates and schemas that drive Step 0. Two of them are *tracking* files you copy into the target repo's `.docforge/` and update as you go — they answer different questions and use different status vocabularies:
 
-- `manifest.json` → the shape of `.docforge/manifest.json`, which `scripts/manifest_sync.py` writes and maintains. The **durable plan and fill-state** of the whole tree: one entry per planned document, its group, path, template, and `status` (`planned` → `in_progress` → `generated` → `needs_review` → `complete`, or `skipped`). This is the record you present at Gate 1 and update (via `manifest_sync.py set`) as each part lands. Also carries per-section provenance once written (see `references/provenance-tracking.md`). Its `project_context.tier` is stored under a different vocabulary than Step 2's table: `1 — Spine` / `2 — Diligence` / `3 — Portfolio` (the CLI's numeric `--tier`) are recorded as the strings `"core"` / `"standard"` / `"extended"` respectively — the same three tiers, spelled differently for storage.
+- `manifest.json` → the shape of `.docforge/manifest.json`, which `scripts/manage_manifest.py` writes and maintains. The **durable plan and fill-state** of the whole tree: one entry per planned document, its group, path, template, and `status` (`planned` → `in_progress` → `generated` → `needs_review` → `complete`, or `skipped`). This is the record you present at Gate 1 and update (via `manage_manifest.py set`) as each part lands. Also carries per-section provenance once written (see `references/provenance-tracking.md`). Its `project_context.tier` is stored under a different vocabulary than Step 2's table: `1 — Spine` / `2 — Diligence` / `3 — Portfolio` (the CLI's numeric `--tier`) are recorded as the strings `"core"` / `"standard"` / `"extended"` respectively — the same three tiers, spelled differently for storage.
 - `generation-status.json` → the **live session log** while you write: per document `status` (`planned` → `querying` → `writing` → `complete`, or `skipped`), timing, tokens, and any error. Ephemeral; the manifest is the record that outlives the session. **The token `complete` means different things in the two files** and they must not be equated: runtime-`complete` means "finished writing" (the doc is now `generated` in the manifest and awaits its independent audit); manifest-`complete` is the *later* state a document reaches only after it passes the audit and the user accepts it. Runtime-`complete` therefore maps to manifest-`generated`, never straight to manifest-`complete`.
 - `manifest-schema.json` / `status-schema.json` — schemas validating the two above.
 - `document-templates.json` — maps each document type to its instruction file and required data sources (a craft pointer; the content contract is `references/document-catalog.md`). `template-schema.json` validates it.
 
-Manifest document paths must match the taxonomy in `references/docs-tree.md` and what `scripts/docs_scaffold.py` emits — they are the same tree seen from the plan side and the disk side.
+Manifest document paths must match the taxonomy in `references/docs-tree.md` and what `scripts/scaffold_docs.py` emits — they are the same tree seen from the plan side and the disk side.
 
 ### Step 1 — Build the graph, then read the repo
 
@@ -157,7 +175,7 @@ Run the analysis above, then fill the gaps it does not cover:
 - **Operational reality** — CI config, container and deploy manifests, and the environment variables the code actually reads.
 - **History for the "why"** — `git log` on architecturally significant paths, and merge commits with substantive messages. This is where backfilled decision records come from, and it is the one thing the graph cannot supply.
 - **Business flows** — the Precheck already confirms both graphs exist before this step (see "Precheck" above). Read `/understand-domain`'s output to enumerate the domains, flows and steps in the code's own terms. That list *is* the set of flow documents to build under `docs/flows/` — never hand-type it, since the point of the analysis is to surface flows a writer would miss. Each flow starts as a flat file (`docs/flows/<flow>.md`); it is promoted to a folder only when you write real audience depth for it in the same pass. See `references/document-composition.md`.
-- **Child repos** — before any multi-repo work, and as a cheap sanity check otherwise, run `python scripts/discover_repos.py --root <path>`. It reports declared submodules and, more importantly, nested repos present on disk but *not* declared in `.gitmodules` (vendored copies, `git subtree` merges, hand-cloned submodules). For single-repo work this just confirms scope; for diligence it is load-bearing — see Step 2 and `references/diligence-collection.md`.
+- **Child repos** — before any multi-repo work, and as a cheap sanity check otherwise, run `python scripts/discover_child_repos.py --root <path>`. It reports declared submodules and, more importantly, nested repos present on disk but *not* declared in `.gitmodules` (vendored copies, `git subtree` merges, hand-cloned submodules). For single-repo work this just confirms scope; for diligence it is load-bearing — see Step 2 and `references/diligence-collection.md`.
 
 #### Migrate pre-existing documentation — before Gate 1, when the repo has any
 
@@ -168,7 +186,7 @@ This is the **first docforge run** against a repo that already has hand-written 
 3. **Map** surviving documents to their taxonomy slot (`references/docs-tree.md`'s placement table); split a document that serves two audiences rather than filing it under one.
 4. **Present the classification to the user and get an explicit decision before touching anything** — one line per old document: keep-in-place / migrate-to-`<slot>` / merge-into-`<target>` / archive / delete-outright. Never auto-archive, auto-merge, or silently drop a document on the strength of your own classification; "obsolete" and "stale" are your proposal, not a verdict the user already gave. Fold this decision into Gate 1's presentation rather than running it as a separate silent pass.
 5. **Leave a forwarding pointer** at any old path something external still links to.
-6. **Archive**, per the user's decision, genuinely obsolete material under `docs/_archive/<year>/` with a `README.md` explaining nothing inside is maintained — never delete design history outright unless the user explicitly says delete; `docs_scaffold.py --audit` already excludes `_archive/` from its checks.
+6. **Archive**, per the user's decision, genuinely obsolete material under `docs/_archive/<year>/` with a `README.md` explaining nothing inside is maintained — never delete design history outright unless the user explicitly says delete; `scaffold_docs.py --audit` already excludes `_archive/` from its checks.
 7. **Merge**, per the user's decision, documents they confirmed as duplicates into the single surviving target, then archive (not delete) the superseded originals so the merge is reversible.
 
 This is a distinct scenario from "Updating existing docs" (below): that section refreshes docs that **already carry docforge provenance** from a prior run, using hash comparison. This procedure runs once, on first contact with a repo's own hand-written docs; every later run on the same repo uses the provenance-hash path instead.
@@ -187,7 +205,7 @@ The numeric `--tier {1,2,3}` the CLI takes is stored in the manifest as a **stri
 
 State the chosen tier and the reasoning in one sentence before generating. If the user gives a deadline-driven signal ("we're in diligence next month"), invert the order: build the Tier 3 skeleton and the security and dependency documents first, backfill the rest after.
 
-**Tier 3 discovers its collection before it builds anything.** A multi-repo review's scope *is* the collection `scripts/discover_repos.py` returns — never a hand-typed list, since the whole point of a review is to find what the team forgot to mention. Gap-check every member (does each already carry a docforge baseline, or must one be generated first?), and record the collection honestly in `docs-portfolio/repo-inventory.md`. Read `references/diligence-collection.md` in full before proceeding.
+**Tier 3 discovers its collection before it builds anything.** A multi-repo review's scope *is* the collection `scripts/discover_child_repos.py` returns — never a hand-typed list, since the whole point of a review is to find what the team forgot to mention. Gap-check every member (does each already carry a docforge baseline, or must one be generated first?), and record the collection honestly in `docs-portfolio/repo-inventory.md`. Read `references/diligence-collection.md` in full before proceeding.
 
 ### Step 3 — Select overlays by repo type and audience
 
@@ -195,7 +213,7 @@ The spine is universal; the overlay is what makes documentation actually useful 
 
 **Repo-type overlays:**
 
-The `--overlay` flag value (the literal `docs_scaffold.py`/`manifest_sync.py` accept) is in the middle column — pass that string, not the display name.
+The `--overlay` flag value (the literal `scaffold_docs.py`/`manage_manifest.py` accept) is in the middle column — pass that string, not the display name.
 
 | Signal in the repo | Overlay (`--overlay` value) | Reference |
 |---|---|---|
@@ -214,9 +232,9 @@ Repos frequently match two type overlays (an API that also runs scheduled jobs).
 | Business Analyst (BA) — `business-analyst` | business rules, process flows, requirements traceability | `docs/product/business-analyst/` | `references/overlay-business-analyst.md` |
 | Product Owner (PO) — `product-owner` | feature value, release framing, success metrics | `docs/product/product-owner/` | `references/overlay-product-owner.md` |
 
-**Agent-context overlay — on by default, every run.** Unlike the two above, `agent-context` (`--overlay` value `agent-context`) is not conditional on a signal or a request — `docs_scaffold.py`/`.js` and `manifest_sync.py`/`.js` add it automatically unless `--no-agent-context` is passed. It produces `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json`, and `docs/agents/` (root + `docs/agents/`, see `references/overlay-agent-context.md`) — a token-budgeted orientation kernel, not a human reader. State it in the Gate 1 tree like any other overlay; only drop it when the user explicitly opts out (pass `--no-agent-context` to both scripts, and say so in the manifest).
+**Agent-context overlay — on by default, every run.** Unlike the two above, `agent-context` (`--overlay` value `agent-context`) is not conditional on a signal or a request — `scaffold_docs.py`/`.js` and `manage_manifest.py`/`.js` add it automatically unless `--no-agent-context` is passed. It produces `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json`, and `docs/agents/` (root + `docs/agents/`, see `references/overlay-agent-context.md`) — a token-budgeted orientation kernel, not a human reader. State it in the Gate 1 tree like any other overlay; only drop it when the user explicitly opts out (pass `--no-agent-context` to both scripts, and say so in the manifest).
 
-**Ordering constraint: agent-context writes last.** Every `docs/agents/*` file and `AGENTS.md`'s "Deeper Context" section are brief stubs that link into the human-facing documents this run produces (`architecture/`, `flows/`, `reference/`, decision records, etc.) — see the overlay reference's "governing rule." Those link targets must exist and be finished before the stub pointing at them is written, or the audit gate (Step 0) fails it as a dangling reference. `manifest_sync.py`'s `GROUPS` list places `agent-context` last for this reason; do not reorder Step 5's write loop to interleave agent-context documents earlier.
+**Ordering constraint: agent-context writes last.** Every `docs/agents/*` file and `AGENTS.md`'s "Deeper Context" section are brief stubs that link into the human-facing documents this run produces (`architecture/`, `flows/`, `reference/`, decision records, etc.) — see the overlay reference's "governing rule." Those link targets must exist and be finished before the stub pointing at them is written, or the audit gate (Step 0) fails it as a dangling reference. `manage_manifest.py`'s `GROUPS` list places `agent-context` last for this reason; do not reorder Step 5's write loop to interleave agent-context documents earlier.
 
 Audience content follows the three-class model in `references/audience-matrix.md`: a subject two or more audiences share is written **once**, as an aligned topic — `flows/<flow>.md` or `architecture/concepts/<subsystem>.md` — while genuinely single-reader material stays in that audience's own folder (`product/business-analyst/`, `product/product-owner/`). An aligned topic is a **flat file by default**; it becomes a folder (`<topic>/README.md` + deep-dive subfiles) only at the moment real per-reader depth is written, in the same pass — never a folder with a promised subfile that isn't there yet. Every fact is owned once and linked, never pasted into two folders. Do not produce an unrequested audience folder or an empty deep-dive subfile; an empty or promised-but-missing overlay is the same anti-pattern as an unfilled scaffold. Read `references/audience-matrix.md`, `references/document-composition.md` and `references/depth-and-audience.md` before writing any flow or audience content.
 
@@ -224,12 +242,12 @@ Audience content follows the three-class model in `references/audience-matrix.md
 
 Read `references/docs-tree.md` for the canonical taxonomy, folder naming rules, and what belongs in each file. Then either:
 
-- **Scaffold mechanically** — `python scripts/docs_scaffold.py --repo <path> --tier 2 --overlay api --overlay business-analyst` creates the directories and drops **scaffold templates** (`assets/templates/`) with `{{…}}` placeholders in place. Use this when starting from nothing; it is faster and more consistent than writing files by hand.
+- **Scaffold mechanically** — `python scripts/scaffold_docs.py --repo <path> --tier 2 --overlay api --overlay business-analyst` creates the directories and drops **scaffold templates** (`assets/templates/`) with `{{…}}` placeholders in place. Use this when starting from nothing; it is faster and more consistent than writing files by hand.
 - **Write directly** — when the repo already has partial documentation, or when only a few files are needed. Pull scaffold templates from `assets/templates/`.
 
 *Two things are called "template" in this skill — keep them distinct.* A **scaffold template** (`assets/templates/*.md`) is a starting-point file with `{{…}}` placeholders that the scaffold drops on disk. An **instruction file** (`instructions/*.md`) is writing-craft guidance for the agent, never written to disk — and it is what the manifest's `template` field and `document-templates.json`'s `instruction_file` point to. They sometimes share a base name (`architecture-high-level.md` exists in both), so resolve the manifest's `template` field against `instructions/`, not `assets/templates/`.
 
-Not every scaffold template is emitted by `docs_scaffold.py`. A few are **hand-pulled** at the moment they're needed rather than at scaffold time: `topic-readme.md` and `audience-deepdive.md` at flow/concept promotion (`references/document-composition.md`), and `repo-inventory.md` for the Tier-3 portfolio layer (`references/diligence-collection.md`). That's expected — reach for them from `assets/templates/` when you write those specific documents.
+Not every scaffold template is emitted by `scaffold_docs.py`. A few are **hand-pulled** at the moment they're needed rather than at scaffold time: `topic-readme.md` and `audience-deepdive.md` at flow/concept promotion (`references/document-composition.md`), and `repo-inventory.md` for the Tier-3 portfolio layer (`references/diligence-collection.md`). That's expected — reach for them from `assets/templates/` when you write those specific documents.
 
 Either way, the templates are starting points, not output. A scaffold left full of `{{…}}` placeholders is not a deliverable — those markers mean "not yet written," and every one must be replaced with derived content before presenting. The only marks that legitimately survive into a finished document are typed `<UPPER_SNAKE>` tokens standing in for genuinely external facts (non-negotiable 1); everything else you have evidence for, you write.
 
@@ -256,7 +274,7 @@ Later documents cite earlier ones, so order matters:
 
 **Per-document completeness, depth, mode purity, and grounding are already settled** — each document passed its independent audit (`references/document-audit.md`) before it was marked `complete` in the Step 0 write loop. Step 6 is **not** a second per-document review, and it is emphatically not the moment to first check whether a document is deep enough; that gate has already fired, one document at a time. Step 6 is the pass for the checks that are only meaningful **across the whole set**:
 
-- `python scripts/docs_scaffold.py --repo <path> --audit` — dead cross-references between documents, empty templated sections, folder-only-readme promotions, and forge-specific strings that leaked into prose.
+- `python scripts/scaffold_docs.py --repo <path> --audit` — dead cross-references between documents, empty templated sections, folder-only-readme promotions, and forge-specific strings that leaked into prose.
 - The **whole-tree** items of `references/quality-bar.md`: the four tests (onboarding, location, reviewer, stranger), index reachability (every document reachable from `docs/README.md` in two hops), and no fact duplicated across two files.
 - The onboarding test specifically: could a competent engineer who has never seen this repo go from the root README to a running local instance without asking a human a question? If not, `engineering/setup.md` is incomplete regardless of how polished the rest looks.
 
@@ -268,7 +286,7 @@ This section is for docs that **already carry docforge provenance** from a prior
 
 When asked to refresh docs that already carry docforge provenance, do not re-read and re-guess. Compare hashes:
 
-1. `python scripts/check_provenance.py --manifest .docforge/manifest.json`.
+1. `python scripts/check_staleness.py --manifest .docforge/manifest.json`.
 2. For every `PARTIAL  <doc>  section=<id>  STALE: <file>` line, regenerate only that section — re-run its narrow graph query, replace only that section's prose, re-stamp only its hashes. See "Partial rewrite" in `provenance-tracking.md`.
 3. For every `FRESH` result, leave the file untouched — do not re-open it or bump its timestamp.
 4. For a `MISSING` file-status inside a `PARTIAL` line (a recorded source file no longer exists), do not delete the claim — the logic likely moved rather than vanished. Flag it for a human to confirm.
@@ -367,7 +385,7 @@ Load only what the current task needs.
 |---|---|
 | `references/source-analysis.md` | Always — how to build and query the knowledge graph, and which command answers which document |
 | `references/graph-sources.md` | Always — which source (understand-anything or GitNexus) is active, and the capability-to-command dispatch table for each |
-| `references/gitnexus-bridge.md` | Precheck reports a GitNexus index but no `.ua/*.json` yet — the build recipe |
+| `references/graph-source-gitnexus.md` | The active/chosen source is GitNexus — what its ladybug DB stores, how to detect, read (MCP or the offline reader), and build/refresh it |
 | `references/docs-tree.md` | Always — the canonical taxonomy, folder naming, and placement rules |
 | `references/document-catalog.md` | Before writing any document — what each doc type must present and must keep out, its primary Diátaxis mode, its target depth, and its source-of-truth |
 | `instructions/<type>.md` | Alongside the catalog when writing a document of a type that has one — the writing-craft layer (layout, which `/understand-*` feeds it, how to tag provenance); `instructions/README.md` indexes them. Craft only; the contract stays in `document-catalog.md` |
@@ -388,27 +406,30 @@ Load only what the current task needs.
 | `references/overlay-*.md` | The repo-type overlay matching the repo (Step 3) |
 
 Templates live in `assets/templates/`. Scripts (each has a `.py` and an equivalent `.js` — see the note at the top of "Precheck"):
-- `scripts/check_preconditions.{py,js}` — gate all docforge work on both the knowledge graph and domain graph actually existing; run as the first step of every invocation (see "Precheck" above). Orchestrates the two source modules below — READY/MISSING reporting only, source-agnostic
-- `scripts/graph_common.{py,js}` — shared helpers used by `check_preconditions` and every `graph_source_*` module: locating a graph file up to the git root, display formatting, and writing a freshly-built graph to `.ua/`
-- `scripts/graph_source_ua.{py,js}` — understand-anything source: detection only (it always builds its own output)
-- `scripts/graph_source_gitnexus.{py,js}` — GitNexus source: `detect` (is an index present) and `build` (materialize `.ua/*.json` from raw Cypher dumps — see `references/gitnexus-bridge.md`)
-- `scripts/validate_graphs.{py,js}` — the diagnostic probe for when `check_preconditions` reports a graph missing but `.ua/` holds data; lists both graph folders' contents with sizes, JSON validity and node/edge counts
-- `scripts/graph_extract.{py,js}` — read the knowledge graph
-- `scripts/docs_scaffold.{py,js}` — create and audit the tree
-- `scripts/manifest_sync.{py,js}` — create and maintain `.docforge/manifest.json`: `init` the plan (all `planned`), `add` discovered flows/overlays, `set` a document's status as it lands, `status` for a summary
-- `scripts/check_provenance.{py,js}` — recompute git blob hashes for every source file recorded in the manifest's per-document `sections`. Emits one of three **document-level** statuses: `FRESH`; `PARTIAL` (one line per offending file — `PARTIAL  <doc>  section=<id>  <file_status>: <file>`, where `<file_status>` is `STALE` for a changed file or `MISSING` for a deleted one); or a document-level `STALE  <doc>  (no section granularity recorded)` for an adopted doc without section-level frontmatter. `MISSING` is never a document-level result — only a per-file substatus inside a `PARTIAL` line. Exit 0 only if every checked document is `FRESH`; documents still `planned`/`in_progress` are skipped
-- `scripts/discover_repos.{py,js}` — walk a root for declared submodules and undeclared nested repos, reporting each member's docforge status so gaps surface before a review, not during it
-- `scripts/check_document.{py,js}` — mechanical pre-audit of one document (`--file <path>`): flags `{{…}}` markers, empty headings, dead relative links, unlinked file mentions, and any `--require-heading` that's absent; lists typed `<UPPER_SNAKE>` tokens separately as non-defects. Run it before the independent audit (`references/document-audit.md`) so the auditing agent spends effort on judgement, not mechanics
-- `scripts/check_agents_kernel.{py,js}` — `AGENTS.md`-specific rubric (`agent-context` overlay): the 100-line cap, the 7-section shape, tagline/test-sentence conventions, and dangling `@docs/agents/…` references. Run alongside `check_document.{py,js}`, not instead of it
+- `scripts/precheck_graph.{py,js}` — gate all docforge work on the code graph (and, for `--need flow`, a flow graph) actually existing; run as the first step of every invocation (see "Precheck" above). Resolves across the registry, reports **every** ready source and how each is read — READY/MISSING only, source-agnostic
+- `scripts/graph_storage.{py,js}` — source-agnostic graph-file helpers used by `precheck_graph`, the registry, every `graph_source_*` module, and `derive_flow_graph`: locating a graph file up to the git root, display formatting, and writing a derived flow graph to `.docforge/tmp/`
+- `scripts/graph_source_registry.{py,js}` — the ordered registry of sources; `resolve_first_ready` / `resolve_all_ready` / `setup_hints_for_missing`. Add a source with one import + one list entry (`references/adding-a-graph-source.md`)
+- `scripts/graph_source_understand_anything.{py,js}` — understand-anything source (read_mode `json`): detection only (it writes its own `.ua/*.json`)
+- `scripts/graph_source_gitnexus.{py,js}` — GitNexus source (read_mode `db`): detection only — is `.gitnexus/lbug` present, what does `meta.json` promise, is it stale vs HEAD. No build step; the DB is read in place (`references/graph-source-gitnexus.md`)
+- `scripts/graph_source_gitnexus_reader.{py,js}` — optional offline reader for GitNexus's ladybug DB via `@ladybugdb/core` / a ladybug Python binding; prints a module/area/flow inventory (the DB-source counterpart to `read_graph`). Degrades gracefully when the driver is absent — the gitnexus MCP is the preferred read path
+- `scripts/derive_flow_graph.{py,js}` — `prepare`/`write` a provisional flow graph from the code graph into `.docforge/tmp/` (git-ignored), only for a source with a code graph but no native flows (`references/domain-derivation.md`)
+- `scripts/diagnose_graphs.{py,js}` — the diagnostic probe for when `precheck_graph` reports a graph missing but a graph folder holds data; lists the known graph folders' contents with sizes, JSON validity and node/edge counts (a note for the binary lbug DB)
+- `scripts/read_graph.{py,js}` — read a **JSON** code graph (understand-anything); for a DB source use the gitnexus MCP or `graph_source_gitnexus_reader`
+- `scripts/scaffold_docs.{py,js}` — create and audit the tree
+- `scripts/manage_manifest.{py,js}` — create and maintain `.docforge/manifest.json`: `init` the plan (all `planned`), `add` discovered flows/overlays, `set` a document's status as it lands, `status` for a summary
+- `scripts/check_staleness.{py,js}` — recompute git blob hashes for every source file recorded in the manifest's per-document `sections`. Emits one of three **document-level** statuses: `FRESH`; `PARTIAL` (one line per offending file — `PARTIAL  <doc>  section=<id>  <file_status>: <file>`, where `<file_status>` is `STALE` for a changed file or `MISSING` for a deleted one); or a document-level `STALE  <doc>  (no section granularity recorded)` for an adopted doc without section-level frontmatter. `MISSING` is never a document-level result — only a per-file substatus inside a `PARTIAL` line. Exit 0 only if every checked document is `FRESH`; documents still `planned`/`in_progress` are skipped
+- `scripts/discover_child_repos.{py,js}` — walk a root for declared submodules and undeclared nested repos, reporting each member's docforge status so gaps surface before a review, not during it
+- `scripts/lint_document.{py,js}` — mechanical pre-audit of one document (`--file <path>`): flags `{{…}}` markers, empty headings, dead relative links, unlinked file mentions, and any `--require-heading` that's absent; lists typed `<UPPER_SNAKE>` tokens separately as non-defects. Run it before the independent audit (`references/document-audit.md`) so the auditing agent spends effort on judgement, not mechanics
+- `scripts/lint_agents_kernel.{py,js}` — `AGENTS.md`-specific rubric (`agent-context` overlay): the 100-line cap, the 7-section shape, tagline/test-sentence conventions, and dangling `@docs/agents/…` references. Run alongside `lint_document.{py,js}`, not instead of it
 
 ---
 
 ## When a graph "isn't found" but the `.ua/` folder exists
 
-If `check_preconditions.py` or a workflow step reports the graph missing while `.ua/` clearly holds data, the file on disk and the file the step expects have diverged — a partial write, an unreadable JSON, or the wrong filename. Diagnose before re-running anything expensive:
+If `precheck_graph.py` or a workflow step reports the graph missing while `.ua/` clearly holds data, the file on disk and the file the step expects have diverged — a partial write, an unreadable JSON, or the wrong filename. Diagnose before re-running anything expensive:
 
 ```bash
-python scripts/validate_graphs.py --repo . --verbose
+python scripts/diagnose_graphs.py --repo . --verbose
 ```
 
-It prints what actually sits in `.ua/` and `.understand-anything/` — filenames, sizes, timestamps, JSON validity, node/edge counts — so a false "not found" separates cleanly from a genuinely absent or truncated graph. Where `check_preconditions.py` is the gate, this is the probe you reach for when the gate's answer surprises you. The two most common causes: `/understand` reported success but wrote nothing (re-run it — the pass is incremental and cheap), or the JSON is truncated from an interrupted write (re-run to rewrite it). Both graph locations and every parent up to the git root are searched, so subdirectory invocation is not the cause.
+It prints what actually sits in `.ua/` and `.understand-anything/` — filenames, sizes, timestamps, JSON validity, node/edge counts — so a false "not found" separates cleanly from a genuinely absent or truncated graph. Where `precheck_graph.py` is the gate, this is the probe you reach for when the gate's answer surprises you. The two most common causes: `/understand` reported success but wrote nothing (re-run it — the pass is incremental and cheap), or the JSON is truncated from an interrupted write (re-run to rewrite it). Both graph locations and every parent up to the git root are searched, so subdirectory invocation is not the cause.

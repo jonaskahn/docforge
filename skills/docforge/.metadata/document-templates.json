@@ -94,7 +94,7 @@
     {
       "type": "agents-kernel",
       "name": "AGENTS.md Kernel",
-      "description": "Root machine-consumption entry point: commands, boundaries, module map, non-obvious conventions, absolute rules, links to docs/agents/ for depth. Hard 100-line cap; self-linted by check_agents_kernel.",
+      "description": "Root machine-consumption entry point: commands, boundaries, module map, non-obvious conventions, absolute rules, links to docs/agents/ for depth. Hard 100-line cap; self-linted by lint_agents_kernel.",
       "instruction_file": "agents-kernel.md",
       "requires": ["knowledge_graph", "manifests"],
       "audience": ["agent"]

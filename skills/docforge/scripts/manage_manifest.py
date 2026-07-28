@@ -16,16 +16,16 @@ Subcommands
   status   print the plan as a table with a status summary.
 
 Statuses: planned -> in_progress -> generated -> needs_review -> complete (or skipped).
-Paths mirror references/docs-tree.md and scripts/docs_scaffold.py exactly.
+Paths mirror references/docs-tree.md and scripts/scaffold_docs.py exactly.
 
 Examples
 --------
-    python manifest_sync.py init   --repo ../my-service --tier 2 --name my-service
-    python manifest_sync.py add    --repo ../my-service --group flows \\
+    python manage_manifest.py init   --repo ../my-service --tier 2 --name my-service
+    python manage_manifest.py add    --repo ../my-service --group flows \\
                                     --id flow_checkout --type flows \\
                                     --path docs/flows/checkout.md --needs-dg
-    python manifest_sync.py set    --repo ../my-service --id setup_guide --status complete
-    python manifest_sync.py status --repo ../my-service
+    python manage_manifest.py set    --repo ../my-service --id setup_guide --status complete
+    python manage_manifest.py status --repo ../my-service
 
 Standard library only.
 """
@@ -47,7 +47,7 @@ STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "
 GROUPS = ["architecture", "flows", "product", "engineering", "operations",
           "reference", "security", "contributing", "records", "agent-context"]
 
-# Spine plan: the documents a tier implies, keyed to the same paths docs_scaffold.py
+# Spine plan: the documents a tier implies, keyed to the same paths scaffold_docs.py
 # emits. `template` and `requires_*` are resolved from document-templates.json by type.
 # (group, id, type, path, min_tier)
 SPINE_PLAN: list[tuple[str, str, str, str, int]] = [
@@ -93,7 +93,7 @@ def make_doc(id_: str, type_: str, path: str, template: str | None,
         "template": template,
         # Per-section provenance, filled as the document is written and stamped
         # (each entry: {"id": <anchor>, "sources": [{"path", "git_blob"}]}).
-        # check_provenance.py reads this to decide staleness; empty while planned.
+        # check_staleness.py reads this to decide staleness; empty while planned.
         "sections": [],
     }
 

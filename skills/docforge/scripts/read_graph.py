@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
-"""Read a knowledge graph produced by the understand-anything pipeline and
-extract the inventories that seed a documentation set.
+"""Read a JSON code (knowledge) graph and extract the inventories that seed a
+documentation set.
+
+This reads a **JSON** graph on disk — understand-anything's
+.ua/knowledge-graph.json (or the legacy .understand-anything/ path). A
+**DB-backed** source (GitNexus's ladybug .gitnexus/lbug) is not a JSON file and
+is not read here: query it via the gitnexus MCP, or offline with
+scripts/graph_source_gitnexus_reader.py — see references/graph-sources.md for
+the read dispatch.
 
 The on-disk schema is not assumed. The script probes the JSON, reports the shape
 it found, and extracts only fields it can actually see. Where a field is absent
@@ -9,14 +16,13 @@ graph is to stop inventing.
 
 Typical use:
 
-    python graph_extract.py --graph .ua/knowledge-graph.json --summary
-    python graph_extract.py --graph .ua/knowledge-graph.json --probe
-    python graph_extract.py --graph .ua/knowledge-graph.json --modules --deps
+    python read_graph.py --summary
+    python read_graph.py --graph <path/to/knowledge-graph.json> --probe
+    python read_graph.py --modules --deps
 
-If --graph is omitted, the graph is located at the repository root —
-$PROJECT_ROOT/.ua/knowledge-graph.json then $PROJECT_ROOT/.understand-anything/knowledge-graph.json —
-by searching the current directory and every parent up to the git root, so it
-works when invoked from a subdirectory.
+If --graph is omitted, the graph is located at the repository root by searching
+the known JSON store locations (`.ua/`, legacy `.understand-anything/`) up every
+parent to the git root, so it works when invoked from a subdirectory.
 
 Standard library only. Output is an inventory to verify, not finished prose.
 """
@@ -70,40 +76,41 @@ EDGEKIND_KEYS = ["type", "kind", "relation", "label"]
 EXTERNAL_HINTS = ["external", "isExternal", "thirdParty", "builtin"]
 
 
-def first(d: dict, keys: list[str]) -> Any:
-    for k in keys:
-        if isinstance(d, dict) and k in d and d[k] not in (None, ""):
-            return d[k]
+def first_present(node: dict, keys: list[str]) -> Any:
+    for key in keys:
+        if isinstance(node, dict) and key in node and node[key] not in (None, ""):
+            return node[key]
     return None
 
 
-def find_collection(doc: Any, keys: list[str], depth: int = 3) -> tuple[str, list]:
+def locate_collection(doc: Any, keys: list[str], depth: int = 3) -> tuple[str, list]:
     """Locate a list of dicts under one of `keys`, searching nested objects."""
     if not isinstance(doc, dict) or depth < 0:
         return "", []
-    for k in keys:
-        v = doc.get(k)
-        if isinstance(v, list) and (not v or isinstance(v[0], dict)):
-            return k, v
-        if isinstance(v, dict):  # e.g. {"nodes": {"id": {...}}}
-            vals = list(v.values())
-            if vals and isinstance(vals[0], dict):
-                return k, vals
-    for k, v in doc.items():
-        if isinstance(v, dict):
-            path, found = find_collection(v, keys, depth - 1)
+    for key in keys:
+        value = doc.get(key)
+        if isinstance(value, list) and (not value or isinstance(value[0], dict)):
+            return key, value
+        if isinstance(value, dict):  # e.g. {"nodes": {"id": {...}}}
+            entries = list(value.values())
+            if entries and isinstance(entries[0], dict):
+                return key, entries
+    for key, value in doc.items():
+        if isinstance(value, dict):
+            path, found = locate_collection(value, keys, depth - 1)
             if found:
-                return f"{k}.{path}", found
+                return f"{key}.{path}", found
     return "", []
 
 
-def load(path: Path) -> dict:
+def load_graph(path: Path) -> dict:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        sys.exit(f"No graph at {path}. Build one with /understand first.")
-    except json.JSONDecodeError as e:
-        sys.exit(f"{path} is not valid JSON ({e}). The graph may be mid-write.")
+        sys.exit(f"No graph at {path}. Build a code graph from any configured "
+                 "source first — see references/graph-sources.md.")
+    except json.JSONDecodeError as error:
+        sys.exit(f"{path} is not valid JSON ({error}). The graph may be mid-write.")
     if not isinstance(data, dict):
         sys.exit(f"Unexpected top-level type in {path}: {type(data).__name__}")
     return data
@@ -111,7 +118,7 @@ def load(path: Path) -> dict:
 
 # ---------------------------------------------------------------------------
 
-def probe(doc: dict, nkey: str, nodes: list, ekey: str, edges: list) -> None:
+def describe_shape(doc: dict, nkey: str, nodes: list, ekey: str, edges: list) -> None:
     print("SHAPE")
     print(f"  top-level keys : {', '.join(sorted(doc)[:20])}")
     print(f"  nodes          : {nkey or '(not found)'} — {len(nodes)}")
@@ -122,8 +129,8 @@ def probe(doc: dict, nkey: str, nodes: list, ekey: str, edges: list) -> None:
         for label, keys in (("id", ID_KEYS), ("path", PATH_KEYS),
                             ("kind", KIND_KEYS), ("layer", LAYER_KEYS),
                             ("summary", SUMMARY_KEYS)):
-            v = first(sample, keys)
-            shown = str(v)[:70] if v is not None else "(absent in sample)"
+            value = first_present(sample, keys)
+            shown = str(value)[:70] if value is not None else "(absent in sample)"
             print(f"    {label:<8}-> {shown}")
     if edges:
         print(f"  edge fields    : {', '.join(sorted(edges[0])[:24])}")
@@ -135,84 +142,86 @@ def probe(doc: dict, nkey: str, nodes: list, ekey: str, edges: list) -> None:
 def modules(nodes: list, limit: int) -> None:
     counts: dict[str, Counter] = defaultdict(Counter)
     summaries: dict[str, str] = {}
-    for n in nodes:
-        if any(n.get(h) is True for h in EXTERNAL_HINTS):
+    for node in nodes:
+        if any(node.get(h) is True for h in EXTERNAL_HINTS):
             continue
-        p = first(n, PATH_KEYS) or first(n, LABEL_KEYS)
-        if not p:
+        location = first_present(node, PATH_KEYS) or first_present(node, LABEL_KEYS)
+        if not location:
             continue
-        parts = str(p).replace("\\", "/").split("/")
-        mod = "/".join(parts[:-1]) or "."
-        counts[mod][first(n, KIND_KEYS) or "unknown"] += 1
-        s = first(n, SUMMARY_KEYS)
-        if s and mod not in summaries:
-            summaries[mod] = " ".join(str(s).split())[:150]
+        parts = str(location).replace("\\", "/").split("/")
+        module = "/".join(parts[:-1]) or "."
+        counts[module][first_present(node, KIND_KEYS) or "unknown"] += 1
+        summary = first_present(node, SUMMARY_KEYS)
+        if summary and module not in summaries:
+            summaries[module] = " ".join(str(summary).split())[:150]
 
     print(f"MODULES ({len(counts)})")
-    for mod, kinds in sorted(counts.items(), key=lambda kv: -sum(kv[1].values()))[:limit]:
+    for module, kinds in sorted(counts.items(), key=lambda kv: -sum(kv[1].values()))[:limit]:
         total = sum(kinds.values())
         detail = ", ".join(f"{k}:{v}" for k, v in kinds.most_common(4))
-        print(f"  {mod}/  [{total}] {detail}")
-        if mod in summaries:
-            print(f"      {summaries[mod]}")
+        print(f"  {module}/  [{total}] {detail}")
+        if module in summaries:
+            print(f"      {summaries[module]}")
     if len(counts) > limit:
         print(f"  ... {len(counts) - limit} more (raise --limit)")
     print("\n  Seeds the code map in docs/architecture/high-level.md. Confirm each\n"
-          "  module's purpose with /understand-explain before describing it.")
+          "  module's purpose with a subsystem deep-dive (references/graph-sources.md,\n"
+          "  'Deep-dive a symbol') before describing it.")
 
 
 def layers(nodes: list) -> None:
-    c = Counter()
-    for n in nodes:
-        lv = first(n, LAYER_KEYS)
-        if lv:
-            c[str(lv)] += 1
-    if not c:
+    counter = Counter()
+    for node in nodes:
+        layer_value = first_present(node, LAYER_KEYS)
+        if layer_value:
+            counter[str(layer_value)] += 1
+    if not counter:
         print("LAYERS\n  No layer field found on nodes. Derive grouping from the\n"
-              "  module inventory instead, or re-run /understand.")
+              "  module inventory instead, or rebuild the code graph "
+              "(references/graph-sources.md).")
         return
-    print(f"LAYERS ({len(c)})")
-    for layer, n in c.most_common():
-        print(f"  {layer:<24} {n}")
+    print(f"LAYERS ({len(counter)})")
+    for layer, count in counter.most_common():
+        print(f"  {layer:<24} {count}")
 
 
 def deps(nodes: list, edges: list, limit: int) -> None:
     known = set()
-    for n in nodes:
-        for k in ID_KEYS + PATH_KEYS:
-            v = n.get(k) if isinstance(n, dict) else None
-            if v:
-                known.add(str(v))
+    for node in nodes:
+        for key in ID_KEYS + PATH_KEYS:
+            value = node.get(key) if isinstance(node, dict) else None
+            if value:
+                known.add(str(value))
 
     external = Counter()
-    for n in nodes:
-        if any(n.get(h) is True for h in EXTERNAL_HINTS):
-            name = first(n, LABEL_KEYS) or first(n, PATH_KEYS)
+    for node in nodes:
+        if any(node.get(h) is True for h in EXTERNAL_HINTS):
+            name = first_present(node, LABEL_KEYS) or first_present(node, PATH_KEYS)
             if name:
                 external[str(name)] += 1
 
-    for e in edges:
-        kind = str(first(e, EDGEKIND_KEYS) or "").lower()
+    for edge in edges:
+        kind = str(first_present(edge, EDGEKIND_KEYS) or "").lower()
         if "import" not in kind and "depend" not in kind and "require" not in kind:
             continue
-        tgt = first(e, DST_KEYS)
-        if tgt is None:
+        target = first_present(edge, DST_KEYS)
+        if target is None:
             continue
-        t = str(tgt)
-        if t in known or t.startswith((".", "/", "src", "app", "lib", "pkg")):
+        text = str(target)
+        if text in known or text.startswith((".", "/", "src", "app", "lib", "pkg")):
             continue
-        external[t.split("/")[0] if not t.startswith("@") else "/".join(t.split("/")[:2])] += 1
+        external[text.split("/")[0] if not text.startswith("@") else "/".join(text.split("/")[:2])] += 1
 
     if not external:
         print("EXTERNAL REFERENCES\n  None distinguishable from this graph. Take the\n"
               "  inventory from the manifest and lockfile instead.")
         return
     print(f"EXTERNAL REFERENCES ({len(external)})")
-    for name, n in external.most_common(limit):
-        print(f"  {name:<40} {n} reference(s)")
+    for name, count in external.most_common(limit):
+        print(f"  {name:<40} {count} reference(s)")
     print("\n  Candidates for docs/architecture/dependencies.md. Versions and\n"
           "  licences come from the manifest; criticality and failure behaviour\n"
-          "  come from the team or from /understand-chat.")
+          "  come from the team or a targeted graph query (references/graph-sources.md).")
 
 
 def boundaries(nodes: list, edges: list) -> None:
@@ -222,27 +231,27 @@ def boundaries(nodes: list, edges: list) -> None:
     """
     roots = {"src", "app", "lib", "pkg", "internal", "packages", "source"}
 
-    def top(v: Any) -> str:
+    def top(value: Any) -> str:
         """First meaningful path segment, skipping a conventional source root."""
-        if not v:
+        if not value:
             return ""
-        parts = [q for q in str(v).replace("\\", "/").split("/") if q]
+        parts = [segment for segment in str(value).replace("\\", "/").split("/") if segment]
         if parts and parts[0] in roots and len(parts) > 1:
             parts = parts[1:]
         return parts[0] if parts else ""
 
-    idx = {}
-    for n in nodes:
-        nid = first(n, ID_KEYS)
-        if nid is not None:
-            idx[str(nid)] = top(first(n, PATH_KEYS) or first(n, LABEL_KEYS))
+    index = {}
+    for node in nodes:
+        node_id = first_present(node, ID_KEYS)
+        if node_id is not None:
+            index[str(node_id)] = top(first_present(node, PATH_KEYS) or first_present(node, LABEL_KEYS))
 
     pairs: Counter = Counter()
-    for e in edges:
-        s, t = first(e, SRC_KEYS), first(e, DST_KEYS)
-        if str(s) not in idx or str(t) not in idx:
+    for edge in edges:
+        source, target = first_present(edge, SRC_KEYS), first_present(edge, DST_KEYS)
+        if str(source) not in index or str(target) not in index:
             continue  # unresolved endpoint — usually external, not a boundary
-        a, b = idx[str(s)], idx[str(t)]
+        a, b = index[str(source)], index[str(target)]
         if a and b and a != b:
             pairs[(a, b)] += 1
 
@@ -251,8 +260,8 @@ def boundaries(nodes: list, edges: list) -> None:
         return
     mods = sorted({m for pair in pairs for m in pair})
     print(f"CROSS-MODULE EDGES ({len(pairs)} directed pairs over {len(mods)} modules)")
-    for (a, b), n in pairs.most_common(30):
-        print(f"  {a} -> {b}   {n}")
+    for (a, b), count in pairs.most_common(30):
+        print(f"  {a} -> {b}   {count}")
     absent = [(a, b) for a in mods for b in mods
               if a != b and (a, b) not in pairs and (b, a) in pairs]
     if absent:
@@ -279,21 +288,24 @@ def main() -> int:
     if path is None:
         path = find_default_graph()
         if path is None:
-            sys.exit("No graph found in $PROJECT_ROOT/.ua/ or $PROJECT_ROOT/.understand-anything/ "
-                     "(searched the current directory and every parent up to the "
-                     "repo root). Build one with /understand first, or pass "
-                     "--graph <path> explicitly.")
+            sys.exit("No JSON code graph found in $PROJECT_ROOT/.ua/ or "
+                     "$PROJECT_ROOT/.understand-anything/ (searched the current "
+                     "directory and every parent up to the repo root). If the "
+                     "active source is GitNexus, its graph is a ladybug DB — read "
+                     "it via the gitnexus MCP or scripts/graph_source_gitnexus_reader.py "
+                     "(references/graph-sources.md), not this script. Otherwise "
+                     "build a JSON code graph, or pass --graph <path> explicitly.")
 
-    doc = load(path)
-    nkey, nodes = find_collection(doc, NODE_KEYS)
-    ekey, edges = find_collection(doc, EDGE_KEYS)
+    doc = load_graph(path)
+    nkey, nodes = locate_collection(doc, NODE_KEYS)
+    ekey, edges = locate_collection(doc, EDGE_KEYS)
 
     print(f"# {path}  ({path.stat().st_size / 1024:.0f} KB)\n")
 
     want_all = args.summary or not any(
         (args.probe, args.modules, args.layers, args.deps, args.boundaries))
     if args.probe or want_all:
-        probe(doc, nkey, nodes, ekey, edges)
+        describe_shape(doc, nkey, nodes, ekey, edges)
         print()
     if not nodes:
         return 1

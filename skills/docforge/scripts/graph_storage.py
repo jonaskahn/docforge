@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Source-agnostic helpers shared by every graph_source_*.py module and by
-check_preconditions.py.
+"""Source-agnostic graph-file storage helpers shared by every graph_source_*.py
+module, by the graph_source_registry.py registry, by precheck_graph.py, and by
+derive_flow_graph.py.
 
 Nothing in this file knows which tool (understand-anything, GitNexus, or any
 future source) produced a graph — it only knows how to find, display, sanity
-check, and write the two on-disk files docforge itself reads:
-$PROJECT_ROOT/.ua/knowledge-graph.json and $PROJECT_ROOT/.ua/domain-graph.json
-(or their legacy .understand-anything/ counterparts, for reading only — new
-writes always go to .ua/).
+check, and write graph files on disk. There is no single canonical store: each
+source declares where its own graph lives (understand-anything reads .ua/,
+GitNexus stores a ladybug DB under .gitnexus/, and docforge's own derived flow
+graph is written to the never-committed .docforge/tmp/).
 """
 
 from __future__ import annotations
@@ -15,10 +16,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-GRAPH_DIR_NAMES = (".ua", ".understand-anything")
+# Directories a graph file may live in, for diagnostics only. Detection itself
+# is per-source (each source declares its own candidate paths); this list is
+# used solely to list folder contents on a miss.
+KNOWN_GRAPH_DIRS = (".ua", ".understand-anything", ".gitnexus", ".docforge/tmp")
 
 
-def find(repo: Path, candidates: list[str]) -> Path | None:
+def find_graph_file(repo: Path, candidates: list[str]) -> Path | None:
     """Search the repo root, then every ancestor up to (and including) the
     git root, for the first candidate relative path that exists as a file.
 
@@ -27,17 +31,17 @@ def find(repo: Path, candidates: list[str]) -> Path | None:
     exists at the root, so climb until a .git directory is reached.
     """
     base = repo.resolve()
-    for cur in (base, *base.parents):
-        for rel in candidates:
-            p = cur / rel
-            if p.is_file():
-                return p
-        if (cur / ".git").exists():
+    for current in (base, *base.parents):
+        for relative_path in candidates:
+            candidate = current / relative_path
+            if candidate.is_file():
+                return candidate
+        if (current / ".git").exists():
             break  # reached the repo root; do not climb past it
     return None
 
 
-def display(found: Path, repo: Path) -> str:
+def relative_display_path(found: Path, repo: Path) -> str:
     """Path relative to --repo when possible, else absolute (the file may
     sit at an ancestor when --repo is a subdirectory)."""
     try:
@@ -46,70 +50,72 @@ def display(found: Path, repo: Path) -> str:
         return str(found)
 
 
-def show_graph_dirs(repo: Path) -> None:
-    """On a miss, list what the graph folders actually hold so a false 'not
-    found' (folder present, expected file absent or misnamed) is visible at a
-    glance. Points at validate_graphs.py for the full probe."""
+def list_known_graph_dirs(repo: Path) -> None:
+    """On a miss, list what the known graph folders actually hold so a false
+    'not found' (folder present, expected file absent or misnamed) is visible
+    at a glance. Points at diagnose_graphs.py for the full probe."""
     base = repo.resolve()
     listed = False
-    for cur in (base, *base.parents):
-        for name in GRAPH_DIR_NAMES:
-            d = cur / name
-            if d.is_dir():
+    for current in (base, *base.parents):
+        for name in KNOWN_GRAPH_DIRS:
+            directory = current / name
+            if directory.is_dir():
                 try:
-                    names = sorted(p.name for p in d.iterdir())
-                except OSError as e:
-                    names = [f"(error listing: {e})"]
-                print(f"  {name}/ exists at {display(d, repo)} — contains: "
+                    names = sorted(entry.name for entry in directory.iterdir())
+                except OSError as error:
+                    names = [f"(error listing: {error})"]
+                print(f"  {name}/ exists at {relative_display_path(directory, repo)} — contains: "
                       f"{', '.join(names) or '(empty)'}")
                 listed = True
-        if (cur / ".git").exists():
+        if (current / ".git").exists():
             break
     if listed:
-        print("  Diagnose: python scripts/validate_graphs.py --repo . --verbose")
+        print("  Diagnose: python scripts/diagnose_graphs.py --repo . --verbose")
 
 
-def validate_knowledge_graph_shape(obj: dict) -> str | None:
-    """Minimal sanity check for a freshly-built knowledge graph, before it is
-    written to disk. Returns an error string, or None if the shape is
-    acceptable. Deliberately loose — docforge's own reader (graph_extract.py)
-    already tolerates several key names; this only catches a build gone
-    obviously wrong (empty or malformed), not schema drift."""
-    if not isinstance(obj, dict):
-        return "knowledge graph must be a JSON object"
-    nodes = obj.get("nodes")
-    edges = obj.get("edges")
-    if not isinstance(nodes, list) or not nodes:
-        return "knowledge graph must have a non-empty 'nodes' list"
-    if not isinstance(edges, list):
-        return "knowledge graph must have an 'edges' list (may be empty)"
+def validate_flow_graph_shape(flow_graph: dict) -> str | None:
+    """Sanity check for a flow (domain) graph before it is written — today
+    only docforge's own derivation writes one. It uses the docforge flow
+    shape: a non-empty 'flows' list of objects, each with a 'name' and a
+    'steps' list. Refusing an empty graph is what stops a derivation gone
+    wrong from masquerading as a real flow graph."""
+    if not isinstance(flow_graph, dict):
+        return "flow graph must be a JSON object"
+    flows = flow_graph.get("flows")
+    if not isinstance(flows, list) or not flows:
+        return "flow graph must have a non-empty 'flows' list"
+    for index, flow in enumerate(flows):
+        if not isinstance(flow, dict) or not flow.get("name"):
+            return f"flow[{index}] must be an object with a non-empty 'name'"
+        if not isinstance(flow.get("steps"), list):
+            return f"flow[{index}] ('{flow.get('name')}') must have a 'steps' list"
     return None
 
 
-def validate_domain_graph_shape(obj: dict) -> str | None:
-    """domain-graph.json has no rigid consumer today (no docforge script
-    parses it directly) — only confirm it is a non-empty JSON object."""
-    if not isinstance(obj, dict) or not obj:
-        return "domain graph must be a non-empty JSON object"
-    return None
+def _write_json(path: Path, graph: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(graph, indent=2) + "\n", encoding="utf-8")
 
 
-def write_graph(repo: Path, knowledge_graph: dict, domain_graph: dict) -> tuple[Path, Path]:
-    """Write both graph files to $PROJECT_ROOT/.ua/, creating the directory
-    if needed. Raises ValueError if either shape fails its sanity check —
-    callers should surface that message and write nothing."""
-    kg_error = validate_knowledge_graph_shape(knowledge_graph)
-    if kg_error:
-        raise ValueError(f"refusing to write knowledge graph: {kg_error}")
-    dg_error = validate_domain_graph_shape(domain_graph)
-    if dg_error:
-        raise ValueError(f"refusing to write domain graph: {dg_error}")
+def write_flow_graph(repo: Path, flow_graph: dict, dest_rel: str = ".docforge/tmp") -> Path:
+    """Write a flow (domain) graph to $PROJECT_ROOT/<dest_rel>/domain-graph.json.
+    Docforge's derivation passes dest_rel='.docforge/tmp' (never committed).
+    Raises ValueError if the shape fails its sanity check — callers should
+    surface that message and write nothing."""
+    error = validate_flow_graph_shape(flow_graph)
+    if error:
+        raise ValueError(f"refusing to write flow graph: {error}")
+    path = repo.resolve() / dest_rel / "domain-graph.json"
+    _write_json(path, flow_graph)
+    return path
 
-    ua_dir = repo.resolve() / ".ua"
-    ua_dir.mkdir(parents=True, exist_ok=True)
 
-    kg_path = ua_dir / "knowledge-graph.json"
-    dg_path = ua_dir / "domain-graph.json"
-    kg_path.write_text(json.dumps(knowledge_graph, indent=2) + "\n", encoding="utf-8")
-    dg_path.write_text(json.dumps(domain_graph, indent=2) + "\n", encoding="utf-8")
-    return kg_path, dg_path
+def ensure_tmp_dir_gitignored(repo: Path) -> Path:
+    """Drop $PROJECT_ROOT/.docforge/tmp/.gitignore containing '*' so the
+    provisional derived flow graph is never committed. Idempotent."""
+    tmp = repo.resolve() / ".docforge" / "tmp"
+    tmp.mkdir(parents=True, exist_ok=True)
+    gitignore = tmp / ".gitignore"
+    if not gitignore.is_file():
+        gitignore.write_text("*\n", encoding="utf-8")
+    return gitignore

@@ -33,7 +33,7 @@ Four buffs make the output trustworthy rather than just plausible-looking:
 - **🛡 GROUNDED.** Reads the codebase through a knowledge graph before writing a word, so every claim is verifiable — no invention, no drift. Flows and product content are hard-gated on the *domain* graph specifically; no fallback to guessing from folder names.
 - **⚔ INDEPENDENTLY AUDITED.** Each finished document faces a fresh reviewer pass against the source it claims to describe — not the agent that wrote it — before it's marked complete. See [`document-audit.md`](skills/docforge/references/document-audit.md).
 - **🗺 PROVENANCE-TRACKED.** Each document records the exact source files it draws from by git blob hash in a per-repo [`.docforge/manifest.json`](skills/docforge/.metadata/manifest.json), so "has this drifted?" is answered by comparison, not a re-read and a guess — only the stale section gets rewritten. Format in [`provenance-tracking.md`](skills/docforge/references/provenance-tracking.md).
-- **🌐 HOST-NEUTRAL.** Works on any git host; never hardcodes one forge's paths (see [`host-neutrality.md`](skills/docforge/references/host-neutrality.md)). For multi-repo diligence it discovers the full collection first — declared submodules and undeclared nested/vendored repos alike, via [`discover_repos.py`](skills/docforge/scripts/discover_repos.py) — see [`diligence-collection.md`](skills/docforge/references/diligence-collection.md).
+- **🌐 HOST-NEUTRAL.** Works on any git host; never hardcodes one forge's paths (see [`host-neutrality.md`](skills/docforge/references/host-neutrality.md)). For multi-repo diligence it discovers the full collection first — declared submodules and undeclared nested/vendored repos alike, via [`discover_child_repos.py`](skills/docforge/scripts/discover_child_repos.py) — see [`diligence-collection.md`](skills/docforge/references/diligence-collection.md).
 
 ## ▓▒░ HOW TO PLAY ░▒▓
 
@@ -117,17 +117,24 @@ Every invocation follows the same cadence, defined in [`SKILL.md`](skills/docfor
 
 Plus [`assets/templates/`](skills/docforge/assets/templates/) — a scaffold file for every spine and overlay document, including the `agent-context` set (`agents-kernel.md`, `agents-architecture.md`, `agents-patterns.md`, `agents-glossary.md`, `agents-testing.md`, `agents-tech-debt.md`, `agents-flow.md`, `agents-conventions.md`, `claude-md.md`, `claude-local-md.md`, `claude-settings.json`) — and [`scripts/`](skills/docforge/scripts/), the tool belt:
 
+Source-specific graph modules carry a `graph_source_<name>` prefix; source-agnostic tools carry none.
+
 | Script | Purpose |
 |---|---|
-| [`docs_scaffold.py`](skills/docforge/scripts/docs_scaffold.py) / [`.js`](skills/docforge/scripts/docs_scaffold.js) | Scaffold the `docs/` tree for a chosen tier and overlay set (dry-run preview or real write), and audit an existing tree against the taxonomy |
-| [`manifest_sync.py`](skills/docforge/scripts/manifest_sync.py) / [`.js`](skills/docforge/scripts/manifest_sync.js) | Create and maintain `.docforge/manifest.json` — the durable plan and per-document fill-state record |
-| [`check_provenance.py`](skills/docforge/scripts/check_provenance.py) / [`.js`](skills/docforge/scripts/check_provenance.js) | Compare recorded git blob hashes against the working tree to decide whether a document (or one of its sections) needs rewriting |
-| [`check_document.py`](skills/docforge/scripts/check_document.py) / [`.js`](skills/docforge/scripts/check_document.js) | Run the mechanical pre-checks that feed the independent per-document audit |
-| [`check_agents_kernel.py`](skills/docforge/scripts/check_agents_kernel.py) / [`.js`](skills/docforge/scripts/check_agents_kernel.js) | `AGENTS.md`-specific rubric — the 100-line cap, 7-section shape, tagline/test-sentence conventions, and dangling `@docs/agents/…` references |
-| [`check_preconditions.py`](skills/docforge/scripts/check_preconditions.py) / [`.js`](skills/docforge/scripts/check_preconditions.js) | Gate flow/product/BA-PO documentation on the knowledge graph and domain graph actually existing |
-| [`graph_extract.py`](skills/docforge/scripts/graph_extract.py) / [`.js`](skills/docforge/scripts/graph_extract.js) | Read the knowledge graph and extract the module inventory, layer assignment, and external dependency list that seed the code map |
-| [`validate_graphs.py`](skills/docforge/scripts/validate_graphs.py) / [`.js`](skills/docforge/scripts/validate_graphs.js) | Diagnose "graph not found" false positives by scanning for graph files at the repo root |
-| [`discover_repos.py`](skills/docforge/scripts/discover_repos.py) / [`.js`](skills/docforge/scripts/discover_repos.js) | Assemble the full repo collection for a diligence job — parent, declared submodules, and undeclared nested/vendored repos |
+| [`precheck_graph.py`](skills/docforge/scripts/precheck_graph.py) / [`.js`](skills/docforge/scripts/precheck_graph.js) | Gate every invocation on a code graph existing (and, for `--need flow`, a flow graph); report every ready source and how each is read |
+| [`graph_source_registry.py`](skills/docforge/scripts/graph_source_registry.py) / [`.js`](skills/docforge/scripts/graph_source_registry.js) | The ordered registry of graph sources — resolve a capability to a ready source, or list them all |
+| [`graph_source_understand_anything.py`](skills/docforge/scripts/graph_source_understand_anything.py) / [`.js`](skills/docforge/scripts/graph_source_understand_anything.js) | Understand-Anything source (JSON): detect `.ua/*.json` |
+| [`graph_source_gitnexus.py`](skills/docforge/scripts/graph_source_gitnexus.py) / [`.js`](skills/docforge/scripts/graph_source_gitnexus.js) | GitNexus source (ladybug DB): detect `.gitnexus/lbug` + staleness |
+| [`graph_source_gitnexus_reader.py`](skills/docforge/scripts/graph_source_gitnexus_reader.py) / [`.js`](skills/docforge/scripts/graph_source_gitnexus_reader.js) | Optional offline reader for GitNexus's ladybug DB (via `@ladybugdb/core` / a ladybug Python binding); the gitnexus MCP is the preferred read path |
+| [`read_graph.py`](skills/docforge/scripts/read_graph.py) / [`.js`](skills/docforge/scripts/read_graph.js) | Read a JSON code graph and extract the module inventory, layer assignment, and external dependency list that seed the code map |
+| [`derive_flow_graph.py`](skills/docforge/scripts/derive_flow_graph.py) / [`.js`](skills/docforge/scripts/derive_flow_graph.js) | Derive a provisional flow graph from a code graph when a source has no native flows (writes to git-ignored `.docforge/tmp/`) |
+| [`diagnose_graphs.py`](skills/docforge/scripts/diagnose_graphs.py) / [`.js`](skills/docforge/scripts/diagnose_graphs.js) | Diagnose "graph not found" false positives by scanning for graph files at the repo root |
+| [`scaffold_docs.py`](skills/docforge/scripts/scaffold_docs.py) / [`.js`](skills/docforge/scripts/scaffold_docs.js) | Scaffold the `docs/` tree for a chosen tier and overlay set (dry-run preview or real write), and audit an existing tree against the taxonomy |
+| [`manage_manifest.py`](skills/docforge/scripts/manage_manifest.py) / [`.js`](skills/docforge/scripts/manage_manifest.js) | Create and maintain `.docforge/manifest.json` — the durable plan and per-document fill-state record |
+| [`check_staleness.py`](skills/docforge/scripts/check_staleness.py) / [`.js`](skills/docforge/scripts/check_staleness.js) | Compare recorded git blob hashes against the working tree to decide whether a document (or one of its sections) needs rewriting |
+| [`lint_document.py`](skills/docforge/scripts/lint_document.py) / [`.js`](skills/docforge/scripts/lint_document.js) | Run the mechanical pre-checks that feed the independent per-document audit |
+| [`lint_agents_kernel.py`](skills/docforge/scripts/lint_agents_kernel.py) / [`.js`](skills/docforge/scripts/lint_agents_kernel.js) | `AGENTS.md`-specific rubric — the 100-line cap, 7-section shape, tagline/test-sentence conventions, and dangling `@docs/agents/…` references |
+| [`discover_child_repos.py`](skills/docforge/scripts/discover_child_repos.py) / [`.js`](skills/docforge/scripts/discover_child_repos.js) | Assemble the full repo collection for a diligence job — parent, declared submodules, and undeclared nested/vendored repos |
 
 ## ▓▒░ SYSTEM REQUIREMENTS ░▒▓
 

@@ -1,163 +1,155 @@
 #!/usr/bin/env python3
-"""GitNexus graph source: index detection, plus building docforge's
-.ua/knowledge-graph.json and .ua/domain-graph.json from a GitNexus index.
+"""GitNexus graph source: detection only.
 
-GitNexus (https://github.com/abhigyanpatwari/GitNexus) stores its own graph
-in an opaque embedded database (.gitnexus/lbug) reachable only through MCP
-tools (`cypher`, resource reads) — there is no file this script can read
-directly, and no MCP client available to a plain script. So the contract
-here is agent-mediated: the acting agent runs the three fixed Cypher queries
-documented in references/gitnexus-bridge.md (fixed RETURN aliases — this
-script does not guess column names), saves each raw result to a JSON file,
-then invokes:
+GitNexus (https://github.com/abhigyanpatwari/GitNexus) stores its graph in a
+ladybug property-graph database at .gitnexus/lbug, with a sidecar
+.gitnexus/meta.json describing the index (files/nodes/edges/processes counts and
+the commit it was built at). docforge reads that database **directly**, in place
+— there is no copy-to-JSON bridge:
 
-    python graph_source_gitnexus.py build --repo <path> \\
-        --nodes nodes.json --edges edges.json --processes processes.json
+  * primary  — the gitnexus MCP tools (`cypher`, `query`, `context`) and
+               `gitnexus://repo/{name}/...` resources, available whenever the
+               GitNexus plugin is loaded;
+  * offline  — scripts/graph_source_gitnexus_reader.{py,js}, which opens
+               .gitnexus/lbug via @ladybugdb/core (Node) or the ladybug Python
+               binding, for machines without the MCP wired.
 
-`detect(repo)` only checks whether a GitNexus index exists at all
-(.gitnexus/meta.json) — it says nothing about whether .ua/*.json has been
-built from it yet; that's what check_preconditions.py's orchestration is for.
+Because GitNexus carries native Process nodes (execution flows) and Community
+clusters (functional areas), it satisfies **both** the code-graph and the
+flow-graph capability the moment its index exists — no derivation, no build.
+
+So this module is pure detection: is there an index, what does it promise, and
+is it stale against the current git HEAD? See references/graph-source-gitnexus.md
+for the read recipes and the capability dispatch in references/graph-sources.md.
+
+This module exposes a SOURCE descriptor consumed by the graph_source_registry.py
+registry; see references/adding-a-graph-source.md for the interface.
 
 Usage:
     python graph_source_gitnexus.py detect --repo <path>
-    python graph_source_gitnexus.py build --repo <path> --nodes <f> --edges <f> --processes <f>
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
-from graph_common import find, write_graph
+from graph_storage import find_graph_file, relative_display_path
 
 SOURCE_NAME = "gitnexus"
+DISPLAY = "GitNexus"
+CAPABILITIES = frozenset({"code_graph", "flow_graph"})
+# A ladybug DB, not a JSON file: read via the gitnexus MCP or the offline
+# reader (graph_source_gitnexus_reader.py), never via read_graph.py.
+READ_MODE = "db"
 
+LBUG_CANDIDATES = [".gitnexus/lbug"]
 INDEX_MARKER_CANDIDATES = [".gitnexus/meta.json"]
 
-# Fixed RETURN aliases the bridge doc's Cypher queries must use. Kept as a
-# single source of truth so the doc and this script cannot silently drift.
-NODE_COLUMNS = ("id", "name", "path", "type")
-EDGE_COLUMNS = ("source", "target", "type")
-PROCESS_COLUMNS = ("processName", "stepIndex", "symbolId", "symbolName", "path")
+
+def _git_head(repo: Path) -> str | None:
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if out.returncode == 0:
+            return out.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return None
+
+
+def _read_meta(index_path: Path) -> dict | None:
+    try:
+        return json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def detect(repo: Path) -> dict:
-    """Look for a GitNexus index. Returns {"index": Path|None}."""
-    return {"index": find(repo, INDEX_MARKER_CANDIDATES)}
+    """Report the GitNexus graph's readiness, read directly from disk.
+
+    Returns the registry-standard keys code_graph / flow_graph — each the path
+    to the ladybug DB (.gitnexus/lbug) when that capability is available, or
+    None — plus source-private fields:
+      index  — Path to .gitnexus/meta.json, or None
+      stats  — the index's stats dict (files/nodes/edges/processes/...), or None
+      stale  — True if meta.lastCommit differs from the current git HEAD
+
+    The DB satisfies code_graph when it has nodes and flow_graph when it has
+    processes; when the sidecar meta.json carries no stats we do not
+    second-guess a present DB, and report both capabilities.
+    """
+    lbug = find_graph_file(repo, LBUG_CANDIDATES)
+    index = find_graph_file(repo, INDEX_MARKER_CANDIDATES)
+    meta = _read_meta(index) if index else None
+    stats = meta.get("stats") if isinstance(meta, dict) else None
+    stats = stats if isinstance(stats, dict) else None
+
+    stale = None
+    if isinstance(meta, dict) and meta.get("lastCommit"):
+        head = _git_head(repo)
+        if head:
+            stale = head != meta.get("lastCommit")
+
+    has_nodes = stats is None or stats.get("nodes", 0) > 0
+    has_processes = stats is None or stats.get("processes", 0) > 0
+    return {
+        "code_graph": lbug if (lbug and has_nodes) else None,
+        "flow_graph": lbug if (lbug and has_processes) else None,
+        "index": index,
+        "stats": stats,
+        "stale": stale,
+    }
 
 
-def normalize_rows(raw) -> list[dict]:
-    """Accept either shape a Cypher-query JSON dump might arrive in:
-    a plain array of row-objects (most MCP tool results), or a
-    {"columns": [...], "rows": [[...], ...]} envelope (common driver output).
-    Always returns a list of plain dicts keyed by the RETURN aliases."""
-    if isinstance(raw, list):
-        return raw
-    if isinstance(raw, dict) and "rows" in raw and "columns" in raw:
-        cols = raw["columns"]
-        return [dict(zip(cols, row)) for row in raw["rows"]]
-    raise ValueError(
-        "unrecognized Cypher result shape — expected a JSON array of row "
-        "objects, or {\"columns\": [...], \"rows\": [[...], ...]}"
-    )
-
-
-def require_columns(rows: list[dict], columns: tuple[str, ...], label: str) -> None:
-    if not rows:
-        return
-    missing = [c for c in columns if c not in rows[0]]
-    if missing:
-        raise ValueError(
-            f"{label} rows are missing expected column(s) {missing} — "
-            f"the Cypher query must RETURN exactly {list(columns)} "
-            "(see references/gitnexus-bridge.md)"
-        )
-
-
-def build_knowledge_graph(node_rows: list[dict], edge_rows: list[dict]) -> dict:
-    require_columns(node_rows, NODE_COLUMNS, "node")
-    require_columns(edge_rows, EDGE_COLUMNS, "edge")
-    nodes = [
-        {"id": r["id"], "name": r["name"], "path": r["path"], "type": r["type"]}
-        for r in node_rows
+def setup_hint(repo: Path, gap: str) -> list[str]:
+    """Lines telling the user how to produce the missing graph with GitNexus.
+    The right steps depend on whether an index exists and whether it is stale."""
+    info = detect(repo)
+    index, stale = info["index"], info["stale"]
+    if not index:
+        return [
+            "GitNexus (no index yet): from the repo root, run:",
+            "    npx gitnexus analyze",
+            "    npx gitnexus setup",
+            "  `analyze` builds .gitnexus/lbug; `setup` connects the MCP tools. "
+            "Re-run detect to confirm READY (see references/graph-source-gitnexus.md).",
+        ]
+    if stale:
+        return [
+            "GitNexus (index is STALE — meta.lastCommit != current HEAD): re-index first:",
+            "    npx gitnexus analyze",
+            "  Then re-run detect (see references/graph-source-gitnexus.md).",
+        ]
+    return [
+        "GitNexus index present and current — the ladybug DB (.gitnexus/lbug) is "
+        "ready. Read it via the gitnexus MCP, or offline with "
+        "scripts/graph_source_gitnexus_reader.py (references/graph-source-gitnexus.md).",
     ]
-    edges = [
-        {"source": r["source"], "target": r["target"], "type": r["type"]}
-        for r in edge_rows
-    ]
-    return {"nodes": nodes, "edges": edges, "source": SOURCE_NAME}
 
 
-def build_domain_graph(process_rows: list[dict]) -> dict:
-    """Group STEP_IN_PROCESS rows into one flow per process, steps ordered by
-    stepIndex. GitNexus's Community clusters are not mapped to domains in
-    this first pass — there is no reliable cluster-to-process linkage
-    available without a fourth query, so flows are reported flat rather than
-    invented under an ungrounded domain grouping."""
-    require_columns(process_rows, PROCESS_COLUMNS, "process")
-    flows_by_name: dict[str, list[dict]] = {}
-    for r in process_rows:
-        flows_by_name.setdefault(r["processName"], []).append(r)
-
-    flows = []
-    for name, rows in flows_by_name.items():
-        rows.sort(key=lambda r: r["stepIndex"])
-        flows.append({
-            "name": name,
-            "steps": [
-                {
-                    "order": r["stepIndex"],
-                    "symbolId": r["symbolId"],
-                    "symbolName": r["symbolName"],
-                    "path": r["path"],
-                }
-                for r in rows
-            ],
-        })
-    return {"flows": flows, "source": SOURCE_NAME}
-
-
-def load_json(path: Path):
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        raise ValueError(f"file not found: {path}")
-    except json.JSONDecodeError as e:
-        raise ValueError(f"invalid JSON in {path}: {e}")
-
-
-def cmd_detect(args: argparse.Namespace) -> int:
+def run_detect(args: argparse.Namespace) -> int:
     result = detect(args.repo)
-    if result["index"]:
-        print(f"READY  gitnexus index  -> {result['index']}")
+    if result["index"] or result["code_graph"]:
+        target = result["code_graph"] or result["index"]
+        stale = " (STALE vs HEAD)" if result["stale"] else ""
+        print(f"READY  gitnexus  -> {relative_display_path(target, args.repo)}{stale}")
+        if result["stats"]:
+            stats = result["stats"]
+            print(f"  stats: {stats.get('nodes', '?')} nodes, {stats.get('edges', '?')} edges, "
+                  f"{stats.get('processes', '?')} processes")
+        print("  Read via the gitnexus MCP, or offline with "
+              "scripts/graph_source_gitnexus_reader.py.")
         return 0
-    print("MISSING  gitnexus index  (checked for .gitnexus/meta.json)")
-    print("  Fix: from the repo root, run:")
-    print("    npx gitnexus analyze")
-    print("    npx gitnexus setup")
-    print("  Then re-run this check.")
+    print("MISSING  gitnexus index  (checked for .gitnexus/lbug and .gitnexus/meta.json)")
+    for line in setup_hint(args.repo, "code_graph"):
+        print(line if line.startswith("    ") else f"  {line}")
     return 1
-
-
-def cmd_build(args: argparse.Namespace) -> int:
-    try:
-        node_rows = normalize_rows(load_json(args.nodes))
-        edge_rows = normalize_rows(load_json(args.edges))
-        process_rows = normalize_rows(load_json(args.processes))
-        knowledge_graph = build_knowledge_graph(node_rows, edge_rows)
-        domain_graph = build_domain_graph(process_rows)
-        kg_path, dg_path = write_graph(args.repo, knowledge_graph, domain_graph)
-    except ValueError as e:
-        print(f"BUILD FAILED: {e}", file=sys.stderr)
-        return 1
-
-    print(f"Wrote {kg_path} ({len(knowledge_graph['nodes'])} nodes, "
-          f"{len(knowledge_graph['edges'])} edges)")
-    print(f"Wrote {dg_path} ({len(domain_graph['flows'])} flows)")
-    print("Re-run check_preconditions.py --need domain to confirm READY.")
-    return 0
 
 
 def main() -> int:
@@ -165,22 +157,25 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
 
-    p_detect = sub.add_parser("detect", help="check whether a GitNexus index exists")
+    p_detect = sub.add_parser("detect", help="check GitNexus index state")
     p_detect.add_argument("--repo", required=True, type=Path)
-    p_detect.set_defaults(func=cmd_detect)
-
-    p_build = sub.add_parser("build", help="build .ua/*.json from raw Cypher dumps")
-    p_build.add_argument("--repo", required=True, type=Path)
-    p_build.add_argument("--nodes", required=True, type=Path)
-    p_build.add_argument("--edges", required=True, type=Path)
-    p_build.add_argument("--processes", required=True, type=Path)
-    p_build.set_defaults(func=cmd_build)
+    p_detect.set_defaults(func=run_detect)
 
     args = ap.parse_args()
     if not args.repo.is_dir():
         print(f"Not a directory: {args.repo}", file=sys.stderr)
         return 2
     return args.func(args)
+
+
+SOURCE = {
+    "name": SOURCE_NAME,
+    "display": DISPLAY,
+    "capabilities": CAPABILITIES,
+    "read_mode": READ_MODE,
+    "detect": detect,
+    "setup_hint": setup_hint,
+}
 
 
 if __name__ == "__main__":

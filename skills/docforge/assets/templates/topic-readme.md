@@ -46,6 +46,6 @@ Each fact below lives once, in its own file. This section links; it does not res
 - {{Value, metrics, release framing}} → [product-owner.md](product-owner.md)
 - {{Why it is built this way}} → [{{../../architecture/decisions/NNNN-slug.md}}]({{../../architecture/decisions/}})
 
-_A bullet here with no corresponding file is a defect, not a placeholder — `docs_scaffold.py
+_A bullet here with no corresponding file is a defect, not a placeholder — `scaffold_docs.py
 --audit` will catch it as a broken link. Write the subfile and add the bullet together, or
 add neither._

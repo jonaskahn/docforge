@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 "use strict";
-/* Read a knowledge graph produced by the understand-anything pipeline and
- * extract the inventories that seed a documentation set.
+/* Read a JSON code (knowledge) graph and extract the inventories that seed a
+ * documentation set.
+ *
+ * This reads a JSON graph on disk — understand-anything's
+ * .ua/knowledge-graph.json (or the legacy .understand-anything/ path). A
+ * DB-backed source (GitNexus's ladybug .gitnexus/lbug) is not a JSON file and
+ * is not read here: query it via the gitnexus MCP, or offline with
+ * scripts/graph_source_gitnexus_reader.js — see references/graph-sources.md.
  *
  * The on-disk schema is not assumed. The script probes the JSON, reports the
  * shape it found, and extracts only fields it can actually see. Where a field
@@ -9,14 +15,13 @@
  * reading the graph is to stop inventing.
  *
  * Typical use:
- *   node graph_extract.js --graph .ua/knowledge-graph.json --summary
- *   node graph_extract.js --graph .ua/knowledge-graph.json --probe
- *   node graph_extract.js --graph .ua/knowledge-graph.json --modules --deps
+ *   node read_graph.js --summary
+ *   node read_graph.js --graph <path/to/knowledge-graph.json> --probe
+ *   node read_graph.js --modules --deps
  *
- * If --graph is omitted, the graph is located at the repository root —
- * $PROJECT_ROOT/.ua/knowledge-graph.json then
- * $PROJECT_ROOT/.understand-anything/knowledge-graph.json — by searching the
- * current directory and every parent up to the git root, so it works when
+ * If --graph is omitted, the graph is located at the repository root by
+ * searching the known JSON store locations (`.ua/`, legacy
+ * `.understand-anything/`) up every parent to the git root, so it works when
  * invoked from a subdirectory.
  *
  * Node.js built-ins only. Output is an inventory to verify, not finished prose.
@@ -77,7 +82,7 @@ const DST_KEYS = ["target", "to", "dst", "end"];
 const EDGEKIND_KEYS = ["type", "kind", "relation", "label"];
 const EXTERNAL_HINTS = ["external", "isExternal", "thirdParty", "builtin"];
 
-function first(d, keys) {
+function firstPresent(d, keys) {
   if (!d || typeof d !== "object") return null;
   for (const k of keys) {
     if (k in d && d[k] !== null && d[k] !== "" && d[k] !== undefined) return d[k];
@@ -90,7 +95,7 @@ function isPlainObject(v) {
 }
 
 // Locate a list of dicts under one of `keys`, searching nested objects.
-function findCollection(doc, keys, depth = 3) {
+function locateCollection(doc, keys, depth = 3) {
   if (!isPlainObject(doc) || depth < 0) return ["", []];
   for (const k of keys) {
     const v = doc[k];
@@ -102,19 +107,22 @@ function findCollection(doc, keys, depth = 3) {
   }
   for (const [k, v] of Object.entries(doc)) {
     if (isPlainObject(v)) {
-      const [subPath, found] = findCollection(v, keys, depth - 1);
+      const [subPath, found] = locateCollection(v, keys, depth - 1);
       if (found.length) return [`${k}.${subPath}`, found];
     }
   }
   return ["", []];
 }
 
-function load(p) {
+function loadGraph(p) {
   let raw;
   try {
     raw = fs.readFileSync(p, "utf8");
   } catch {
-    console.error(`No graph at ${p}. Build one with /understand first.`);
+    console.error(
+      `No graph at ${p}. Build a code graph from any configured source ` +
+        "first — see references/graph-sources.md."
+    );
     process.exit(1);
   }
   let data;
@@ -133,7 +141,7 @@ function load(p) {
 
 // ---------------------------------------------------------------------------
 
-function probe(doc, nkey, nodes, ekey, edges) {
+function describeShape(doc, nkey, nodes, ekey, edges) {
   console.log("SHAPE");
   console.log(`  top-level keys : ${Object.keys(doc).sort().slice(0, 20).join(", ")}`);
   console.log(`  nodes          : ${nkey || "(not found)"} — ${nodes.length}`);
@@ -149,7 +157,7 @@ function probe(doc, nkey, nodes, ekey, edges) {
       ["summary", SUMMARY_KEYS],
     ];
     for (const [label, keys] of rows) {
-      const v = first(sample, keys);
+      const v = firstPresent(sample, keys);
       const shown = v !== null ? String(v).slice(0, 70) : "(absent in sample)";
       console.log(`    ${label.padEnd(8)}-> ${shown}`);
     }
@@ -176,14 +184,14 @@ function modules(nodes, limit) {
   const summaries = new Map();
   for (const n of nodes) {
     if (EXTERNAL_HINTS.some((h) => n[h] === true)) continue;
-    const p = first(n, PATH_KEYS) || first(n, LABEL_KEYS);
+    const p = firstPresent(n, PATH_KEYS) || firstPresent(n, LABEL_KEYS);
     if (!p) continue;
     const parts = String(p).replace(/\\/g, "/").split("/");
     const mod = parts.slice(0, -1).join("/") || ".";
     if (!counts.has(mod)) counts.set(mod, {});
-    const kind = first(n, KIND_KEYS) || "unknown";
+    const kind = firstPresent(n, KIND_KEYS) || "unknown";
     counts.get(mod)[kind] = (counts.get(mod)[kind] || 0) + 1;
-    const s = first(n, SUMMARY_KEYS);
+    const s = firstPresent(n, SUMMARY_KEYS);
     if (s && !summaries.has(mod)) summaries.set(mod, String(s).split(/\s+/).join(" ").slice(0, 150));
   }
 
@@ -202,21 +210,23 @@ function modules(nodes, limit) {
   if (counts.size > limit) console.log(`  ... ${counts.size - limit} more (raise --limit)`);
   console.log(
     "\n  Seeds the code map in docs/architecture/high-level.md. Confirm each\n" +
-      "  module's purpose with /understand-explain before describing it."
+      "  module's purpose with a subsystem deep-dive (references/graph-sources.md,\n" +
+      "  'Deep-dive a symbol') before describing it."
   );
 }
 
 function layers(nodes) {
   const c = {};
   for (const n of nodes) {
-    const lv = first(n, LAYER_KEYS);
+    const lv = firstPresent(n, LAYER_KEYS);
     if (lv) c[String(lv)] = (c[String(lv)] || 0) + 1;
   }
   const entries = counterTop(c, Infinity);
   if (!entries.length) {
     console.log(
       "LAYERS\n  No layer field found on nodes. Derive grouping from the\n" +
-        "  module inventory instead, or re-run /understand."
+        "  module inventory instead, or rebuild the code graph " +
+        "(references/graph-sources.md)."
     );
     return;
   }
@@ -238,15 +248,15 @@ function deps(nodes, edges, limit) {
   const external = {};
   for (const n of nodes) {
     if (EXTERNAL_HINTS.some((h) => n[h] === true)) {
-      const name = first(n, LABEL_KEYS) || first(n, PATH_KEYS);
+      const name = firstPresent(n, LABEL_KEYS) || firstPresent(n, PATH_KEYS);
       if (name) external[String(name)] = (external[String(name)] || 0) + 1;
     }
   }
 
   for (const e of edges) {
-    const kind = String(first(e, EDGEKIND_KEYS) || "").toLowerCase();
+    const kind = String(firstPresent(e, EDGEKIND_KEYS) || "").toLowerCase();
     if (!kind.includes("import") && !kind.includes("depend") && !kind.includes("require")) continue;
-    const tgt = first(e, DST_KEYS);
+    const tgt = firstPresent(e, DST_KEYS);
     if (tgt === null) continue;
     const t = String(tgt);
     if (known.has(t) || /^(\.|\/|src|app|lib|pkg)/.test(t)) continue;
@@ -269,7 +279,7 @@ function deps(nodes, edges, limit) {
   console.log(
     "\n  Candidates for docs/architecture/dependencies.md. Versions and\n" +
       "  licences come from the manifest; criticality and failure behaviour\n" +
-      "  come from the team or from /understand-chat."
+      "  come from the team or a targeted graph query (references/graph-sources.md)."
   );
 }
 
@@ -288,14 +298,14 @@ function boundaries(nodes, edges) {
 
   const idx = {};
   for (const n of nodes) {
-    const nid = first(n, ID_KEYS);
-    if (nid !== null) idx[String(nid)] = top(first(n, PATH_KEYS) || first(n, LABEL_KEYS));
+    const nid = firstPresent(n, ID_KEYS);
+    if (nid !== null) idx[String(nid)] = top(firstPresent(n, PATH_KEYS) || firstPresent(n, LABEL_KEYS));
   }
 
   const pairs = new Map(); // "a b" -> count
   for (const e of edges) {
-    const s = first(e, SRC_KEYS);
-    const t = first(e, DST_KEYS);
+    const s = firstPresent(e, SRC_KEYS);
+    const t = firstPresent(e, DST_KEYS);
     if (!(String(s) in idx) || !(String(t) in idx)) continue;
     const a = idx[String(s)];
     const b = idx[String(t)];
@@ -361,18 +371,21 @@ function main() {
     graphPath = findDefaultGraph();
     if (!graphPath) {
       console.error(
-        "No graph found in $PROJECT_ROOT/.ua/ or $PROJECT_ROOT/.understand-anything/ " +
-          "(searched the current directory and every parent up to the " +
-          "repo root). Build one with /understand first, or pass " +
+        "No JSON code graph found in $PROJECT_ROOT/.ua/ or " +
+          "$PROJECT_ROOT/.understand-anything/ (searched the current directory " +
+          "and every parent up to the repo root). If the active source is " +
+          "GitNexus, its graph is a ladybug DB — read it via the gitnexus MCP " +
+          "or scripts/graph_source_gitnexus_reader.js (references/graph-sources.md), " +
+          "not this script. Otherwise build a JSON code graph, or pass " +
           "--graph <path> explicitly."
       );
       return 1;
     }
   }
 
-  const doc = load(graphPath);
-  const [nkey, nodes] = findCollection(doc, NODE_KEYS);
-  const [ekey, edges] = findCollection(doc, EDGE_KEYS);
+  const doc = loadGraph(graphPath);
+  const [nkey, nodes] = locateCollection(doc, NODE_KEYS);
+  const [ekey, edges] = locateCollection(doc, EDGE_KEYS);
 
   const sizeKb = fs.statSync(graphPath).size / 1024;
   console.log(`# ${graphPath}  (${sizeKb.toFixed(0)} KB)\n`);
@@ -380,7 +393,7 @@ function main() {
   const wantAll =
     args.summary || !(args.probe || args.modules || args.layers || args.deps || args.boundaries);
   if (args.probe || wantAll) {
-    probe(doc, nkey, nodes, ekey, edges);
+    describeShape(doc, nkey, nodes, ekey, edges);
     console.log();
   }
   if (!nodes.length) return 1;

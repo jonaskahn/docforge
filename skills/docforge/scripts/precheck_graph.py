@@ -1,34 +1,38 @@
 #!/usr/bin/env python3
-"""Gate all docforge documentation work on the analysis it depends on.
+"""Gate docforge documentation work on the graph analysis it depends on —
+provider-agnostic, over whatever graph sources are registered in
+graph_source_registry.py (understand-anything, GitNexus, and any future source).
 
-Both the knowledge graph and domain graph are required for every docforge
-invocation — there is no fallback, no inspection substitute. This script
-checks that the two files exist under .ua/ (or the legacy
-.understand-anything/) and refuses to report READY unless both are present.
-It does not care which tool produced them.
+Two capabilities matter:
 
-understand-anything is the default producer, but this script also detects a
-GitNexus index (.gitnexus/meta.json) and, when the graph is missing but an
-index exists, points at the GitNexus bridge (graph_source_gitnexus.py build,
-documented in references/gitnexus-bridge.md) instead of only suggesting
-/understand. Priority is always: use .ua/*.json if present, regardless of
-which source could also build it; only fall back to a source-specific build
-suggestion when the files are actually missing. See references/graph-sources.md
-for the full capability-to-source dispatch table, and the docstring in
-graph_source_gitnexus.py for why this can't be a fully automatic build (MCP
-tool calls are agent-mediated, not scriptable).
+  code_graph  — the structure/knowledge graph. **Universal precondition.**
+                Docforge does nothing without one, but *any* single registered
+                source that has built one satisfies it; docforge never
+                fabricates a code graph itself.
 
-This script cannot check whether the understand-anything skill/plugin itself
-is installed (that's a property of the calling agent's environment, not this
-repo's filesystem) — the agent must confirm that separately by checking its
-own skill listing or attempting `/understand` and `/understand-domain`.
+  flow_graph  — the business-flow/domain graph. Needed only for flow/product/
+                BA-PO/agent-context-flow docs. Resolved native-first (a source
+                that emits flows — understand-anything's domain graph, or
+                GitNexus's native processes), else docforge derives a
+                provisional one from the code graph into
+                .docforge/tmp/domain-graph.json (never committed — see
+                derive_flow_graph.py). So flow docs are never hard-blocked while
+                a code graph exists.
 
-Exit code 0 only when every file required for the requested --need scope is
-present. Non-zero otherwise, with a specific remediation command per gap.
+This script only inspects the filesystem; it cannot tell whether a producer
+plugin/skill is installed in the calling agent's environment — the agent
+confirms that separately (skill listing) using the setup hints printed here.
+
+When more than one source is ready for the same repo, this reports **all** of
+them (with each one's read mechanism) so the agent can let the user choose —
+understand-anything is the recommended default; see SKILL.md Step 0.
+
+Exit code 0 when the requested --need scope is satisfiable; non-zero otherwise,
+with per-source remediation.
 
 Usage:
-    python check_preconditions.py --repo <path> --need graph
-    python check_preconditions.py --repo <path> --need domain
+    python precheck_graph.py --repo <path>                 # --need code (default)
+    python precheck_graph.py --repo <path> --need flow
 """
 
 from __future__ import annotations
@@ -37,100 +41,130 @@ import argparse
 import sys
 from pathlib import Path
 
-from graph_common import display, show_graph_dirs
-from graph_source_gitnexus import detect as gitnexus_detect
-from graph_source_ua import detect as ua_detect
+from graph_storage import relative_display_path, find_graph_file, list_known_graph_dirs
+from graph_source_registry import setup_hints_for_missing, resolve_all_ready
+
+DERIVED_FLOW_CANDIDATES = [".docforge/tmp/domain-graph.json"]
+
+# Accept the old capability names as aliases so any stray caller keeps working.
+NEED_ALIASES = {"graph": "code", "domain": "flow"}
+
+# How each source's graph is read, keyed by its read_mode, for the report.
+READ_MECHANISM = {
+    "json": "JSON on disk — read with read_graph.py",
+    "db": "ladybug DB — query via the gitnexus MCP, or offline with "
+          "graph_source_gitnexus_reader.py",
+}
 
 
-GITNEXUS_BUILD_CMD = (
-    "    python scripts/graph_source_gitnexus.py build --repo <path> "
-    "--nodes <nodes.json> --edges <edges.json> --processes <processes.json>"
-)
+def print_setup_hints(repo: Path, capability: str) -> None:
+    """Print every capable source's remediation block for a missing graph."""
+    for src, lines in setup_hints_for_missing(repo, capability):
+        for line in lines:
+            print(line if line.startswith("    ") else f"  {line}")
 
 
-def print_missing_remediation(repo: Path, gx_index: Path | None, *, is_domain: bool) -> None:
-    """Print the Fix: block for a missing graph file. Always shows both
-    remediation paths — understand-anything and GitNexus — since either one
-    resolves the gap and the user may already have one but not the other
-    installed. The GitNexus option's exact steps depend on whether an index
-    already exists."""
-    if is_domain:
-        print("  Fix (understand-anything): after the knowledge graph exists, run:")
-        print("    /understand-domain")
-        print("  Business flows, docs/flows/, docs/product/overview.md and the "
-              "BA/PO overlays are never hand-typed. Do not enumerate flows from "
-              "route files or folder names as a substitute for this graph.")
-    else:
-        print("  Fix (understand-anything): confirm the understand-anything skill is "
-              "loaded in this session (check the skill listing, or load/invoke it), "
-              "then run:")
-        print("    /understand")
+def check_code_graph(repo: Path) -> bool:
+    """Report every source that has a code graph ready. True if at least one is."""
+    ready = resolve_all_ready(repo, "code_graph")
+    if not ready:
+        print("MISSING  code graph   (no registered source has one built)")
+        list_known_graph_dirs(repo)
+        print("  Build a code graph from any one configured source, then re-run. Options:")
+        print_setup_hints(repo, "code_graph")
+        print("  Do not write documentation from directory names or guesswork while this is missing.")
+        return False
+    for src, path in ready:
+        mechanism = READ_MECHANISM.get(src.get("read_mode", ""), "")
+        suffix = f"  [{mechanism}]" if mechanism else ""
+        print(f"READY    code graph   -> {relative_display_path(path, repo)}  "
+              f"(source: {src['name']}){suffix}")
+    if len(ready) > 1:
+        print(f"  {len(ready)} sources are ready — ask the user which to read "
+              "(understand-anything recommended). See SKILL.md Step 0.")
+    return True
 
-    if gx_index:
-        print(f"  Fix (GitNexus, index already found at {display(gx_index, repo)}): "
-              "follow references/gitnexus-bridge.md, then run:")
-        print(GITNEXUS_BUILD_CMD)
-    else:
-        print("  Fix (GitNexus, not yet installed/indexed): from the repo root, run:")
-        print("    npx gitnexus analyze")
-        print("    npx gitnexus setup")
-        print("  Then follow references/gitnexus-bridge.md and run:")
-        print(GITNEXUS_BUILD_CMD)
 
-    if not is_domain:
-        print("  Do not proceed to writing documentation from directory names or "
-              "guesswork while this is missing.")
+def report_flow_graph(repo: Path) -> str:
+    """Resolve the flow graph. Returns 'native', 'derived', or 'none' and
+    prints a status line. Does not itself decide the exit code."""
+    ready = resolve_all_ready(repo, "flow_graph")
+    if ready:
+        for src, path in ready:
+            print(f"READY    flow graph   -> {relative_display_path(path, repo)}  "
+                  f"(source: {src['name']}, authoritative)")
+        return "native"
+    derived = find_graph_file(repo, DERIVED_FLOW_CANDIDATES)
+    if derived:
+        print(f"READY    flow graph   -> {relative_display_path(derived, repo)}  "
+              "(docforge-derived, provisional)")
+        return "derived"
+    print("MISSING  flow graph   (no native flow graph; none derived yet)")
+    return "none"
+
+
+def print_flow_remediation(repo: Path) -> None:
+    print("  Flows are needed for docs/flows/, docs/product/, BA/PO overlays, and "
+          "agent-context flow sections. Resolve either way:")
+    print("  (a) Derive a provisional flow graph from the code graph "
+          "(see references/domain-derivation.md):")
+    print("    python scripts/derive_flow_graph.py prepare --repo <path>")
+    print("    # dispatch the docforge domain analyzer on the emitted context, then")
+    print("    python scripts/derive_flow_graph.py write --repo <path> --analysis <analysis.json>")
+    print("    # writes .docforge/tmp/domain-graph.json — provisional, never committed")
+    print("  (b) Or produce a native (authoritative) flow graph from a source:")
+    print_setup_hints(repo, "flow_graph")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repo", required=True, type=Path)
-    ap.add_argument("--need", choices=["graph", "domain"], default="domain",
-                     help="'graph' is a partial check (knowledge graph only); 'domain' "
-                          "(the default, recommended for every docforge run) checks both "
-                          "the knowledge graph and domain graph, which are both required "
-                          "for all documentation work — there is no fallback or "
-                          "inspection substitute")
+    ap.add_argument("--need", default="code",
+                    help="'code' (default): the universal code-graph gate. "
+                         "'flow': also require a flow graph (native or derived), "
+                         "for a plan that includes flow/product/BA-PO docs. "
+                         "Legacy aliases 'graph'/'domain' map to 'code'/'flow'.")
     args = ap.parse_args()
 
+    need = NEED_ALIASES.get(args.need, args.need)
+    if need not in ("code", "flow"):
+        print(f"--need must be 'code' or 'flow' (or legacy 'graph'/'domain'), got '{args.need}'",
+              file=sys.stderr)
+        return 2
     if not args.repo.is_dir():
         print(f"Not a directory: {args.repo}", file=sys.stderr)
         return 2
 
-    ok = True
-    ua = ua_detect(args.repo)
-
-    kg = ua["knowledge_graph"]
-    if kg:
-        print(f"READY  knowledge graph  -> {display(kg, args.repo)}")
-    else:
-        ok = False
-        print("MISSING  knowledge graph  (checked .ua/ and .understand-anything/)")
-        show_graph_dirs(args.repo)
-        gx = gitnexus_detect(args.repo)
-        print_missing_remediation(args.repo, gx["index"], is_domain=False)
-
-    if args.need == "domain":
-        dg = ua["domain_graph"]
-        if dg:
-            print(f"READY  domain graph     -> {display(dg, args.repo)}")
-        else:
-            ok = False
-            print("MISSING  domain graph  (checked .ua/ and .understand-anything/)")
-            show_graph_dirs(args.repo)
-            gx = gitnexus_detect(args.repo)
-            print_missing_remediation(args.repo, gx["index"], is_domain=True)
+    code_ok = check_code_graph(args.repo)
+    flow_state = report_flow_graph(args.repo) if (need == "flow" or code_ok) else "none"
 
     print()
-    if ok:
-        print("All required analysis present. Proceed.")
+    if not code_ok:
+        print("BLOCKED. A code graph is docforge's universal precondition — no "
+              "documentation of any kind may be written until one exists. Tell the "
+              "user which source to build it with (options above); docforge never "
+              "fabricates a code graph itself.")
+        return 1
+
+    if need == "code":
+        print("Code graph present — proceed.")
+        if flow_state == "none":
+            print("Note: no flow graph yet. Flow/product/BA-PO/agent-context-flow docs "
+                  "will derive one from the code graph when reached (--need flow).")
         return 0
-    print("BLOCKED. No documentation of any kind may be written until every "
-          "MISSING item above is resolved. Tell the user what is missing and which "
-          "command produces it. Both the knowledge graph and domain graph are "
-          "required for all docforge work — there is no inspection fallback or "
-          "substitute for either.")
+
+    # need == "flow"
+    if flow_state != "none":
+        print("Code and flow graphs present — proceed.")
+        if flow_state == "derived":
+            print("Note: flows are docforge-derived (provisional). Confirm business "
+                  "rules against source before asserting them; a native flow graph is "
+                  "authoritative where available.")
+        return 0
+
+    print("Code graph present, but flows are required for this plan and none exist yet.")
+    print_flow_remediation(args.repo)
     return 1
 
 

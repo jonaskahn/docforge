@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 "use strict";
-/* check_provenance.js — compare recorded git blob hashes against current
+/* check_staleness.js — compare recorded git blob hashes against current
  * working-tree content to decide whether a docforge document (or one of its
  * sections) needs to be rewritten.
  *
  * Usage:
- *   node check_provenance.js --manifest .docforge/manifest.json
- *   node check_provenance.js --manifest .docforge/manifest.json --flow order-approval-threshold
- *   node check_provenance.js --manifest .docforge/manifest.json --json
- *   node check_provenance.js --rebuild-manifest --docs-dir docs --manifest .docforge/manifest.json
+ *   node check_staleness.js --manifest .docforge/manifest.json
+ *   node check_staleness.js --manifest .docforge/manifest.json --flow order-approval-threshold
+ *   node check_staleness.js --manifest .docforge/manifest.json --json
+ *   node check_staleness.js --rebuild-manifest --docs-dir docs --manifest .docforge/manifest.json
  *
  * Exit code is 0 if everything is FRESH, 1 if anything is PARTIAL/STALE/MISSING,
  * 2 on a usage or IO error — so this can gate a CI job.
@@ -22,7 +22,7 @@ const { spawnSync } = require("child_process");
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n/;
 
-// Same group vocabulary manifest_sync.js uses, in the same order.
+// Same group vocabulary manage_manifest.js uses, in the same order.
 const GROUPS = ["architecture", "flows", "product", "engineering", "operations",
   "reference", "security", "contributing", "records"];
 
@@ -132,7 +132,7 @@ function walkMdFiles(dir) {
 }
 
 // Reconstruct the manifest from every document's frontmatter, in the same
-// document_groups envelope manifest_sync.js writes — so check() reads one shape
+// document_groups envelope manage_manifest.js writes — so check() reads one shape
 // whether the manifest was built by the plan or rebuilt from disk. Group and id
 // are inferred from the path; type is "adopted" since frontmatter doesn't record it.
 function rebuildManifest(docsDir, manifestPath) {

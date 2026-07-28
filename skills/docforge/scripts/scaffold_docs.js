@@ -18,9 +18,9 @@
  *
  * Examples
  * --------
- *   node docs_scaffold.js --repo ../my-service --tier 2 --overlay api
- *   node docs_scaffold.js --repo ../my-service --tier 2 --overlay api --dry-run
- *   node docs_scaffold.js --repo ../my-service --audit
+ *   node scaffold_docs.js --repo ../my-service --tier 2 --overlay api
+ *   node scaffold_docs.js --repo ../my-service --tier 2 --overlay api --dry-run
+ *   node scaffold_docs.js --repo ../my-service --audit
  *
  * Node.js built-ins only.
  */
@@ -463,7 +463,7 @@ function parseArgs(argv) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.repo) {
-    console.error("usage: docs_scaffold.js --repo <path> [--tier 1|2|3] [--overlay <name>]... [--no-agent-context] [--audit] [--dry-run]");
+    console.error("usage: scaffold_docs.js --repo <path> [--tier 1|2|3] [--overlay <name>]... [--no-agent-context] [--audit] [--dry-run]");
     return 1;
   }
   if (![1, 2, 3].includes(args.tier)) {
