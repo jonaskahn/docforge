@@ -1,24 +1,88 @@
-# Agent-context overlay
+# Coding-agent context overlay
 
-Select this overlay explicitly when agent-facing context is wanted. It writes
-last because its views link to finished human-facing documents.
+Select `agent-context` when AI coding agents need a compact, repository-local
+operating map. It writes last because it links to completed human-facing
+documentation and compresses facts rather than creating another source of
+truth.
 
-The catalog defines:
+## Generated structure
 
-- `AGENTS.md`: compact root kernel, exempt from frontmatter and capped by the
-  agent-kernel lint profile;
-- `CLAUDE.md` and `CLAUDE.local.md`: fixed shims, with provenance in manifest;
-- `.claude/settings.json`: safely merged machine configuration;
-- `docs/agents/`: brief linking views.
+```text
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+.claude/settings.json
+docs/agents/
+├── README.md
+├── architecture.md
+├── patterns.md
+├── testing.md
+├── tech-debt.md
+├── conventions.md   # conditional on an existing conventions source
+├── flow.md
+└── glossary.md
+```
 
 `CLAUDE.local.md` is added to the target repository’s ignore rules.
+`.claude/settings.json` is deep-merged so existing configuration survives.
+Cross-vendor mirrors beyond the fixed shims are generated only when requested
+or when existing target configuration makes them applicable.
 
-Architecture and patterns require the code graph. Testing uses manifests.
-Conventions is selected only with an existing conventions source. Only the flow
-view and flow-derived glossary view require the flow graph. Other agent files
-must not be hard-gated on it.
+## Capability boundaries
 
-Agent views link to the human document that owns a fact. Patterns may contain
-agent-specific exemplars when no human document owns them. Cross-vendor mirrors
-are produced only when requested or when existing target configuration makes
-them applicable.
+- `AGENTS.md` and architecture/pattern views use `code_graph`.
+- testing uses manifests and verified commands;
+- conventions is selected only when a conventions source already exists;
+- only `flow.md` and the flow-derived `glossary.md` require `flow_graph`;
+- shims and machine configuration are not reasons to build a flow graph.
+
+Thus a missing flow graph delays two views, not the whole overlay.
+
+## Content ownership
+
+### `AGENTS.md`
+
+Keep a small root kernel: repository map, verified commands, validation rules,
+critical constraints, and links to deeper context. It is exempt from
+frontmatter, records provenance in the manifest, and must pass the dedicated
+size/content lint.
+
+### Fixed shims and settings
+
+`CLAUDE.md` points to the canonical root kernel. `CLAUDE.local.md` is a local
+extension point. Settings contain only safe, portable defaults and are merged
+without discarding user values.
+
+### `docs/agents/`
+
+- `architecture.md`: short layer/entry-point map linked to the owning
+  architecture documents;
+- `patterns.md`: representative paths, recurring conventions, and complexity
+  hotspots useful before editing;
+- `testing.md`: exact commands, test locations, and the minimum validation
+  matrix;
+- `tech-debt.md`: editing hazards linked to the authoritative debt/limitation
+  entries;
+- `conventions.md`: evidenced local conventions, generated only when the
+  source condition is satisfied;
+- `flow.md`: triggers and entry points linked to canonical flow documents;
+- `glossary.md`: flow/domain terms linked to their owning glossary or flow.
+
+These are token-budgeted retrieval views. They link to the human document that
+owns each fact and include agent-specific exemplars only when no human-facing
+document owns that guidance.
+
+## Provider-native grounding
+
+Use the selected provider’s native query path to retrieve the smallest useful
+context:
+
+- Understand Anything: layers, tours, focused explanations, and domain flows;
+- GitNexus: symbol context, processes, change impact, and high-connectivity
+  areas;
+- CodeGraph: relevant source, call paths, routes, and blast radius through
+  `codegraph_explore`.
+
+Do not paste provider graph schema, node IDs, private symbol dumps, or volatile
+line numbers into agent documents. Convert them into durable paths,
+responsibilities, commands, constraints, and links.

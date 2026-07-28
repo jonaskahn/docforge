@@ -2,9 +2,9 @@
 """GitNexus graph source: detection only.
 
 GitNexus (https://github.com/abhigyanpatwari/GitNexus) stores its graph in a
-ladybug property-graph database at .gitnexus/lbug, with a sidecar
-.gitnexus/meta.json describing the index (files/nodes/edges/processes counts and
-the commit it was built at). docforge reads that database **directly**, in place
+LadybugDB property-graph database at .gitnexus/lbug, with a sidecar
+.gitnexus/gitnexus.json (legacy .gitnexus/meta.json) describing the index.
+Docforge reads that database **directly**, in place
 — there is no copy-to-JSON bridge:
 
   * primary  — the gitnexus MCP tools (`cypher`, `query`, `context`) and
@@ -47,7 +47,10 @@ CAPABILITIES = frozenset({"code_graph", "flow_graph"})
 READ_MODE = "db"
 
 LBUG_CANDIDATES = [".gitnexus/lbug"]
-INDEX_MARKER_CANDIDATES = [".gitnexus/meta.json"]
+INDEX_MARKER_CANDIDATES = [
+    ".gitnexus/gitnexus.json",
+    ".gitnexus/meta.json",
+]
 
 
 def _git_head(repo: Path) -> str | None:
@@ -76,12 +79,12 @@ def detect(repo: Path) -> dict:
     Returns the registry-standard keys code_graph / flow_graph — each the path
     to the ladybug DB (.gitnexus/lbug) when that capability is available, or
     None — plus source-private fields:
-      index  — Path to .gitnexus/meta.json, or None
+      index  — Path to current or legacy GitNexus metadata, or None
       stats  — the index's stats dict (files/nodes/edges/processes/...), or None
       stale  — True if meta.lastCommit differs from the current git HEAD
 
     The DB satisfies code_graph when it has nodes and flow_graph when it has
-    processes; when the sidecar meta.json carries no stats we do not
+    processes; when the metadata carries no stats we do not
     second-guess a present DB, and report both capabilities.
     """
     lbug = find_graph_file(repo, LBUG_CANDIDATES)
@@ -122,7 +125,7 @@ def setup_hint(repo: Path, gap: str) -> list[str]:
         ]
     if stale:
         return [
-            "GitNexus (index is STALE — meta.lastCommit != current HEAD): ask explicit approval, then re-index:",
+            "GitNexus (index is STALE — indexed lastCommit != current HEAD): ask explicit approval, then re-index:",
             "    npx gitnexus analyze",
             "  Then re-run detect (see references/graph-source-gitnexus.md).",
         ]
@@ -146,7 +149,7 @@ def run_detect(args: argparse.Namespace) -> int:
         print("  Read via the gitnexus MCP, or offline with "
               "scripts/graph_source_gitnexus_reader.py.")
         return 0
-    print("MISSING  gitnexus index  (checked for .gitnexus/lbug and .gitnexus/meta.json)")
+    print("MISSING  gitnexus index  (checked for .gitnexus/lbug and current/legacy metadata)")
     for line in setup_hint(args.repo, "code_graph"):
         print(line if line.startswith("    ") else f"  {line}")
     return 1

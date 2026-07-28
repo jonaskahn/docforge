@@ -1,12 +1,13 @@
 # Source analysis
 
 Use the provider selected through `graph-sources.md`. This file owns the
-provider-neutral evidence loop.
+provider-neutral evidence loop; provider references own the skill/MCP/CLI
+commands.
 
 ## Evidence order
 
-1. Read the code graph for structure, boundaries, entry points, and dependency
-   edges.
+1. Query the code graph through the provider’s native skill/MCP for structure,
+   boundaries, entry points, source-bearing call paths, and dependency edges.
 2. Read manifests for commands, versions, configuration, and published surface.
 3. Read a native or provisional flow graph only for a selected document that
    requires `flow_graph`.
@@ -18,6 +19,8 @@ provider-neutral evidence loop.
 
 Ask narrow capability questions. Retrieve the files and edges that answer the
 current document contract rather than requesting a generic system summary.
+Do this once for the planning inventory and again for each document’s narrower
+evidence card. A ready index that is never queried does not ground a plan.
 
 ## Evidence by document family
 
@@ -29,6 +32,9 @@ current document contract rather than requesting a generic system summary.
 | dependencies/security/risks | manifests, code-graph edges, controls, history |
 | decisions | history and the code structure that resulted |
 | portfolio | child-repository discovery, member manifests, each member’s graph evidence |
+| Business Analyst | native/provisional flows, source-confirmed rules, tests, connected requirement evidence |
+| Product Owner | reachable capabilities, release history, instrumentation, stakeholder evidence |
+| coding-agent context | entry points, representative paths, tests, constraints, hotspots, owning human documents |
 
 Treat graph output as evidence to synthesize, not prose to paste. If evidence
 cannot establish an external value, use one typed token. If evidence should

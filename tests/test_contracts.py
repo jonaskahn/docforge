@@ -149,7 +149,7 @@ class CatalogSelectionTests(unittest.TestCase):
     def test_flow_requirement_is_per_document(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            result = initialize("py", repo, "spine", "agent-context")
+            result = initialize("py", repo, "spine", "business-analyst", "product-owner", "agent-context")
             self.assertEqual(result.returncode, 0, result.stderr)
             docs = {doc["id"]: doc for doc in load_manifest(repo)["documents"]}
             self.assertNotIn("flow_graph", docs["agents_architecture"]["requires"])
@@ -157,6 +157,38 @@ class CatalogSelectionTests(unittest.TestCase):
             self.assertNotIn("flow_graph", docs["agents_testing"]["requires"])
             self.assertIn("flow_graph", docs["agents_flow"]["requires"])
             self.assertIn("flow_graph", docs["agents_glossary"]["requires"])
+            self.assertIn("flow_graph", docs["ba_process_flows"]["requires"])
+            self.assertIn("flow_graph", docs["ba_business_rules"]["requires"])
+            self.assertIn("flow_graph", docs["ba_requirements"]["requires"])
+            self.assertNotIn("flow_graph", docs["po_features"]["requires"])
+            self.assertNotIn("flow_graph", docs["po_metrics"]["requires"])
+            self.assertNotIn("flow_graph", docs["po_release_notes"]["requires"])
+
+    def test_audience_overlay_paths_are_explicit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            result = initialize(
+                "py", repo, "spine",
+                "business-analyst", "product-owner", "agent-context",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
+            self.assertTrue({
+                "docs/product/business-analyst/README.md",
+                "docs/product/business-analyst/process-flows.md",
+                "docs/product/business-analyst/business-rules.md",
+                "docs/product/business-analyst/requirements-traceability.md",
+                "docs/product/product-owner/README.md",
+                "docs/product/product-owner/feature-catalog.md",
+                "docs/product/product-owner/success-metrics.md",
+                "docs/product/product-owner/release-notes.md",
+                "AGENTS.md",
+                "docs/agents/architecture.md",
+                "docs/agents/flow.md",
+            } <= paths)
+            self.assertNotIn(
+                "docs/product/product-owner/backlog-traceability.md", paths,
+            )
 
 
 class PairedRuntimeTests(unittest.TestCase):
@@ -182,6 +214,14 @@ class PairedRuntimeTests(unittest.TestCase):
                           str(js_repo / ".docforge/manifest.json"), "--dry-run")
             self.assertEqual(py_tree.returncode, 0, py_tree.stderr)
             self.assertEqual(py_tree.stdout, js_tree.stdout)
+            self.assertIn("Generation plan — tier: portfolio", py_tree.stdout)
+            self.assertIn("depth:", py_tree.stdout)
+            self.assertIn("requires:", py_tree.stdout)
+            self.assertIn("selected by:", py_tree.stdout)
+            self.assertRegex(
+                py_tree.stdout,
+                r"\d+ manifest documents; \d+ require a flow graph\.",
+            )
             listed = {
                 match.group(1)
                 for line in py_tree.stdout.splitlines()
@@ -234,6 +274,32 @@ class GraphAndStateTests(unittest.TestCase):
             js_result = run("js", "precheck_graph", "--repo", str(repo), "--need", "flow")
             self.assertEqual(normalized(py_result.stdout, [repo]), normalized(js_result.stdout, [repo]))
             self.assertIn("2 sources are ready", py_result.stdout)
+
+    def test_gitnexus_current_metadata_and_native_process_detection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            graph_dir = repo / ".gitnexus"
+            graph_dir.mkdir()
+            (graph_dir / "lbug").write_bytes(b"fixture")
+            (graph_dir / "gitnexus.json").write_text(json.dumps({
+                "stats": {"nodes": 12, "edges": 20, "processes": 3},
+            }) + "\n", encoding="utf-8")
+            outputs = []
+            for runtime in ("py", "js"):
+                detected = run(
+                    runtime, "graph_source_gitnexus", "detect",
+                    "--repo", str(repo),
+                )
+                self.assertEqual(detected.returncode, 0, detected.stderr)
+                self.assertIn("3 processes", detected.stdout)
+                precheck = run(
+                    runtime, "precheck_graph", "--repo", str(repo),
+                    "--need", "flow",
+                )
+                self.assertEqual(precheck.returncode, 0, precheck.stderr)
+                self.assertIn("(source: gitnexus, authoritative)", precheck.stdout)
+                outputs.append(normalized(precheck.stdout, [repo]))
+            self.assertEqual(outputs[0], outputs[1])
 
     def test_completion_requires_independent_pass(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

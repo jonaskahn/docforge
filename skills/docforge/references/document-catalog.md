@@ -59,9 +59,13 @@ mechanism, constraints, and tradeoffs.
 | compatibility | supported versions/platforms, tested matrix, deprecation behavior | migration procedure | Reference | reference |
 | migration | source/target versions, breaking changes, ordered changes, verification, rollback | full compatibility matrix | How-to | deep-dive |
 | error-catalog | stable code/name, trigger, client behavior, retryability, observability | implementation stack traces | Reference | reference |
+| process-flows | actor, trigger, business-language steps, decision points, exceptions, outcome, owning flow links | raw call chains or repeated business-rule definitions | Explanation | deep-dive |
+| business-rules | stable rule id, plain-language statement, trigger, outcome, exceptions, enforcement evidence | rules inferred only from names | Reference | deep-dive |
 | requirements-traceability | requirement evidence, owning rule/flow, implementation, test, status | invented ticket identifiers | Reference | deep-dive |
 | feature-catalog | user outcome, audience, availability, owning flow | implementation inventory | Reference | deep-dive |
 | success-metrics | outcome, measure, instrumentation state, interpretation, external target token | invented targets | Reference | deep-dive |
+| release-notes | released user impact, version/date, compatibility impact, feature links | internal refactor and dependency noise | Reference | reference |
+| backlog-traceability | evidenced ticket id, feature, flow/change, release/status link | guessed ticket mappings or empty seed tables | Reference | reference |
 | portfolio security/operations | cross-repo controls, gaps, shared dependencies, operational coupling | member-level repetition | Explanation | deep-dive |
 
 ## Overlay types
@@ -70,10 +74,12 @@ mechanism, constraints, and tradeoffs.
   exported interfaces; do not hand-maintain a parallel API.
 - Data contracts name producers, consumers, schema, validation, lineage,
   compatibility, and recovery.
-- Business Analyst documents own rules and requirements traceability. Shared
-  flow steps remain in flow documents.
-- Product Owner documents own feature value and success measures. Backlog
-  traceability exists only with ticket evidence.
+- Business Analyst documents own a business-language process view, rules, and
+  requirements traceability. The process view links each item to its canonical
+  dynamic flow document; it does not duplicate technical call-chain prose.
+- Product Owner documents own feature value/status, evidenced measures, and
+  user-facing release notes. Backlog traceability is dynamic and exists only
+  with ticket evidence.
 - Agent views are compact linking views. Architecture and patterns require the
   code graph; only flow and flow-derived glossary views require the flow graph;
   conventions require a conventions source.

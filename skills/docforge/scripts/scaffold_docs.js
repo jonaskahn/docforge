@@ -32,8 +32,19 @@ function activeDocuments(manifest) {
 }
 function preview(manifest) {
   const docs = activeDocuments(manifest);
-  for (const doc of docs) console.log(`${String(doc.write_order).padStart(3, "0")}  ${doc.id.padEnd(28)}  ${doc.path}`);
-  console.log(`\n${docs.length} manifest documents.`);
+  const project = manifest.project || {};
+  const overlays = (project.overlays || []).join(", ") || "none";
+  console.log(`Generation plan — tier: ${project.tier || "unknown"}; overlays: ${overlays}`);
+  console.log();
+  for (const doc of docs) {
+    console.log(`${String(doc.write_order).padStart(3, "0")}  ${doc.id.padEnd(28)}  ${doc.path}`);
+    const requires = (doc.requires || []).join(", ") || "none";
+    const origins = (((doc.selection || {}).origins) || [])
+      .map((origin) => `${origin.kind}:${origin.id}`).join(", ") || "manifest";
+    console.log(`     ${doc.group} / ${doc.type} | depth: ${doc.target_depth} | requires: ${requires} | selected by: ${origins}`);
+  }
+  const flowCount = docs.filter((doc) => (doc.requires || []).includes("flow_graph")).length;
+  console.log(`\n${docs.length} manifest documents; ${flowCount} require a flow graph.`);
   return 0;
 }
 function posixDirname(value) {

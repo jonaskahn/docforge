@@ -22,8 +22,8 @@
  * producer plugin/skill is installed using the setup hints printed here.
  *
  * When more than one source is ready for the same repo, this reports all of
- * them (with each one's read mechanism) so the agent can let the user choose —
- * understand-anything is the recommended default; see SKILL.md Step 0.
+ * them (with each one's read mechanism) so the agent can choose by the
+ * provider fit documented in references/graph-sources.md.
  *
  * Exit code 0 when the requested --need scope is satisfiable; non-zero
  * otherwise, with per-source remediation.
@@ -100,15 +100,19 @@ function checkCodeGraph(repo) {
   }
   for (const [src, p] of ready) {
     const mechanism = READ_MECHANISM[src.readMode] || "";
-    const suffix = mechanism ? `  [${mechanism}]` : "";
+    let suffix = mechanism ? `  [${mechanism}]` : "";
+    const state = src.detect(repo);
+    if (state.stale === true) {
+      suffix += "  [STALE vs HEAD; refresh requires approval]";
+    }
     console.log(
       `READY    code graph   -> ${relativeDisplayPath(p, repo)}  (source: ${src.name})${suffix}`
     );
   }
   if (ready.length > 1) {
     console.log(
-      `  ${ready.length} sources are ready — ask the user which to read ` +
-        "(understand-anything recommended). See SKILL.md Step 0."
+      `  ${ready.length} sources are ready — ask the user which should be ` +
+        "primary; select by the evidence need in references/graph-sources.md."
     );
   }
   return true;
@@ -197,8 +201,9 @@ function main() {
     console.log("Code graph present — proceed.");
     if (flowState === "none") {
       console.log(
-        "Note: no flow graph yet. Flow/product/BA-PO/agent-context-flow docs " +
-          "will derive one from the code graph when reached (--need flow)."
+        "Note: no flow graph yet. Selected flow, Business Analyst, and " +
+          "agent flow/glossary documents will resolve it when reached " +
+          "(--need flow); other documents may proceed."
       );
     }
     return 0;

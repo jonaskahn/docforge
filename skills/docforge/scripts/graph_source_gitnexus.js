@@ -3,9 +3,9 @@
 /* GitNexus graph source: detection only.
  *
  * GitNexus (https://github.com/abhigyanpatwari/GitNexus) stores its graph in a
- * ladybug property-graph database at .gitnexus/lbug, with a sidecar
- * .gitnexus/meta.json describing the index (files/nodes/edges/processes counts
- * and the commit it was built at). docforge reads that database **directly**,
+ * LadybugDB property-graph database at .gitnexus/lbug, with a sidecar
+ * .gitnexus/gitnexus.json (legacy .gitnexus/meta.json) describing the index.
+ * Docforge reads that database **directly**,
  * in place — there is no copy-to-JSON bridge:
  *
  *   - primary: the gitnexus MCP tools (`cypher`, `query`, `context`) and
@@ -41,7 +41,10 @@ const CAPABILITIES = ["code_graph", "flow_graph"];
 const READ_MODE = "db";
 
 const LBUG_CANDIDATES = [".gitnexus/lbug"];
-const INDEX_MARKER_CANDIDATES = [".gitnexus/meta.json"];
+const INDEX_MARKER_CANDIDATES = [
+  ".gitnexus/gitnexus.json",
+  ".gitnexus/meta.json",
+];
 
 function gitHead(repo) {
   try {
@@ -69,7 +72,7 @@ function readMeta(indexPath) {
 // ladybug DB (.gitnexus/lbug) when that capability is available, or null —
 // plus source-private fields: index, stats, stale. The DB satisfies code_graph
 // when it has nodes and flow_graph when it has processes; when the sidecar
-// meta.json carries no stats we do not second-guess a present DB.
+// metadata carries no stats we do not second-guess a present DB.
 function detect(repo) {
   const lbug = findGraphFile(repo, LBUG_CANDIDATES);
   const index = findGraphFile(repo, INDEX_MARKER_CANDIDATES);
@@ -111,7 +114,7 @@ function setupHint(repo, gap) {
   }
   if (stale) {
     return [
-      "GitNexus (index is STALE — meta.lastCommit != current HEAD): ask explicit approval, then re-index:",
+      "GitNexus (index is STALE — indexed lastCommit != current HEAD): ask explicit approval, then re-index:",
       "    npx gitnexus analyze",
       "  Then re-run detect (see references/graph-source-gitnexus.md).",
     ];
@@ -151,7 +154,7 @@ function runDetect(args) {
     );
     return 0;
   }
-  console.log("MISSING  gitnexus index  (checked for .gitnexus/lbug and .gitnexus/meta.json)");
+  console.log("MISSING  gitnexus index  (checked for .gitnexus/lbug and current/legacy metadata)");
   for (const line of setupHint(args.repo, "code_graph")) {
     console.log(line.startsWith("    ") ? line : `  ${line}`);
   }

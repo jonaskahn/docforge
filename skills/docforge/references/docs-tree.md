@@ -74,9 +74,43 @@ Actual cross-repository decisions are dynamic entries under
 
 Overlay identifiers and order come from the catalog. Shared paths are defined
 once with multiple overlay selectors, so selection retains every origin without
-duplicating the document. Product Owner backlog traceability is a dynamic entry
-that can be added only with ticket evidence. Agent conventions are conditional on an existing conventions
-source. Only agent flow and flow-derived glossary views require a flow graph.
+duplicating the document.
+
+Audience overlay roots are intentionally visible in the plan:
+
+```text
+docs/product/business-analyst/
+  README.md
+  process-flows.md
+  business-rules.md
+  requirements-traceability.md
+
+docs/product/product-owner/
+  README.md
+  feature-catalog.md
+  success-metrics.md
+  release-notes.md
+  backlog-traceability.md  # dynamic; only with ticket evidence
+
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+.claude/settings.json
+docs/agents/
+  README.md
+  architecture.md
+  patterns.md
+  testing.md
+  tech-debt.md
+  conventions.md  # conditional on an existing conventions source
+  flow.md
+  glossary.md
+```
+
+Only the BA process/rule/traceability set and the agent flow/flow-derived
+glossary views require a flow graph. Product Owner documents use code,
+manifests, history, ticket evidence, and stakeholder evidence as applicable;
+they do not globally hard-gate on flow data.
 
 ## Existing documentation
 

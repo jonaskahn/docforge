@@ -51,9 +51,29 @@ def active_documents(manifest: dict) -> list[dict]:
 
 def preview(manifest: dict) -> int:
     docs = active_documents(manifest)
+    project = manifest.get("project", {})
+    overlays = ", ".join(project.get("overlays", [])) or "none"
+    print(
+        f"Generation plan — tier: {project.get('tier', 'unknown')}; "
+        f"overlays: {overlays}"
+    )
+    print()
     for doc in docs:
         print(f"{doc['write_order']:03d}  {doc['id']:<28}  {doc['path']}")
-    print(f"\n{len(docs)} manifest documents.")
+        requires = ", ".join(doc.get("requires", [])) or "none"
+        origins = ", ".join(
+            f"{origin['kind']}:{origin['id']}"
+            for origin in doc.get("selection", {}).get("origins", [])
+        ) or "manifest"
+        print(
+            f"     {doc['group']} / {doc['type']} | depth: {doc['target_depth']} | "
+            f"requires: {requires} | selected by: {origins}"
+        )
+    flow_count = sum("flow_graph" in doc.get("requires", []) for doc in docs)
+    print(
+        f"\n{len(docs)} manifest documents; "
+        f"{flow_count} require a flow graph."
+    )
     return 0
 
 

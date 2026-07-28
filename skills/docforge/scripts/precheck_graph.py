@@ -24,8 +24,8 @@ plugin/skill is installed in the calling agent's environment — the agent
 confirms that separately (skill listing) using the setup hints printed here.
 
 When more than one source is ready for the same repo, this reports **all** of
-them (with each one's read mechanism) so the agent can let the user choose —
-understand-anything is the recommended default; see SKILL.md Step 0.
+them (with each one's read mechanism) so the agent can choose by the provider
+fit documented in references/graph-sources.md.
 
 Exit code 0 when the requested --need scope is satisfiable; non-zero otherwise,
 with per-source remediation.
@@ -77,11 +77,14 @@ def check_code_graph(repo: Path) -> bool:
     for src, path in ready:
         mechanism = READ_MECHANISM.get(src.get("read_mode", ""), "")
         suffix = f"  [{mechanism}]" if mechanism else ""
+        state = src["detect"](repo)
+        if state.get("stale") is True:
+            suffix += "  [STALE vs HEAD; refresh requires approval]"
         print(f"READY    code graph   -> {relative_display_path(path, repo)}  "
               f"(source: {src['name']}){suffix}")
     if len(ready) > 1:
-        print(f"  {len(ready)} sources are ready — ask the user which to read "
-              "(understand-anything recommended). See SKILL.md Step 0.")
+        print(f"  {len(ready)} sources are ready — ask the user which should be "
+              "primary; select by the evidence need in references/graph-sources.md.")
     return True
 
 
@@ -143,8 +146,9 @@ def main() -> int:
     if need == "code":
         print("Code graph present — proceed.")
         if flow_state == "none":
-            print("Note: no flow graph yet. Flow/product/BA-PO/agent-context-flow docs "
-                  "will derive one from the code graph when reached (--need flow).")
+            print("Note: no flow graph yet. Selected flow, Business Analyst, and "
+                  "agent flow/glossary documents will resolve it when reached "
+                  "(--need flow); other documents may proceed.")
         return 0
 
     # need == "flow"

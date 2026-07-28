@@ -80,9 +80,12 @@ Document this repository --plan-only
 Expected result:
 
 1. Docforge checks for a readable code graph.
-2. It asks for the graph source, tier, audience overlays, and depth.
-3. It initializes manifest v2 and shows the exact manifest-backed tree.
-4. It stops without creating placeholder documents.
+2. It reuses the selected provider’s persisted graph and native skill/MCP
+   queries to inventory the repository.
+3. It asks for the graph source, tier, audience overlays, and depth.
+4. It initializes manifest v2 and shows the exact manifest-backed tree plus a
+   one-line content/evidence card for every document.
+5. It stops without creating placeholder documents.
 
 If no code graph exists, Docforge stops and shows the available setup paths instead of guessing from directory names.
 
@@ -105,7 +108,15 @@ Read the full [workflow](skills/docforge/SKILL.md#workflow), [document contracts
 
 ## ▓▒░ GRAPH CARTRIDGES ░▒▓
 
-A code graph is the universal key. Docforge can read Understand-Anything JSON, a GitNexus LadybugDB index, or a CodeGraph SQLite index through its MCP tool.
+A code graph is the universal key. Docforge reuses, rather than replaces, the
+provider’s pre-generated index:
+
+- Understand Anything’s shareable structural and domain/flow JSON, queried
+  through its skills or the deterministic JSON reader;
+- GitNexus’s LadybugDB knowledge graph and indexed processes, queried through
+  its MCP/skills or project-local CLI;
+- CodeGraph’s auto-synchronized SQLite index, queried through
+  `codegraph_explore` for relevant source, call paths, and blast radius.
 
 Only catalog entries declaring `flow_graph` require flow data. They prefer native flow data; when only a code graph is available, Docforge derives a provisional, entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
 
@@ -115,7 +126,12 @@ Provider capabilities and setup live in [graph dispatch](skills/docforge/referen
 
 Choose **Spine** for a repository baseline, **Diligence** for external scrutiny, or **Portfolio** for a multi-repository review. Add repo-type power-ups (`api`, `web`, `library`, `data-pipeline`, `infrastructure`) and audience power-ups (`business-analyst`, `product-owner`, `agent-context`) as needed.
 
-Select `agent-context` when a compact `AGENTS.md` kernel, Claude shims/settings, and `docs/agents/` views are wanted. It writes after the human-facing documents it links to.
+The Business Analyst overlay generates a business process view, rule catalog,
+and requirements traceability. The Product Owner overlay generates feature
+value/status, success metrics, release impact, and ticket traceability only
+when ticket evidence exists. Select `agent-context` for a compact `AGENTS.md`
+kernel, Claude shims/settings, and token-budgeted `docs/agents/` views; it
+writes after the human-facing documents it links to.
 
 The tier rules, overlay signals, and complete level layout live in the [canonical docs tree](skills/docforge/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
 

@@ -75,6 +75,18 @@ agent-run. Building or refreshing a repository index requires explicit user
 approval. Global installation, MCP wiring, and restart-requiring setup remain
 user-run.
 
+Do not stop at the readiness flag. Select and use the provider’s native
+retrieval path before planning:
+
+- Understand Anything skills plus its structural/domain JSON;
+- GitNexus skills/MCP over its LadybugDB graph and indexed processes;
+- CodeGraph’s `codegraph_explore` over its SQLite-backed index.
+
+Collect a graph-grounded inventory of boundaries, entry points, public
+surfaces, functional areas, candidate flows, tests, configuration, hotspots,
+and operational paths. Exact preparation and query dispatch live in
+[`references/graph-sources.md`](references/graph-sources.md).
+
 Inspect repository manifests, code, existing documentation, CI/deployment
 configuration, git history, and child repositories. Existing documents are
 evidence: propose keep, migrate, merge, archive, or delete decisions and obtain
@@ -115,8 +127,39 @@ python scripts/scaffold_docs.py \
   --repo <repo> --manifest <repo>/.docforge/manifest.json --dry-run
 ```
 
-The dry-run tree is the exact active manifest tree. Confirm it unless
-`--auto-accept` is present. `--plan-only` stops here.
+The dry run is the exact active manifest tree and prints, for every selected
+document, its group/type, target depth, required evidence, selection origin,
+and write order.
+
+Present a human-readable plan before writing. It must contain:
+
+1. **Evidence readiness** — selected graph provider and persisted artifact,
+   current/stale state, native or provisional flow status, and manifest/history
+   evidence available.
+2. **Scope decision** — chosen tier, each overlay, depth, and one evidence-based
+   sentence explaining why it applies.
+3. **Exact tree** — every static and discovered dynamic path from the manifest;
+   label conditional items that were omitted and why.
+4. **Document cards** — one line per path stating the reader question/content
+   contract, depth, evidence capabilities, and write order. For audience
+   overlays, group cards under Business Analyst, Product Owner, and Coding
+   Agent headings.
+5. **Capability schedule** — which documents can proceed from the code graph
+   now, which wait for `flow_graph`, and whether flow evidence will be native or
+   Docforge-derived.
+6. **Existing-doc actions** — keep/migrate/merge/archive/delete proposals,
+   with destructive or moving actions still awaiting separate approval.
+
+This presentation is the plan gate; a bare list of filenames is insufficient.
+Confirm it unless `--auto-accept` is present. Under `--auto-accept`, display the
+same plan and continue. `--plan-only` stops after the full presentation and
+does not create placeholder documents.
+
+Immediately before materializing each document, show a compact execution card:
+path, reader, owned topics, evidence query, links to owning documents, and
+acceptance checks. This is derived from the manifest and
+[`references/document-catalog.md`](references/document-catalog.md), not a
+second plan file.
 
 ### 4. Write one document
 

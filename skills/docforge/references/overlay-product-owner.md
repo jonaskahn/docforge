@@ -1,47 +1,76 @@
-# Overlay: Product Owner
+# Product Owner overlay
 
-**Applies when:** the repo ships user-facing features with an independent release cadence that a product owner actively plans against.
+Select `product-owner` when readers need value, delivery state, measurable
+outcomes, and release impact. Product value is not inferable from architecture
+alone; code and history establish shipped behavior, while stakeholder evidence
+owns intent and targets.
 
-Adds three or four files under `docs/product/product-owner/`.
+## Generated structure
 
-## `README.md`
-
-Index, plus a cross-link to `../business-analyst/` if that overlay also exists.
-
-## `feature-catalog.md`
-
-Distinct from the spine's `capabilities.md`: that file states what the product does, for any reader; this one reframes the same feature set around *value and status*, for planning conversations.
-
-```markdown
-### Feature: <name>
-**Value:** <the business or user outcome, one sentence>
-**Status:** shipped (vX.Y) / in progress / planned / deprecated (sunset date)
-**Owns:** <which flow(s) implement it — link to `business-analyst/process-flows.md` if that overlay exists, otherwise to `architecture/high-level.md`>
-**Depends on:** <other features or external services this needs>
+```text
+docs/product/product-owner/
+├── README.md
+├── feature-catalog.md
+├── success-metrics.md
+├── release-notes.md
+└── backlog-traceability.md   # dynamic; ticket evidence only
 ```
 
-Do not restate `capabilities.md`'s descriptions — link to them. This file's contribution is status and value framing, nothing `capabilities.md` already carries.
+The first four entries are static for the overlay. `backlog-traceability.md`
+enters the manifest only after discovery proves that ticket evidence exists.
+It is never scaffolded and later deleted as cleanup.
 
-## `success-metrics.md`
+## Content ownership
 
-One entry per feature or epic that has a stated success metric — only where the metric is either instrumented in code (an emitted event, a logged counter) or explicitly given by a stakeholder. Never invent a target number.
+### `README.md`
 
-```markdown
-### <Feature>
-**Metric:** <what's measured>
-**Instrumented via:** <the emitted `<event/metric name>` — a stable event or metric name is a public contract, safe to cite; never a private `module::function` symbol. If none exists, name the `<module>` and write "not instrumented — flag">
+Route product readers to value/status, metrics, and release impact. Link to the
+BA view only when that overlay is selected.
 
-**Target:** <only if stated by a stakeholder; omit the row rather than guess>
-```
+### `feature-catalog.md`
 
-## `release-notes.md`
+For every evidenced user-facing feature, record:
 
-User-facing changelog, distinct from the root `CHANGELOG.md`, which is commit-level and technical. This one is feature-framed: "Approval threshold is now configurable per account," not "refactor: extract ApprovalConfig." Build it by walking merge commits since the last entry and translating each into user impact; skip purely internal changes (refactors, dependency bumps) — a PO-facing changelog that lists internal noise trains readers to stop reading it.
+- user or business outcome;
+- audience;
+- availability/status and the evidence for that state;
+- owning capability and flow links;
+- material dependencies or constraints.
 
-## `backlog-traceability.md` (optional)
+Link to `docs/product/overview.md` for the general capability description.
+This file contributes value and delivery framing rather than restating it.
+“Shipped” requires a reachable code path and release/deployment evidence, not
+merely code present in the tree.
 
-Only build this file if an issue tracker's IDs actually appear in commit messages or code comments — epic/story ID → feature → code flow, so a PO can answer "what did ticket X actually change" without archaeology. Skip it entirely, rather than fabricate a mapping, if no ticket references exist anywhere in history. `scaffold_docs.py`'s mechanical scaffold seeds this file unconditionally alongside the other product-owner documents (it cannot check history) — if you scaffolded mechanically and no ticket references turn up, delete the file rather than filling it with a fabricated or empty mapping.
+### `success-metrics.md`
 
-## Non-negotiable specific to this overlay
+Record the desired outcome, measurable signal, instrumentation source,
+interpretation, and ownership. A code-emitted event or metric proves
+instrumentation, not the business target. Include a target only when
+stakeholder or connected planning evidence supplies it; otherwise use the
+appropriate typed external token or state that no target is documented.
 
-Status and value are the two claims this overlay must never overstate. "Shipped" means the code path is reachable and tested, not merely present in the tree. "Value" is the stated business reason a stakeholder gave, not an assumed one — where that reason isn't recorded anywhere accessible, write "value not documented at time of writing" rather than supply a plausible-sounding justification.
+### `release-notes.md`
+
+Translate released changes into user impact by correlating release tags,
+merge/history evidence, and the feature catalog. Exclude refactors, test-only
+changes, and dependency noise unless they materially change user behavior,
+compatibility, security, or operations.
+
+### `backlog-traceability.md`
+
+When ticket IDs or a connected tracker provide evidence, map ticket → feature
+→ flow/change → verification/release. Add it with `manage_manifest add` using
+the dynamic `backlog-traceability` type. If evidence is absent, the correct
+result is no manifest entry and no file.
+
+## Evidence recipe
+
+1. Use the code graph to discover externally reachable capabilities and their
+   owning paths.
+2. Use manifests and configuration for availability and instrumentation.
+3. Use git history/tags for delivery chronology and release impact.
+4. Use flow evidence only for links when it exists; the PO overlay itself does
+   not globally require `flow_graph`.
+5. Treat stakeholder intent, target values, owners, dates, and roadmap state as
+   external evidence—not facts to infer from code.

@@ -1,14 +1,70 @@
 # Business Analyst overlay
 
-This overlay owns business-rule and requirements-traceability views.
+Select `business-analyst` when readers need the system translated into
+business processes, enforceable rules, and requirement-to-verification links.
+This is an audience view over repository evidence, not a second architecture
+tree.
 
-- Build the rule inventory from selected flow evidence and confirm each
-  condition against source.
-- Record rule identifier, plain-language statement, trigger, outcome,
-  exceptions, and provenance.
-- Keep ordered shared steps in the owning flow document; link instead of
-  repeating them.
-- Trace requirements only to evidence that exists. Use a typed external token
-  for an unavailable external identifier, never an invented ticket.
+## Generated structure
 
-These documents require the flow graph only where their catalog entry lists it.
+```text
+docs/product/business-analyst/
+├── README.md
+├── process-flows.md
+├── business-rules.md
+└── requirements-traceability.md
+```
+
+The dry-run plan must show all four paths and identify the three substantive
+documents as `flow_graph` consumers. The overlay does not make unrelated spine
+or agent documents depend on a flow graph.
+
+## Content ownership
+
+### `README.md`
+
+Route a BA to the process, rule, and traceability view. Link to the Product
+Owner view only when that overlay is selected.
+
+### `process-flows.md`
+
+Present each discovered flow in language a domain expert recognizes:
+
+- actor and trigger;
+- ordered business steps;
+- decision points and exceptions;
+- successful and unsuccessful outcomes;
+- link to the canonical dynamic document under `docs/flows/`.
+
+The canonical dynamic flow owns technical sequence and detailed failure paths.
+This BA view owns the business-language summary and must not paste raw call
+chains.
+
+### `business-rules.md`
+
+Record one stable rule per block: identifier, plain-language statement,
+trigger, outcome, exceptions, owning process, enforcement evidence, and test
+evidence. A branch name is a lead, not proof. Confirm the condition and its
+effect against source.
+
+### `requirements-traceability.md`
+
+Map only evidenced requirements to owning rules/flows, implementation areas,
+verification, and current status. Preserve stakeholder wording when available.
+Use one typed external token for a missing external requirement identifier or
+wording; never invent a ticket.
+
+## Evidence recipe
+
+1. Query native provider flows first (Understand Anything domain flows or
+   GitNexus Process nodes). If unavailable, use Docforge’s explicitly
+   provisional derivation from the selected code graph.
+2. Confirm actors, branches, rules, exceptions, and outcomes in the narrow
+   source paths returned by the graph.
+3. Inspect tests for executable verification.
+4. Use existing requirements/tickets only when they are present or connected
+   by the user.
+5. Add provenance per process/rule/requirement section.
+
+If flow evidence is not ready, the plan still remains visible, but these three
+documents wait at `planned`; Docforge does not block code-graph-only documents.
