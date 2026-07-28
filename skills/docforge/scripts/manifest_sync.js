@@ -204,12 +204,21 @@ function cmdAdd(args) {
   const needsDg = args.needsDg || meta.needs_dg || false;
   const doc = makeDoc(args.id, args.type, args.path, template, needsKg, needsDg);
 
-  let grp = man.document_groups.find((g) => g.group === args.group);
-  if (!grp) {
-    grp = { group: args.group, documents: [] };
-    man.document_groups.push(grp);
+  // Rebuild document_groups with new doc added to target group
+  const groupsMap = {};
+  for (const g of man.document_groups) {
+    groupsMap[g.group] = g.documents;
   }
-  grp.documents.push(doc);
+  if (!(args.group in groupsMap)) {
+    groupsMap[args.group] = [];
+  }
+  groupsMap[args.group].push(doc);
+
+  // Reconstruct document_groups in canonical order
+  man.document_groups = GROUPS.filter((g) => g in groupsMap).map((g) => ({
+    group: g,
+    documents: groupsMap[g],
+  }));
 
   saveManifest(args.repo, man);
   console.log(`Added ${args.id} (${args.path}) to group '${args.group}', status planned.`);

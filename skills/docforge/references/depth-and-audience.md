@@ -53,26 +53,30 @@ files the taxonomy *could* hold. When one coherent document covers a subject wel
 right answer — do not split it into many thin files a reader then has to reassemble. Detail
 lives in the *depth of the right documents*, not in the *count* of them.
 
-## Which understand-anything command feeds which cell
+## Which command feeds which cell
 
-The knowledge graph gives breadth (the map). Depth comes from the deeper commands —
-`/understand-explain` is the engine for L2/L3 and is required there, not optional.
+The knowledge graph gives breadth (the map), from whichever source built `.ua/*.json`
+(`references/graph-sources.md`). Depth comes from the deeper commands — `/understand-explain`
+is the engine for L2/L3 and is required there, not optional; where understand-anything isn't
+the active source, the GitNexus column is the required substitute for the same depth, not an
+optional extra.
 
-| Document / layer | Depth | Command | What it yields |
-|---|---|---|---|
-| `architecture/high-level.md` (context, blocks) | L1 | `/understand` (the graph) | module map, layers, boundaries |
-| `architecture/low-level.md` (components) | L1–L2 | graph + `/understand-explain <path>` | component decomposition |
-| `architecture/concepts/<subsystem>/engineering.md` | L2–L3 | `/understand-explain <module>` | internals, how it actually works |
-| invariants, failure modes, concurrency | L3 | `/understand-chat "what breaks <x> / concurrency assumptions"` | the absences code can't show |
-| `flows/<flow>.md` (steps) | L0–L1 | `/understand-domain` | flow skeleton in business terms |
-| `flows/<flow>/business-analyst.md` (rules, once promoted) | L1–L2 | `/understand-chat "what business rules gate <flow>"` | thresholds, exceptions |
-| `flows/<flow>/engineering.md` (mechanism, once promoted) | L2 | `/understand-explain <flow module>` | execution detail |
-| `flows/<flow>/product-owner.md` (once promoted), PO docs | L0 | `/understand-domain` + `/understand-diff` | feature set, release framing |
-| `engineering/setup.md` | how-to | `/understand-onboard` | zero-to-running (verify every command) |
-| `reference/configuration.md`, `limitations.md` | reference | targeted `/understand-chat` | env vars, unhandled cases |
+| Document / layer | Depth | understand-anything command | GitNexus equivalent | What it yields |
+|---|---|---|---|---|
+| `architecture/high-level.md` (context, blocks) | L1 | `/understand` (the graph) | graph already built via the bridge | module map, layers, boundaries |
+| `architecture/low-level.md` (components) | L1–L2 | graph + `/understand-explain <path>` | `context` MCP tool | component decomposition |
+| `architecture/concepts/<subsystem>/engineering.md` | L2–L3 | `/understand-explain <module>` | `context` MCP tool | internals, how it actually works |
+| invariants, failure modes, concurrency | L3 | `/understand-chat "what breaks <x> / concurrency assumptions"` | `query` or `cypher` MCP tool | the absences code can't show |
+| `flows/<flow>.md` (steps) | L0–L1 | `/understand-domain` | graph already built via the bridge (flows-only) | flow skeleton in business terms |
+| `flows/<flow>/business-analyst.md` (rules, once promoted) | L1–L2 | `/understand-chat "what business rules gate <flow>"` | `query` MCP tool | thresholds, exceptions |
+| `flows/<flow>/engineering.md` (mechanism, once promoted) | L2 | `/understand-explain <flow module>` | `context` MCP tool | execution detail |
+| `flows/<flow>/product-owner.md` (once promoted), PO docs | L0 | `/understand-domain` + `/understand-diff` | flows-only graph + `detect_changes` MCP tool | feature set, release framing |
+| `engineering/setup.md` | how-to | `/understand-onboard` | none — write from README/config inspection instead | zero-to-running (verify every command) |
+| `reference/configuration.md`, `limitations.md` | reference | targeted `/understand-chat` | `query` or `cypher` MCP tool | env vars, unhandled cases |
 
 Treat every answer as evidence, not prose to paste — write in the document's own voice, at
-its own depth. See `source-analysis.md` for the full command reference.
+its own depth. See `source-analysis.md` for the full command reference and `graph-sources.md`
+for the complete capability dispatch table.
 
 ## Discovering the flows
 

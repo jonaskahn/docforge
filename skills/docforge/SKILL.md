@@ -25,41 +25,37 @@ Six rules that hold regardless of tier, repo type, ecosystem, or audience. Viola
 
 ## Precheck — mandatory before every invocation
 
-**This runs first, before any other step, every single time.** Both the `understand-anything` skill and both required graph files must be present and ready before docforge proceeds.
+**This runs first, before any other step, every single time.** Both required graph files must be present and ready before docforge proceeds — from either of two sources, checked in priority order. See `references/graph-sources.md` for the full capability-to-source dispatch table.
 
 Every script in `scripts/` ships as both a Python file (`scripts/<name>.py`) and a Node.js file (`scripts/<name>.js`) — same flags, same output, same exit codes, standard-library/built-ins only on either side, no install step. Examples below show the Python form; use `node scripts/<name>.js …` with identical flags if Python 3 is not available (or vice versa). Pick whichever runtime is already on the machine — `python3 --version` / `node --version` to check.
 
-### Two checks in order:
-
-**1. Skill-callable check: `understand-anything:understand` and `understand-anything:understand-domain`**
-
-Confirm that both skills appear in your own available-skill listing. The command name varies by agent (slash command `/understand`, Codex `$understand`, or plain language where no command exists: *"use the understand skill"*). If you don't see the skill listed:
-- Try to load it (via Skill tool, plugin registry, or your agent's load/enable mechanism) and re-check the listing.
-- If it remains absent after that, the plugin is not installed.
-
-**If genuinely absent after load attempt:** Stop. Tell the user to install the `understand-anything` plugin or skill, then return here. Do not take any further docforge step without it.
-
-**2. Graph check — one invocation reports both files**
+### Run the graph check first — it reports READY/MISSING and, on a miss, which source to build from
 
 ```
 python scripts/check_preconditions.py --repo <path> --need domain
 ```
 
-This single call reports READY/MISSING for the knowledge graph *and* the domain graph — no need to run it twice. Branch on what it prints:
+This single call reports READY/MISSING for the knowledge graph *and* the domain graph — no need to run it twice. It checks `.ua/knowledge-graph.json` / `.ua/domain-graph.json` (or their legacy `.understand-anything/` counterparts) regardless of which tool produced them, then branch on what it prints:
 
-- **MISSING knowledge graph:** the user must generate it. **Ask for explicit permission first** before running `/understand` yourself — do not invoke it unprompted. If the user declines, stop and wait. If they agree, run `/understand` (or `/understand <path>` to scope to a subdirectory; large first runs consume tokens — say so before starting), then re-run the check above to confirm READY before continuing to the domain-graph branch.
-- **MISSING domain graph** (knowledge graph READY): **do not offer to run `/understand-domain` yourself** — tell the user they must run it, using the exact command the script prints. Stop and wait; no document of any kind is written until this exists.
-- **READY for both:** Precheck passes. Proceed to Step 1.
+**READY for both:** Precheck passes — proceed to Step 1. Skip the rest of this section entirely; which source built the graph does not matter downstream.
+
+**MISSING, and the script's output shows "GitNexus index detected":** a GitNexus index already exists for this repo — building `.ua/*.json` from it is usually cheaper than a first `/understand` run. **Ask for explicit permission first**, same rule as below. If the user agrees, follow `references/gitnexus-bridge.md` end to end (it ends with the same re-check above). If they decline, fall through to the understand-anything path.
+
+**MISSING, and no GitNexus index exists:** fall back to understand-anything.
+1. **Skill-callable check: `understand-anything:understand` and `understand-anything:understand-domain`.** Confirm that both skills appear in your own available-skill listing. The command name varies by agent (slash command `/understand`, Codex `$understand`, or plain language where no command exists: *"use the understand skill"*). If you don't see the skill listed, try to load it (via Skill tool, plugin registry, or your agent's load/enable mechanism) and re-check the listing.
+   - **If genuinely absent after load attempt:** Stop. Tell the user to install the `understand-anything` plugin *or* set up GitNexus for this repo (`npx gitnexus analyze` to index, `npx gitnexus setup` to connect the editor — see `references/gitnexus-bridge.md` Step 0), then return here. Do not take any further docforge step without one of the two.
+2. **Knowledge graph missing:** the user must generate it. **Ask for explicit permission first** before running `/understand` yourself — do not invoke it unprompted. If the user declines, stop and wait. If they agree, run `/understand` (or `/understand <path>` to scope to a subdirectory; large first runs consume tokens — say so before starting), then re-run the check above to confirm READY before continuing to the domain-graph branch.
+3. **Domain graph missing** (knowledge graph READY): **do not offer to run `/understand-domain` yourself** — tell the user they must run it, using the exact command the script prints. Stop and wait; no document of any kind is written until this exists.
 
 ### Universal requirement — no fallback
 
-Both `.ua/knowledge-graph.json` and `.ua/domain-graph.json` (or their legacy `.understand-anything/` counterparts) are **required for every docforge invocation**, regardless of tier, scope, or which documents are planned. This means: architecture/spine documents, flow documents, product content, BA/PO overlays, and agent-context files all require the domain graph. No inspection fallback exists for architecture-only work anymore.
+Both `.ua/knowledge-graph.json` and `.ua/domain-graph.json` (or their legacy `.understand-anything/` counterparts) are **required for every docforge invocation**, regardless of tier, scope, or which documents are planned, and regardless of which of the two sources above built them. This means: architecture/spine documents, flow documents, product content, BA/PO overlays, and agent-context files all require the domain graph. No inspection fallback exists for architecture-only work anymore — "no fallback" means the graph requirement itself can never be skipped, not that only one tool may satisfy it.
 
 ### Operational notes on graphs
 
 Every document in the tree makes claims about the source. The knowledge graph replaces guessing with retrieval: it gives you the module map, the architectural layers, the call and import edges, the business domains and flows, and a queryable interface for everything the graph does not already state.
 
-- **Check for existing graphs first.** If `.ua/knowledge-graph.json` and `.ua/domain-graph.json` are both present and newer than the last substantive commit, use them as-is. If either is stale, `/understand` and `/understand-domain` update them incrementally rather than starting over — re-runs are cheap.
+- **Check for existing graphs first.** If `.ua/knowledge-graph.json` and `.ua/domain-graph.json` are both present and newer than the last substantive commit, use them as-is. If either is stale, `/understand` and `/understand-domain` update them incrementally rather than starting over — re-runs are cheap. If the graph came from GitNexus instead, refresh via `references/gitnexus-bridge.md`'s steps (`npx gitnexus analyze` then re-run the bridge) — see `references/graph-sources.md` for the full per-source refresh mapping.
 - **Large repos**: scope the analysis to the part being documented — `/understand src/frontend` — rather than paying for a full pass you do not need. First runs on large codebases consume significant tokens; say so before starting one.
 - **After any regeneration**, re-run the Precheck to confirm freshness:
   ```
@@ -370,6 +366,8 @@ Load only what the current task needs.
 | File | Read it when |
 |---|---|
 | `references/source-analysis.md` | Always — how to build and query the knowledge graph, and which command answers which document |
+| `references/graph-sources.md` | Always — which source (understand-anything or GitNexus) is active, and the capability-to-command dispatch table for each |
+| `references/gitnexus-bridge.md` | Precheck reports a GitNexus index but no `.ua/*.json` yet — the build recipe |
 | `references/docs-tree.md` | Always — the canonical taxonomy, folder naming, and placement rules |
 | `references/document-catalog.md` | Before writing any document — what each doc type must present and must keep out, its primary Diátaxis mode, its target depth, and its source-of-truth |
 | `instructions/<type>.md` | Alongside the catalog when writing a document of a type that has one — the writing-craft layer (layout, which `/understand-*` feeds it, how to tag provenance); `instructions/README.md` indexes them. Craft only; the contract stays in `document-catalog.md` |
@@ -390,7 +388,10 @@ Load only what the current task needs.
 | `references/overlay-*.md` | The repo-type overlay matching the repo (Step 3) |
 
 Templates live in `assets/templates/`. Scripts (each has a `.py` and an equivalent `.js` — see the note at the top of "Precheck"):
-- `scripts/check_preconditions.{py,js}` — gate all docforge work on both the knowledge graph and domain graph actually existing; run as the first step of every invocation (see "Precheck" above)
+- `scripts/check_preconditions.{py,js}` — gate all docforge work on both the knowledge graph and domain graph actually existing; run as the first step of every invocation (see "Precheck" above). Orchestrates the two source modules below — READY/MISSING reporting only, source-agnostic
+- `scripts/graph_common.{py,js}` — shared helpers used by `check_preconditions` and every `graph_source_*` module: locating a graph file up to the git root, display formatting, and writing a freshly-built graph to `.ua/`
+- `scripts/graph_source_ua.{py,js}` — understand-anything source: detection only (it always builds its own output)
+- `scripts/graph_source_gitnexus.{py,js}` — GitNexus source: `detect` (is an index present) and `build` (materialize `.ua/*.json` from raw Cypher dumps — see `references/gitnexus-bridge.md`)
 - `scripts/validate_graphs.{py,js}` — the diagnostic probe for when `check_preconditions` reports a graph missing but `.ua/` holds data; lists both graph folders' contents with sizes, JSON validity and node/edge counts
 - `scripts/graph_extract.{py,js}` — read the knowledge graph
 - `scripts/docs_scaffold.{py,js}` — create and audit the tree

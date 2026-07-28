@@ -2,14 +2,28 @@
 """Gate all docforge documentation work on the analysis it depends on.
 
 Both the knowledge graph and domain graph are required for every docforge
-invocation — there is no fallback, no inspection substitute. This script checks
-that the two files exist and refuses to report READY unless both are present.
-It cannot check whether the understand-anything skill/plugin itself is installed
-(that's a property of the calling agent's environment, not this repo's filesystem)
-— the agent must confirm that separately by checking its own skill listing or
-attempting `/understand` and `/understand-domain`.
+invocation — there is no fallback, no inspection substitute. This script
+checks that the two files exist under .ua/ (or the legacy
+.understand-anything/) and refuses to report READY unless both are present.
+It does not care which tool produced them.
 
-Exit code 0 only when every file required for the requested `--need` scope is
+understand-anything is the default producer, but this script also detects a
+GitNexus index (.gitnexus/meta.json) and, when the graph is missing but an
+index exists, points at the GitNexus bridge (graph_source_gitnexus.py build,
+documented in references/gitnexus-bridge.md) instead of only suggesting
+/understand. Priority is always: use .ua/*.json if present, regardless of
+which source could also build it; only fall back to a source-specific build
+suggestion when the files are actually missing. See references/graph-sources.md
+for the full capability-to-source dispatch table, and the docstring in
+graph_source_gitnexus.py for why this can't be a fully automatic build (MCP
+tool calls are agent-mediated, not scriptable).
+
+This script cannot check whether the understand-anything skill/plugin itself
+is installed (that's a property of the calling agent's environment, not this
+repo's filesystem) — the agent must confirm that separately by checking its
+own skill listing or attempting `/understand` and `/understand-domain`.
+
+Exit code 0 only when every file required for the requested --need scope is
 present. Non-zero otherwise, with a specific remediation command per gap.
 
 Usage:
@@ -23,66 +37,49 @@ import argparse
 import sys
 from pathlib import Path
 
-KNOWLEDGE_GRAPH_CANDIDATES = [
-    ".ua/knowledge-graph.json",
-    ".understand-anything/knowledge-graph.json",
-]
-
-DOMAIN_GRAPH_CANDIDATES = [
-    ".ua/domain-graph.json",
-    ".understand-anything/domain-graph.json",
-]
+from graph_common import display, show_graph_dirs
+from graph_source_gitnexus import detect as gitnexus_detect
+from graph_source_ua import detect as ua_detect
 
 
-def find(repo: Path, candidates: list[str]) -> Path | None:
-    """Search the graph at the repo root.
-
-    The graphs live at the project root ($PROJECT_ROOT/.ua/...). If --repo happens to
-    point at a subdirectory, a direct lookup would report "not found" even
-    though the file exists at the root, so search the given directory and every
-    ancestor up to (and including) the git root.
-    """
-    base = repo.resolve()
-    for cur in (base, *base.parents):
-        for rel in candidates:
-            p = cur / rel
-            if p.is_file():
-                return p
-        if (cur / ".git").exists():
-            break  # reached the repo root; do not climb past it
-    return None
+GITNEXUS_BUILD_CMD = (
+    "    python scripts/graph_source_gitnexus.py build --repo <path> "
+    "--nodes <nodes.json> --edges <edges.json> --processes <processes.json>"
+)
 
 
-def display(found: Path, repo: Path) -> str:
-    """Path relative to --repo when possible, else absolute (graph may sit at an
-    ancestor when --repo is a subdirectory)."""
-    try:
-        return str(found.relative_to(repo.resolve()))
-    except ValueError:
-        return str(found)
+def print_missing_remediation(repo: Path, gx_index: Path | None, *, is_domain: bool) -> None:
+    """Print the Fix: block for a missing graph file. Always shows both
+    remediation paths — understand-anything and GitNexus — since either one
+    resolves the gap and the user may already have one but not the other
+    installed. The GitNexus option's exact steps depend on whether an index
+    already exists."""
+    if is_domain:
+        print("  Fix (understand-anything): after the knowledge graph exists, run:")
+        print("    /understand-domain")
+        print("  Business flows, docs/flows/, docs/product/overview.md and the "
+              "BA/PO overlays are never hand-typed. Do not enumerate flows from "
+              "route files or folder names as a substitute for this graph.")
+    else:
+        print("  Fix (understand-anything): confirm the understand-anything skill is "
+              "loaded in this session (check the skill listing, or load/invoke it), "
+              "then run:")
+        print("    /understand")
 
+    if gx_index:
+        print(f"  Fix (GitNexus, index already found at {display(gx_index, repo)}): "
+              "follow references/gitnexus-bridge.md, then run:")
+        print(GITNEXUS_BUILD_CMD)
+    else:
+        print("  Fix (GitNexus, not yet installed/indexed): from the repo root, run:")
+        print("    npx gitnexus analyze")
+        print("    npx gitnexus setup")
+        print("  Then follow references/gitnexus-bridge.md and run:")
+        print(GITNEXUS_BUILD_CMD)
 
-def show_graph_dirs(repo: Path) -> None:
-    """On a miss, list what the graph folders actually hold so a false 'not
-    found' (folder present, expected file absent or misnamed) is visible at a
-    glance. Points at validate_graphs.py for the full probe."""
-    base = repo.resolve()
-    listed = False
-    for cur in (base, *base.parents):
-        for name in (".ua", ".understand-anything"):
-            d = cur / name
-            if d.is_dir():
-                try:
-                    names = sorted(p.name for p in d.iterdir())
-                except OSError as e:
-                    names = [f"(error listing: {e})"]
-                print(f"  {name}/ exists at {display(d, repo)} — contains: "
-                      f"{', '.join(names) or '(empty)'}")
-                listed = True
-        if (cur / ".git").exists():
-            break
-    if listed:
-        print("  Diagnose: python scripts/validate_graphs.py --repo . --verbose")
+    if not is_domain:
+        print("  Do not proceed to writing documentation from directory names or "
+              "guesswork while this is missing.")
 
 
 def main() -> int:
@@ -102,33 +99,28 @@ def main() -> int:
         return 2
 
     ok = True
+    ua = ua_detect(args.repo)
 
-    kg = find(args.repo, KNOWLEDGE_GRAPH_CANDIDATES)
+    kg = ua["knowledge_graph"]
     if kg:
         print(f"READY  knowledge graph  -> {display(kg, args.repo)}")
     else:
         ok = False
         print("MISSING  knowledge graph  (checked .ua/ and .understand-anything/)")
         show_graph_dirs(args.repo)
-        print("  Fix: confirm the understand-anything skill is loaded in this session "
-              "(check the skill listing, or load/invoke it), then run:")
-        print("    /understand")
-        print("  Do not proceed to writing documentation from directory names or "
-              "guesswork while this is missing.")
+        gx = gitnexus_detect(args.repo)
+        print_missing_remediation(args.repo, gx["index"], is_domain=False)
 
     if args.need == "domain":
-        dg = find(args.repo, DOMAIN_GRAPH_CANDIDATES)
+        dg = ua["domain_graph"]
         if dg:
             print(f"READY  domain graph     -> {display(dg, args.repo)}")
         else:
             ok = False
             print("MISSING  domain graph  (checked .ua/ and .understand-anything/)")
             show_graph_dirs(args.repo)
-            print("  Fix: after the knowledge graph exists, run:")
-            print("    /understand-domain")
-            print("  Business flows, docs/flows/, docs/product/overview.md and the "
-                  "BA/PO overlays are never hand-typed. Do not enumerate flows from "
-                  "route files or folder names as a substitute for this graph.")
+            gx = gitnexus_detect(args.repo)
+            print_missing_remediation(args.repo, gx["index"], is_domain=True)
 
     print()
     if ok:

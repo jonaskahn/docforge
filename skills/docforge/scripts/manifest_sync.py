@@ -189,11 +189,17 @@ def cmd_add(args) -> int:
     needs_dg = args.needs_dg or meta.get("needs_dg", False)
     doc = make_doc(args.id, args.type, args.path, template, needs_kg, needs_dg)
 
-    grp = next((g for g in man["document_groups"] if g["group"] == args.group), None)
-    if grp is None:
-        grp = {"group": args.group, "documents": []}
-        man["document_groups"].append(grp)
-    grp["documents"].append(doc)
+    # Rebuild document_groups with new doc added to target group
+    groups_map = {g["group"]: g["documents"] for g in man["document_groups"]}
+    if args.group not in groups_map:
+        groups_map[args.group] = []
+    groups_map[args.group].append(doc)
+
+    # Reconstruct document_groups in canonical order
+    man["document_groups"] = [
+        {"group": g, "documents": groups_map[g]}
+        for g in GROUPS if g in groups_map
+    ]
 
     save_manifest(args.repo, man)
     print(f"Added {args.id} ({args.path}) to group '{args.group}', status planned.")

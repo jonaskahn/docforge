@@ -16,6 +16,8 @@ Contents:
 
 ## 1. Building and refreshing the graph
 
+This section describes the understand-anything path — the default source. If `.ua/*.json` is missing and a GitNexus index already exists for the repo, `references/gitnexus-bridge.md` builds the same two files without needing understand-anything installed; `references/graph-sources.md` has the full per-capability dispatch table across both sources.
+
 ```
 /understand
 ```
@@ -37,7 +39,9 @@ A multi-agent pipeline scans the project, extracts files, functions, classes and
 | Non-English output | `/understand --language <en\|zh\|zh-TW\|ja\|ko\|ru>` |
 | Visual exploration | `/understand-dashboard` |
 
-**`/understand` is a skill, not universally a slash command.** Some agents expose it as `/understand`; Codex uses `$understand`; others show no command until the understand-anything skill or plugin is loaded. If no command is recognized, load or enable it the way this agent loads skills (skill listing, plugin registry, an explicit load/`Skill` call) before concluding it is missing, then invoke it — in plain language where no command form exists: *"Use the understand skill to analyze this project."* If the plugin is genuinely absent (loading it is not possible here), stop per `SKILL.md`'s "Precheck" section — tell the user to install `understand-anything` before anything else runs.
+**`/understand` is a skill, not universally a slash command.** Some agents expose it as `/understand`; Codex uses `$understand`; others show no command until the understand-anything skill or plugin is loaded. If no command is recognized, load or enable it the way this agent loads skills (skill listing, plugin registry, an explicit load/`Skill` call) before concluding it is missing, then invoke it — in plain language where no command form exists: *"Use the understand skill to analyze this project."*
+
+**If the plugin is genuinely absent, this is not automatically a stop.** Check for a GitNexus index first — `python scripts/graph_source_gitnexus.py detect --repo <path>`. If one exists, build the graph from it instead: `references/gitnexus-bridge.md` (also `references/graph-sources.md` for the full dispatch table). Only stop per `SKILL.md`'s "Precheck" section — tell the user to install `understand-anything` *or* set up GitNexus (`npx gitnexus analyze` then `npx gitnexus setup` — see `references/gitnexus-bridge.md` Step 0) — when neither source is available.
 
 ---
 

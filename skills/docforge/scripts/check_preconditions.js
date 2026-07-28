@@ -3,12 +3,27 @@
 /* Gate all docforge documentation work on the analysis it depends on.
  *
  * Both the knowledge graph and domain graph are required for every docforge
- * invocation — there is no fallback, no inspection substitute. This script checks
- * that the two files exist and refuses to report READY unless both are present.
- * It cannot check whether the understand-anything skill/plugin itself is installed
- * (that's a property of the calling agent's environment, not this repo's filesystem)
- * — the agent must confirm that separately by checking its own skill listing or
- * attempting `/understand` and `/understand-domain`.
+ * invocation — there is no fallback, no inspection substitute. This script
+ * checks that the two files exist under .ua/ (or the legacy
+ * .understand-anything/) and refuses to report READY unless both are
+ * present. It does not care which tool produced them.
+ *
+ * understand-anything is the default producer, but this script also detects
+ * a GitNexus index (.gitnexus/meta.json) and, when the graph is missing but
+ * an index exists, points at the GitNexus bridge (graph_source_gitnexus.js
+ * build, documented in references/gitnexus-bridge.md) instead of only
+ * suggesting /understand. Priority is always: use .ua/*.json if present,
+ * regardless of which source could also build it; only fall back to a
+ * source-specific build suggestion when the files are actually missing. See
+ * references/graph-sources.md for the full capability-to-source dispatch
+ * table, and the comment in graph_source_gitnexus.js for why this can't be a
+ * fully automatic build (MCP tool calls are agent-mediated, not scriptable).
+ *
+ * This script cannot check whether the understand-anything skill/plugin
+ * itself is installed (that's a property of the calling agent's
+ * environment, not this repo's filesystem) — the agent must confirm that
+ * separately by checking its own skill listing or attempting `/understand`
+ * and `/understand-domain`.
  *
  * Exit code 0 only when every file required for the requested --need scope is
  * present. Non-zero otherwise, with a specific remediation command per gap.
@@ -21,17 +36,9 @@
  */
 
 const fs = require("fs");
-const path = require("path");
-
-const KNOWLEDGE_GRAPH_CANDIDATES = [
-  ".ua/knowledge-graph.json",
-  ".understand-anything/knowledge-graph.json",
-];
-
-const DOMAIN_GRAPH_CANDIDATES = [
-  ".ua/domain-graph.json",
-  ".understand-anything/domain-graph.json",
-];
+const { display, showGraphDirs } = require("./graph_common.js");
+const { detect: gitnexusDetect } = require("./graph_source_gitnexus.js");
+const { detect: uaDetect } = require("./graph_source_ua.js");
 
 function parseArgs(argv) {
   const args = { need: "domain" };
@@ -44,14 +51,6 @@ function parseArgs(argv) {
   return args;
 }
 
-function isFile(p) {
-  try {
-    return fs.statSync(p).isFile();
-  } catch {
-    return false;
-  }
-}
-
 function isDir(p) {
   try {
     return fs.statSync(p).isDirectory();
@@ -60,64 +59,52 @@ function isDir(p) {
   }
 }
 
-function parents(dir) {
-  const out = [];
-  let cur = dir;
-  for (;;) {
-    const up = path.dirname(cur);
-    if (up === cur) break;
-    out.push(up);
-    cur = up;
-  }
-  return out;
-}
+const GITNEXUS_BUILD_CMD =
+  "    node scripts/graph_source_gitnexus.js build --repo <path> " +
+  "--nodes <nodes.json> --edges <edges.json> --processes <processes.json>";
 
-// Search the graph at the repo root, then every ancestor up to (and
-// including) the git root — the graphs live at $PROJECT_ROOT/.ua/..., and a
-// direct lookup from a subdirectory would otherwise falsely report "not found".
-function find(repo, candidates) {
-  const base = path.resolve(repo);
-  for (const cur of [base, ...parents(base)]) {
-    for (const rel of candidates) {
-      const p = path.join(cur, rel);
-      if (isFile(p)) return p;
-    }
-    if (fs.existsSync(path.join(cur, ".git"))) break;
+// Print the Fix: block for a missing graph file. Always shows both
+// remediation paths — understand-anything and GitNexus — since either one
+// resolves the gap and the user may already have one but not the other
+// installed. The GitNexus option's exact steps depend on whether an index
+// already exists.
+function printMissingRemediation(repo, gxIndex, { isDomain }) {
+  if (isDomain) {
+    console.log("  Fix (understand-anything): after the knowledge graph exists, run:");
+    console.log("    /understand-domain");
+    console.log(
+      "  Business flows, docs/flows/, docs/product/overview.md and the " +
+        "BA/PO overlays are never hand-typed. Do not enumerate flows from " +
+        "route files or folder names as a substitute for this graph."
+    );
+  } else {
+    console.log(
+      "  Fix (understand-anything): confirm the understand-anything skill is " +
+        "loaded in this session (check the skill listing, or load/invoke it), " +
+        "then run:"
+    );
+    console.log("    /understand");
   }
-  return null;
-}
 
-function display(found, repo) {
-  const base = path.resolve(repo);
-  const rel = path.relative(base, found);
-  return rel.startsWith("..") ? found : rel;
-}
-
-function showGraphDirs(repo) {
-  const base = path.resolve(repo);
-  let listed = false;
-  for (const cur of [base, ...parents(base)]) {
-    for (const name of [".ua", ".understand-anything"]) {
-      const d = path.join(cur, name);
-      if (isDir(d)) {
-        let names;
-        try {
-          names = fs.readdirSync(d).sort();
-        } catch (e) {
-          names = [`(error listing: ${e.message})`];
-        }
-        console.log(
-          `  ${name}/ exists at ${display(d, repo)} — contains: ${
-            names.join(", ") || "(empty)"
-          }`
-        );
-        listed = true;
-      }
-    }
-    if (fs.existsSync(path.join(cur, ".git"))) break;
+  if (gxIndex) {
+    console.log(
+      `  Fix (GitNexus, index already found at ${display(gxIndex, repo)}): ` +
+        "follow references/gitnexus-bridge.md, then run:"
+    );
+    console.log(GITNEXUS_BUILD_CMD);
+  } else {
+    console.log("  Fix (GitNexus, not yet installed/indexed): from the repo root, run:");
+    console.log("    npx gitnexus analyze");
+    console.log("    npx gitnexus setup");
+    console.log("  Then follow references/gitnexus-bridge.md and run:");
+    console.log(GITNEXUS_BUILD_CMD);
   }
-  if (listed) {
-    console.log("  Diagnose: node scripts/validate_graphs.js --repo . --verbose");
+
+  if (!isDomain) {
+    console.log(
+      "  Do not proceed to writing documentation from directory names or " +
+        "guesswork while this is missing."
+    );
   }
 }
 
@@ -137,40 +124,29 @@ function main() {
   }
 
   let ok = true;
+  const ua = uaDetect(args.repo);
 
-  const kg = find(args.repo, KNOWLEDGE_GRAPH_CANDIDATES);
+  const kg = ua.knowledgeGraph;
   if (kg) {
     console.log(`READY  knowledge graph  -> ${display(kg, args.repo)}`);
   } else {
     ok = false;
     console.log("MISSING  knowledge graph  (checked .ua/ and .understand-anything/)");
     showGraphDirs(args.repo);
-    console.log(
-      "  Fix: confirm the understand-anything skill is loaded in this session " +
-        "(check the skill listing, or load/invoke it), then run:"
-    );
-    console.log("    /understand");
-    console.log(
-      "  Do not proceed to writing documentation from directory names or " +
-        "guesswork while this is missing."
-    );
+    const gx = gitnexusDetect(args.repo);
+    printMissingRemediation(args.repo, gx.index, { isDomain: false });
   }
 
   if (args.need === "domain") {
-    const dg = find(args.repo, DOMAIN_GRAPH_CANDIDATES);
+    const dg = ua.domainGraph;
     if (dg) {
       console.log(`READY  domain graph     -> ${display(dg, args.repo)}`);
     } else {
       ok = false;
       console.log("MISSING  domain graph  (checked .ua/ and .understand-anything/)");
       showGraphDirs(args.repo);
-      console.log("  Fix: after the knowledge graph exists, run:");
-      console.log("    /understand-domain");
-      console.log(
-        "  Business flows, docs/flows/, docs/product/overview.md and the " +
-          "BA/PO overlays are never hand-typed. Do not enumerate flows from " +
-          "route files or folder names as a substitute for this graph."
-      );
+      const gx = gitnexusDetect(args.repo);
+      printMissingRemediation(args.repo, gx.index, { isDomain: true });
     }
   }
 
