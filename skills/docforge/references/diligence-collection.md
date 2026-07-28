@@ -12,7 +12,7 @@ explicit inclusion decision; do not assume it is either in or out of scope.
 
 For every included repository:
 
-1. Check for a version-2 manifest and the selected baseline documents.
+1. Check for a version-3 manifest and the selected baseline documents.
 2. Run staleness checks for an existing baseline.
 3. Build a missing Spine or Diligence baseline before representing the member
    as reviewed.

@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-1.0.2-10b981?style=flat-square)](meta.json)
+  [![Version](https://img.shields.io/badge/version-2.0.0-10b981?style=flat-square)](meta.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -64,7 +64,7 @@ Describe the documentation quest in plain language:
 Document this repository from scratch.
 Create diligence documentation for this service.
 Generate ADRs from the repository history.
-Add the API and Business Analyst overlays.
+Add the API-service shape and Business Analyst audience.
 Make this repository ready for AI coding agents.
 Check which generated docs have drifted from source.
 ```
@@ -82,9 +82,10 @@ Expected result:
 1. Docforge performs only read-only discovery: repository/manifest state and
    available graph sources.
 2. It presents all applicable unresolved scope questions together: goal,
-   documentation tier, audience, repository shape, graph source only when it
-   is unresolved, and execution mode. Each question explains its choices;
-   native selection controls are used when the host provides them.
+   documentation tier, the five typed repository-profile dimensions, graph
+   source only when it is unresolved, and execution mode. Each question
+   explains its choices; native selection controls are used when the host
+   provides them.
 3. After you answer the set, it summarizes the complete scope and asks you to
    confirm, edit, or cancel. This confirmation is required even when
    Auto-accept is selected. It does not create a manifest, documents, or a
@@ -109,7 +110,7 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 
 1. **PRECHECK** — require one supported code graph.
 2. **ANALYZE** — read graph data, source, config, manifests, existing docs, CI, deployment files, git history, and child repositories.
-3. **PLAN** — choose a named tier and overlays, initialize manifest v2, then preview its exact tree.
+3. **PLAN** — choose a named tier and typed profiles, initialize manifest 3.0, then preview its exact tree.
 4. **WRITE** — generate one document at a time in dependency order.
 5. **AUDIT** — use a fresh artifact-only reviewer when supported, otherwise a recorded cold artifact-only pass; derivable gaps force a rewrite.
 6. **TRACK** — stamp section-level source paths and git blob hashes so later runs update only what drifted.
@@ -123,9 +124,9 @@ Read the full [workflow](skills/docforge/SKILL.md#workflow), [document contracts
 A code graph is the universal key. Docforge reuses, rather than replaces, the
 provider’s pre-generated index:
 
-- Understand Anything’s shareable structural and domain/flow JSON, queried
+- Understand Anything’s shareable code-graph and flow-graph JSON, queried
   through its skills or the deterministic JSON reader;
-- GitNexus’s LadybugDB knowledge graph and indexed processes, queried through
+- GitNexus’s LadybugDB code graph and indexed processes, queried through
   its MCP/skills or project-local CLI;
 - CodeGraph’s auto-synchronized SQLite index, queried through
   `codegraph_explore` for relevant source, call paths, and blast radius.
@@ -141,22 +142,46 @@ Provider capabilities and setup live in [graph dispatch](skills/docforge/referen
 
 ## ▓▒░ STAGE SELECT ░▒▓
 
-Choose **Spine** for a repository baseline, **Diligence** for external scrutiny, or **Portfolio** for a multi-repository review. Add repo-type power-ups (`api`, `web`, `library`, `data-pipeline`, `infrastructure`) and audience power-ups (`business-analyst`, `product-owner`, `agent-context`) as needed.
+Choose **Spine** for a repository baseline, **Diligence** for external scrutiny,
+or **Portfolio** for a multi-repository review. Docforge then composes five
+independent profile dimensions:
 
-The Business Analyst overlay generates a business process view, rule catalog,
-and requirements traceability. The Product Owner overlay generates feature
+- shapes such as `web-app`, `api-service`, `mobile-app`, `desktop-app`,
+  `cli-tui`, `library-sdk`, `data-pipeline`, `infrastructure-platform`,
+  `game`, `embedded-iot`, and `smart-contract`;
+- platforms such as `browser`, `ios`, `android`, `macos`, `windows`, `linux`,
+  wearable/TV/spatial targets, cloud, containers, edge, and RTOS;
+- framework detection profiles such as Flutter, React Native, KMP, MAUI,
+  Electron, Tauri, SwiftUI/AppKit, popular web/backend/data frameworks, game
+  engines, and embedded toolchains;
+- evidenced concerns such as accessibility, localization, privacy, secure
+  storage, offline sync, payments, notifications, and hardware integration;
+- audiences such as engineers, beginners, Business Analysts, Product Owners,
+  coding agents, operators, and security reviewers.
+
+Frameworks tailor detection, graph queries, terminology, and verified commands;
+shapes and platforms own the durable document tree. Shared paths are selected
+once and retain every profile origin. With no audience flag, manifest
+initialization records `engineers` and `beginners` as the default audience.
+
+The Business Analyst audience generates a business process view, rule catalog,
+and requirements traceability. The Product Owner audience generates feature
 value/status, success metrics, release impact, and ticket traceability only
-when ticket evidence exists. Select `agent-context` for a compact `AGENTS.md`
-kernel, Claude shims/settings, and token-budgeted `docs/agents/` views; it
-writes after the human-facing documents it links to.
+when ticket evidence exists. Select `coding-agents` (aliases include `agent`
+and `agent-context`) for a compact `AGENTS.md` kernel, Claude shims/settings,
+and token-budgeted `docs/agents/` views.
 
-The tier rules, overlay signals, and complete level layout live in the [canonical docs tree](skills/docforge/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
+The tier rules, profile signals, and complete level layout live in the [canonical docs tree](skills/docforge/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
 
 ## ▓▒░ CONTROLLER MAPPING ░▒▓
 
 Use `--revise all` or `--revise <area>` for stale content, `--plan-only` to stop after manifest initialization and preview, `--resume` to continue a saved run, and `--status` for a read-only progress report.
 
-`--auto-accept` uses defaults and skips conversational pauses. It does not authorize installation, global configuration, graph construction or refresh, archive/delete actions, or other separately approved side effects; it also does not skip grounding, plan display, audits, or final checks.
+`--auto-accept` skips routine conversational pauses after the scope has been
+explicitly confirmed. It does not silently choose unresolved profiles or
+authorize installation, global configuration, graph construction or refresh,
+archive/delete actions, or other separately approved side effects; it also
+does not skip grounding, plan display, audits, or final checks.
 
 The exact flag semantics and composition rules live in the [workflow](skills/docforge/SKILL.md#workflow).
 
@@ -164,7 +189,11 @@ The exact flag semantics and composition rules live in the [workflow](skills/doc
 
 [`SKILL.md`](skills/docforge/SKILL.md) is the entry cartridge. [`.metadata/catalog.json`](skills/docforge/.metadata/catalog.json) is the canonical registry; [`references/`](skills/docforge/references/) holds owned prose contracts, [`instructions/`](skills/docforge/instructions/) holds writing craft, and [`assets/templates/`](skills/docforge/assets/templates/) holds output scaffolds.
 
-[`scripts/`](skills/docforge/scripts/) contains paired Python and Node tools for graph adapters, flow derivation, scaffolding, linting, manifest state, staleness checks, and child-repository discovery. [`.claude-plugin/`](.claude-plugin/) and [`meta.json`](meta.json) package the same skill for its two distribution paths.
+[`scripts/`](skills/docforge/scripts/) contains paired Python and Node tools for
+profile detection, graph adapters, flow derivation, scaffolding, linting,
+manifest state, staleness checks, and child-repository discovery.
+[`.claude-plugin/`](.claude-plugin/) and [`meta.json`](meta.json) package the
+same skill for its two distribution paths.
 
 ## ▓▒░ SYSTEM REQUIREMENTS ░▒▓
 

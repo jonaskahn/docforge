@@ -150,7 +150,7 @@ function printFlowRemediation(repo) {
       "(see references/flow-derivation.md):"
   );
   console.log("    node scripts/derive_flow_graph.js prepare --repo <path>");
-  console.log("    # dispatch the docforge domain analyzer on the emitted context, then");
+  console.log("    # dispatch the Docforge flow analyzer on the emitted context, then");
   console.log("    node scripts/derive_flow_graph.js write --repo <path> --analysis <analysis.json>");
   console.log("    # writes .docforge/tmp/flow-graph.json — provisional, never committed");
   console.log("  (b) Or produce a native (authoritative) flow graph from a source:");

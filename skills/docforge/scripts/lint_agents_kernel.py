@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-lint_agents_kernel.py — mechanical rubric check for AGENTS.md (agent-context overlay).
+lint_agents_kernel.py — mechanical rubric check for the coding-agents audience.
 
 Runs the format-specific checks scripts/lint_document.py has no concept of: the
 100-line cap, the 7-numbered-section shape, the tagline/test-sentence convention,

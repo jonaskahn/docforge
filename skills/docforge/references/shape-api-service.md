@@ -1,4 +1,4 @@
-# Overlay — API service
+# Shape — API service
 
 **Applies when:** the repo exposes HTTP, gRPC or GraphQL endpoints consumed by anything outside its own process — other services, a front end, or third parties.
 

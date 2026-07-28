@@ -99,7 +99,7 @@ function listKnownGraphDirs(repo) {
   }
 }
 
-// Sanity check for a flow (domain) graph before it is written — today only
+// Sanity check for a flow graph before it is written — today only
 // docforge's own derivation writes one. It uses the docforge flow shape: a
 // non-empty 'flows' list of objects, each with a 'name' and a 'steps' list.
 // Refusing an empty graph is what stops a derivation gone wrong from

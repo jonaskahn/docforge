@@ -2,7 +2,7 @@
 
 {{One sentence: what this is.}} {{One sentence: primary languages/frameworks, from the manifests.}}
 
-<!-- docforge-provenance v{{skill_version}} | graph {{graph_hash_short}} | {{graph_analyzed_date}} | regenerate: re-run the agent-context overlay -->
+<!-- docforge-provenance v{{skill_version}} | graph {{graph_hash_short}} | {{graph_analyzed_date}} | regenerate: re-run the coding-agents audience -->
 
 ## 1. Commands
 

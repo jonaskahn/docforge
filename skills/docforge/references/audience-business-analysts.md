@@ -1,6 +1,6 @@
-# Business Analyst overlay
+# Business Analyst audience profile
 
-Select `business-analyst` when readers need the system translated into
+Select the `business-analysts` audience when readers need the system translated into
 business processes, enforceable rules, and requirement-to-verification links.
 This is an audience view over repository evidence, not a second architecture
 tree.
@@ -16,7 +16,7 @@ docs/product/business-analyst/
 ```
 
 The dry-run plan must show all four paths and identify the three substantive
-documents as `flow_graph` consumers. The overlay does not make unrelated spine
+documents as `flow_graph` consumers. The profile does not make unrelated spine
 or agent documents depend on a flow graph.
 
 ## Content ownership
@@ -24,7 +24,7 @@ or agent documents depend on a flow graph.
 ### `README.md`
 
 Route a BA to the process, rule, and traceability view. Link to the Product
-Owner view only when that overlay is selected.
+Owner view only when that profile is selected.
 
 ### `process-flows.md`
 

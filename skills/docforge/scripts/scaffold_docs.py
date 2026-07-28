@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Preview, materialize, or audit the exact tree in a Docforge 2.0 manifest."""
+"""Preview, materialize, or audit the exact tree in a Docforge 3.0 manifest."""
 
 from __future__ import annotations
 
@@ -40,8 +40,11 @@ def load_manifest(path: Path) -> dict:
     if not path.is_file():
         raise ValueError(f"manifest not found: {path}")
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    if manifest.get("version") != "2.0" or not isinstance(manifest.get("documents"), list):
-        raise ValueError(f"manifest must use version 2.0: {path}")
+    if manifest.get("version") != "3.0" or not isinstance(manifest.get("documents"), list):
+        raise ValueError(
+            f"manifest must use version 3.0: {path}; "
+            "manifest v2 is unsupported in Docforge 2.0"
+        )
     return manifest
 
 
@@ -52,11 +55,11 @@ def active_documents(manifest: dict) -> list[dict]:
 def preview(manifest: dict) -> int:
     docs = active_documents(manifest)
     project = manifest.get("project", {})
-    overlays = ", ".join(project.get("overlays", [])) or "none"
-    print(
-        f"Generation plan — tier: {project.get('tier', 'unknown')}; "
-        f"overlays: {overlays}"
-    )
+    print(f"Generation plan — tier: {project.get('tier', 'unknown')}")
+    profiles = project.get("profiles", {})
+    for dimension in ("shapes", "platforms", "frameworks", "concerns", "audiences"):
+        values = ", ".join(profiles.get(dimension, [])) or "none"
+        print(f"  {dimension}: {values}")
     print()
     for doc in docs:
         print(f"{doc['write_order']:03d}  {doc['id']:<28}  {doc['path']}")

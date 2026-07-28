@@ -1,4 +1,4 @@
-# Overlay — infrastructure as code
+# Shape — infrastructure platform
 
 **Applies when:** the repo contains infrastructure definitions — declarative cloud resources, cluster manifests, configuration management, or deployment orchestration.
 

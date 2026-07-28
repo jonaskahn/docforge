@@ -23,8 +23,11 @@ def load_manifest(path: Path) -> dict:
     if not path.is_file():
         raise ValueError(f"manifest not found: {path}")
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    if manifest.get("version") != "2.0":
-        raise ValueError(f"manifest must use version 2.0: {path}")
+    if manifest.get("version") != "3.0":
+        raise ValueError(
+            f"manifest must use version 3.0: {path}; "
+            "manifest v2 is unsupported in Docforge 2.0"
+        )
     return manifest
 
 

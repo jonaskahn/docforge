@@ -1,108 +1,85 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://docforge.dev/schemas/manifest-2.0.json",
-  "title": "Docforge Manifest 2.0",
+  "title": "Docforge Manifest 3.0",
   "type": "object",
-  "required": ["version", "project", "documents", "metadata"],
+  "required": ["version", "generated_at", "project", "discovery", "documents", "metadata"],
   "properties": {
-    "$schema": {"type": "string"},
-    "version": {"const": "2.0"},
+    "version": {"const": "3.0"},
     "generated_at": {"type": "string"},
     "project": {
       "type": "object",
-      "required": ["name", "root", "tier", "overlays"],
+      "required": ["name", "root", "tier", "profiles"],
       "properties": {
         "name": {"type": "string"},
         "root": {"type": "string"},
         "tier": {"enum": ["spine", "diligence", "portfolio"]},
-        "overlays": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+        "profiles": {
+          "type": "object",
+          "required": ["shapes", "platforms", "frameworks", "concerns", "audiences"],
+          "properties": {
+            "shapes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "platforms": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "frameworks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "concerns": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "audiences": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },
-    "documents": {
+    "discovery": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "type", "path", "group", "selection", "status", "requires", "scaffold_template", "target_depth", "write_order", "provenance_mode", "audit_profile", "provenance", "audit"],
+        "required": ["dimension", "id", "confidence", "evidence"],
         "properties": {
+          "dimension": {"enum": ["shapes", "platforms", "frameworks", "concerns"]},
           "id": {"type": "string"},
-          "type": {"type": "string"},
-          "path": {"type": "string"},
-          "group": {"type": "string"},
-          "selection": {
-            "type": "object",
-            "required": ["origins", "evidence"],
-            "properties": {
-              "origins": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": ["kind", "id"],
-                  "properties": {
-                    "kind": {"enum": ["tier", "overlay", "condition", "dynamic"]},
-                    "id": {"type": "string"}
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "evidence": {"type": "array", "items": {"type": "string"}}
-            },
-            "additionalProperties": false
-          },
-          "status": {"enum": ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]},
-          "requires": {"type": "array", "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}},
-          "scaffold_template": {"type": "string"},
-          "instruction_file": {"type": ["string", "null"]},
-          "target_depth": {"type": "string"},
-          "write_order": {"type": "integer"},
-          "provenance_mode": {"enum": ["sections", "manifest"]},
-          "audit_profile": {"type": "string"},
-          "provenance": {
-            "type": "object",
-            "required": ["sections"],
-            "properties": {
-              "sections": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": ["id", "sources"],
-                  "properties": {
-                    "id": {"type": "string"},
-                    "sources": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": ["path", "git_blob"],
-                        "properties": {
-                          "path": {"type": "string"},
-                          "git_blob": {"type": "string"}
-                        },
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          "audit": {
-            "type": ["object", "null"],
-            "properties": {
-              "mode": {"enum": ["subagent", "cold-pass"]},
-              "verdict": {"enum": ["PASS", "FAIL"]},
-              "timestamp": {"type": "string"},
-              "report_path": {"type": "string"}
-            },
-            "required": ["mode", "verdict", "timestamp", "report_path"],
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
+          "confidence": {"enum": ["confirmed", "candidate"]},
+          "evidence": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+        }
       }
     },
+    "documents": {"type": "array", "items": {"$ref": "#/definitions/document"}},
     "metadata": {"type": "object"}
   },
-  "additionalProperties": false
+  "definitions": {
+    "origin": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {"enum": ["tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor"]},
+        "id": {"type": "string"}
+      }
+    },
+    "document": {
+      "type": "object",
+      "required": ["id", "type", "path", "group", "selection", "status", "requires", "scaffold_template", "target_depth", "write_order", "provenance_mode", "audit_profile", "provenance", "audit"],
+      "properties": {
+        "id": {"type": "string"},
+        "type": {"type": "string"},
+        "path": {"type": "string"},
+        "group": {"type": "string"},
+        "selection": {
+          "type": "object",
+          "required": ["origins", "evidence"],
+          "properties": {
+            "origins": {"type": "array", "items": {"$ref": "#/definitions/origin"}},
+            "evidence": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "status": {"enum": ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]},
+        "requires": {"type": "array", "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}},
+        "scaffold_template": {"type": "string"},
+        "instruction_file": {"type": ["string", "null"]},
+        "target_depth": {"type": "string"},
+        "write_order": {"type": "integer"},
+        "provenance_mode": {"enum": ["sections", "manifest"]},
+        "audit_profile": {"type": "string"},
+        "provenance": {"type": "object"},
+        "audit": {"type": ["object", "null"]}
+      }
+    }
+  }
 }

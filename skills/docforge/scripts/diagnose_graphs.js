@@ -8,7 +8,7 @@
  * `.codegraph/` (CodeGraph's SQLite DB), and `.docforge/tmp/`
  * (docforge-derived, provisional) — and reports:
  *   - which graph folders exist and what they contain
- *   - whether a code (knowledge) graph and a flow (domain) graph are present
+ *   - whether a code graph and a flow graph are present
  *   - file sizes and modification times
  *   - schema structure (nodes/edges count) for JSON graphs; a note for the
  *     binary ladybug/SQLite DBs (queried via their MCP tools, not read here)
@@ -30,20 +30,20 @@ const { KNOWN_GRAPH_DIRS } = require("./graph_storage.js");
 // CodeGraph's .codegraph/codegraph.db serves only the code graph — it has no
 // flow_graph capability, so it is absent from the flow candidates below.
 const GRAPH_CANDIDATES = {
-  "code (knowledge) graph": [
+  "code graph": [
     ".ua/knowledge-graph.json",
     ".understand-anything/knowledge-graph.json",
     ".gitnexus/lbug",
     ".codegraph/codegraph.db",
   ],
-  "flow (domain) graph": [
+  "flow graph": [
     ".ua/domain-graph.json",
     ".understand-anything/domain-graph.json",
     ".gitnexus/lbug",
     ".docforge/tmp/flow-graph.json",
   ],
 };
-const REQUIRED = new Set(["code (knowledge) graph"]);
+const REQUIRED = new Set(["code graph"]);
 
 // Binary DB files probeGraph() cannot parse as JSON, and the note printed for
 // each in --verbose output.

@@ -1,7 +1,7 @@
 # Understand Anything source
 
-Understand Anything writes a structural graph to `.ua/knowledge-graph.json`
-and a native domain/flow graph to `.ua/domain-graph.json`. Repositories already
+Understand Anything writes a code graph to `.ua/knowledge-graph.json`
+and a native flow graph to `.ua/domain-graph.json`. Repositories already
 using `.understand-anything/` keep that legacy data directory. Because the
 artifacts are JSON, Docforge can deterministically inventory them with
 `read_graph.{py,js}` and can also use the provider’s own skills for semantic
@@ -14,7 +14,7 @@ Codex the skills are invoked with `$`; on hosts that support slash commands
 they use `/`.
 
 After explicit approval, invoke the installed `understand` skill to build the
-structural graph:
+code graph:
 
 ```text
 /understand
@@ -28,15 +28,15 @@ monorepos may be scoped to a subdirectory, but the resulting graph scope must
 be stated in the Docforge plan.
 
 Only when the selected manifest contains a `flow_graph` requirement, invoke
-the domain skill:
+the provider's flow-extraction skill:
 
 ```text
 /understand-domain
 ```
 
-With an existing structural graph it derives domain knowledge cheaply; without
+With an existing code graph it derives flow knowledge cheaply; without
 one it can perform a lightweight scan, though Docforge’s universal code-graph
-gate means the normal Docforge path already has the structural graph. This
+gate means the normal Docforge path already has the code graph. This
 adds business domains, flows, and ordered steps. `--auto-accept` never supplies
 approval for either graph-generation run. Optional provider auto-update hooks
 are also a separate side effect.
@@ -49,7 +49,7 @@ Use the installed provider skills when available:
 - `understand-explain` for a focused file or symbol;
 - `understand-diff` for change impact;
 - `understand-onboard` for orientation evidence;
-- `understand-domain` to create or refresh native domain/flow data.
+- `understand-domain` to create or refresh native flow data.
 
 For deterministic inventory or environments without the interactive MCP/skill
 path, read the JSON in place:
@@ -60,8 +60,8 @@ python scripts/read_graph.py --graph <repo>/.ua/knowledge-graph.json --layers
 python scripts/read_graph.py --graph <repo>/.ua/knowledge-graph.json --entry-points
 ```
 
-The structural graph contains files, functions, classes, dependencies,
-summaries, and architectural layers. The domain graph contains domains, flows,
+The code graph contains files, functions, classes, dependencies, summaries,
+and architectural layers. The flow graph contains domains, flows,
 and steps. Do not assume a semantic summary or domain label is authoritative:
 confirm business rules, failures, and externally visible behavior in source.
 
@@ -69,7 +69,7 @@ confirm business rules, failures, and externally visible behavior in source.
 
 - Use layers, imports, symbols, and tours to plan the architecture and agent
   views.
-- Add dynamic flow documents from actual domain-graph flows—never from example
+- Add dynamic flow documents from actual flows in `.ua/domain-graph.json`—never from example
   seeds.
 - Generate the BA process view, rules, and requirements links from native flow
   evidence plus source confirmation.

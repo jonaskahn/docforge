@@ -1,6 +1,6 @@
-# Product Owner overlay
+# Product Owner audience profile
 
-Select `product-owner` when readers need value, delivery state, measurable
+Select the `product-owners` audience when readers need value, delivery state, measurable
 outcomes, and release impact. Product value is not inferable from architecture
 alone; code and history establish shipped behavior, while stakeholder evidence
 owns intent and targets.
@@ -16,7 +16,7 @@ docs/product/product-owner/
 └── backlog-traceability.md   # dynamic; ticket evidence only
 ```
 
-The first four entries are static for the overlay. `backlog-traceability.md`
+The first four entries are static for the profile. `backlog-traceability.md`
 enters the manifest only after discovery proves that ticket evidence exists.
 It is never scaffolded and later deleted as cleanup.
 
@@ -25,7 +25,7 @@ It is never scaffolded and later deleted as cleanup.
 ### `README.md`
 
 Route product readers to value/status, metrics, and release impact. Link to the
-BA view only when that overlay is selected.
+BA view only when that profile is selected.
 
 ### `feature-catalog.md`
 
@@ -70,7 +70,7 @@ result is no manifest entry and no file.
    owning paths.
 2. Use manifests and configuration for availability and instrumentation.
 3. Use git history/tags for delivery chronology and release impact.
-4. Use flow evidence only for links when it exists; the PO overlay itself does
+4. Use flow evidence only for links when it exists; the PO profile itself does
    not globally require `flow_graph`.
 5. Treat stakeholder intent, target values, owners, dates, and roadmap state as
    external evidence—not facts to infer from code.

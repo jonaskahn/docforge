@@ -10,6 +10,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
+from detect_profiles import detect as detect_profiles
+
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 CATALOG_PATH = SKILL_ROOT / ".metadata" / "catalog.json"
 MANIFEST_REL = Path(".docforge/manifest.json")
@@ -50,8 +52,10 @@ def load_manifest(repo: Path) -> dict:
     if not path.is_file():
         raise ValueError(f"manifest not found: {path}")
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("version") != "2.0":
-        raise ValueError(f"manifest version must be 2.0: {path}")
+    if data.get("version") != "3.0":
+        raise ValueError(
+            f"manifest must use version 3.0: {path}; manifest v2 is unsupported in Docforge 2.0"
+        )
     return data
 
 
@@ -119,7 +123,83 @@ def make_document(definition: dict, origins: list[dict], evidence: list[str] | N
     }
 
 
-def selected_static_documents(catalog: dict, repo: Path, tier: str, overlays: list[str]) -> list[dict]:
+PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
+ORIGIN_KINDS = {
+    "shapes": "shape",
+    "platforms": "platform",
+    "frameworks": "framework",
+    "concerns": "concern",
+    "audiences": "audience",
+}
+
+
+def normalize_profiles(catalog: dict, raw: dict[str, list[str]]) -> dict[str, list[str]]:
+    normalized: dict[str, list[str]] = {}
+    for dimension in PROFILE_DIMENSIONS:
+        definitions = catalog["profiles"][dimension]
+        aliases: dict[str, str] = {}
+        for definition in definitions:
+            aliases[definition["id"]] = definition["id"]
+            aliases.update({alias: definition["id"] for alias in definition.get("aliases", [])})
+        unknown = [value for value in raw.get(dimension, []) if value not in aliases]
+        if unknown:
+            singular = dimension[:-1] if dimension != "audiences" else "audience"
+            expected = ", ".join(item["id"] for item in definitions)
+            raise ValueError(f"unknown {singular}: {unknown[0]}; expected one of: {expected}")
+        requested = {aliases[value] for value in raw.get(dimension, [])}
+        normalized[dimension] = [
+            definition["id"] for definition in definitions
+            if definition["id"] in requested
+        ]
+    return normalized
+
+
+def matching_origins(rule: dict, profiles: dict[str, list[str]]) -> list[dict]:
+    origins: list[dict] = []
+    for dimension in PROFILE_DIMENSIONS:
+        selected = profiles.get(dimension, [])
+        accepted = rule.get("selectors", {}).get(dimension, [])
+        origins.extend(
+            {"kind": ORIGIN_KINDS[dimension], "id": value}
+            for value in selected if value in accepted
+        )
+    return origins
+
+
+def add_ancestor_indexes(catalog: dict, selected: list[dict]) -> None:
+    definitions = {
+        item["path"]: item for item in catalog["documents"]
+        if item["selection"]["mode"] == "static" and item["type"] in {
+            "folder-index", "docs-index", "portfolio-index",
+            "decision-index", "portfolio-decisions-index",
+        }
+    }
+    selected_paths = {item["path"] for item in selected}
+    changed = True
+    while changed:
+        changed = False
+        for child in list(selected):
+            path = PurePosixPath(child["path"])
+            parent = path.parent
+            while str(parent) not in (".", ""):
+                candidate = str(parent / "README.md")
+                definition = definitions.get(candidate)
+                if definition and candidate not in selected_paths:
+                    selected.append(make_document(
+                        definition,
+                        [{"kind": "ancestor", "id": child["id"]}],
+                    ))
+                    selected_paths.add(candidate)
+                    changed = True
+                parent = parent.parent
+
+
+def selected_static_documents(
+    catalog: dict,
+    repo: Path,
+    tier: str,
+    profiles: dict[str, list[str]],
+) -> list[dict]:
     ranks = {item["id"]: item["order"] for item in catalog["tiers"]}
     selected: list[dict] = []
     for definition in catalog["documents"]:
@@ -127,49 +207,56 @@ def selected_static_documents(catalog: dict, repo: Path, tier: str, overlays: li
         if rule["mode"] != "static":
             continue
         tier_selected = ranks[rule["min_tier"]] <= ranks[tier]
-        matching_overlays = [overlay for overlay in overlays if overlay in rule["overlays"]]
-        trigger_overlays = [
-            overlay for overlay in overlays
-            if overlay in rule.get("include_if_overlay", [])
-        ]
-        if rule["overlays"] and (not tier_selected or not matching_overlays):
+        if not tier_selected:
             continue
-        if not rule["overlays"] and not tier_selected and not trigger_overlays:
+        origins = matching_origins(rule, profiles)
+        has_selectors = any(rule.get("selectors", {}).values())
+        if has_selectors and not origins:
             continue
         evidence = condition_evidence(repo, rule.get("condition"))
         if rule.get("condition") and not evidence:
             continue
-        origins = []
-        if not rule["overlays"] and tier_selected:
+        if not has_selectors:
             origins.append({"kind": "tier", "id": rule["min_tier"]})
-        origins.extend({"kind": "overlay", "id": overlay} for overlay in matching_overlays)
-        origins.extend({"kind": "overlay", "id": overlay} for overlay in trigger_overlays)
         if rule.get("condition"):
             origins.append({"kind": "condition", "id": rule["condition"]})
         selected.append(make_document(definition, origins, evidence))
+    add_ancestor_indexes(catalog, selected)
     return sorted(selected, key=lambda item: (item["write_order"], item["path"], item["id"]))
 
 
 def cmd_init(args: argparse.Namespace) -> int:
+    if args.obsolete_overlay:
+        return fail(
+            "--overlay is unsupported in Docforge 2.0; use --shape, --platform, "
+            "--framework, --concern, or --audience",
+            2,
+        )
     path = manifest_path(args.repo)
     if path.exists() and not args.force:
         return fail(f"manifest already exists: {path}; pass --force to replace it")
     catalog = load_catalog()
-    overlay_ids = [item["id"] for item in catalog["overlays"]]
-    unknown = [item for item in args.overlay if item not in overlay_ids]
-    if unknown:
-        return fail(f"unknown overlay: {unknown[0]}; expected one of: {', '.join(overlay_ids)}", 2)
-    overlays = [item for item in overlay_ids if item in set(args.overlay)]
-    docs = selected_static_documents(catalog, args.repo, args.tier, overlays)
+    try:
+        profiles = normalize_profiles(catalog, {
+            "shapes": args.shape,
+            "platforms": args.platform,
+            "frameworks": args.framework,
+            "concerns": args.concern,
+            "audiences": args.audience or ["engineers", "beginners"],
+        })
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    docs = selected_static_documents(catalog, args.repo, args.tier, profiles)
     manifest = {
-        "version": "2.0",
+        "version": "3.0",
         "generated_at": now_iso(),
         "project": {
             "name": args.name or args.repo.resolve().name,
             "root": str(args.repo.resolve()),
             "tier": args.tier,
-            "overlays": overlays,
+            "profiles": profiles,
         },
+        "discovery": detect_profiles(args.repo),
         "documents": docs,
         "metadata": {},
     }
@@ -209,8 +296,16 @@ def cmd_add(args: argparse.Namespace) -> int:
     rule = definition["selection"]
     if ranks[rule["min_tier"]] > ranks[manifest["project"]["tier"]]:
         return fail(f"dynamic type {args.type} requires tier {rule['min_tier']}", 2)
-    if rule["overlays"] and not set(rule["overlays"]) & set(manifest["project"]["overlays"]):
-        return fail(f"dynamic type {args.type} requires overlay: {', '.join(rule['overlays'])}", 2)
+    required_selectors = rule.get("selectors", {})
+    profile_origins: list[dict] = []
+    if any(required_selectors.values()):
+        profile_origins = matching_origins(rule, manifest["project"]["profiles"])
+        if not profile_origins:
+            requirements = ", ".join(
+                f"{ORIGIN_KINDS[dimension]}: {', '.join(values)}"
+                for dimension, values in required_selectors.items() if values
+            )
+            return fail(f"dynamic type {args.type} requires profile {requirements}", 2)
     evidence = condition_evidence(args.repo, rule.get("condition"))
     if rule.get("condition") == "ticket_evidence" and not evidence:
         return fail(f"dynamic type {args.type} requires ticket evidence in the repository", 2)
@@ -225,7 +320,7 @@ def cmd_add(args: argparse.Namespace) -> int:
     actual = dict(definition)
     actual["id"] = args.id
     actual["path"] = args.path
-    origins = [{"kind": "dynamic", "id": definition["type"]}]
+    origins = [{"kind": "dynamic", "id": definition["type"]}, *profile_origins]
     if rule.get("condition"):
         origins.append({"kind": "condition", "id": rule["condition"]})
     doc = make_document(actual, origins, evidence)
@@ -296,8 +391,10 @@ def cmd_status(args: argparse.Namespace) -> int:
     except ValueError as exc:
         return fail(str(exc), 2)
     project = manifest["project"]
-    overlays = ", ".join(project["overlays"]) or "none"
-    print(f"repo: {project['name']}  tier: {project['tier']}  overlays: {overlays}")
+    print(f"repo: {project['name']}  tier: {project['tier']}")
+    for dimension in PROFILE_DIMENSIONS:
+        values = ", ".join(project["profiles"][dimension]) or "none"
+        print(f"  {dimension}: {values}")
     print()
     for doc in manifest["documents"]:
         verdict = doc["audit"]["verdict"] if doc.get("audit") else "-"
@@ -323,7 +420,12 @@ def build_parser() -> argparse.ArgumentParser:
     init = sub.add_parser("init")
     add_repo(init)
     init.add_argument("--tier", required=True, choices=["spine", "diligence", "portfolio"])
-    init.add_argument("--overlay", action="append", default=[])
+    init.add_argument("--shape", action="append", default=[])
+    init.add_argument("--platform", action="append", default=[])
+    init.add_argument("--framework", action="append", default=[])
+    init.add_argument("--concern", action="append", default=[])
+    init.add_argument("--audience", action="append", default=[])
+    init.add_argument("--overlay", dest="obsolete_overlay", action="append", default=[], help=argparse.SUPPRESS)
     init.add_argument("--name")
     init.add_argument("--force", action="store_true")
     init.set_defaults(func=cmd_init)

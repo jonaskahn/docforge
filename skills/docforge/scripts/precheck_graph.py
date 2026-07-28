@@ -111,7 +111,7 @@ def print_flow_remediation(repo: Path) -> None:
     print("  (a) Derive a provisional flow graph from the code graph "
           "(see references/flow-derivation.md):")
     print("    python scripts/derive_flow_graph.py prepare --repo <path>")
-    print("    # dispatch the docforge domain analyzer on the emitted context, then")
+    print("    # dispatch the Docforge flow analyzer on the emitted context, then")
     print("    python scripts/derive_flow_graph.py write --repo <path> --analysis <analysis.json>")
     print("    # writes .docforge/tmp/flow-graph.json — provisional, never committed")
     print("  (b) Or produce a native (authoritative) flow graph from a source:")

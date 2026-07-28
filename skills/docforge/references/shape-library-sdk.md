@@ -1,4 +1,4 @@
-# Overlay — library / SDK
+# Shape — library / SDK
 
 **Applies when:** the repo publishes a package that other codebases depend on — a language package, an internal shared module, or a client SDK.
 

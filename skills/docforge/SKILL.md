@@ -1,9 +1,9 @@
 ---
 name: docforge
-description: Catalog-driven repository documentation with code-graph grounding, conditional flow evidence, manifest v2 planning and provenance, independent audits, and equivalent Python/Node tools.
+description: Catalog-driven repository documentation with typed repository profiles, code-graph grounding, conditional flow evidence, manifest 3.0 provenance, independent audits, and equivalent Python/Node tools.
 ---
 
-# Docforge 1.0
+# Docforge 2.0
 
 Docforge builds a durable documentation system from repository evidence. The
 canonical machine contract is `.metadata/catalog.json`; prose explains that
@@ -11,16 +11,17 @@ contract but never replaces it.
 
 ## Bare `/docforge` invocation
 
-When the user invokes `/docforge` with no task, flags, tier, overlay, or
+When the user invokes `/docforge` with no task, flags, tier, or typed profile
 document request, begin an **interactive intake**. Do not initialize a
 manifest, scaffold a file, build/refresh a graph, install a provider, change
 configuration, or archive/delete anything.
 
 First perform only safe discovery: identify the repository root, check whether
-`.docforge/manifest.json` exists, run the read-only code-graph precheck, and
-inspect manifests/directories for likely repository shapes. Report the detected
-state and recommendations. Never select an audience or content overlay on the
-user's behalf. When exactly one readable code-graph provider is ready, use it
+`.docforge/manifest.json` exists, run the read-only code-graph precheck, and run
+`detect_profiles` to identify candidate shapes, platforms, frameworks, and
+concerns. Report matched evidence and recommendations. Detection proposes
+profiles; it never confirms them on the user's behalf. When exactly one
+readable code-graph provider is ready, use it
 as the proposed default and do not ask the user to choose among absent
 providers. This read-only provider selection is not permission to build,
 refresh, install, or configure anything.
@@ -47,20 +48,24 @@ Ask only what remains unresolved, in this order:
    security, operations, dependencies, and ADRs), Portfolio (Diligence plus
    `docs-portfolio/` diligence views), or a grounded recommendation that
    Docforge will explain after inspection.
-3. **Audience starting point.** Offer Engineers + beginners (the default);
-   Engineers + Business Analysts + Product Owners; Engineers + coding agents;
-   Everyone; or a custom audience combination. Explain which reader-specific
-   views each choice adds. This is a starting point, not a bundled tier.
-4. **Repository shape.** Offer the detected recommendation with its evidence,
-   or applicable API/service, web application, library, data pipeline,
-   infrastructure, none, and custom choices. Permit multiple shapes where the
-   repository supports them.
-5. **Graph source, only when unresolved.** With several ready providers, offer
+3. **Repository profiles.** Show detected recommendations with evidence, then
+   let the user confirm or edit each applicable dimension:
+   - shapes describe what the repository delivers;
+   - platforms describe where it runs;
+   - frameworks describe how it is built and tailor evidence queries without
+     adding framework-specific trees;
+   - concerns describe evidenced cross-cutting behavior;
+   - audiences describe whom the documentation serves.
+   Permit multiple values in every dimension. Offer Engineers + beginners as
+   the default audience starting point (and the manifest CLI default when no
+   audience flag is supplied); BA + PO, coding agents, operators, and security
+   reviewers add their catalog-owned views.
+4. **Graph source, only when unresolved.** With several ready providers, offer
    only those providers. With no ready provider, explain setup paths and their
    approval requirements. With exactly one ready provider, record it as the
    proposed source and skip this question; include it in the final confirmation
    so the user can still ask to compare or change it.
-6. **Execution mode.** Offer Review (pause after every new or changed tree),
+5. **Execution mode.** Offer Review (pause after every new or changed tree),
    Auto-accept (always display trees and updates, then continue without routine
    conversational pauses), or Plan only (stop after the completed tree and
    document cards). Explain that Auto-accept never approves installation,
@@ -74,7 +79,7 @@ leaves a material choice missing or ambiguous, ask one concise follow-up
 containing only those unresolved choices.
 
 After resolving the answers, display one confirmation summary containing the
-action, tier, audiences, repository shapes, selected graph provider and its
+action, tier, every selected profile dimension, selected graph provider and its
 code/flow capabilities, and execution mode. Ask whether to continue, edit a
 choice, or cancel. Always wait for explicit confirmation of this intake
 summary, including when Auto-accept was selected. Only after confirmation may
@@ -86,7 +91,7 @@ no manifest exists, and do not present a provider that needs setup as ready. If
 no code graph is ready, explain that global installation/MCP wiring is user-run
 and that an agent-run repository index build or refresh needs separate explicit
 approval; selecting a setup path is not that approval. If a manifest exists,
-include its tier, overlays, and incomplete count in the first explanation.
+include its tier, typed profiles, and incomplete count in the first explanation.
 Report existing documentation and candidate repository shapes with a brief
 evidence note, such as an API schema, web framework manifest, library package
 manifest, pipeline configuration, or infrastructure files.
@@ -165,7 +170,7 @@ mechanisms, setup, and refresh behavior belong to
   conversational confirmation pauses. It never authorizes installation, global
   configuration, graph construction or refresh, archive/delete actions, or any
   other separately approved side effect.
-- `--resume`: load the version-2 manifest and continue the first non-complete,
+- `--resume`: load the version-3 manifest and continue the first non-complete,
   non-skipped document in write order.
 - `--status`: print manifest state only.
 - `--revise all` / `--revise <area>`: check provenance, re-ground stale
@@ -209,9 +214,14 @@ Choose exactly one catalog tier:
 - `portfolio`: Diligence plus the complete cross-repository
   `docs-portfolio/` layer.
 
-Select overlay identifiers only from `.metadata/catalog.json`. A document
-shared by selected overlays appears once, with every applicable selection
-origin retained.
+Select shape, platform, framework, concern, and audience identifiers only from
+`.metadata/catalog.json`. Aliases are accepted only at CLI input and normalize
+to canonical IDs. Shapes own durable document packs; platforms add platform
+constraints; frameworks tailor detection, terminology, evidence queries, and
+commands; concerns add conditional content; audiences add reader views. A
+document shared by selected profiles appears once, with every applicable
+selection origin retained. Selected child paths automatically pull in their
+cataloged ancestor indexes.
 
 Conditional entries are selected only when their evidence exists. Actual
 flows, decisions, runbooks, datasets, concepts, migrations, backlog
@@ -223,7 +233,11 @@ discovery. Never seed an example artifact to stand in for discovery.
 ```sh
 python scripts/manage_manifest.py init \
   --repo <repo> --tier spine \
-  --overlay api
+  --shape desktop-app --shape library-sdk \
+  --platform macos \
+  --framework swiftui --framework appkit \
+  --concern accessibility \
+  --audience coding-agents
 
 python scripts/manage_manifest.py add \
   --repo <repo> --type flow \
@@ -265,13 +279,13 @@ Present a human-readable plan before writing. It must contain:
 1. **Evidence readiness** — selected graph provider and persisted artifact,
    current/stale state, native or provisional flow status, and manifest/history
    evidence available.
-2. **Scope decision** — chosen tier, each overlay, depth, and one evidence-based
+2. **Scope decision** — chosen tier, each profile, depth, and one evidence-based
    sentence explaining why it applies.
 3. **Exact tree** — every static and discovered dynamic path from the manifest;
    label conditional items that were omitted and why.
 4. **Document cards** — one line per path stating the reader question/content
    contract, depth, evidence capabilities, and write order. For audience
-   overlays, group cards under Business Analyst, Product Owner, and Coding
+   profiles, group cards under Business Analyst, Product Owner, and Coding
    Agent headings.
 5. **Capability schedule** — which documents can proceed from the code graph
    now, which wait for `flow_graph`, and whether flow evidence will be native or
@@ -360,7 +374,9 @@ independent audit again.
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `2.0`; there is no secondary runtime state file.
+Its schema version is `3.0`; there is no secondary runtime state file.
+Manifest v2 is intentionally unsupported in Docforge 2.0 and must be replaced
+after the user confirms a new profile-backed plan.
 
 Check staleness with:
 
@@ -385,6 +401,8 @@ same flags, messages, JSON shapes, filesystem effects, and exit codes. Unknown
 flags exit `2`.
 
 - `manage_manifest.{py,js}`: `init`, `add`, `set`, `status`, and `audit`.
+- `detect_profiles.{py,js}`: read-only shape/platform/framework/concern
+  recommendations with evidence and `confirmed|candidate` confidence.
 - `scaffold_docs.{py,js}`: exact dry-run, one-document materialization, and
   manifest-backed audit.
 - `precheck_graph.{py,js}`: `--need code|flow`.

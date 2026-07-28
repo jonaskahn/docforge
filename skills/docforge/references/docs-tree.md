@@ -70,13 +70,85 @@ docs-portfolio/
 Actual cross-repository decisions are dynamic entries under
 `docs-portfolio/decisions/`.
 
-## Overlays
+## Typed profiles
 
-Overlay identifiers and order come from the catalog. Shared paths are defined
-once with multiple overlay selectors, so selection retains every origin without
-duplicating the document.
+The catalog owns five independent dimensions:
 
-Audience overlay roots are intentionally visible in the plan:
+- **shapes** describe what the repository delivers and select durable document
+  packs;
+- **platforms** describe where artifacts run and add platform constraints;
+- **frameworks** supply detection, terminology, evidence queries, and verified
+  commands but do not add a parallel framework tree;
+- **concerns** add evidenced cross-cutting documents or sections;
+- **audiences** add reader-specific views.
+
+All dimensions are multi-select. Shared paths are defined once with multiple
+selectors, retain every matching origin, and never duplicate. Selecting any
+child also selects each cataloged ancestor `README.md`; there are no manual
+folder-index trigger lists.
+
+### Shape-owned paths
+
+The catalog is authoritative; these families explain placement:
+
+```text
+website / web-app
+  docs/product/content-model.md
+  docs/architecture/{rendering,state,ui-components}.md
+  docs/engineering/styling.md
+  docs/reference/browser-support.md
+
+mobile-app / desktop-app
+  docs/architecture/{application-lifecycle,ui-and-state,platform-integration}.md
+  docs/security/permissions.md
+  docs/reference/platform-compatibility.md
+  docs/operations/distribution.md
+
+worker-serverless
+  docs/architecture/triggers-and-jobs.md
+  docs/operations/job-reliability.md
+
+cli-tui
+  docs/reference/{commands,output-and-exit-codes}.md
+  docs/operations/distribution.md
+
+plugin-extension
+  docs/architecture/host-integration.md
+  docs/reference/extension-points.md
+  docs/operations/distribution.md
+
+ml-system
+  docs/architecture/model-lifecycle.md
+  docs/reference/model-card.md
+
+game
+  docs/architecture/{gameplay-systems,assets-and-scenes}.md
+  docs/reference/{performance-budgets,platform-compatibility}.md
+  docs/operations/distribution.md
+
+embedded-iot
+  docs/architecture/{hardware-map,firmware-lifecycle}.md
+  docs/reference/performance-budgets.md
+  docs/operations/flashing-and-recovery.md
+
+smart-contract
+  docs/architecture/contract-system.md
+  docs/security/economic-invariants.md
+  docs/operations/network-deployment.md
+```
+
+API/service, library/SDK, data-pipeline, and infrastructure-platform paths are
+the existing canonical packs under product, architecture, engineering,
+operations, reference, and security. Platform-specific packaging, signing,
+permissions, lifecycle, compatibility, and distribution details are sections
+inside their owning documents rather than one file per framework.
+
+Detailed composition notes are available for the
+[API-service](shape-api-service.md), [web-app](shape-web-app.md),
+[library/SDK](shape-library-sdk.md), [data-pipeline](shape-data-pipeline.md),
+and [infrastructure-platform](shape-infrastructure-platform.md) shapes.
+
+Audience-profile roots are intentionally visible in the plan:
 
 ```text
 docs/product/business-analyst/
@@ -111,6 +183,11 @@ Only the BA process/rule/traceability set and the agent flow/flow-derived
 glossary views require a flow graph. Product Owner documents use code,
 manifests, history, ticket evidence, and stakeholder evidence as applicable;
 they do not globally hard-gate on flow data.
+
+Audience-specific composition notes live in
+[Business Analysts](audience-business-analysts.md),
+[Product Owners](audience-product-owners.md), and
+[coding agents](audience-coding-agents.md).
 
 ## Existing documentation
 

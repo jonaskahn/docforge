@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-/** Preview, materialize, or audit the exact tree in a Docforge 2.0 manifest. */
+/** Preview, materialize, or audit the exact tree in a Docforge 3.0 manifest. */
 
 const fs = require("fs");
 const path = require("path");
@@ -24,7 +24,7 @@ function resolveManifest(value, repo) {
 function loadManifest(target) {
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) throw new Error(`manifest not found: ${target}`);
   const manifest = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (manifest.version !== "2.0" || !Array.isArray(manifest.documents)) throw new Error(`manifest must use version 2.0: ${target}`);
+  if (manifest.version !== "3.0" || !Array.isArray(manifest.documents)) throw new Error(`manifest must use version 3.0: ${target}; manifest v2 is unsupported in Docforge 2.0`);
   return manifest;
 }
 function activeDocuments(manifest) {
@@ -33,8 +33,11 @@ function activeDocuments(manifest) {
 function preview(manifest) {
   const docs = activeDocuments(manifest);
   const project = manifest.project || {};
-  const overlays = (project.overlays || []).join(", ") || "none";
-  console.log(`Generation plan — tier: ${project.tier || "unknown"}; overlays: ${overlays}`);
+  console.log(`Generation plan — tier: ${project.tier || "unknown"}`);
+  const profiles = project.profiles || {};
+  for (const dimension of ["shapes", "platforms", "frameworks", "concerns", "audiences"]) {
+    console.log(`  ${dimension}: ${(profiles[dimension] || []).join(", ") || "none"}`);
+  }
   console.log();
   for (const doc of docs) {
     console.log(`${String(doc.write_order).padStart(3, "0")}  ${doc.id.padEnd(28)}  ${doc.path}`);

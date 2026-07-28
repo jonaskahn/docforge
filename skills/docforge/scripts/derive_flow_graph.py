@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Docforge's own flow-graph derivation — build a provisional domain/flow graph
+"""Docforge's own flow-graph derivation — build a provisional flow graph
 from an existing code graph when no native flow graph is available.
 
-Docforge needs a flow graph for docs/flows/, docs/product/, the BA/PO overlays,
-and agent-context flow sections. When a source supplies one natively (an
+Docforge needs a flow graph only for selected manifest documents that declare
+the `flow_graph` capability. When a source supplies one natively (an
 understand-anything flow graph, or GitNexus's native processes) docforge uses
 that. When none exists — a code-graph-only source with no flow data — docforge
 derives one *from the code graph it already has*, grounded in the graph and
@@ -13,8 +13,8 @@ git-ignored, regenerated each run, never committed.
 The reasoning step is agent-mediated (a script cannot infer business domains):
 
     python derive_flow_graph.py prepare --repo <path>
-    # -> writes .docforge/tmp/domain-context.json (compact code-graph digest)
-    # The agent dispatches the docforge domain analyzer on that context per
+    # -> writes .docforge/tmp/flow-context.json (compact code-graph digest)
+    # The agent dispatches the Docforge flow analyzer on that context per
     # references/flow-derivation.md and saves its JSON to <analysis.json>.
     python derive_flow_graph.py write --repo <path> --analysis <analysis.json>
     # -> validates and writes .docforge/tmp/flow-graph.json (+ .gitignore)
@@ -38,7 +38,7 @@ from graph_storage import ensure_tmp_dir_gitignored, validate_flow_graph_shape, 
 from graph_source_registry import resolve_first_ready
 
 TMP_REL = ".docforge/tmp"
-CONTEXT_NAME = "domain-context.json"
+CONTEXT_NAME = "flow-context.json"
 
 # Main-flow budget and traversal radius for the entry-point-first strategy.
 DEFAULT_MAX_FLOWS = 15
@@ -308,7 +308,7 @@ def run_prepare(args: argparse.Namespace) -> int:
     out.write_text(json.dumps(context, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {out}")
     _report_prepare(context)
-    print("Next: dispatch the docforge domain analyzer on this context, main flows "
+    print("Next: dispatch the Docforge flow analyzer on this context, main flows "
           "first (references/flow-derivation.md), save its JSON, then run:")
     print(f"    python scripts/derive_flow_graph.py write --repo {args.repo} --analysis <analysis.json>")
     return 0

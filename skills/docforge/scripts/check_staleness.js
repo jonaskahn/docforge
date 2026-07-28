@@ -14,7 +14,7 @@ function fail(message, code = 2) {
 function loadManifest(target) {
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) throw new Error(`manifest not found: ${target}`);
   const manifest = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (manifest.version !== "2.0") throw new Error(`manifest must use version 2.0: ${target}`);
+  if (manifest.version !== "3.0") throw new Error(`manifest must use version 3.0: ${target}; manifest v2 is unsupported in Docforge 2.0`);
   return manifest;
 }
 function parseFrontmatter(target) {

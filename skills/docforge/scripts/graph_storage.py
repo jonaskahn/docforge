@@ -75,7 +75,7 @@ def list_known_graph_dirs(repo: Path) -> None:
 
 
 def validate_flow_graph_shape(flow_graph: dict) -> str | None:
-    """Sanity check for a flow (domain) graph before it is written — today
+    """Sanity check for a flow graph before it is written — today
     only docforge's own derivation writes one. It uses the docforge flow
     shape: a non-empty 'flows' list of objects, each with a 'name' and a
     'steps' list. Refusing an empty graph is what stops a derivation gone

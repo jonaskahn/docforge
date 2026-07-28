@@ -4,6 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { detect: detectProfiles } = require("./detect_profiles.js");
 
 const SKILL_ROOT = path.resolve(__dirname, "..");
 const CATALOG_PATH = path.join(SKILL_ROOT, ".metadata", "catalog.json");
@@ -37,7 +38,7 @@ function loadManifest(repo) {
   const target = manifestPath(repo);
   if (!fs.existsSync(target)) throw new Error(`manifest not found: ${target}`);
   const data = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (data.version !== "2.0") throw new Error(`manifest version must be 2.0: ${target}`);
+  if (data.version !== "3.0") throw new Error(`manifest must use version 3.0: ${target}; manifest v2 is unsupported in Docforge 2.0`);
   return data;
 }
 function saveManifest(repo, manifest) {
@@ -92,26 +93,82 @@ function makeDocument(definition, origins, evidence = []) {
     audit: null,
   };
 }
-function selectedStaticDocuments(catalog, repo, tier, overlays) {
+const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
+const ORIGIN_KINDS = {
+  shapes: "shape", platforms: "platform", frameworks: "framework",
+  concerns: "concern", audiences: "audience",
+};
+function normalizeProfiles(catalog, raw) {
+  const normalized = {};
+  for (const dimension of PROFILE_DIMENSIONS) {
+    const definitions = catalog.profiles[dimension];
+    const aliases = new Map();
+    for (const definition of definitions) {
+      aliases.set(definition.id, definition.id);
+      for (const alias of definition.aliases || []) aliases.set(alias, definition.id);
+    }
+    const unknown = (raw[dimension] || []).filter((value) => !aliases.has(value));
+    if (unknown.length) {
+      const singular = dimension === "audiences" ? "audience" : dimension.slice(0, -1);
+      throw new Error(`unknown ${singular}: ${unknown[0]}; expected one of: ${definitions.map((item) => item.id).join(", ")}`);
+    }
+    const requested = new Set((raw[dimension] || []).map((value) => aliases.get(value)));
+    normalized[dimension] = definitions.filter((item) => requested.has(item.id)).map((item) => item.id);
+  }
+  return normalized;
+}
+function matchingOrigins(rule, profiles) {
+  const origins = [];
+  for (const dimension of PROFILE_DIMENSIONS) {
+    const accepted = (rule.selectors || {})[dimension] || [];
+    for (const value of profiles[dimension] || []) {
+      if (accepted.includes(value)) origins.push({ kind: ORIGIN_KINDS[dimension], id: value });
+    }
+  }
+  return origins;
+}
+function addAncestorIndexes(catalog, selected) {
+  const indexTypes = new Set(["folder-index", "docs-index", "portfolio-index", "decision-index", "portfolio-decisions-index"]);
+  const definitions = new Map(catalog.documents
+    .filter((item) => item.selection.mode === "static" && indexTypes.has(item.type))
+    .map((item) => [item.path, item]));
+  const selectedPaths = new Set(selected.map((item) => item.path));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const child of [...selected]) {
+      let parent = path.posix.dirname(child.path);
+      while (parent !== ".") {
+        const candidate = path.posix.join(parent, "README.md");
+        const definition = definitions.get(candidate);
+        if (definition && !selectedPaths.has(candidate)) {
+          selected.push(makeDocument(definition, [{ kind: "ancestor", id: child.id }]));
+          selectedPaths.add(candidate);
+          changed = true;
+        }
+        parent = path.posix.dirname(parent);
+      }
+    }
+  }
+}
+function selectedStaticDocuments(catalog, repo, tier, profiles) {
   const ranks = Object.fromEntries(catalog.tiers.map((item) => [item.id, item.order]));
   const selected = [];
   for (const definition of catalog.documents) {
     const rule = definition.selection;
     if (rule.mode !== "static") continue;
     const tierSelected = ranks[rule.min_tier] <= ranks[tier];
-    const matching = overlays.filter((overlay) => rule.overlays.includes(overlay));
-    const triggers = overlays.filter((overlay) => (rule.include_if_overlay || []).includes(overlay));
-    if (rule.overlays.length && (!tierSelected || !matching.length)) continue;
-    if (!rule.overlays.length && !tierSelected && !triggers.length) continue;
+    if (!tierSelected) continue;
+    const origins = matchingOrigins(rule, profiles);
+    const hasSelectors = Object.values(rule.selectors || {}).some((values) => values.length);
+    if (hasSelectors && !origins.length) continue;
     const evidence = conditionEvidence(repo, rule.condition);
     if (rule.condition && !evidence.length) continue;
-    const origins = [];
-    if (!rule.overlays.length && tierSelected) origins.push({ kind: "tier", id: rule.min_tier });
-    for (const overlay of matching) origins.push({ kind: "overlay", id: overlay });
-    for (const overlay of triggers) origins.push({ kind: "overlay", id: overlay });
+    if (!hasSelectors) origins.push({ kind: "tier", id: rule.min_tier });
     if (rule.condition) origins.push({ kind: "condition", id: rule.condition });
     selected.push(makeDocument(definition, origins, evidence));
   }
+  addAncestorIndexes(catalog, selected);
   return selected.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
 }
 function parseArgs(argv) {
@@ -119,16 +176,16 @@ function parseArgs(argv) {
   const command = argv[0];
   const knownCommands = new Set(["init", "add", "set", "audit", "status"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
-  const repeatable = new Set(["overlay"]);
+  const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay"]);
   const boolean = new Set(["force"]);
   const allowed = {
-    init: new Set(["repo", "tier", "overlay", "name", "force"]),
+    init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force"]),
     add: new Set(["repo", "type", "id", "path"]),
     set: new Set(["repo", "id", "status"]),
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
   }[command];
-  const result = { command, overlay: [] };
+  const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [] };
   for (let i = 1; i < argv.length; i++) {
     const token = argv[i];
     if (!token.startsWith("--")) throw new Error(`unexpected argument: ${token}`);
@@ -151,25 +208,32 @@ function required(args, names) {
 }
 function cmdInit(args) {
   required(args, ["repo", "tier"]);
+  if (args.overlay.length) return fail("--overlay is unsupported in Docforge 2.0; use --shape, --platform, --framework, --concern, or --audience", 2);
   if (!["spine", "diligence", "portfolio"].includes(args.tier)) return fail(`invalid tier: ${args.tier}`, 2);
   const target = manifestPath(args.repo);
   if (fs.existsSync(target) && !args.force) return fail(`manifest already exists: ${target}; pass --force to replace it`);
   const catalog = loadCatalog();
-  const overlayIds = catalog.overlays.map((item) => item.id);
-  const unknown = args.overlay.filter((item) => !overlayIds.includes(item));
-  if (unknown.length) return fail(`unknown overlay: ${unknown[0]}; expected one of: ${overlayIds.join(", ")}`, 2);
-  const overlaySet = new Set(args.overlay);
-  const overlays = overlayIds.filter((item) => overlaySet.has(item));
-  const docs = selectedStaticDocuments(catalog, args.repo, args.tier, overlays);
+  let profiles;
+  try {
+    profiles = normalizeProfiles(catalog, {
+      shapes: args.shape, platforms: args.platform, frameworks: args.framework,
+      concerns: args.concern,
+      audiences: args.audience.length ? args.audience : ["engineers", "beginners"],
+    });
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  const docs = selectedStaticDocuments(catalog, args.repo, args.tier, profiles);
   const manifest = {
-    version: "2.0",
+    version: "3.0",
     generated_at: nowIso(),
     project: {
       name: args.name || path.basename(path.resolve(args.repo)),
       root: path.resolve(args.repo),
       tier: args.tier,
-      overlays,
+      profiles,
     },
+    discovery: detectProfiles(fs.realpathSync(args.repo)),
     documents: docs,
     metadata: {},
   };
@@ -199,8 +263,14 @@ function cmdAdd(args) {
     const ranks = Object.fromEntries(catalog.tiers.map((item) => [item.id, item.order]));
     const rule = definition.selection;
     if (ranks[rule.min_tier] > ranks[manifest.project.tier]) return fail(`dynamic type ${args.type} requires tier ${rule.min_tier}`, 2);
-    if (rule.overlays.length && !rule.overlays.some((overlay) => manifest.project.overlays.includes(overlay))) {
-      return fail(`dynamic type ${args.type} requires overlay: ${rule.overlays.join(", ")}`, 2);
+    const selectors = rule.selectors || {};
+    const profileOrigins = matchingOrigins(rule, manifest.project.profiles);
+    if (Object.values(selectors).some((values) => values.length) && !profileOrigins.length) {
+      const requirements = Object.entries(selectors)
+        .filter(([, values]) => values.length)
+        .map(([dimension, values]) => `${ORIGIN_KINDS[dimension]}: ${values.join(", ")}`)
+        .join(", ");
+      return fail(`dynamic type ${args.type} requires profile ${requirements}`, 2);
     }
     const evidence = conditionEvidence(args.repo, rule.condition);
     if (rule.condition === "ticket_evidence" && !evidence.length) return fail(`dynamic type ${args.type} requires ticket evidence in the repository`, 2);
@@ -209,7 +279,7 @@ function cmdAdd(args) {
     if (manifest.documents.some((doc) => doc.id === args.id)) return fail(`document id already exists: ${args.id}`, 2);
     if (manifest.documents.some((doc) => doc.path === args.path)) return fail(`document path already exists: ${args.path}`, 2);
     const actual = { ...definition, id: args.id, path: args.path };
-    const origins = [{ kind: "dynamic", id: definition.type }];
+    const origins = [{ kind: "dynamic", id: definition.type }, ...profileOrigins];
     if (rule.condition) origins.push({ kind: "condition", id: rule.condition });
     manifest.documents.push(makeDocument(actual, origins, evidence));
     manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
@@ -272,7 +342,10 @@ function cmdStatus(args) {
   try {
     const manifest = loadManifest(args.repo);
     const project = manifest.project;
-    console.log(`repo: ${project.name}  tier: ${project.tier}  overlays: ${project.overlays.join(", ") || "none"}`);
+    console.log(`repo: ${project.name}  tier: ${project.tier}`);
+    for (const dimension of PROFILE_DIMENSIONS) {
+      console.log(`  ${dimension}: ${project.profiles[dimension].join(", ") || "none"}`);
+    }
     console.log();
     for (const doc of manifest.documents) {
       const verdict = doc.audit ? doc.audit.verdict : "-";
@@ -287,7 +360,7 @@ function cmdStatus(args) {
   }
 }
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--overlay <id>] | add --repo <path> --type <type> --id <id> --path <path> | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <subagent|cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path>");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <subagent|cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path>");
 }
 function main() {
   let args;

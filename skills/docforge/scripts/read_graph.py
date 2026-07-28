@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read a JSON code (knowledge) graph and extract the inventories that seed a
+"""Read a JSON code graph and extract the inventories that seed a
 documentation set.
 
 This reads a **JSON** graph on disk — understand-anything's

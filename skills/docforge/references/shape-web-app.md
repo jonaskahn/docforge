@@ -1,4 +1,4 @@
-# Overlay — web application
+# Shape — web application
 
 **Applies when:** the repo builds a browser-delivered interface — a single-page app, a server-rendered application, or a static site with client-side behaviour.
 

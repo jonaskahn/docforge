@@ -25,7 +25,7 @@ capabilities; provenance records the repository sources used for claims.
 
 | Provider | Persisted artifact | Native strengths | Native read path | Refresh behavior |
 |---|---|---|---|---|
-| Understand Anything | `.ua/knowledge-graph.json` and `.ua/domain-graph.json` (legacy `.understand-anything/`) | shareable structural JSON; semantic summaries; native domains, flows, and steps | Understand Anything skills for exploration; `read_graph` for deterministic JSON inventory | `/understand` is incremental; optional auto-update hook |
+| Understand Anything | `.ua/knowledge-graph.json` and `.ua/domain-graph.json` (legacy `.understand-anything/`) | shareable code-graph JSON; semantic summaries; native flows and steps | Understand Anything skills for exploration; `read_graph` for deterministic JSON inventory | `/understand` is incremental; optional auto-update hook |
 | GitNexus | `.gitnexus/lbug` plus index metadata | calls, dependencies, communities, indexed execution processes, change/impact views | GitNexus MCP tools/resources or project-local CLI; optional read-only LadybugDB inventory | `analyze` refreshes the index; compare indexed commit with `HEAD` |
 | CodeGraph | `.codegraph/codegraph.db` | current source, symbol relationships, call paths, routes, and blast radius in one query | `codegraph_explore` MCP tool (or its CLI equivalent when the skill directs it) | watcher and connect-time reconciliation; `status`/`sync` for exceptional manual checks |
 
@@ -112,7 +112,7 @@ Use the selected provider’s native interface to collect a planning inventory:
 5. hotspots, tests, configuration reads, and operational surfaces.
 
 Then inspect manifests, current docs, and history. This evidence determines the
-tier, overlays, conditions, and dynamic entries in the manifest. The plan is
+tier, profiles, conditions, and dynamic entries in the manifest. The plan is
 therefore graph-grounded rather than a generic tier skeleton.
 
 For each document, make another narrow provider-native query for its contract.
@@ -130,7 +130,7 @@ Examples:
 
 Resolve flow data native-first:
 
-1. use Understand Anything’s domain graph when ready;
+1. use Understand Anything’s native flow graph when ready;
 2. use GitNexus indexed processes when ready;
 3. otherwise derive `.docforge/tmp/flow-graph.json` from the selected code graph
    through [`flow-derivation.md`](flow-derivation.md).
@@ -138,4 +138,4 @@ Resolve flow data native-first:
 The derived result is explicitly provisional. Confirm business rules and
 failure behavior against source before publishing them. CodeGraph can provide
 excellent structural paths, routes, and source for derivation, but Docforge
-does not relabel that structural index as a native business flow graph.
+does not relabel that code graph as a native business flow graph.

@@ -17,7 +17,8 @@ REQUIRED_DOC_FIELDS = {
 }
 MARKDOWN_EXCEPTIONS = {"agents-kernel.md", "claude-md.md", "claude-local-md.md"}
 PUBLIC_CONTRACTS = {
-    "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--overlay", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
+    "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
+    "detect_profiles": ["--repo", "--json", "confirmed", "candidate"],
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
     "check_staleness": ["--manifest", "--section", "--json", "--sync-provenance"],
@@ -34,19 +35,67 @@ def validate() -> list[str]:
     catalog = read_json(metadata / "catalog.json")
     catalog_schema = read_json(metadata / "catalog-schema.json")
     manifest_schema = read_json(metadata / "manifest-schema.json")
-    if catalog.get("version") != "1.0.2":
-        errors.append("catalog version must be 1.0.2")
-    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "1.0.2":
+    if catalog.get("version") != "2.0.0":
+        errors.append("catalog version must be 2.0.0")
+    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.0.0":
         errors.append("catalog schema version disagrees with catalog")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "2.0":
-        errors.append("manifest schema must require version 2.0")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.0":
+        errors.append("manifest schema must require version 3.0")
     tiers = {item["id"] for item in catalog.get("tiers", [])}
-    overlays = {item["id"] for item in catalog.get("overlays", [])}
+    dimensions = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
+    profiles = catalog.get("profiles", {})
+    schema_profile_required = set(
+        catalog_schema.get("properties", {}).get("profiles", {}).get("required", [])
+    )
+    manifest_profile_required = set(
+        manifest_schema.get("properties", {})
+        .get("project", {}).get("properties", {})
+        .get("profiles", {}).get("required", [])
+    )
+    if schema_profile_required != set(dimensions):
+        errors.append("catalog schema profile dimensions disagree with catalog")
+    if manifest_profile_required != set(dimensions):
+        errors.append("manifest schema profile dimensions disagree with catalog")
+    profile_ids: dict[str, set[str]] = {}
+    for dimension in dimensions:
+        definitions = profiles.get(dimension, [])
+        if not definitions:
+            errors.append(f"{dimension}: profile registry must not be empty")
+        ids = {item.get("id") for item in definitions}
+        if len(ids) != len(definitions):
+            errors.append(f"{dimension}: duplicate profile id")
+        orders = [item.get("order") for item in definitions]
+        if len(set(orders)) != len(orders) or not all(isinstance(item, int) for item in orders):
+            errors.append(f"{dimension}: profile order values must be unique integers")
+        profile_ids[dimension] = ids
+        names: dict[str, str] = {}
+        for item in definitions:
+            identifier = item.get("id")
+            for name in [identifier, *item.get("aliases", [])]:
+                if not isinstance(name, str) or re.fullmatch(r"[a-z0-9][a-z0-9-]*", name) is None:
+                    errors.append(f"{dimension}: invalid profile name {name}")
+                    continue
+                if name in names:
+                    errors.append(
+                        f"{dimension}: profile name collision {name} "
+                        f"between {names[name]} and {identifier}"
+                    )
+                names[name] = identifier
+            for signal in item.get("signals", []):
+                if signal.get("kind") not in {"path", "content"}:
+                    errors.append(f"{dimension}/{identifier}: invalid signal kind")
+                if not isinstance(signal.get("pattern"), str) or not signal.get("pattern"):
+                    errors.append(f"{dimension}/{identifier}: signal needs a pattern")
+                if signal.get("kind") == "content" and not signal.get("contains"):
+                    errors.append(f"{dimension}/{identifier}: content signal needs contains")
     groups = set(catalog.get("groups", []))
     capabilities = set(catalog.get("capabilities", []))
     static_ids: set[str] = set()
     static_paths: set[str] = set()
     dynamic_types: set[str] = set()
+    catalog_contract = (
+        SKILL_ROOT / "references" / "document-catalog.md"
+    ).read_text(encoding="utf-8")
     for index, doc in enumerate(catalog.get("documents", [])):
         label = doc.get("id", f"document[{index}]")
         missing = sorted(REQUIRED_DOC_FIELDS - set(doc))
@@ -54,21 +103,30 @@ def validate() -> list[str]:
             errors.append(f"{label}: missing fields: {', '.join(missing)}")
             continue
         selection = doc.get("selection", {})
+        obsolete = {"overlays", "include_if_overlay"} & set(selection)
+        if obsolete:
+            errors.append(f"{label}: obsolete selection fields: {', '.join(sorted(obsolete))}")
         if doc["group"] not in groups:
             errors.append(f"{label}: unknown group {doc['group']}")
         if selection.get("min_tier") not in tiers:
             errors.append(f"{label}: unknown tier {selection.get('min_tier')}")
-        for overlay in selection.get("overlays", []):
-            if overlay not in overlays:
-                errors.append(f"{label}: unknown overlay {overlay}")
-        for overlay in selection.get("include_if_overlay", []):
-            if overlay not in overlays:
-                errors.append(f"{label}: unknown include_if_overlay {overlay}")
+        selectors = selection.get("selectors", {})
+        if "frameworks" in selectors and selectors["frameworks"]:
+            errors.append(f"{label}: frameworks may tailor evidence but must not select documents")
+        for dimension, values in selectors.items():
+            if dimension not in profile_ids:
+                errors.append(f"{label}: unknown selector dimension {dimension}")
+                continue
+            for value in values:
+                if value not in profile_ids[dimension]:
+                    errors.append(f"{label}: unknown {dimension} selector {value}")
         for requirement in doc.get("requires", []):
             if requirement not in capabilities:
                 errors.append(f"{label}: unknown requirement {requirement}")
         if not isinstance(doc.get("write_order"), int):
             errors.append(f"{label}: write_order must be an integer")
+        if doc["type"] not in catalog_contract:
+            errors.append(f"{label}: document type is missing from document-catalog.md")
         template = SKILL_ROOT / "assets" / "templates" / doc["scaffold_template"]
         if not template.is_file():
             errors.append(f"{label}: missing template {doc['scaffold_template']}")
@@ -119,7 +177,7 @@ def validate() -> list[str]:
     plugin = read_json(REPO_ROOT / ".claude-plugin" / "plugin.json")
     market = read_json(REPO_ROOT / ".claude-plugin" / "marketplace.json")["plugins"][0]
     versions = {meta.get("version"), plugin.get("version"), market.get("version"), catalog.get("version")}
-    if versions != {"1.0.2"}:
+    if versions != {"2.0.0"}:
         errors.append(f"release versions disagree: {sorted(str(item) for item in versions)}")
     skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     skill_match = re.search(r"^description: (.+)$", skill_text, re.MULTILINE)

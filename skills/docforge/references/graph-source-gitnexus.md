@@ -44,7 +44,7 @@ Use narrow native operations:
 - `impact`: measure upstream/downstream blast radius and risk;
 - `trace`: find a directed path between two symbols;
 - `detect_changes`: relate a diff to affected symbols and processes;
-- `route_map`, `tool_map`, or `api_impact`: ground applicable overlay plans;
+- `route_map`, `tool_map`, or `api_impact`: ground applicable profile plans;
 - `cypher`: answer a precise structural question not covered by a higher-level
   tool.
 

@@ -1,6 +1,6 @@
-# Coding-agent context overlay
+# Coding-agent audience profile
 
-Select `agent-context` when AI coding agents need a compact, repository-local
+Select the `coding-agents` audience when AI coding agents need a compact, repository-local
 operating map. It writes last because it links to completed human-facing
 documentation and compresses facts rather than creating another source of
 truth.
@@ -36,7 +36,7 @@ or when existing target configuration makes them applicable.
 - only `flow.md` and the flow-derived `glossary.md` require `flow_graph`;
 - shims and machine configuration are not reasons to build a flow graph.
 
-Thus a missing flow graph delays two views, not the whole overlay.
+Thus a missing flow graph delays two views, not the whole profile.
 
 ## Content ownership
 
@@ -72,16 +72,12 @@ These are token-budgeted retrieval views. They link to the human document that
 owns each fact and include agent-specific exemplars only when no human-facing
 document owns that guidance.
 
-## Provider-native grounding
+## Capability-grounded retrieval
 
-Use the selected provider’s native query path to retrieve the smallest useful
-context:
-
-- Understand Anything: layers, tours, focused explanations, and domain flows;
-- GitNexus: symbol context, processes, change impact, and high-connectivity
-  areas;
-- CodeGraph: relevant source, call paths, routes, and blast radius through
-  `codegraph_explore`.
+Use the selected code-graph provider to retrieve the smallest useful structural
+context and the selected flow-graph capability only for documents that declare
+it. Provider dispatch and commands are owned by
+[`graph-sources.md`](graph-sources.md).
 
 Do not paste provider graph schema, node IDs, private symbol dumps, or volatile
 line numbers into agent documents. Convert them into durable paths,

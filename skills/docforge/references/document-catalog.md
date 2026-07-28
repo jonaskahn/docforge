@@ -26,7 +26,7 @@ mechanism, constraints, and tradeoffs.
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
 | root-readme | purpose, audience, verified quick start, links to setup/architecture/limitations | deep architecture and duplicated setup | Orientation | orientation |
-| docs-index / folder-index | selected children and one-line purpose | unselected or future links | Orientation | orientation |
+| docs-index / folder-index / ba-index / po-index / portfolio-index / portfolio-decisions-index | selected children and one-line purpose | unselected or future links | Orientation | orientation |
 | product-overview | users, problems, capabilities, explicit non-goals | invented roadmap or implementation detail | Explanation | orientation |
 | architecture-high-level | context, deployable blocks, boundaries, communication, invariants | decision rationale and code listings | Explanation | deep-dive |
 | architecture-low-level | subsystem responsibilities, data/control paths, failure boundaries | duplicated high-level map | Explanation | deep-dive |
@@ -44,6 +44,7 @@ mechanism, constraints, and tradeoffs.
 | observability | signals, ownership, correlation, alert intent, blind spots | provider marketing | Reference | deep-dive |
 | decision-index / adr | indexed decisions; for each ADR context, decision, alternatives, consequences, status | rewritten history | Explanation | deep-dive |
 | flow | trigger, actors, ordered steps, branches, rules, failures, outcome | hand-inferred flow inventory | Explanation | deep-dive |
+| concept | one durable concept, responsibility, relationships, invariants, failure boundaries | symbol-by-symbol implementation tour | Explanation | deep-dive |
 | runbook | symptom, safety, diagnosis, remediation, verification, escalation | architectural tutorial | How-to | deep-dive |
 | repo-inventory | discovered repositories, role, owner token, documentation state, evidence | hand-typed collection omissions | Reference | reference |
 | system-context | repository/system boundaries, shared services, cross-repo flows | repo-local internals | Explanation | deep-dive |
@@ -57,6 +58,33 @@ mechanism, constraints, and tradeoffs.
 | environments | environment differences, promotion boundaries, configuration ownership | deployment procedure | Explanation | deep-dive |
 | disaster-recovery | failure scenarios, recovery order, verification, data-loss boundary | ordinary deploy steps | How-to | deep-dive |
 | compatibility | supported versions/platforms, tested matrix, deprecation behavior | migration procedure | Reference | reference |
+| quickstart | shortest verified path to first useful result, prerequisites, expected output, next links | complete setup duplication | How-to | deep-dive |
+| api-reference / authentication / rate-limits | public surface, inputs/outputs, auth contract, limits, errors, compatibility source | hand-copied generated schema or secrets | Reference | reference |
+| data-flow / data-quality / data-types | producers, transformations, contracts, checks, failure/recovery, schema ownership | unevidenced lineage or sample-only guarantees | Explanation | deep-dive |
+| content-model | content types, lifecycle, validation, ownership, publishing boundary | editorial strategy unsupported by repository evidence | Explanation | deep-dive |
+| ui-components / styling / browser-support | component responsibilities, composition, tokens/themes, browser matrix, degradation | screenshot catalog or invented support claims | Reference | reference |
+| application-lifecycle | launch/activation/background/termination states, ownership, restoration, failure boundaries | UI component inventory | Explanation | deep-dive |
+| ui-navigation-state | surfaces, navigation, state ownership, transitions, restoration, error presentation | visual design token catalog | Explanation | deep-dive |
+| platform-integration | OS services, adapters, permissions boundary, callbacks, failure and fallback | generic platform API tutorial | Explanation | deep-dive |
+| platform-permissions | requested capability, trigger, user value, denial behavior, settings/recovery, manifest evidence | invented entitlement or policy claims | Reference | deep-dive |
+| platform-compatibility | OS/device/architecture matrix, minimums, tested evidence, degradation, deprecation | release procedure | Reference | reference |
+| application-distribution | artifact, build, signing, packaging, channels, verification, update/rollback | secret material or unsupported store claims | How-to | deep-dive |
+| offline-installation | installability, cache/update lifecycle, offline boundaries, invalidation, recovery | generic service-worker tutorial | Explanation | deep-dive |
+| triggers-and-jobs | trigger, payload, scheduling, concurrency, ownership, downstream effects | runbook remediation | Explanation | deep-dive |
+| job-reliability | retry, idempotency, timeout, backpressure, dead-letter, replay, observability | business process duplication | Reference | deep-dive |
+| command-reference | commands/subcommands, arguments, configuration, examples, side effects | implementation call graph | Reference | reference |
+| output-exit-contract | stdout/stderr ownership, formats, exit codes, stability, scripting behavior | prose-only examples without verified output | Reference | reference |
+| host-integration / extension-points | host contract, activation, contribution points, permissions, compatibility, sandbox, failure | host product tutorial | Explanation | deep-dive |
+| model-lifecycle / model-card | datasets, training/evaluation, artifact lineage, inference, limitations, drift, ownership | unsupported quality or safety claims | Explanation | deep-dive |
+| gameplay-systems / assets-and-scenes | system boundaries, scenes/assets, loading, save state, platform builds | design-document aspiration | Explanation | deep-dive |
+| performance-budgets | evidenced CPU/GPU/memory/storage/timing limits, measurement, degradation | invented targets | Reference | reference |
+| hardware-map / firmware-lifecycle | boards, peripherals, protocols, boot/update states, memory/power, failure | generic component datasheets | Explanation | deep-dive |
+| flashing-recovery | prerequisites, artifact, connection, flashing, verification, rollback/recovery, safety | unverified destructive commands | How-to | deep-dive |
+| contract-system / economic-invariants | contracts, storage, authorities, networks, upgrade boundary, economic/security invariants | unsupported audit verdict | Explanation | deep-dive |
+| network-deployment | network configuration, keys/roles, deployment order, verification, upgrade/rollback | private keys or fabricated addresses | How-to | deep-dive |
+| infrastructure-apply / infrastructure-state / resources | plan/apply safety, external state, locking, ownership, resource inventory, drift, recovery | credentials or unverified destructive commands | Reference | deep-dive |
+| publishing | artifacts, version source, build/sign, registry/channel, verification, rollback/deprecation | secret values or changelog duplication | How-to | deep-dive |
+| accessibility / localization | supported behavior, resources/semantics, fallback, verification, known limits | compliance claims without evidence | Reference | deep-dive |
 | migration | source/target versions, breaking changes, ordered changes, verification, rollback | full compatibility matrix | How-to | deep-dive |
 | error-catalog | stable code/name, trigger, client behavior, retryability, observability | implementation stack traces | Reference | reference |
 | process-flows | actor, trigger, business-language steps, decision points, exceptions, outcome, owning flow links | raw call chains or repeated business-rule definitions | Explanation | deep-dive |
@@ -66,12 +94,24 @@ mechanism, constraints, and tradeoffs.
 | success-metrics | outcome, measure, instrumentation state, interpretation, external target token | invented targets | Reference | deep-dive |
 | release-notes | released user impact, version/date, compatibility impact, feature links | internal refactor and dependency noise | Reference | reference |
 | backlog-traceability | evidenced ticket id, feature, flow/change, release/status link | guessed ticket mappings or empty seed tables | Reference | reference |
-| portfolio security/operations | cross-repo controls, gaps, shared dependencies, operational coupling | member-level repetition | Explanation | deep-dive |
+| contributing-router | verified contribution path, required checks, conventions and ownership links | duplicated setup/testing guides | Orientation | router |
+| agents-kernel / fixed-shim / machine-config | compact entry points, verified commands, precedence, safe links to owning agent views | broad narrative, invented settings, or overwritten user configuration | Orientation | router |
+| agents-architecture / agents-patterns / agents-testing / agents-tech-debt / agents-conventions | token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links | duplicated human documentation or volatile symbol dumps | Reference | deep-dive |
+| agents-flow / agents-glossary | compact flow/term lookup grounded in declared flow evidence and linked owners | inferred flows or duplicated business prose | Reference | reference |
+| security-posture / portfolio-operations | cross-repo controls, gaps, shared dependencies, operational coupling | member-level repetition | Explanation | deep-dive |
+| portfolio-decision / portfolio-glossary | cross-repository decision evidence or shared terminology with member links | repository-local ADR duplication | Reference | deep-dive |
 
-## Overlay types
+## Typed profile behavior
 
-- API and library references derive their public surface from specs, schemas, or
+- Shapes own document packs. API and library references derive their public surface from specs, schemas, or
   exported interfaces; do not hand-maintain a parallel API.
+- Platforms own runtime compatibility, permissions, lifecycle, packaging,
+  signing, and distribution details inside the shared client documents.
+- Framework profiles change detection, graph queries, terminology, and verified
+  commands only. They do not create `flutter-*`, `electron-*`, or equivalent
+  duplicate document families.
+- Concerns add a document only when the catalog explicitly owns one; otherwise
+  they add a section to the existing topic owner.
 - Data contracts name producers, consumers, schema, validation, lineage,
   compatibility, and recovery.
 - Business Analyst documents own a business-language process view, rules, and

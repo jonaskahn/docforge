@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-free Docforge 1.0 contract fixtures."""
+"""Dependency-free Docforge 2.0 contract fixtures."""
 
 from __future__ import annotations
 
@@ -35,10 +35,27 @@ def load_manifest(repo: Path) -> dict:
     return json.loads((repo / ".docforge" / "manifest.json").read_text(encoding="utf-8"))
 
 
-def initialize(runtime: str, repo: Path, tier: str, *overlays: str) -> subprocess.CompletedProcess:
+def initialize(
+    runtime: str,
+    repo: Path,
+    tier: str,
+    *,
+    shapes: tuple[str, ...] = (),
+    platforms: tuple[str, ...] = (),
+    frameworks: tuple[str, ...] = (),
+    concerns: tuple[str, ...] = (),
+    audiences: tuple[str, ...] = (),
+) -> subprocess.CompletedProcess:
     args = ["init", "--repo", str(repo), "--tier", tier]
-    for overlay in overlays:
-        args += ["--overlay", overlay]
+    for flag, values in (
+        ("shape", shapes),
+        ("platform", platforms),
+        ("framework", frameworks),
+        ("concern", concerns),
+        ("audience", audiences),
+    ):
+        for value in values:
+            args += [f"--{flag}", value]
     return run(runtime, "manage_manifest", *args)
 
 
@@ -64,8 +81,7 @@ class CatalogSelectionTests(unittest.TestCase):
         for question in (
             "Goal or action",
             "Documentation tier",
-            "Audience starting point",
-            "Repository shape",
+            "Repository profiles",
             "Graph source, only when unresolved",
             "Execution mode",
         ):
@@ -85,17 +101,24 @@ class CatalogSelectionTests(unittest.TestCase):
         self.assertIn("confirm, edit, or cancel", readme)
         self.assertIn("Only one readable provider is required", readme)
 
-    def test_each_tier_overlay_selection_has_manifest_indexes(self) -> None:
-        overlays = [
-            "data-pipeline", "api", "web", "library", "infrastructure",
-            "business-analyst", "product-owner", "agent-context",
+    def test_each_tier_profile_selection_has_manifest_indexes(self) -> None:
+        profiles = [
+            ("shapes", "data-pipeline"),
+            ("shapes", "api-service"),
+            ("shapes", "web-app"),
+            ("shapes", "desktop-app"),
+            ("shapes", "library-sdk"),
+            ("shapes", "infrastructure-platform"),
+            ("audiences", "business-analysts"),
+            ("audiences", "product-owners"),
+            ("audiences", "coding-agents"),
         ]
         with tempfile.TemporaryDirectory() as tmp:
             for tier in ("spine", "diligence", "portfolio"):
-                for overlay in overlays:
-                    repo = Path(tmp) / f"{tier}-{overlay}"
+                for dimension, profile in profiles:
+                    repo = Path(tmp) / f"{tier}-{profile}"
                     repo.mkdir()
-                    result = initialize("py", repo, tier, overlay)
+                    result = initialize("py", repo, tier, **{dimension: (profile,)})
                     self.assertEqual(result.returncode, 0, result.stderr)
                     paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
                     for selected in paths:
@@ -103,7 +126,7 @@ class CatalogSelectionTests(unittest.TestCase):
                             continue
                         parent = str(Path(selected).parent).replace(os.sep, "/")
                         while parent not in ("docs", "docs-portfolio", "."):
-                            self.assertIn(f"{parent}/README.md", paths, (tier, overlay, selected))
+                            self.assertIn(f"{parent}/README.md", paths, (tier, profile, selected))
                             parent = str(Path(parent).parent).replace(os.sep, "/")
 
     def test_every_tier_and_portfolio_layer(self) -> None:
@@ -115,8 +138,12 @@ class CatalogSelectionTests(unittest.TestCase):
                 result = initialize("py", repo, tier)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "2.0")
+                self.assertEqual(manifest["version"], "3.0")
                 self.assertEqual(manifest["project"]["tier"], tier)
+                self.assertEqual(
+                    manifest["project"]["profiles"]["audiences"],
+                    ["engineers", "beginners"],
+                )
                 counts.append(len(manifest["documents"]))
                 paths = {doc["path"] for doc in manifest["documents"]}
                 if tier == "portfolio":
@@ -124,24 +151,80 @@ class CatalogSelectionTests(unittest.TestCase):
             self.assertLess(counts[0], counts[1])
             self.assertLess(counts[1], counts[2])
 
+    def test_all_canonical_profiles_are_accepted_and_frameworks_add_no_tree(self) -> None:
+        catalog = json.loads(
+            (ROOT / "skills" / "docforge" / ".metadata" / "catalog.json")
+            .read_text(encoding="utf-8")
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            base_repo = Path(tmp) / "base"
+            profile_repo = Path(tmp) / "profiles"
+            base_repo.mkdir()
+            profile_repo.mkdir()
+            self.assertEqual(initialize("py", base_repo, "spine").returncode, 0)
+            args = ["init", "--repo", str(profile_repo), "--tier", "spine"]
+            flag_for = {
+                "shapes": "--shape",
+                "platforms": "--platform",
+                "frameworks": "--framework",
+                "concerns": "--concern",
+                "audiences": "--audience",
+            }
+            for dimension, definitions in catalog["profiles"].items():
+                for definition in definitions:
+                    args += [flag_for[dimension], definition["id"]]
+            result = run("py", "manage_manifest", *args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            manifest = load_manifest(profile_repo)
+            for dimension, definitions in catalog["profiles"].items():
+                self.assertEqual(
+                    manifest["project"]["profiles"][dimension],
+                    [item["id"] for item in definitions],
+                )
+
+            framework_repo = Path(tmp) / "frameworks"
+            framework_repo.mkdir()
+            framework_args = [
+                item
+                for definition in catalog["profiles"]["frameworks"]
+                for item in ("--framework", definition["id"])
+            ]
+            framework_result = run(
+                "py", "manage_manifest", "init",
+                "--repo", str(framework_repo), "--tier", "spine",
+                *framework_args,
+            )
+            self.assertEqual(framework_result.returncode, 0, framework_result.stderr)
+            base_paths = {doc["path"] for doc in load_manifest(base_repo)["documents"]}
+            framework_paths = {
+                doc["path"] for doc in load_manifest(framework_repo)["documents"]
+            }
+            self.assertEqual(framework_paths, base_paths)
+
     def test_overlap_deduplicates_and_retains_origins(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            result = initialize("py", repo, "spine", "api", "library")
+            result = initialize(
+                "py", repo, "spine",
+                shapes=("api-service", "library-sdk"),
+            )
             self.assertEqual(result.returncode, 0, result.stderr)
             docs = load_manifest(repo)["documents"]
             quickstarts = [doc for doc in docs if doc["path"] == "docs/product/quickstart.md"]
             self.assertEqual(len(quickstarts), 1)
             origins = quickstarts[0]["selection"]["origins"]
             self.assertEqual(origins, [
-                {"kind": "overlay", "id": "api"},
-                {"kind": "overlay", "id": "library"},
+                {"kind": "shape", "id": "api-service"},
+                {"kind": "shape", "id": "library-sdk"},
             ])
 
     def test_conditional_and_dynamic_documents(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            result = initialize("py", repo, "diligence", "product-owner", "agent-context")
+            result = initialize(
+                "py", repo, "diligence",
+                audiences=("product-owners", "coding-agents"),
+            )
             self.assertEqual(result.returncode, 0, result.stderr)
             paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
             self.assertNotIn("docs/engineering/conventions.md", paths)
@@ -155,10 +238,13 @@ class CatalogSelectionTests(unittest.TestCase):
 
             (repo / "CONVENTIONS.md").write_text("# Conventions\n", encoding="utf-8")
             (repo / ".docforge" / "tickets.json").write_text("[]\n", encoding="utf-8")
-            result = initialize("py", repo, "diligence", "product-owner", "agent-context")
+            result = initialize(
+                "py", repo, "diligence",
+                audiences=("product-owners", "coding-agents"),
+            )
             self.assertNotEqual(result.returncode, 0)
             result = run("py", "manage_manifest", "init", "--repo", str(repo), "--tier", "diligence",
-                         "--overlay", "product-owner", "--overlay", "agent-context", "--force")
+                         "--audience", "product-owners", "--audience", "coding-agents", "--force")
             self.assertEqual(result.returncode, 0, result.stderr)
             paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
             self.assertIn("docs/engineering/conventions.md", paths)
@@ -167,9 +253,17 @@ class CatalogSelectionTests(unittest.TestCase):
                         "--type", "backlog-traceability", "--id", "po-backlog",
                         "--path", "docs/product/product-owner/backlog-traceability.md")
             self.assertEqual(added.returncode, 0, added.stderr)
-            self.assertIn(
-                "docs/product/product-owner/backlog-traceability.md",
-                {doc["path"] for doc in load_manifest(repo)["documents"]},
+            backlog = next(
+                doc for doc in load_manifest(repo)["documents"]
+                if doc["id"] == "po-backlog"
+            )
+            self.assertEqual(
+                backlog["selection"]["origins"],
+                [
+                    {"kind": "dynamic", "id": "backlog-traceability"},
+                    {"kind": "audience", "id": "product-owners"},
+                    {"kind": "condition", "id": "ticket_evidence"},
+                ],
             )
 
             result = run("py", "manage_manifest", "add", "--repo", str(repo), "--type", "flow",
@@ -180,7 +274,10 @@ class CatalogSelectionTests(unittest.TestCase):
     def test_flow_requirement_is_per_document(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            result = initialize("py", repo, "spine", "business-analyst", "product-owner", "agent-context")
+            result = initialize(
+                "py", repo, "spine",
+                audiences=("business-analysts", "product-owners", "coding-agents"),
+            )
             self.assertEqual(result.returncode, 0, result.stderr)
             docs = {doc["id"]: doc for doc in load_manifest(repo)["documents"]}
             self.assertNotIn("flow_graph", docs["agents_architecture"]["requires"])
@@ -195,12 +292,12 @@ class CatalogSelectionTests(unittest.TestCase):
             self.assertNotIn("flow_graph", docs["po_metrics"]["requires"])
             self.assertNotIn("flow_graph", docs["po_release_notes"]["requires"])
 
-    def test_audience_overlay_paths_are_explicit(self) -> None:
+    def test_audience_profile_paths_are_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             result = initialize(
                 "py", repo, "spine",
-                "business-analyst", "product-owner", "agent-context",
+                audiences=("business-analysts", "product-owners", "coding-agents"),
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
@@ -221,6 +318,132 @@ class CatalogSelectionTests(unittest.TestCase):
                 "docs/product/product-owner/backlog-traceability.md", paths,
             )
 
+    def test_aliases_normalize_and_obsolete_overlay_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                result = run(
+                    runtime, "manage_manifest", "init",
+                    "--repo", str(repo), "--tier", "diligence",
+                    "--shape", "desktop", "--shape", "desktop-app",
+                    "--platform", "mac", "--audience", "agent",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                profiles = load_manifest(repo)["project"]["profiles"]
+                self.assertEqual(profiles["shapes"], ["desktop-app"])
+                self.assertEqual(profiles["platforms"], ["macos"])
+                self.assertEqual(profiles["audiences"], ["coding-agents"])
+                obsolete = run(
+                    runtime, "manage_manifest", "init",
+                    "--repo", str(repo), "--tier", "spine",
+                    "--overlay", "agent", "--force",
+                )
+                self.assertEqual(obsolete.returncode, 2)
+                self.assertIn("--overlay is unsupported in Docforge 2.0", obsolete.stderr)
+
+    def test_desktop_mobile_and_specialized_shape_packs(self) -> None:
+        expected = {
+            "desktop-app": {
+                "docs/architecture/application-lifecycle.md",
+                "docs/architecture/ui-and-state.md",
+                "docs/architecture/platform-integration.md",
+                "docs/security/permissions.md",
+                "docs/reference/platform-compatibility.md",
+                "docs/operations/distribution.md",
+            },
+            "cli-tui": {
+                "docs/reference/commands.md",
+                "docs/reference/output-and-exit-codes.md",
+                "docs/operations/distribution.md",
+            },
+            "embedded-iot": {
+                "docs/architecture/hardware-map.md",
+                "docs/architecture/firmware-lifecycle.md",
+                "docs/operations/flashing-and-recovery.md",
+            },
+            "smart-contract": {
+                "docs/architecture/contract-system.md",
+                "docs/security/economic-invariants.md",
+                "docs/operations/network-deployment.md",
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for shape, required in expected.items():
+                repo = Path(tmp) / shape
+                repo.mkdir()
+                result = initialize("py", repo, "spine", shapes=(shape,))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
+                self.assertTrue(required <= paths, (shape, required - paths))
+
+    def test_profile_detection_for_native_macos_mixed_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            project = repo / "EasyKey.xcodeproj"
+            project.mkdir()
+            (project / "project.pbxproj").write_text(
+                "SDKROOT = macosx; com.apple.product-type.framework;\n",
+                encoding="utf-8",
+            )
+            source = repo / "App.swift"
+            source.write_text(
+                "import SwiftUI\nimport AppKit\n// accessibility Keychain SMAppService\n",
+                encoding="utf-8",
+            )
+            (repo / "Localizable.xcstrings").write_text("{}\n", encoding="utf-8")
+            outputs = []
+            detected_payloads = []
+            for runtime in ("py", "js"):
+                result = run(runtime, "detect_profiles", "--repo", str(repo), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                payload = json.loads(result.stdout)
+                detected = {
+                    (item["dimension"], item["id"]): item["confidence"]
+                    for item in payload["detections"]
+                }
+                for item in (
+                    ("shapes", "desktop-app"),
+                    ("shapes", "library-sdk"),
+                    ("platforms", "macos"),
+                    ("frameworks", "swiftui"),
+                    ("frameworks", "appkit"),
+                    ("concerns", "localization"),
+                    ("concerns", "secure-storage"),
+                    ("concerns", "login-helper"),
+                ):
+                    self.assertIn(item, detected)
+                outputs.append(normalized(result.stdout, [repo]))
+                if runtime == "py":
+                    init_result = initialize(
+                        runtime, repo, "spine",
+                        shapes=("desktop-app", "library-sdk"),
+                        platforms=("macos",),
+                        frameworks=("swiftui", "appkit"),
+                        concerns=("localization", "secure-storage", "login-helper"),
+                    )
+                else:
+                    init_result = run(
+                        runtime, "manage_manifest", "init",
+                        "--repo", str(repo), "--tier", "spine",
+                        "--shape", "desktop-app", "--shape", "library-sdk",
+                        "--platform", "macos",
+                        "--framework", "swiftui", "--framework", "appkit",
+                        "--concern", "localization",
+                        "--concern", "secure-storage",
+                        "--concern", "login-helper",
+                        "--force",
+                    )
+                self.assertEqual(init_result.returncode, 0, init_result.stderr)
+                saved = load_manifest(repo)
+                self.assertNotIn(
+                    "accessibility", saved["project"]["profiles"]["concerns"],
+                )
+                detected_payloads.append(saved["discovery"])
+            self.assertEqual(outputs[0], outputs[1])
+            self.assertEqual(detected_payloads[0], detected_payloads[1])
+            self.assertTrue(detected_payloads[0])
+
 
 class PairedRuntimeTests(unittest.TestCase):
     def test_manifest_dry_run_and_filesystem_parity(self) -> None:
@@ -228,8 +451,12 @@ class PairedRuntimeTests(unittest.TestCase):
             py_repo, js_repo = Path(tmp) / "py", Path(tmp) / "js"
             py_repo.mkdir()
             js_repo.mkdir()
-            py_result = initialize("py", py_repo, "portfolio", "api", "library", "agent-context")
-            js_result = initialize("js", js_repo, "portfolio", "api", "library", "agent-context")
+            kwargs = {
+                "shapes": ("api-service", "library-sdk"),
+                "audiences": ("coding-agents",),
+            }
+            py_result = initialize("py", py_repo, "portfolio", **kwargs)
+            js_result = initialize("js", js_repo, "portfolio", **kwargs)
             self.assertEqual(py_result.returncode, js_result.returncode)
             py_manifest, js_manifest = load_manifest(py_repo), load_manifest(js_repo)
             for manifest in (py_manifest, js_manifest):
@@ -281,6 +508,48 @@ class PairedRuntimeTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 result = run(runtime, "precheck_graph", "--repo", tmp, "--need", "domain")
                 self.assertEqual(result.returncode, 2)
+
+    def test_agent_settings_merge_and_local_ignore_are_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            results = []
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                (repo / ".claude").mkdir(parents=True)
+                (repo / ".claude" / "settings.json").write_text(
+                    json.dumps({
+                        "permissions": {"deny": ["Bash(custom-danger*)"]},
+                        "env": {"KEEP_ME": "yes"},
+                    }) + "\n",
+                    encoding="utf-8",
+                )
+                (repo / ".gitignore").write_text("build/\n", encoding="utf-8")
+                init = initialize(
+                    runtime, repo, "spine", audiences=("coding-agents",),
+                )
+                self.assertEqual(init.returncode, 0, init.stderr)
+                for doc_id in ("claude_settings", "claude_local"):
+                    created = run(
+                        runtime, "scaffold_docs",
+                        "--repo", str(repo),
+                        "--manifest", str(repo / ".docforge" / "manifest.json"),
+                        "--document", doc_id,
+                    )
+                    self.assertEqual(created.returncode, 0, created.stderr)
+                settings = json.loads(
+                    (repo / ".claude" / "settings.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(settings["env"], {"KEEP_ME": "yes"})
+                self.assertIn(
+                    "Bash(custom-danger*)", settings["permissions"]["deny"],
+                )
+                self.assertIn(
+                    "Bash(git reset --hard*)", settings["permissions"]["deny"],
+                )
+                ignore = (repo / ".gitignore").read_text(encoding="utf-8")
+                self.assertEqual(ignore.count("CLAUDE.local.md"), 1)
+                self.assertIn("build/\n", ignore)
+                results.append((settings, ignore))
+            self.assertEqual(results[0], results[1])
 
 
 class GraphAndStateTests(unittest.TestCase):
@@ -391,8 +660,12 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "\n---\n# Readme\n", encoding="utf-8",
             )
             manifest = {
-                "version": "2.0",
-                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "overlays": []},
+                "version": "3.0",
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                    "shapes": [], "platforms": [], "frameworks": [],
+                    "concerns": [], "audiences": [],
+                }},
+                "discovery": [],
                 "documents": [{
                     "id": "root_readme", "type": "root-readme", "path": "README.md",
                     "status": "complete", "provenance": {"sections": []},
@@ -439,7 +712,10 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "provenance": {"sections": []}, "audit": None,
             }
             manifest = {
-                "version": "2.0", "project": {"name": "fixture", "root": str(repo), "tier": "spine", "overlays": []},
+                "version": "3.0", "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                    "shapes": [], "platforms": [], "frameworks": [],
+                    "concerns": [], "audiences": [],
+                }}, "discovery": [],
                 "documents": [document], "metadata": {},
             }
             manifest_path = repo / ".docforge" / "manifest.json"
@@ -492,8 +768,12 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "provenance": {"sections": []}, "audit": None,
             }
             manifest = {
-                "version": "2.0",
-                "project": {"name": "fixture", "root": str(repo), "tier": "diligence", "overlays": []},
+                "version": "3.0",
+                "project": {"name": "fixture", "root": str(repo), "tier": "diligence", "profiles": {
+                    "shapes": [], "platforms": [], "frameworks": [],
+                    "concerns": [], "audiences": [],
+                }},
+                "discovery": [],
                 "documents": [document], "metadata": {},
             }
             manifest_path = repo / ".docforge" / "manifest.json"

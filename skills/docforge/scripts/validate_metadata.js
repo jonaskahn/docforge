@@ -9,7 +9,8 @@ const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..");
 const REQUIRED = new Set(["id", "type", "path", "group", "selection", "scaffold_template", "requires", "target_depth", "write_order", "provenance_mode", "audit_profile"]);
 const EXCEPTIONS = new Set(["agents-kernel.md", "claude-md.md", "claude-local-md.md"]);
 const PUBLIC_CONTRACTS = {
-  manage_manifest: ["init", "add", "set", "status", "audit", "--repo", "--tier", "--overlay", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
+  manage_manifest: ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
+  detect_profiles: ["--repo", "--json", "confirmed", "candidate"],
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--section", "--json", "--sync-provenance"],
@@ -24,16 +25,45 @@ function validate() {
   const catalog = readJson(path.join(metadata, "catalog.json"));
   const catalogSchema = readJson(path.join(metadata, "catalog-schema.json"));
   const manifestSchema = readJson(path.join(metadata, "manifest-schema.json"));
-  if (catalog.version !== "1.0.2") errors.push("catalog version must be 1.0.2");
-  if ((((catalogSchema.properties || {}).version || {}).const) !== "1.0.2") errors.push("catalog schema version disagrees with catalog");
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "2.0") errors.push("manifest schema must require version 2.0");
+  if (catalog.version !== "2.0.0") errors.push("catalog version must be 2.0.0");
+  if ((((catalogSchema.properties || {}).version || {}).const) !== "2.0.0") errors.push("catalog schema version disagrees with catalog");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.0") errors.push("manifest schema must require version 3.0");
   const tiers = new Set(catalog.tiers.map((item) => item.id));
-  const overlays = new Set(catalog.overlays.map((item) => item.id));
+  const dimensions = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
+  const schemaProfileRequired = new Set(((((catalogSchema.properties || {}).profiles || {}).required) || []));
+  const manifestProfileRequired = new Set(((((((manifestSchema.properties || {}).project || {}).properties || {}).profiles || {}).required) || []));
+  if (schemaProfileRequired.size !== dimensions.length || dimensions.some((item) => !schemaProfileRequired.has(item))) errors.push("catalog schema profile dimensions disagree with catalog");
+  if (manifestProfileRequired.size !== dimensions.length || dimensions.some((item) => !manifestProfileRequired.has(item))) errors.push("manifest schema profile dimensions disagree with catalog");
+  const profileIds = {};
+  for (const dimension of dimensions) {
+    const definitions = (catalog.profiles || {})[dimension] || [];
+    if (!definitions.length) errors.push(`${dimension}: profile registry must not be empty`);
+    profileIds[dimension] = new Set(definitions.map((item) => item.id));
+    if (profileIds[dimension].size !== definitions.length) errors.push(`${dimension}: duplicate profile id`);
+    const orders = definitions.map((item) => item.order);
+    if (new Set(orders).size !== orders.length || orders.some((item) => !Number.isInteger(item))) errors.push(`${dimension}: profile order values must be unique integers`);
+    const names = new Map();
+    for (const item of definitions) {
+      for (const name of [item.id, ...(item.aliases || [])]) {
+        if (typeof name !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(name)) errors.push(`${dimension}: invalid profile name ${name}`);
+        else {
+          if (names.has(name)) errors.push(`${dimension}: profile name collision ${name} between ${names.get(name)} and ${item.id}`);
+          names.set(name, item.id);
+        }
+      }
+      for (const signal of item.signals || []) {
+        if (!["path", "content"].includes(signal.kind)) errors.push(`${dimension}/${item.id}: invalid signal kind`);
+        if (typeof signal.pattern !== "string" || !signal.pattern) errors.push(`${dimension}/${item.id}: signal needs a pattern`);
+        if (signal.kind === "content" && !signal.contains) errors.push(`${dimension}/${item.id}: content signal needs contains`);
+      }
+    }
+  }
   const groups = new Set(catalog.groups);
   const capabilities = new Set(catalog.capabilities);
   const staticIds = new Set();
   const staticPaths = new Set();
   const dynamicTypes = new Set();
+  const catalogContract = fs.readFileSync(path.join(SKILL_ROOT, "references", "document-catalog.md"), "utf8");
   for (let index = 0; index < catalog.documents.length; index++) {
     const doc = catalog.documents[index];
     const label = doc.id || `document[${index}]`;
@@ -43,12 +73,18 @@ function validate() {
       continue;
     }
     const selection = doc.selection || {};
+    const obsolete = ["overlays", "include_if_overlay"].filter((field) => field in selection).sort();
+    if (obsolete.length) errors.push(`${label}: obsolete selection fields: ${obsolete.join(", ")}`);
     if (!groups.has(doc.group)) errors.push(`${label}: unknown group ${doc.group}`);
     if (!tiers.has(selection.min_tier)) errors.push(`${label}: unknown tier ${selection.min_tier}`);
-    for (const overlay of selection.overlays || []) if (!overlays.has(overlay)) errors.push(`${label}: unknown overlay ${overlay}`);
-    for (const overlay of selection.include_if_overlay || []) if (!overlays.has(overlay)) errors.push(`${label}: unknown include_if_overlay ${overlay}`);
+    for (const [dimension, values] of Object.entries(selection.selectors || {})) {
+      if (!profileIds[dimension]) errors.push(`${label}: unknown selector dimension ${dimension}`);
+      else for (const value of values) if (!profileIds[dimension].has(value)) errors.push(`${label}: unknown ${dimension} selector ${value}`);
+    }
+    if ((((selection.selectors || {}).frameworks) || []).length) errors.push(`${label}: frameworks may tailor evidence but must not select documents`);
     for (const requirement of doc.requires || []) if (!capabilities.has(requirement)) errors.push(`${label}: unknown requirement ${requirement}`);
     if (!Number.isInteger(doc.write_order)) errors.push(`${label}: write_order must be an integer`);
+    if (!catalogContract.includes(doc.type)) errors.push(`${label}: document type is missing from document-catalog.md`);
     if (!fs.existsSync(path.join(SKILL_ROOT, "assets", "templates", doc.scaffold_template))) errors.push(`${label}: missing template ${doc.scaffold_template}`);
     if (doc.instruction_file && !fs.existsSync(path.join(SKILL_ROOT, "instructions", doc.instruction_file))) errors.push(`${label}: missing instruction ${doc.instruction_file}`);
     if (selection.mode === "static") {
@@ -93,7 +129,7 @@ function validate() {
   const plugin = readJson(path.join(REPO_ROOT, ".claude-plugin", "plugin.json"));
   const market = readJson(path.join(REPO_ROOT, ".claude-plugin", "marketplace.json")).plugins[0];
   const versions = new Set([meta.version, plugin.version, market.version, catalog.version]);
-  if (versions.size !== 1 || !versions.has("1.0.2")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
+  if (versions.size !== 1 || !versions.has("2.0.0")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
   const skillText = fs.readFileSync(path.join(SKILL_ROOT, "SKILL.md"), "utf8");
   const skillMatch = skillText.match(/^description: (.+)$/m);
   const entryDescription = (((meta.skills || {}).entries || [{}])[0] || {}).description;

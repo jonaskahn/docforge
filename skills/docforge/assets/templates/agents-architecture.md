@@ -4,7 +4,7 @@
 # Architecture (agent view)
 
 <!-- Brief stub — do not restate architecture/high-level.md or low-level.md. See
-     overlay-agent-context.md's governing rule: less work, not more. -->
+     audience-coding-agents.md's governing rule: less work, not more. -->
 
 {{One sentence: the stack — primary languages/frameworks.}}
 

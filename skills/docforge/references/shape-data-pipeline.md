@@ -1,4 +1,4 @@
-# Overlay — data pipeline / ETL
+# Shape — data pipeline / ETL
 
 **Applies when:** the repo defines scheduled jobs, DAGs, extract/transform/load stages, streaming consumers, or writes to a warehouse, lake or vector store.
 
