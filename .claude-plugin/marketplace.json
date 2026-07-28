@@ -10,7 +10,7 @@
       "name": "docforge",
       "source": "./",
       "description": "Design and generate a repository's documentation set — docs/ tree, README, two-altitude architecture (high-level map, low-level detail, deep-dive concepts), tech-debt and constraints registers, decision records, dependency inventory, security policy, error catalogs, runbooks, AI-agent context files (AGENTS.md, CLAUDE.md, docs/agents/), plus aligned per-flow documents and Business Analyst and Product Owner audience depth. Grounded in a knowledge-graph analysis of the actual source, with git-hash provenance so staleness is checked, not guessed. Host-neutral, with multi-repo collection discovery for diligence.",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "author": {
         "name": "Jonas Kahn",
         "url": "https://github.com/jonaskahn"
