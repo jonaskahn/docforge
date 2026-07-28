@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Patterns
 
 <!-- The one docs/agents/ file with real, non-stub content — this has no other home

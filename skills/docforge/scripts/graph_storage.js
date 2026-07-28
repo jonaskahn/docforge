@@ -128,12 +128,12 @@ function writeJson(p, graph) {
   fs.writeFileSync(p, JSON.stringify(graph, null, 2) + "\n", "utf-8");
 }
 
-// Write a flow (domain) graph to $PROJECT_ROOT/<destRel>/domain-graph.json.
+// Write a flow graph to $PROJECT_ROOT/<destRel>/flow-graph.json.
 // Docforge's derivation passes destRel='.docforge/tmp' (never committed).
 function writeFlowGraph(repo, flowGraph, destRel = ".docforge/tmp") {
   const error = validateFlowGraphShape(flowGraph);
   if (error) throw new Error(`refusing to write flow graph: ${error}`);
-  const p = path.join(path.resolve(repo), destRel, "domain-graph.json");
+  const p = path.join(path.resolve(repo), destRel, "flow-graph.json");
   writeJson(p, flowGraph);
   return p;
 }

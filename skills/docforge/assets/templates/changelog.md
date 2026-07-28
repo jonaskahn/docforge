@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Changelog
 
 Notable changes to this project. Format follows Keep a Changelog; versioning

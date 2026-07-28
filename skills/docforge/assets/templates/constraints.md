@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Architectural constraints
 
 _Last reviewed: {{YYYY-MM-DD}}_

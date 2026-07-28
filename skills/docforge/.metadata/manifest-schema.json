@@ -1,147 +1,108 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Docforge Manifest Schema",
-  "description": "Schema defining the documentation structure and generation plan for a repository",
+  "$id": "https://docforge.dev/schemas/manifest-2.0.json",
+  "title": "Docforge Manifest 2.0",
   "type": "object",
-  "required": ["version", "project_context", "document_groups"],
+  "required": ["version", "project", "documents", "metadata"],
   "properties": {
-    "version": {
-      "type": "string",
-      "description": "Schema version"
-    },
-    "generated_at": {
-      "type": ["string", "null"],
-      "description": "ISO 8601 timestamp when manifest was generated"
-    },
-    "project_context": {
+    "$schema": {"type": "string"},
+    "version": {"const": "2.0"},
+    "generated_at": {"type": "string"},
+    "project": {
       "type": "object",
-      "required": ["repo_name", "tier", "overlays"],
+      "required": ["name", "root", "tier", "overlays"],
       "properties": {
-        "repo_name": {
-          "type": ["string", "null"],
-          "description": "Repository name"
-        },
-        "repo_path": {
-          "type": ["string", "null"],
-          "description": "Full path to repository"
-        },
-        "tier": {
-          "type": ["string", "null"],
-          "enum": ["core", "standard", "extended", null],
-          "description": "Documentation tier, stored as a string. Maps from the CLI's numeric --tier: 1 (Spine) -> 'core', 2 (Diligence) -> 'standard', 3 (Portfolio) -> 'extended'."
-        },
-        "overlays": {
-          "type": "array",
-          "description": "Selected audience/domain overlays",
-          "items": {
-            "type": "string",
-            "enum": ["business-analyst", "product-owner", "agent-context", "data-pipeline", "api", "web", "infrastructure", "library"]
-          }
-        }
-      }
+        "name": {"type": "string"},
+        "root": {"type": "string"},
+        "tier": {"enum": ["spine", "diligence", "portfolio"]},
+        "overlays": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      },
+      "additionalProperties": false
     },
-    "document_groups": {
+    "documents": {
       "type": "array",
-      "description": "Grouped document definitions",
       "items": {
         "type": "object",
-        "required": ["group", "documents"],
+        "required": ["id", "type", "path", "group", "selection", "status", "requires", "scaffold_template", "target_depth", "write_order", "provenance_mode", "audit_profile", "provenance", "audit"],
         "properties": {
-          "group": {
-            "type": "string",
-            "enum": ["architecture", "flows", "product", "engineering", "operations", "reference", "security", "contributing", "records", "agent-context"]
+          "id": {"type": "string"},
+          "type": {"type": "string"},
+          "path": {"type": "string"},
+          "group": {"type": "string"},
+          "selection": {
+            "type": "object",
+            "required": ["origins", "evidence"],
+            "properties": {
+              "origins": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["kind", "id"],
+                  "properties": {
+                    "kind": {"enum": ["tier", "overlay", "condition", "dynamic"]},
+                    "id": {"type": "string"}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "evidence": {"type": "array", "items": {"type": "string"}}
+            },
+            "additionalProperties": false
           },
-          "documents": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["id", "type", "path", "status"],
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "description": "Unique document identifier"
-                },
-                "type": {
-                  "type": "string",
-                  "description": "Document type (maps to template)"
-                },
-                "path": {
-                  "type": "string",
-                  "description": "Output path, repo-relative — normally within docs/, but the agent-context group's root files (AGENTS.md, CLAUDE.md, .claude/settings.json) live at the repo root by tool convention"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"],
-                  "description": "Current generation status"
-                },
-                "requires_domain_graph": {
-                  "type": "boolean",
-                  "description": "Must have domain graph to generate"
-                },
-                "requires_knowledge_graph": {
-                  "type": "boolean",
-                  "description": "Must have knowledge graph to generate"
-                },
-                "template": {
-                  "type": "string",
-                  "description": "Template instruction file name"
-                },
-                "sections": {
-                  "type": "array",
-                  "description": "Per-section provenance, aggregated from the document's frontmatter once written. Empty (or absent) for a document still 'planned' or 'in_progress'. Each entry names one heading-anchored section and the source files it draws from; this is what check_staleness.py reads to decide staleness at section granularity.",
-                  "items": {
-                    "type": "object",
-                    "required": ["id", "sources"],
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "description": "Section anchor slug, matching a heading in the document"
-                      },
-                      "sources": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "required": ["path", "git_blob"],
-                          "properties": {
-                            "path": {
-                              "type": "string",
-                              "description": "Repo-relative path of the source file this section draws from"
-                            },
-                            "git_blob": {
-                              "type": "string",
-                              "description": "`git hash-object <path>` at generation time — content hash, not commit SHA"
-                            }
-                          }
-                        }
+          "status": {"enum": ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]},
+          "requires": {"type": "array", "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}},
+          "scaffold_template": {"type": "string"},
+          "instruction_file": {"type": ["string", "null"]},
+          "target_depth": {"type": "string"},
+          "write_order": {"type": "integer"},
+          "provenance_mode": {"enum": ["sections", "manifest"]},
+          "audit_profile": {"type": "string"},
+          "provenance": {
+            "type": "object",
+            "required": ["sections"],
+            "properties": {
+              "sections": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "sources"],
+                  "properties": {
+                    "id": {"type": "string"},
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["path", "git_blob"],
+                        "properties": {
+                          "path": {"type": "string"},
+                          "git_blob": {"type": "string"}
+                        },
+                        "additionalProperties": false
                       }
                     }
-                  }
+                  },
+                  "additionalProperties": false
                 }
               }
-            }
+            },
+            "additionalProperties": false
+          },
+          "audit": {
+            "type": ["object", "null"],
+            "properties": {
+              "mode": {"enum": ["subagent", "cold-pass"]},
+              "verdict": {"enum": ["PASS", "FAIL"]},
+              "timestamp": {"type": "string"},
+              "report_path": {"type": "string"}
+            },
+            "required": ["mode", "verdict", "timestamp", "report_path"],
+            "additionalProperties": false
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
-    "metadata": {
-      "type": "object",
-      "properties": {
-        "total_documents": {
-          "type": "integer"
-        },
-        "completed": {
-          "type": "integer"
-        },
-        "in_progress": {
-          "type": "integer"
-        },
-        "requires_review": {
-          "type": "integer"
-        },
-        "last_updated": {
-          "type": ["string", "null"]
-        }
-      }
-    }
-  }
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
 }

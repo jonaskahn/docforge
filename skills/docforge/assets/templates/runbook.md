@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Runbook: {{symptom as the pager reports it}}
 
 _Last reviewed: {{YYYY-MM-DD}}_ · **Severity:** {{level}} · **Owner:** <TEAM_OWNER>

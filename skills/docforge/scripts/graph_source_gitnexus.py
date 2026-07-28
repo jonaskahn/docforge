@@ -114,15 +114,15 @@ def setup_hint(repo: Path, gap: str) -> list[str]:
     index, stale = info["index"], info["stale"]
     if not index:
         return [
-            "GitNexus (no index yet): from the repo root, run:",
-            "    npx gitnexus analyze",
+            "GitNexus (no index yet): global MCP setup is user-run when needed:",
             "    npx gitnexus setup",
-            "  `analyze` builds .gitnexus/lbug; `setup` connects the MCP tools. "
-            "Re-run detect to confirm READY (see references/graph-source-gitnexus.md).",
+            "  After explicit approval, the agent may build the repo index with:",
+            "    npx gitnexus analyze",
+            "  Re-run detect to confirm READY (see references/graph-source-gitnexus.md).",
         ]
     if stale:
         return [
-            "GitNexus (index is STALE — meta.lastCommit != current HEAD): re-index first:",
+            "GitNexus (index is STALE — meta.lastCommit != current HEAD): ask explicit approval, then re-index:",
             "    npx gitnexus analyze",
             "  Then re-run detect (see references/graph-source-gitnexus.md).",
         ]

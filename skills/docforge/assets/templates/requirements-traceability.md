@@ -1,19 +1,12 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Requirements traceability
 
-_Last generated: {{YYYY-MM-DD}}_
+_Last reviewed: {{YYYY-MM-DD}}_
 
 Maps requirement → implementation → verification. Open this file when a stakeholder asks whether the system actually does what was asked for.
 
----
-docforge_provenance:
-  doc: docs/product/business-analyst/requirements-traceability.md
-  generated_at: {{ISO-8601 timestamp}}
-  sections:
-    - id: traceability-table
-      sources:
-        - path: {{src/module/file.ext}}
-          git_blob: {{git hash-object output}}
----
 
 ### Traceability table
 

@@ -1,101 +1,44 @@
 #!/usr/bin/env python3
-"""Create and maintain the docforge tracking manifest at <repo>/.docforge/manifest.json.
-
-The manifest is the durable plan and fill-state of the documentation tree: one
-entry per planned document, its group, path, template, and status. Step 0 Gate 1
-writes it with everything `planned`; the write loop advances each document's
-status as it lands.
-
-Subcommands
------------
-  init     write a fresh .docforge/manifest.json for a tier (spine documents),
-           every status "planned". Overlay and discovered-flow documents are
-           added later with `add`.
-  add      append one document to a group (a discovered flow, an overlay doc).
-  set      change one document's status by id, recompute counts, stamp the time.
-  status   print the plan as a table with a status summary.
-
-Statuses: planned -> in_progress -> generated -> needs_review -> complete (or skipped).
-Paths mirror references/docs-tree.md and scripts/scaffold_docs.py exactly.
-
-Examples
---------
-    python manage_manifest.py init   --repo ../my-service --tier 2 --name my-service
-    python manage_manifest.py add    --repo ../my-service --group flows \\
-                                    --id flow_checkout --type flows \\
-                                    --path docs/flows/checkout.md --needs-dg
-    python manage_manifest.py set    --repo ../my-service --id setup_guide --status complete
-    python manage_manifest.py status --repo ../my-service
-
-Standard library only.
-"""
+"""Create and maintain a Docforge 2.0 manifest from the canonical catalog."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-TEMPLATES_JSON = SKILL_ROOT / ".metadata" / "document-templates.json"
-
-MANIFEST_REL = ".docforge/manifest.json"
-
+CATALOG_PATH = SKILL_ROOT / ".metadata" / "catalog.json"
+MANIFEST_REL = Path(".docforge/manifest.json")
 STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]
-GROUPS = ["architecture", "flows", "product", "engineering", "operations",
-          "reference", "security", "contributing", "records", "agent-context"]
-
-# Spine plan: the documents a tier implies, keyed to the same paths scaffold_docs.py
-# emits. `template` and `requires_*` are resolved from document-templates.json by type.
-# (group, id, type, path, min_tier)
-SPINE_PLAN: list[tuple[str, str, str, str, int]] = [
-    ("architecture", "arch_high_level", "architecture-high-level", "docs/architecture/high-level.md", 1),
-    ("architecture", "arch_low_level",  "architecture-low-level",  "docs/architecture/low-level.md", 2),
-    ("architecture", "dependencies",    "dependencies-inventory",  "docs/architecture/dependencies.md", 2),
-    ("architecture", "tech_debt",       "tech-debt-register",      "docs/architecture/tech-debt.md", 2),
-    ("architecture", "adr_index",       "decision-records",        "docs/architecture/decisions/README.md", 2),
-    ("product",      "product_overview","product-overview",        "docs/product/overview.md", 1),
-    ("engineering",  "setup_guide",     "setup-guide",             "docs/engineering/setup.md", 1),
-    ("reference",    "limitations",     "limitations-register",    "docs/reference/limitations.md", 1),
-    ("security",     "security_policy", "security-policy",         "SECURITY.md", 2),
-]
+TRANSITIONS = {
+    "planned": {"in_progress", "skipped"},
+    "in_progress": {"generated", "needs_review", "skipped"},
+    "generated": {"needs_review", "complete", "skipped"},
+    "needs_review": {"in_progress", "skipped"},
+    "complete": {"in_progress"},
+    "skipped": {"planned"},
+}
 
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def load_template_index() -> dict[str, dict]:
-    """type -> {template, needs_kg, needs_dg} from document-templates.json."""
-    data = json.loads(TEMPLATES_JSON.read_text(encoding="utf-8"))
-    idx: dict[str, dict] = {}
-    for t in data.get("templates", []):
-        req = t.get("requires", [])
-        idx[t["type"]] = {
-            "template": t.get("instruction_file"),
-            "needs_kg": "knowledge_graph" in req,
-            "needs_dg": "domain_graph" in req,
-        }
-    return idx
+def dump_json(value: dict) -> str:
+    return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
 
 
-def make_doc(id_: str, type_: str, path: str, template: str | None,
-             needs_kg: bool, needs_dg: bool) -> dict:
-    return {
-        "id": id_,
-        "type": type_,
-        "path": path,
-        "status": "planned",
-        "requires_domain_graph": needs_dg,
-        "requires_knowledge_graph": needs_kg,
-        "template": template,
-        # Per-section provenance, filled as the document is written and stamped
-        # (each entry: {"id": <anchor>, "sources": [{"path", "git_blob"}]}).
-        # check_staleness.py reads this to decide staleness; empty while planned.
-        "sections": [],
-    }
+def fail(message: str, code: int = 1) -> int:
+    print(f"error: {message}", file=sys.stderr)
+    return code
+
+
+def load_catalog() -> dict:
+    return json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
 
 
 def manifest_path(repo: Path) -> Path:
@@ -103,196 +46,319 @@ def manifest_path(repo: Path) -> Path:
 
 
 def load_manifest(repo: Path) -> dict:
-    p = manifest_path(repo)
-    if not p.exists():
-        sys.exit(f"No manifest at {p}. Run `init` first.")
-    return json.loads(p.read_text(encoding="utf-8"))
+    path = manifest_path(repo)
+    if not path.is_file():
+        raise ValueError(f"manifest not found: {path}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("version") != "2.0":
+        raise ValueError(f"manifest version must be 2.0: {path}")
+    return data
 
 
-def recount(man: dict) -> None:
-    docs = [d for g in man["document_groups"] for d in g["documents"]]
-    man.setdefault("metadata", {})
-    man["metadata"].update({
+def save_manifest(repo: Path, manifest: dict) -> None:
+    docs = manifest["documents"]
+    manifest["metadata"] = {
         "total_documents": len(docs),
-        "completed": sum(1 for d in docs if d["status"] == "complete"),
-        "in_progress": sum(1 for d in docs if d["status"] == "in_progress"),
-        "requires_review": sum(1 for d in docs if d["status"] == "needs_review"),
+        "planned": sum(d["status"] == "planned" for d in docs),
+        "in_progress": sum(d["status"] == "in_progress" for d in docs),
+        "generated": sum(d["status"] == "generated" for d in docs),
+        "needs_review": sum(d["status"] == "needs_review" for d in docs),
+        "complete": sum(d["status"] == "complete" for d in docs),
+        "skipped": sum(d["status"] == "skipped" for d in docs),
         "last_updated": now_iso(),
-    })
+    }
+    path = manifest_path(repo)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(dump_json(manifest), encoding="utf-8")
 
 
-def save_manifest(repo: Path, man: dict) -> None:
-    recount(man)
-    p = manifest_path(repo)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
+def condition_evidence(repo: Path, condition: str | None) -> list[str]:
+    if condition is None:
+        return []
+    if condition == "conventions_source":
+        candidates = [
+            "CONVENTIONS.md", "docs/CONVENTIONS.md", "docs/conventions.md",
+            ".editorconfig", "STYLEGUIDE.md",
+        ]
+    elif condition == "ticket_evidence":
+        candidates = [
+            ".docforge/tickets.json", "tickets.json", "backlog.json",
+            "BACKLOG.md", "docs/backlog.md", ".github/ISSUE_TEMPLATE",
+        ]
+    else:
+        return []
+    return [candidate for candidate in candidates if (repo / candidate).exists()]
 
 
-# ---------------------------------------------------------------------------
-# Commands
-# ---------------------------------------------------------------------------
+def validate_relative_path(value: str) -> None:
+    path = PurePosixPath(value)
+    if path.is_absolute() or ".." in path.parts or value in ("", "."):
+        raise ValueError(f"path must be a safe repository-relative path: {value}")
 
-def cmd_init(args) -> int:
-    p = manifest_path(args.repo)
-    if p.exists() and not args.force:
-        sys.exit(f"{p} exists. Pass --force to overwrite.")
 
-    if not args.no_agent_context and "agent-context" not in args.overlay:
-        args.overlay.append("agent-context")
-
-    tidx = load_template_index()
-    groups: dict[str, list[dict]] = {}
-    for group, id_, type_, path, min_tier in SPINE_PLAN:
-        if min_tier > args.tier:
-            continue
-        meta = tidx.get(type_, {})
-        doc = make_doc(id_, type_, path, meta.get("template"),
-                       meta.get("needs_kg", False), meta.get("needs_dg", False))
-        groups.setdefault(group, []).append(doc)
-
-    # flows is always present but discovered later via `add`
-    groups.setdefault("flows", [])
-
-    ordered = [g for g in GROUPS if g in groups]
-    man = {
-        "version": "1.1",
-        "generated_at": now_iso(),
-        "project_context": {
-            "repo_name": args.name,
-            "repo_path": str(args.repo.resolve()),
-            "tier": {1: "core", 2: "standard", 3: "extended"}[args.tier],
-            "overlays": args.overlay,
+def make_document(definition: dict, origins: list[dict], evidence: list[str] | None = None) -> dict:
+    return {
+        "id": definition["id"],
+        "type": definition["type"],
+        "path": definition["path"],
+        "group": definition["group"],
+        "selection": {
+            "origins": origins,
+            "evidence": evidence or [],
         },
-        "document_groups": [{"group": g, "documents": groups[g]} for g in ordered],
+        "status": "planned",
+        "requires": list(definition["requires"]),
+        "scaffold_template": definition["scaffold_template"],
+        "instruction_file": definition.get("instruction_file"),
+        "target_depth": definition["target_depth"],
+        "write_order": definition["write_order"],
+        "provenance_mode": definition["provenance_mode"],
+        "audit_profile": definition["audit_profile"],
+        "provenance": {"sections": []},
+        "audit": None,
+    }
+
+
+def selected_static_documents(catalog: dict, repo: Path, tier: str, overlays: list[str]) -> list[dict]:
+    ranks = {item["id"]: item["order"] for item in catalog["tiers"]}
+    selected: list[dict] = []
+    for definition in catalog["documents"]:
+        rule = definition["selection"]
+        if rule["mode"] != "static":
+            continue
+        tier_selected = ranks[rule["min_tier"]] <= ranks[tier]
+        matching_overlays = [overlay for overlay in overlays if overlay in rule["overlays"]]
+        trigger_overlays = [
+            overlay for overlay in overlays
+            if overlay in rule.get("include_if_overlay", [])
+        ]
+        if rule["overlays"] and (not tier_selected or not matching_overlays):
+            continue
+        if not rule["overlays"] and not tier_selected and not trigger_overlays:
+            continue
+        evidence = condition_evidence(repo, rule.get("condition"))
+        if rule.get("condition") and not evidence:
+            continue
+        origins = []
+        if not rule["overlays"] and tier_selected:
+            origins.append({"kind": "tier", "id": rule["min_tier"]})
+        origins.extend({"kind": "overlay", "id": overlay} for overlay in matching_overlays)
+        origins.extend({"kind": "overlay", "id": overlay} for overlay in trigger_overlays)
+        if rule.get("condition"):
+            origins.append({"kind": "condition", "id": rule["condition"]})
+        selected.append(make_document(definition, origins, evidence))
+    return sorted(selected, key=lambda item: (item["write_order"], item["path"], item["id"]))
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    path = manifest_path(args.repo)
+    if path.exists() and not args.force:
+        return fail(f"manifest already exists: {path}; pass --force to replace it")
+    catalog = load_catalog()
+    overlay_ids = [item["id"] for item in catalog["overlays"]]
+    unknown = [item for item in args.overlay if item not in overlay_ids]
+    if unknown:
+        return fail(f"unknown overlay: {unknown[0]}; expected one of: {', '.join(overlay_ids)}", 2)
+    overlays = [item for item in overlay_ids if item in set(args.overlay)]
+    docs = selected_static_documents(catalog, args.repo, args.tier, overlays)
+    manifest = {
+        "version": "2.0",
+        "generated_at": now_iso(),
+        "project": {
+            "name": args.name or args.repo.resolve().name,
+            "root": str(args.repo.resolve()),
+            "tier": args.tier,
+            "overlays": overlays,
+        },
+        "documents": docs,
         "metadata": {},
     }
-    save_manifest(args.repo, man)
-    n = sum(len(v) for v in groups.values())
-    print(f"Wrote {manifest_path(args.repo)} — tier {args.tier}, {n} spine documents planned.")
-    print("Add discovered flows and overlay documents with `add`; advance status with `set`.")
+    save_manifest(args.repo, manifest)
+    print(f"Wrote {path} — tier {args.tier}, {len(docs)} static documents planned.")
     return 0
 
 
-def cmd_add(args) -> int:
-    man = load_manifest(args.repo)
-    if args.group not in GROUPS:
-        sys.exit(f"Unknown group '{args.group}'. One of: {', '.join(GROUPS)}")
-
-    all_ids = {d["id"] for g in man["document_groups"] for d in g["documents"]}
-    if args.id in all_ids:
-        sys.exit(f"Document id '{args.id}' already in manifest.")
-
-    tidx = load_template_index()
-    meta = tidx.get(args.type, {})
-    template = args.template or meta.get("template")
-    needs_kg = args.needs_kg or meta.get("needs_kg", False)
-    needs_dg = args.needs_dg or meta.get("needs_dg", False)
-    doc = make_doc(args.id, args.type, args.path, template, needs_kg, needs_dg)
-
-    # Rebuild document_groups with new doc added to target group
-    groups_map = {g["group"]: g["documents"] for g in man["document_groups"]}
-    if args.group not in groups_map:
-        groups_map[args.group] = []
-    groups_map[args.group].append(doc)
-
-    # Reconstruct document_groups in canonical order
-    man["document_groups"] = [
-        {"group": g, "documents": groups_map[g]}
-        for g in GROUPS if g in groups_map
+def dynamic_definition(catalog: dict, type_name: str) -> dict:
+    matches = [
+        item for item in catalog["documents"]
+        if item["selection"]["mode"] == "dynamic" and item["type"] == type_name
     ]
+    if not matches:
+        valid = sorted({
+            item["type"] for item in catalog["documents"]
+            if item["selection"]["mode"] == "dynamic"
+        })
+        raise ValueError(f"unknown dynamic type: {type_name}; expected one of: {', '.join(valid)}")
+    return matches[0]
 
-    save_manifest(args.repo, man)
-    print(f"Added {args.id} ({args.path}) to group '{args.group}', status planned.")
+
+def path_matches(pattern: str, actual: str) -> bool:
+    expression = "^" + re.escape(pattern).replace(r"\{slug\}", r"[a-z0-9][a-z0-9-]*") + "$"
+    return re.fullmatch(expression, actual) is not None
+
+
+def cmd_add(args: argparse.Namespace) -> int:
+    try:
+        manifest = load_manifest(args.repo)
+        catalog = load_catalog()
+        definition = dynamic_definition(catalog, args.type)
+        validate_relative_path(args.path)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    ranks = {item["id"]: item["order"] for item in catalog["tiers"]}
+    rule = definition["selection"]
+    if ranks[rule["min_tier"]] > ranks[manifest["project"]["tier"]]:
+        return fail(f"dynamic type {args.type} requires tier {rule['min_tier']}", 2)
+    if rule["overlays"] and not set(rule["overlays"]) & set(manifest["project"]["overlays"]):
+        return fail(f"dynamic type {args.type} requires overlay: {', '.join(rule['overlays'])}", 2)
+    evidence = condition_evidence(args.repo, rule.get("condition"))
+    if rule.get("condition") == "ticket_evidence" and not evidence:
+        return fail(f"dynamic type {args.type} requires ticket evidence in the repository", 2)
+    if not path_matches(definition["path"], args.path):
+        return fail(f"path '{args.path}' does not match catalog pattern '{definition['path']}'", 2)
+    if re.fullmatch(r"[a-z0-9][a-z0-9_-]*", args.id) is None:
+        return fail(f"document id must use lowercase letters, digits, hyphens, or underscores: {args.id}", 2)
+    if any(doc["id"] == args.id for doc in manifest["documents"]):
+        return fail(f"document id already exists: {args.id}", 2)
+    if any(doc["path"] == args.path for doc in manifest["documents"]):
+        return fail(f"document path already exists: {args.path}", 2)
+    actual = dict(definition)
+    actual["id"] = args.id
+    actual["path"] = args.path
+    origins = [{"kind": "dynamic", "id": definition["type"]}]
+    if rule.get("condition"):
+        origins.append({"kind": "condition", "id": rule["condition"]})
+    doc = make_document(actual, origins, evidence)
+    manifest["documents"].append(doc)
+    manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
+    save_manifest(args.repo, manifest)
+    print(f"Added {args.id} ({args.path}) as dynamic type {args.type}.")
     return 0
 
 
-def cmd_set(args) -> int:
-    if args.status not in STATUSES:
-        sys.exit(f"Invalid status '{args.status}'. One of: {', '.join(STATUSES)}")
-    man = load_manifest(args.repo)
-    for g in man["document_groups"]:
-        for d in g["documents"]:
-            if d["id"] == args.id:
-                old = d["status"]
-                d["status"] = args.status
-                save_manifest(args.repo, man)
-                print(f"{args.id}: {old} -> {args.status}")
-                return 0
-    sys.exit(f"No document with id '{args.id}' in manifest.")
+def find_document(manifest: dict, doc_id: str) -> dict:
+    for doc in manifest["documents"]:
+        if doc["id"] == doc_id:
+            return doc
+    raise ValueError(f"document id not found: {doc_id}")
 
 
-def cmd_status(args) -> int:
-    man = load_manifest(args.repo)
-    ctx = man.get("project_context", {})
-    print(f"repo: {ctx.get('repo_name')}  tier: {ctx.get('tier')}  "
-          f"overlays: {', '.join(ctx.get('overlays') or []) or 'none'}")
-    print(f"updated: {man.get('metadata', {}).get('last_updated')}\n")
-
-    rows = []
-    for g in man["document_groups"]:
-        for d in g["documents"]:
-            rows.append((g["group"], d["status"], d["id"], d["path"]))
-    if not rows:
-        print("(no documents planned)")
+def cmd_set(args: argparse.Namespace) -> int:
+    try:
+        manifest = load_manifest(args.repo)
+        doc = find_document(manifest, args.id)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    old = doc["status"]
+    if args.status == old:
+        print(f"{args.id}: {old} -> {args.status}")
         return 0
-    w_grp = max(len(r[0]) for r in rows)
-    w_st = max(len(r[1]) for r in rows)
-    w_id = max(len(r[2]) for r in rows)
-    for grp, st, id_, path in rows:
-        print(f"  {grp:<{w_grp}}  {st:<{w_st}}  {id_:<{w_id}}  {path}")
-
-    counts: dict[str, int] = {}
-    for _, st, _, _ in rows:
-        counts[st] = counts.get(st, 0) + 1
-    summary = "  ".join(f"{k}={v}" for k, v in sorted(counts.items()))
-    print(f"\n{len(rows)} documents:  {summary}")
+    if args.status not in TRANSITIONS[old]:
+        return fail(f"invalid status transition for {args.id}: {old} -> {args.status}", 2)
+    if args.status == "complete":
+        audit = doc.get("audit")
+        if not audit or audit.get("verdict") != "PASS":
+            return fail(f"{args.id} cannot be complete without a passing independent audit", 2)
+    if args.status in {"planned", "in_progress"}:
+        doc["audit"] = None
+    doc["status"] = args.status
+    save_manifest(args.repo, manifest)
+    print(f"{args.id}: {old} -> {args.status}")
     return 0
+
+
+def cmd_audit(args: argparse.Namespace) -> int:
+    try:
+        manifest = load_manifest(args.repo)
+        doc = find_document(manifest, args.id)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    if doc["status"] != "generated":
+        return fail(f"{args.id} must be generated before audit", 2)
+    report = args.report
+    validate_relative_path(report)
+    doc["audit"] = {
+        "mode": args.mode,
+        "verdict": args.verdict,
+        "timestamp": now_iso(),
+        "report_path": report,
+    }
+    if args.verdict == "FAIL":
+        doc["status"] = "needs_review"
+    save_manifest(args.repo, manifest)
+    print(f"Audit {args.id}: {args.verdict} ({args.mode}) -> {report}")
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    try:
+        manifest = load_manifest(args.repo)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    project = manifest["project"]
+    overlays = ", ".join(project["overlays"]) or "none"
+    print(f"repo: {project['name']}  tier: {project['tier']}  overlays: {overlays}")
+    print()
+    for doc in manifest["documents"]:
+        verdict = doc["audit"]["verdict"] if doc.get("audit") else "-"
+        print(f"  {doc['status']:<12}  {verdict:<4}  {doc['id']:<28}  {doc['path']}")
+    counts = manifest["metadata"]
+    print()
+    print(
+        f"{counts['total_documents']} documents: "
+        f"planned={counts['planned']} in_progress={counts['in_progress']} "
+        f"generated={counts['generated']} needs_review={counts['needs_review']} "
+        f"complete={counts['complete']} skipped={counts['skipped']}"
+    )
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    def add_repo(command: argparse.ArgumentParser) -> None:
+        command.add_argument("--repo", required=True, type=Path)
+
+    init = sub.add_parser("init")
+    add_repo(init)
+    init.add_argument("--tier", required=True, choices=["spine", "diligence", "portfolio"])
+    init.add_argument("--overlay", action="append", default=[])
+    init.add_argument("--name")
+    init.add_argument("--force", action="store_true")
+    init.set_defaults(func=cmd_init)
+
+    add = sub.add_parser("add")
+    add_repo(add)
+    add.add_argument("--type", required=True)
+    add.add_argument("--id", required=True)
+    add.add_argument("--path", required=True)
+    add.set_defaults(func=cmd_add)
+
+    set_status = sub.add_parser("set")
+    add_repo(set_status)
+    set_status.add_argument("--id", required=True)
+    set_status.add_argument("--status", required=True, choices=STATUSES)
+    set_status.set_defaults(func=cmd_set)
+
+    audit = sub.add_parser("audit")
+    add_repo(audit)
+    audit.add_argument("--id", required=True)
+    audit.add_argument("--mode", required=True, choices=["subagent", "cold-pass"])
+    audit.add_argument("--verdict", required=True, choices=["PASS", "FAIL"])
+    audit.add_argument("--report", required=True)
+    audit.set_defaults(func=cmd_audit)
+
+    status = sub.add_parser("status")
+    add_repo(status)
+    status.set_defaults(func=cmd_status)
+    return parser
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = ap.add_subparsers(dest="cmd", required=True)
-
-    def add_repo(sp):
-        sp.add_argument("--repo", required=True, type=Path, help="path to the target repository")
-
-    sp = sub.add_parser("init", help="write a fresh manifest for a tier")
-    add_repo(sp)
-    sp.add_argument("--tier", type=int, default=2, choices=[1, 2, 3])
-    sp.add_argument("--name", default=None, help="repo name for project_context")
-    sp.add_argument("--overlay", action="append", default=[], help="repeatable overlay name")
-    sp.add_argument("--no-agent-context", action="store_true", dest="no_agent_context",
-                     help="opt out of the agent-context overlay, which is otherwise "
-                          "recorded by default on every init")
-    sp.add_argument("--force", action="store_true", help="overwrite an existing manifest")
-    sp.set_defaults(func=cmd_init)
-
-    sp = sub.add_parser("add", help="append one document")
-    add_repo(sp)
-    sp.add_argument("--group", required=True)
-    sp.add_argument("--id", required=True)
-    sp.add_argument("--type", required=True)
-    sp.add_argument("--path", required=True)
-    sp.add_argument("--template", default=None)
-    sp.add_argument("--needs-kg", action="store_true", dest="needs_kg")
-    sp.add_argument("--needs-dg", action="store_true", dest="needs_dg")
-    sp.set_defaults(func=cmd_add)
-
-    sp = sub.add_parser("set", help="change one document's status")
-    add_repo(sp)
-    sp.add_argument("--id", required=True)
-    sp.add_argument("--status", required=True, choices=STATUSES)
-    sp.set_defaults(func=cmd_set)
-
-    sp = sub.add_parser("status", help="print the plan and status summary")
-    add_repo(sp)
-    sp.set_defaults(func=cmd_status)
-
-    args = ap.parse_args()
+    args = build_parser().parse_args()
     if not args.repo.is_dir():
-        print(f"Not a directory: {args.repo}", file=sys.stderr)
-        return 1
+        return fail(f"not a directory: {args.repo}", 2)
     return args.func(args)
 
 

@@ -39,6 +39,7 @@ const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
 // A backtick-quoted path ending in .md — a candidate cross-reference that
 // should be an actual link, not bare text naming the file.
 const MENTION_RE = /`([A-Za-z0-9_./-]+\.md)`/g;
+const FORGE_RE = /\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|github actions|gitlab ci|codeowners)\b/gi;
 
 function isExternalLink(target) {
   const t = target.trim();
@@ -140,6 +141,14 @@ function checkDocument(filePath, requireHeadings) {
     }
   }
 
+  for (let i = 0; i < lines.length; i++) {
+    FORGE_RE.lastIndex = 0;
+    let m;
+    while ((m = FORGE_RE.exec(lines[i])) !== null) {
+      defects.push({ kind: "forge-leakage", line: i + 1, detail: m[0] });
+    }
+  }
+
   return { file: filePath, defects, tokens: [...new Set(tokens)].sort() };
 }
 
@@ -147,15 +156,32 @@ function parseArgs(argv) {
   const args = { file: null, requireHeading: [], json: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--file") args.file = argv[++i];
-    else if (a === "--require-heading") args.requireHeading.push(argv[++i]);
+    if (a === "--file" || a === "--require-heading") {
+      if (i + 1 >= argv.length || argv[i + 1].startsWith("--")) {
+        throw new Error(`option requires a value: ${a}`);
+      }
+      if (a === "--file") args.file = argv[++i];
+      else args.requireHeading.push(argv[++i]);
+    }
     else if (a === "--json") args.json = true;
+    else if (a === "-h" || a === "--help") args.help = true;
+    else throw new Error(`unknown option: ${a}`);
   }
   return args;
 }
 
 function main() {
-  const args = parseArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(`error: ${error.message}`);
+    return 2;
+  }
+  if (args.help) {
+    console.log("usage: lint_document.js --file <path> [--require-heading <text>] [--json]");
+    return 0;
+  }
   if (!args.file || !fs.existsSync(args.file) || !fs.statSync(args.file).isFile()) {
     console.error(`error: not a file: ${args.file}`);
     return 2;

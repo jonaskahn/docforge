@@ -6,15 +6,15 @@
  *
  * Two capabilities matter:
  *
- *   code_graph  — the structure/knowledge graph. Universal precondition.
+ *   code_graph  — structure and call/import relationships. Universal precondition.
  *                 Docforge does nothing without one, but *any* single
  *                 registered source that has built one satisfies it; docforge
  *                 never fabricates a code graph itself.
  *
- *   flow_graph  — the business-flow/domain graph. Needed only for flow/product/
- *                 BA-PO/agent-context-flow docs. Resolved native-first (a
+ *   flow_graph  — business flows and ordered steps. Needed only when a selected
+ *                 catalog entry declares it. Resolved native-first (a
  *                 source that emits flows), else docforge derives a provisional
- *                 one from the code graph into .docforge/tmp/domain-graph.json
+ *                 one from the code graph into .docforge/tmp/flow-graph.json
  *                 (never committed — see derive_flow_graph.js). So flow docs
  *                 are never hard-blocked while a code graph exists.
  *
@@ -39,10 +39,7 @@ const fs = require("fs");
 const { relativeDisplayPath, findGraphFile, listKnownGraphDirs } = require("./graph_storage.js");
 const { setupHintsForMissing, resolveAllReady } = require("./graph_source_registry.js");
 
-const DERIVED_FLOW_CANDIDATES = [".docforge/tmp/domain-graph.json"];
-
-// Accept the old capability names as aliases so any stray caller keeps working.
-const NEED_ALIASES = { graph: "code", domain: "flow" };
+const DERIVED_FLOW_CANDIDATES = [".docforge/tmp/flow-graph.json"];
 
 // How each source's graph is read, keyed by its readMode, for the report.
 const READ_MECHANISM = {
@@ -60,9 +57,14 @@ function parseArgs(argv) {
   const args = { need: "code" };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--repo") args.repo = argv[++i];
-    else if (a === "--need") args.need = argv[++i];
+    if (a === "--repo" || a === "--need") {
+      if (i + 1 >= argv.length || argv[i + 1].startsWith("--")) {
+        throw new Error(`option requires a value: ${a}`);
+      }
+      args[a.slice(2)] = argv[++i];
+    }
     else if (a === "-h" || a === "--help") args.help = true;
+    else throw new Error(`unknown option: ${a}`);
   }
   return args;
 }
@@ -137,32 +139,39 @@ function reportFlowGraph(repo) {
 
 function printFlowRemediation(repo) {
   console.log(
-    "  Flows are needed for docs/flows/, docs/product/, BA/PO overlays, and " +
-      "agent-context flow sections. Resolve either way:"
+    "  A selected catalog entry requires the flow graph. Resolve either way:"
   );
   console.log(
     "  (a) Derive a provisional flow graph from the code graph " +
-      "(see references/domain-derivation.md):"
+      "(see references/flow-derivation.md):"
   );
   console.log("    node scripts/derive_flow_graph.js prepare --repo <path>");
   console.log("    # dispatch the docforge domain analyzer on the emitted context, then");
   console.log("    node scripts/derive_flow_graph.js write --repo <path> --analysis <analysis.json>");
-  console.log("    # writes .docforge/tmp/domain-graph.json — provisional, never committed");
+  console.log("    # writes .docforge/tmp/flow-graph.json — provisional, never committed");
   console.log("  (b) Or produce a native (authoritative) flow graph from a source:");
   printSetupHints(repo, "flow_graph");
 }
 
 function main() {
-  const args = parseArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(`error: ${error.message}`);
+    return 2;
+  }
+  if (args.help) {
+    console.log("usage: precheck_graph.js --repo <path> [--need code|flow]");
+    return 0;
+  }
   if (!args.repo) {
     console.error("usage: precheck_graph.js --repo <path> [--need code|flow]");
     return 2;
   }
-  const need = NEED_ALIASES[args.need] || args.need;
+  const need = args.need;
   if (need !== "code" && need !== "flow") {
-    console.error(
-      `--need must be 'code' or 'flow' (or legacy 'graph'/'domain'), got '${args.need}'`
-    );
+    console.error(`--need must be 'code' or 'flow', got '${args.need}'`);
     return 2;
   }
   if (!isDir(args.repo)) {

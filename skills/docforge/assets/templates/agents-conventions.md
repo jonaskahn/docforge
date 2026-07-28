@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Conventions (agent view)
 
 <!-- Only produced if CONVENTIONS.md exists in the repo. Distilled, AI-targeted

@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Glossary (agent view)
 
 <!-- Brief stub — a linking view only. Never redefine a term; reference/glossary.md

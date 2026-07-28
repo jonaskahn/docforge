@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # {{Topic name — a flow or a subsystem, in business or plain-technical words}}
 
 <!-- This template is used both as a flat file (docs/flows/<flow>.md) and, once a
@@ -21,8 +24,8 @@ on it, what changes when it runs. Describe behaviour, not implementation.}}
 ## How it flows (L1, plain)
 
 {{The steps or moving parts, in the order they happen, in words a domain reader recognises.
-Reference files or modules by path when locating something ("handled in the <module>
-module") — never paste code, never link a line number, never anchor to a private symbol
+Reference files or modules by path when locating something ("handled in the module") —
+never paste code, never link a line number, never anchor to a private symbol
 a rename would break.}}
 
 1. {{step — what happens, in behavioural terms}}

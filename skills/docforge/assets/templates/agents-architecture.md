@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Architecture (agent view)
 
 <!-- Brief stub — do not restate architecture/high-level.md or low-level.md. See

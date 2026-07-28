@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-0.9.0-10b981?style=flat-square)](meta.json)
+  [![Version](https://img.shields.io/badge/version-1.0.0-10b981?style=flat-square)](meta.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -81,8 +81,8 @@ Expected result:
 
 1. Docforge checks for a readable code graph.
 2. It asks for the graph source, tier, audience overlays, and depth.
-3. It shows the proposed tree and per-document plan.
-4. It writes the scaffold and `.docforge/manifest.json`, but no finished prose.
+3. It initializes manifest v2 and shows the exact manifest-backed tree.
+4. It stops without creating placeholder documents.
 
 If no code graph exists, Docforge stops and shows the available setup paths instead of guessing from directory names.
 
@@ -94,9 +94,9 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 
 1. **PRECHECK** — require one supported code graph.
 2. **ANALYZE** — read graph data, source, config, manifests, existing docs, CI, deployment files, git history, and child repositories.
-3. **PLAN** — choose a tier and overlays, preview the tree, then record the accepted layout.
+3. **PLAN** — choose a named tier and overlays, initialize manifest v2, then preview its exact tree.
 4. **WRITE** — generate one document at a time in dependency order.
-5. **AUDIT** — send every document to a fresh reviewer; derivable gaps force a rewrite.
+5. **AUDIT** — use a fresh artifact-only reviewer when supported, otherwise a recorded cold artifact-only pass; derivable gaps force a rewrite.
 6. **TRACK** — stamp section-level source paths and git blob hashes so later runs update only what drifted.
 
 Docforge writes behavior and boundaries, not prose tied to private symbols or line numbers. Derivable facts must be completed; only truly external values may remain as typed tokens such as `<SECURITY_CONTACT>`.
@@ -107,29 +107,29 @@ Read the full [workflow](skills/docforge/SKILL.md#workflow), [document contracts
 
 A code graph is the universal key. Docforge can read Understand-Anything JSON, a GitNexus LadybugDB index, or a CodeGraph SQLite index through its MCP tool.
 
-Flow and product docs prefer native flow data. When only a code graph is available, Docforge derives a provisional, entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace. It never fabricates the code graph itself.
+Only catalog entries declaring `flow_graph` require flow data. They prefer native flow data; when only a code graph is available, Docforge derives a provisional, entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
 
-Provider capabilities and setup live in [graph dispatch](skills/docforge/references/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/references/domain-derivation.md).
+Provider capabilities and setup live in [graph dispatch](skills/docforge/references/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/references/flow-derivation.md).
 
 ## ▓▒░ STAGE SELECT ░▒▓
 
 Choose **Spine** for a repository baseline, **Diligence** for external scrutiny, or **Portfolio** for a multi-repository review. Add repo-type power-ups (`api`, `web`, `library`, `data-pipeline`, `infrastructure`) and audience power-ups (`business-analyst`, `product-owner`, `agent-context`) as needed.
 
-`agent-context` is equipped by default. It generates a compact `AGENTS.md` kernel, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json`, and `docs/agents/` links after the human-facing docs are finished. Unequip it with `--no-agent-context`.
+Select `agent-context` when a compact `AGENTS.md` kernel, Claude shims/settings, and `docs/agents/` views are wanted. It writes after the human-facing documents it links to.
 
 The tier rules, overlay signals, and complete level layout live in the [canonical docs tree](skills/docforge/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
 
 ## ▓▒░ CONTROLLER MAPPING ░▒▓
 
-Use `--revise all` or `--revise <area>` for stale content, `--plan-only` to stop before prose, `--resume` to continue a saved run, `--status` for a read-only progress report, and `--no-agent-context` to disable the default agent overlay.
+Use `--revise all` or `--revise <area>` for stale content, `--plan-only` to stop after manifest initialization and preview, `--resume` to continue a saved run, and `--status` for a read-only progress report.
 
-`--auto-accept` uses questionnaire defaults, displays each planned and completed part without pausing, and runs permitted side effects after a notice. It does not skip graph grounding, plan display, per-document audits, or final consistency checks for documents it generates.
+`--auto-accept` uses defaults and skips conversational pauses. It does not authorize installation, global configuration, graph construction or refresh, archive/delete actions, or other separately approved side effects; it also does not skip grounding, plan display, audits, or final checks.
 
 The exact flag semantics and composition rules live in the [workflow](skills/docforge/SKILL.md#workflow).
 
 ## ▓▒░ INVENTORY ░▒▓
 
-[`SKILL.md`](skills/docforge/SKILL.md) is the entry cartridge. [`references/`](skills/docforge/references/) holds policy, [`instructions/`](skills/docforge/instructions/) holds writing craft, [`assets/templates/`](skills/docforge/assets/templates/) holds scaffolds, and [`.metadata/`](skills/docforge/.metadata/) holds schemas and tracking shapes.
+[`SKILL.md`](skills/docforge/SKILL.md) is the entry cartridge. [`.metadata/catalog.json`](skills/docforge/.metadata/catalog.json) is the canonical registry; [`references/`](skills/docforge/references/) holds owned prose contracts, [`instructions/`](skills/docforge/instructions/) holds writing craft, and [`assets/templates/`](skills/docforge/assets/templates/) holds output scaffolds.
 
 [`scripts/`](skills/docforge/scripts/) contains paired Python and Node tools for graph adapters, flow derivation, scaffolding, linting, manifest state, staleness checks, and child-repository discovery. [`.claude-plugin/`](.claude-plugin/) and [`meta.json`](meta.json) package the same skill for its two distribution paths.
 

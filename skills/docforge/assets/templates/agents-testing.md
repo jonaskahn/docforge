@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Testing (agent view)
 
 <!-- Brief stub — strategy and rationale live in engineering/testing.md, link only. -->

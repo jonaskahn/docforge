@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # {{NNNN}}. {{Decision stated as an outcome}}
 
 - **Status:** {{proposed|accepted|superseded by [NNNN](NNNN-slug.md)|deprecated}}

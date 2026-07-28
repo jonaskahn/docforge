@@ -99,14 +99,14 @@ def _write_json(path: Path, graph: dict) -> None:
 
 
 def write_flow_graph(repo: Path, flow_graph: dict, dest_rel: str = ".docforge/tmp") -> Path:
-    """Write a flow (domain) graph to $PROJECT_ROOT/<dest_rel>/domain-graph.json.
+    """Write a flow graph to $PROJECT_ROOT/<dest_rel>/flow-graph.json.
     Docforge's derivation passes dest_rel='.docforge/tmp' (never committed).
     Raises ValueError if the shape fails its sanity check — callers should
     surface that message and write nothing."""
     error = validate_flow_graph_shape(flow_graph)
     if error:
         raise ValueError(f"refusing to write flow graph: {error}")
-    path = repo.resolve() / dest_rel / "domain-graph.json"
+    path = repo.resolve() / dest_rel / "flow-graph.json"
     _write_json(path, flow_graph)
     return path
 

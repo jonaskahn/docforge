@@ -1,19 +1,12 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Process flows
 
-_Last generated: {{YYYY-MM-DD}}_
+_Last reviewed: {{YYYY-MM-DD}}_
 
-The business process as actually executed by the system — business-language steps a domain expert recognizes, not the technical call graph. Sourced from `/understand-domain`; decision points link to `business-rules.md` rather than restating the condition.
+The business process as actually executed by the system — business-language steps a domain expert recognizes, not the technical call graph. Source it from the selected flow graph; decision points link to `business-rules.md` rather than restating the condition.
 
----
-docforge_provenance:
-  doc: docs/product/business-analyst/process-flows.md
-  generated_at: {{ISO-8601 timestamp}}
-  sections:
-    - id: {{flow-slug}}
-      sources:
-        - path: {{src/module/file.ext}}
-          git_blob: {{git hash-object output}}
----
 
 ### Flow: {{business name, e.g. "Order approval"}}
 

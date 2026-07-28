@@ -5,17 +5,17 @@ graph_source_registry.py (understand-anything, GitNexus, and any future source).
 
 Two capabilities matter:
 
-  code_graph  — the structure/knowledge graph. **Universal precondition.**
+  code_graph  — structure and call/import relationships. **Universal precondition.**
                 Docforge does nothing without one, but *any* single registered
                 source that has built one satisfies it; docforge never
                 fabricates a code graph itself.
 
-  flow_graph  — the business-flow/domain graph. Needed only for flow/product/
-                BA-PO/agent-context-flow docs. Resolved native-first (a source
-                that emits flows — understand-anything's domain graph, or
+  flow_graph  — business flows and ordered steps. Needed only when a selected
+                catalog entry declares it. Resolved native-first (a source
+                that emits flows — understand-anything's flow data, or
                 GitNexus's native processes), else docforge derives a
                 provisional one from the code graph into
-                .docforge/tmp/domain-graph.json (never committed — see
+                .docforge/tmp/flow-graph.json (never committed — see
                 derive_flow_graph.py). So flow docs are never hard-blocked while
                 a code graph exists.
 
@@ -44,10 +44,7 @@ from pathlib import Path
 from graph_storage import relative_display_path, find_graph_file, list_known_graph_dirs
 from graph_source_registry import setup_hints_for_missing, resolve_all_ready
 
-DERIVED_FLOW_CANDIDATES = [".docforge/tmp/domain-graph.json"]
-
-# Accept the old capability names as aliases so any stray caller keeps working.
-NEED_ALIASES = {"graph": "code", "domain": "flow"}
+DERIVED_FLOW_CANDIDATES = [".docforge/tmp/flow-graph.json"]
 
 # How each source's graph is read, keyed by its read_mode, for the report.
 READ_MECHANISM = {
@@ -107,14 +104,13 @@ def report_flow_graph(repo: Path) -> str:
 
 
 def print_flow_remediation(repo: Path) -> None:
-    print("  Flows are needed for docs/flows/, docs/product/, BA/PO overlays, and "
-          "agent-context flow sections. Resolve either way:")
+    print("  A selected catalog entry requires the flow graph. Resolve either way:")
     print("  (a) Derive a provisional flow graph from the code graph "
-          "(see references/domain-derivation.md):")
+          "(see references/flow-derivation.md):")
     print("    python scripts/derive_flow_graph.py prepare --repo <path>")
     print("    # dispatch the docforge domain analyzer on the emitted context, then")
     print("    python scripts/derive_flow_graph.py write --repo <path> --analysis <analysis.json>")
-    print("    # writes .docforge/tmp/domain-graph.json — provisional, never committed")
+    print("    # writes .docforge/tmp/flow-graph.json — provisional, never committed")
     print("  (b) Or produce a native (authoritative) flow graph from a source:")
     print_setup_hints(repo, "flow_graph")
 
@@ -123,18 +119,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repo", required=True, type=Path)
-    ap.add_argument("--need", default="code",
+    ap.add_argument("--need", default="code", choices=["code", "flow"],
                     help="'code' (default): the universal code-graph gate. "
-                         "'flow': also require a flow graph (native or derived), "
-                         "for a plan that includes flow/product/BA-PO docs. "
-                         "Legacy aliases 'graph'/'domain' map to 'code'/'flow'.")
+                         "'flow': also require a flow graph (native or derived).")
     args = ap.parse_args()
 
-    need = NEED_ALIASES.get(args.need, args.need)
-    if need not in ("code", "flow"):
-        print(f"--need must be 'code' or 'flow' (or legacy 'graph'/'domain'), got '{args.need}'",
-              file=sys.stderr)
-        return 2
+    need = args.need
     if not args.repo.is_dir():
         print(f"Not a directory: {args.repo}", file=sys.stderr)
         return 2

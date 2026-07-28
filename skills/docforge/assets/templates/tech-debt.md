@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Technical debt
 
 _Last reviewed: {{YYYY-MM-DD}}_

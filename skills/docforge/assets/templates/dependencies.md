@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Dependencies and integrations
 
 _Last reviewed: {{YYYY-MM-DD}}_

@@ -43,7 +43,7 @@ GRAPH_CANDIDATES = {
         ".ua/domain-graph.json",
         ".understand-anything/domain-graph.json",
         ".gitnexus/lbug",
-        ".docforge/tmp/domain-graph.json",
+        ".docforge/tmp/flow-graph.json",
     ],
 }
 REQUIRED = {"code (knowledge) graph"}

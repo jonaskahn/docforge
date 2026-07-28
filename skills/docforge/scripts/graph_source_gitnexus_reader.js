@@ -164,7 +164,7 @@ function main() {
       if (flows.length > args.limit) console.log(`  ... ${flows.length - args.limit} more (raise --limit)`);
       console.log("\n  These are the flow documents to build under docs/flows/. Process labels");
       console.log("  are code-derived (Entry → Terminal); keep them faithful, rename to business");
-      console.log("  language only where a node summary supports it (references/domain-derivation.md).\n");
+      console.log("  language only where a node summary supports it (references/flow-derivation.md).\n");
     }
   }
 

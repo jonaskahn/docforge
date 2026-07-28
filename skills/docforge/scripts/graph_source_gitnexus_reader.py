@@ -159,7 +159,7 @@ def print_flows(query, limit: int) -> None:
         print(f"  ... {len(flows) - limit} more (raise --limit)")
     print("\n  These are the flow documents to build under docs/flows/. Process labels")
     print("  are code-derived (Entry → Terminal); keep them faithful, rename to business")
-    print("  language only where a node summary supports it (references/domain-derivation.md).\n")
+    print("  language only where a node summary supports it (references/flow-derivation.md).\n")
 
 
 def print_deps(query, limit: int) -> None:

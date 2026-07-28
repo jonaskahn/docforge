@@ -65,7 +65,7 @@ def entry_points(repo: Path) -> list[dict]:
     """Ranked entry-point seeds for flow derivation, read from the UA code
     graph's own semantic signal — never a full-graph scan.
 
-    Signal, in priority order (see references/domain-derivation.md):
+    Signal, in priority order (see references/flow-derivation.md):
       api-handler tag        → the request entry surface
       service / pipeline type→ business-logic entry
       entry-point tag        → declared entry (minus barrel re-exports)
@@ -134,12 +134,12 @@ def setup_hint(repo: Path, gap: str) -> list[str]:
     source. `gap` is 'code_graph' or 'flow_graph'."""
     if gap == "flow_graph":
         return [
-            "Understand-Anything: after the code graph exists, run:",
+            "Understand-Anything: after explicit approval and once the code graph exists, the agent may run:",
             "    /understand-domain",
         ]
     return [
         "Understand-Anything: confirm the understand-anything skill is loaded "
-        "in this session (check the skill listing, or load/invoke it), then run:",
+        "in this session. After disclosing first-run cost and receiving explicit approval, the agent may run:",
         "    /understand   (or /understand <subdir> to scope; first runs on "
         "large repos consume tokens — say so before starting)",
     ]

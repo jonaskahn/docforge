@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Local setup
 
 _Last reviewed: {{YYYY-MM-DD}}_ · Expect roughly **{{N}} minutes** for a first run.

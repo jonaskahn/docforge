@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Errors
 
 _Last reviewed: {{YYYY-MM-DD}}_

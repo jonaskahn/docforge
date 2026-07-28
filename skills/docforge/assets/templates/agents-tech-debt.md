@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Tech debt (agent view)
 
 <!-- Brief stub by default. Add real content only for a gap that is genuinely

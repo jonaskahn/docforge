@@ -1,140 +1,22 @@
 {
   "$schema": "manifest-schema.json",
-  "version": "1.1",
-  "note": "Template for the durable plan written to <repo>/.docforge/manifest.json during Step 0 Gate 1. Every document paths must match references/docs-tree.md and scripts/scaffold_docs.py. Statuses flow planned -> in_progress -> generated -> needs_review -> complete (or skipped). Once a document is written, its per-section provenance is aggregated into a 'sections' array on that document entry ([{id, sources:[{path, git_blob}]}]) — the same shape check_staleness.py reads; planned entries carry an empty 'sections' or omit it. See references/provenance-tracking.md. The example entries below are illustrative; the real plan is built from the graph analysis and confirmed by the user.",
-  "generated_at": null,
-  "project_context": {
-    "repo_name": null,
-    "repo_path": null,
-    "tier": null,
+  "version": "2.0",
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "project": {
+    "name": "example",
+    "root": "/path/to/example",
+    "tier": "spine",
     "overlays": []
   },
-  "document_groups": [
-    {
-      "group": "architecture",
-      "documents": [
-        {
-          "id": "arch_high_level",
-          "type": "architecture-high-level",
-          "path": "docs/architecture/high-level.md",
-          "status": "planned",
-          "requires_domain_graph": false,
-          "requires_knowledge_graph": true,
-          "template": "architecture-high-level.md"
-        },
-        {
-          "id": "arch_low_level",
-          "type": "architecture-low-level",
-          "path": "docs/architecture/low-level.md",
-          "status": "planned",
-          "requires_domain_graph": false,
-          "requires_knowledge_graph": true,
-          "template": "architecture-low-level.md"
-        },
-        {
-          "id": "dependencies",
-          "type": "dependencies-inventory",
-          "path": "docs/architecture/dependencies.md",
-          "status": "planned",
-          "requires_domain_graph": false,
-          "requires_knowledge_graph": true,
-          "template": "dependencies-inventory.md"
-        },
-        {
-          "id": "tech_debt",
-          "type": "tech-debt-register",
-          "path": "docs/architecture/tech-debt.md",
-          "status": "planned",
-          "requires_domain_graph": false,
-          "requires_knowledge_graph": true,
-          "template": "tech-debt-register.md"
-        },
-        {
-          "id": "adr_index",
-          "type": "decision-records",
-          "path": "docs/architecture/decisions/README.md",
-          "status": "planned",
-          "requires_domain_graph": false,
-          "requires_knowledge_graph": false,
-          "template": "decision-records.md"
-        }
-      ]
-    },
-    {
-      "group": "flows",
-      "documents": []
-    },
-    {
-      "group": "product",
-      "documents": [
-        {
-          "id": "product_overview",
-          "type": "product-overview",
-          "path": "docs/product/overview.md",
-          "status": "planned",
-          "requires_domain_graph": true,
-          "requires_knowledge_graph": false,
-          "template": "product-overview.md"
-        },
-        {
-          "id": "product_capabilities",
-          "type": "product-capabilities",
-          "path": "docs/product/capabilities.md",
-          "status": "planned",
-          "requires_domain_graph": true,
-          "requires_knowledge_graph": false,
-          "template": "product-capabilities.md"
-        }
-      ]
-    },
-    {
-      "group": "engineering",
-      "documents": [
-        {
-          "id": "setup_guide",
-          "type": "setup-guide",
-          "path": "docs/engineering/setup.md",
-          "status": "planned",
-          "requires_domain_graph": false,
-          "requires_knowledge_graph": false,
-          "template": "setup-guide.md"
-        }
-      ]
-    },
-    {
-      "group": "reference",
-      "documents": [
-        {
-          "id": "limitations",
-          "type": "limitations-register",
-          "path": "docs/reference/limitations.md",
-          "status": "planned",
-          "requires_domain_graph": false,
-          "requires_knowledge_graph": true,
-          "template": "limitations-register.md"
-        }
-      ]
-    },
-    {
-      "group": "security",
-      "documents": [
-        {
-          "id": "security_policy",
-          "type": "security-policy",
-          "path": "SECURITY.md",
-          "status": "planned",
-          "requires_domain_graph": false,
-          "requires_knowledge_graph": false,
-          "template": "security-policy.md"
-        }
-      ]
-    }
-  ],
+  "documents": [],
   "metadata": {
     "total_documents": 0,
-    "completed": 0,
+    "planned": 0,
     "in_progress": 0,
-    "requires_review": 0,
-    "last_updated": null
+    "generated": 0,
+    "needs_review": 0,
+    "complete": 0,
+    "skipped": 0,
+    "last_updated": "2026-01-01T00:00:00+00:00"
   }
 }

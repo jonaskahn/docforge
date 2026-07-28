@@ -28,11 +28,11 @@
  * tags…), never a full scan. derive_flow_graph uses it to build an
  * entry-point-first, main-flow-first context instead of dumping the whole
  * graph; a source without it falls back to the flat dump. See
- * references/domain-derivation.md.
+ * references/flow-derivation.md.
  *
  * Capabilities:
- *   code_graph  — the structure/knowledge graph. Docforge's universal precondition.
- *   flow_graph  — the business-flow/domain graph. Optional per source; if no
+ *   code_graph  — structure and call/import relationships. Docforge's universal precondition.
+ *   flow_graph  — business flows and ordered steps. Optional per source; if no
  *                 source supplies one, docforge derives a provisional one from
  *                 the code graph (see derive_flow_graph.js).
  *

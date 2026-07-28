@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # {{repo_name}}
 
 > {{one_sentence_what_this_does_and_the_capability_it_delivers}}

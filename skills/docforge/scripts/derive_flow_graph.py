@@ -4,10 +4,10 @@ from an existing code graph when no native flow graph is available.
 
 Docforge needs a flow graph for docs/flows/, docs/product/, the BA/PO overlays,
 and agent-context flow sections. When a source supplies one natively (an
-understand-anything domain graph, or GitNexus's native processes) docforge uses
+understand-anything flow graph, or GitNexus's native processes) docforge uses
 that. When none exists — a code-graph-only source with no flow data — docforge
 derives one *from the code graph it already has*, grounded in the graph and
-never invented, and writes it to .docforge/tmp/domain-graph.json: provisional,
+never invented, and writes it to .docforge/tmp/flow-graph.json: provisional,
 git-ignored, regenerated each run, never committed.
 
 The reasoning step is agent-mediated (a script cannot infer business domains):
@@ -15,9 +15,9 @@ The reasoning step is agent-mediated (a script cannot infer business domains):
     python derive_flow_graph.py prepare --repo <path>
     # -> writes .docforge/tmp/domain-context.json (compact code-graph digest)
     # The agent dispatches the docforge domain analyzer on that context per
-    # references/domain-derivation.md and saves its JSON to <analysis.json>.
+    # references/flow-derivation.md and saves its JSON to <analysis.json>.
     python derive_flow_graph.py write --repo <path> --analysis <analysis.json>
-    # -> validates and writes .docforge/tmp/domain-graph.json (+ .gitignore)
+    # -> validates and writes .docforge/tmp/flow-graph.json (+ .gitignore)
 
 Docforge's flow shape:
     { "derived": true, "source": "<code-graph source>",
@@ -225,7 +225,7 @@ def _native_interface_context(source, path, repo, read_mode) -> dict:
         "instruction": (
             "This source's graph is not a JSON file docforge parses; do NOT dump "
             "the whole graph. Resolve flows entry-point-first through the source's "
-            "native interface (references/domain-derivation.md): "
+            "native interface (references/flow-derivation.md): "
             + ("for CodeGraph, use the codegraph MCP to rank entry points "
                "(route nodes, then exported functions with no incoming call, then "
                "call fan-out) and run codegraph_explore once per main entry point, "
@@ -276,7 +276,7 @@ def build_context(repo: Path, max_flows: int, hops: int) -> dict:
             "tail": max(len(seeds) - max_flows, 0),
             "entryPoints": seeds[:max_flows],
             "note": "Seeds read offline; spread each via the source's reader or "
-                    "MCP, main flows first (references/domain-derivation.md).",
+                    "MCP, main flows first (references/flow-derivation.md).",
         }
     return _native_interface_context(source, path, repo, read_mode)
 
@@ -309,7 +309,7 @@ def run_prepare(args: argparse.Namespace) -> int:
     print(f"Wrote {out}")
     _report_prepare(context)
     print("Next: dispatch the docforge domain analyzer on this context, main flows "
-          "first (references/domain-derivation.md), save its JSON, then run:")
+          "first (references/flow-derivation.md), save its JSON, then run:")
     print(f"    python scripts/derive_flow_graph.py write --repo {args.repo} --analysis <analysis.json>")
     return 0
 
@@ -350,7 +350,7 @@ def run_write(args: argparse.Namespace) -> int:
     if error:
         print(f"WRITE FAILED: {error}. The analyzer must return a non-empty "
               "'flows' list — if the code graph evidences no flows, do not "
-              "write an empty graph (see references/domain-derivation.md).",
+              "write an empty graph (see references/flow-derivation.md).",
               file=sys.stderr)
         return 1
 

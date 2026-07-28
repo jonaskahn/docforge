@@ -1,19 +1,12 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Success metrics
 
-_Last generated: {{YYYY-MM-DD}}_
+_Last reviewed: {{YYYY-MM-DD}}_
 
 One entry per feature or epic with a stated success metric — only where instrumented in code or explicitly given by a stakeholder. Never invent a target.
 
----
-docforge_provenance:
-  doc: docs/product/product-owner/success-metrics.md
-  generated_at: {{ISO-8601 timestamp}}
-  sections:
-    - id: {{feature-slug}}
-      sources:
-        - path: {{src/module/file.ext}}
-          git_blob: {{git hash-object output}}
----
 
 ### {{Feature}}
 

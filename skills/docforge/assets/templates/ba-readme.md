@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Business Analyst documentation
 
 _Last generated: {{YYYY-MM-DD}}_

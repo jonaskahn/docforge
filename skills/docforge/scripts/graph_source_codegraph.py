@@ -74,18 +74,15 @@ def detect(repo: Path) -> dict:
 
 
 def setup_hint(repo: Path, gap: str) -> list[str]:
-    """Lines telling the user how to produce or read the CodeGraph index.
-    The right steps depend on whether the db exists yet; either way the
-    agent never runs these commands itself — CodeGraph ends in an MCP-wiring
-    step that needs an agent restart, so the whole sequence runs outside."""
+    """Lines explaining global setup separately from approved repo indexing."""
     db = detect(repo)["code_graph"]
     if not db:
         return [
-            "CodeGraph (no index yet): ask the user to run, outside this agent:",
-            "    codegraph install   # wires the codegraph MCP server into this agent (one-time per machine)",
+            "CodeGraph (no index yet): global setup is user-run:",
+            "    codegraph install   # one-time MCP wiring; restart the agent afterward",
+            "  Once the tool is wired, ask explicit approval; the agent may then run:",
             "    codegraph init      # builds .codegraph/codegraph.db for this repo",
-            "  Then restart the agent so the codegraph_explore MCP tool loads, and "
-            "re-run detect to confirm READY (see references/graph-source-codegraph.md).",
+            "  Re-run detect to confirm READY (see references/graph-source-codegraph.md).",
         ]
     return [
         "CodeGraph index present — .codegraph/codegraph.db is ready. Before "

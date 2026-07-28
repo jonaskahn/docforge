@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 <!-- Prune every row below that points at a document this repo does not have.
      A router with dead links is worse than a short one. -->
 
@@ -30,7 +33,7 @@
 
 ## Conventions
 
-- Documents that go stale carry a `_Last reviewed:_` line.
+- Volatile documents carry a `_Last reviewed: YYYY-MM-DD_` line.
 - Reference material is generated where a machine-readable source exists; generated
   files say so and name the regeneration command.
 - Documentation is host-neutral: forge-specific detail lives only in

@@ -5,11 +5,11 @@
  *
  * Docforge needs a flow graph for docs/flows/, docs/product/, the BA/PO
  * overlays, and agent-context flow sections. When a source supplies one
- * natively (an understand-anything domain graph, or GitNexus's native
+ * natively (an understand-anything flow graph, or GitNexus's native
  * processes) docforge uses that. When none exists — a code-graph-only source
  * with no flow data — docforge derives one *from the code graph it already
  * has*, grounded in the graph and never invented, and writes it to
- * .docforge/tmp/domain-graph.json: provisional, git-ignored, regenerated each
+ * .docforge/tmp/flow-graph.json: provisional, git-ignored, regenerated each
  * run, never committed.
  *
  * The reasoning step is agent-mediated (a script cannot infer business domains):
@@ -17,9 +17,9 @@
  *   node derive_flow_graph.js prepare --repo <path>
  *   # -> writes .docforge/tmp/domain-context.json (compact code-graph digest)
  *   # The agent dispatches the docforge domain analyzer on that context per
- *   # references/domain-derivation.md and saves its JSON to <analysis.json>.
+ *   # references/flow-derivation.md and saves its JSON to <analysis.json>.
  *   node derive_flow_graph.js write --repo <path> --analysis <analysis.json>
- *   # -> validates and writes .docforge/tmp/domain-graph.json (+ .gitignore)
+ *   # -> validates and writes .docforge/tmp/flow-graph.json (+ .gitignore)
  *
  * Docforge's flow shape:
  *   { "derived": true, "source": "<code-graph source>",
@@ -230,7 +230,7 @@ function nativeInterfaceContext(src, graphPath, repo, readMode) {
   const instruction =
     "This source's graph is not a JSON file docforge parses; do NOT dump the " +
     "whole graph. Resolve flows entry-point-first through the source's native " +
-    "interface (references/domain-derivation.md): " +
+    "interface (references/flow-derivation.md): " +
     (readMode === "mcp"
       ? "for CodeGraph, use the codegraph MCP to rank entry points (route nodes, " +
         "then exported functions with no incoming call, then call fan-out) and " +
@@ -290,7 +290,7 @@ function buildContext(repo, maxFlows, hops) {
       entryPoints: main,
       note:
         "Seeds read offline; spread each via the source's reader or MCP, main " +
-        "flows first (references/domain-derivation.md).",
+        "flows first (references/flow-derivation.md).",
     };
   }
   return nativeInterfaceContext(src, graphPath, repo, readMode);
@@ -333,7 +333,7 @@ function runPrepare(args) {
   reportPrepare(context);
   console.log(
     "Next: dispatch the docforge domain analyzer on this context, main flows " +
-      "first (references/domain-derivation.md), save its JSON, then run:"
+      "first (references/flow-derivation.md), save its JSON, then run:"
   );
   console.log(
     `    node scripts/derive_flow_graph.js write --repo ${args.repo} --analysis <analysis.json>`
@@ -381,7 +381,7 @@ function runWrite(args) {
     console.error(
       `WRITE FAILED: ${error}. The analyzer must return a non-empty 'flows' ` +
         "list — if the code graph evidences no flows, do not write an empty " +
-        "graph (see references/domain-derivation.md)."
+        "graph (see references/flow-derivation.md)."
     );
     return 1;
   }

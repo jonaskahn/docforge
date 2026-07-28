@@ -47,6 +47,11 @@ LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 # A backtick-quoted path ending in .md — a candidate cross-reference that
 # should be an actual link, not bare text naming the file.
 MENTION_RE = re.compile(r"`([A-Za-z0-9_./-]+\.md)`")
+FORGE_RE = re.compile(
+    r"\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|"
+    r"github actions|gitlab ci|codeowners)\b",
+    re.IGNORECASE,
+)
 
 
 def is_external_link(target: str) -> bool:
@@ -125,6 +130,10 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
     for req in require_headings:
         if not any(req in h for h in headings_text):
             defects.append({"kind": "missing-heading", "line": 0, "detail": req})
+
+    for i, line in enumerate(lines, 1):
+        for match in FORGE_RE.finditer(line):
+            defects.append({"kind": "forge-leakage", "line": i, "detail": match.group(0)})
 
     return {"file": str(path), "defects": defects, "tokens": sorted(set(tokens))}
 

@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Limitations and known issues
 
 _Last reviewed: {{YYYY-MM-DD}}_

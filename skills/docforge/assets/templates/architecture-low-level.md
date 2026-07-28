@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Low-level architecture
 
 _Last reviewed: {{YYYY-MM-DD}}_

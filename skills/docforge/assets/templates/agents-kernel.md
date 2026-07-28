@@ -77,7 +77,7 @@ The test: grep for the convention in two more places before assuming it holds.
 **This file is the kernel. Below it, read on demand.**
 
 - @docs/agents/architecture.md — stack, quick start, layer map
-{{- @docs/agents/flow.md — domain flows with entry points and triggers (omit if no domain graph or no flows)}}
+{{- @docs/agents/flow.md — flows with entry points and triggers (omit if no flow graph or no flows)}}
 - @docs/agents/patterns.md — recurring patterns and exemplars
 {{- @docs/agents/glossary.md — canonical vocabulary (omit unless domain quality is high or mixed)}}
 {{- @docs/agents/conventions.md — AI-targeted coding directives (only if CONVENTIONS.md exists)}}

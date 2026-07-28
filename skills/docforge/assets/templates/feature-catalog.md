@@ -1,19 +1,12 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Feature catalog
 
-_Last generated: {{YYYY-MM-DD}}_
+_Last reviewed: {{YYYY-MM-DD}}_
 
 Reframes `../capabilities.md` around value and status for planning conversations. Do not restate capability descriptions here — link to them.
 
----
-docforge_provenance:
-  doc: docs/product/product-owner/feature-catalog.md
-  generated_at: {{ISO-8601 timestamp}}
-  sections:
-    - id: {{feature-slug}}
-      sources:
-        - path: {{src/module/file.ext}}
-          git_blob: {{git hash-object output}}
----
 
 ### Feature: {{name}}
 

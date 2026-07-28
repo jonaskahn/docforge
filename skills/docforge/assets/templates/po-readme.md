@@ -1,3 +1,6 @@
+---
+{"docforge_provenance":{"sections":[]}}
+---
 # Product Owner documentation
 
 _Last generated: {{YYYY-MM-DD}}_
