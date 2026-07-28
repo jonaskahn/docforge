@@ -25,7 +25,7 @@ Six rules that hold regardless of tier, repo type, ecosystem, or audience. Viola
 
 ## Precheck — mandatory before every invocation
 
-**This runs first, before any other step, every single time.** Docforge is provider-agnostic: it grounds every document in a **code graph** produced by *any one* registered graph source. See `references/graph-sources.md` for the sources that ship today (Understand-Anything, GitNexus), where each stores its graph, and the capability-to-command dispatch table; `references/adding-a-graph-source.md` for how to add one.
+**This runs first, before any other step, every single time.** Docforge is provider-agnostic: it grounds every document in a **code graph** produced by *any one* registered graph source. See `references/graph-sources.md` for the sources that ship today (Understand-Anything, GitNexus, CodeGraph), where each stores its graph, and the capability-to-command dispatch table; `references/adding-a-graph-source.md` for how to add one.
 
 Every script in `scripts/` ships as both a Python file (`scripts/<name>.py`) and a Node.js file (`scripts/<name>.js`) — same flags, same output, same exit codes, standard-library/built-ins only, no install step. The **one exception** is `graph_source_gitnexus_reader.{py,js}`, the optional offline reader for GitNexus's ladybug DB, which needs a driver (`@ladybugdb/core` / a ladybug Python binding) — it degrades gracefully when absent, and the gitnexus MCP is the preferred read path anyway. Examples below show the Python form; use `node scripts/<name>.js …` with identical flags if Python 3 is not available (or vice versa). Pick whichever runtime is already on the machine — `python3 --version` / `node --version` to check.
 
@@ -42,11 +42,18 @@ python scripts/precheck_graph.py --repo <path> --need code
 
 This resolves the code graph across every registered source and reports `READY` (with the source and path) or `MISSING`. Branch on what it prints:
 
-**READY:** the code graph exists — Precheck passes, proceed to Step 1. The script prints every ready source, its path, and how it is read (a JSON source via `read_graph.py`; GitNexus's ladybug DB via the gitnexus MCP or the offline reader). If **more than one** source is ready for the repo, ask the user which to read — **recommend understand-anything** (offline-readable JSON), noting that GitNexus's lbug can be richer on some repos (native processes) so the choice is informed. Under `--auto-accept`, take the recommended source and say so. Which source you read does not otherwise matter downstream.
+**READY:** the code graph exists — Precheck passes, proceed to Step 1. The script prints every ready source, its path, and how it is read (a JSON source via `read_graph.py`; GitNexus's ladybug DB via the gitnexus MCP or the offline reader; CodeGraph's SQLite DB via the `codegraph_explore` MCP tool only). **For CodeGraph specifically, `READY` here means "an index exists on disk," not "it's readable this session"** — confirm `codegraph_explore` (possibly listed as deferred) is actually in this session's tool list before treating it as usable; if it's absent entirely, treat CodeGraph as not ready and fall back to another ready source, or tell the user to run `codegraph install` and restart (`references/graph-source-codegraph.md`). If **more than one** source is ready for the repo, ask the user which to read — **recommend understand-anything** (offline-readable JSON), noting that GitNexus's lbug can be richer on some repos (native processes) so the choice is informed. Under `--auto-accept`, take the recommended source and say so. Which source you read does not otherwise matter downstream.
 
-**MISSING:** no source has a code graph built yet. The script prints *every* configured source's setup path, priority-ordered — it does not privilege one tool. Two cases:
-- **A producer is installed** (the understand-anything skill is loadable, or the gitnexus plugin is present): ask the user which source to use, then **load and run it to build the graph**, showing a notice first (a first `/understand` run or a `npx gitnexus analyze` consumes tokens). Under `--auto-accept`, build with the recommended source (understand-anything) after the notice, without waiting. Confirm the exact command against `references/graph-sources.md`; for GitNexus see `references/graph-source-gitnexus.md`.
-- **No producer at all**: **stop.** Tell the user to install understand-anything *or* set up GitNexus (`npx gitnexus analyze` then `npx gitnexus setup`). Do not run a producer command unprompted, and do not write any documentation from directory names while the code graph is missing.
+**MISSING:** no source has a code graph built yet. The script prints *every* configured source's setup path, priority-ordered — it does not privilege one tool. Ask the user which source to use, then branch by source — the agent's role differs sharply between them:
+
+- **Understand-Anything** — runs in-process as a same-agent skill invocation, so the agent drives it directly:
+  1. Check whether the understand-anything skill/plugin is loadable in this session.
+  2. Not loadable → tell the user to install it, then **restart the coding agent**. Stop here until they confirm the restart.
+  3. Loadable → ask permission, showing a notice first (a first `/understand` run consumes tokens), then run `/understand` and `/understand-domain` **sequentially** itself. Under `--auto-accept`, proceed after the notice without waiting. Re-run Precheck after.
+- **GitNexus** or **CodeGraph** — both are external CLI tools that end in an MCP-wiring step requiring an agent restart, so **the agent never runs their build/install commands itself, even with permission** — ask the user to run the full sequence themselves, outside the agent, then restart and re-run Precheck:
+  - GitNexus: `npx gitnexus analyze` (builds the index) then `npx gitnexus setup` (wires the MCP tools) — `references/graph-source-gitnexus.md`.
+  - CodeGraph: `codegraph install` (wires the MCP server, one-time per machine) then `codegraph init` (builds `.codegraph/codegraph.db` for this repo) — `references/graph-source-codegraph.md`.
+- **No producer available at all**: **stop.** Tell the user which of the three to install, per the branches above. Do not run a producer command unprompted, and do not write any documentation from directory names while the code graph is missing.
 
 ### Before writing flow-dependent docs
 
@@ -58,17 +65,19 @@ python scripts/precheck_graph.py --repo <path> --need flow
 
 `READY` (native) → proceed. `READY` (docforge-derived) → proceed, but treat flows as **provisional** (confirm business rules against source before asserting them). `MISSING` → either produce a native flow graph from a source, or derive one from the code graph — the script prints both paths; the derivation loop is in `references/domain-derivation.md`.
 
+Derivation is **entry-point-first, main-flows-first** — not a full-graph dump. `derive_flow_graph.py prepare` finds the application's entry points (routes/API handlers, public surface, high-fan-out services), ranks them, and spreads a bounded neighbourhood from the top `--max-flows` (default 15) — so the analyzer documents the main flows first, on focused context, instead of reconstructing structure from every node. It picks a `strategy` per source (entry-point-first / mcp-explore / native-interface / flat-fallback) and only ever text-loads a JSON graph, so a binary-DB source (CodeGraph, GitNexus) never crashes it. Read the `strategy` field and work the ranked flows in order — `references/domain-derivation.md`.
+
 ### Operational notes on graphs
 
 Every document in the tree makes claims about the source. The knowledge graph replaces guessing with retrieval: it gives you the module map, the architectural layers, the call and import edges, the business domains and flows, and a queryable interface for everything the graph does not already state.
 
-- **Check for an existing graph first.** If a code graph is already present and newer than the last substantive commit, use it as-is. Refresh is per source: `references/graph-sources.md` maps "refresh after code changes" to each source's command (understand-anything re-runs incrementally; a GitNexus index is re-analysed with `npx gitnexus analyze`). A docforge-derived flow graph is provisional and regenerated each run, so it is never "stale" in the provenance sense.
+- **Check for an existing graph first.** If a code graph is already present and newer than the last substantive commit, use it as-is. Refresh is per source: `references/graph-sources.md` maps "refresh after code changes" to each source's command (understand-anything re-runs incrementally; a GitNexus index is re-analysed with `npx gitnexus analyze`; CodeGraph refreshes itself automatically via its file watcher — nothing to run). A docforge-derived flow graph is provisional and regenerated each run, so it is never "stale" in the provenance sense.
 - **Large repos**: scope the analysis to the part being documented where the source supports it (`references/graph-sources.md`, "Scope analysis to a subdirectory") rather than paying for a full pass you do not need. First runs on large codebases consume significant tokens; say so before starting one.
 - **After any regeneration**, re-run the Precheck to confirm freshness (`--need flow` if flow docs are planned):
   ```
   python scripts/precheck_graph.py --repo <path> --need code
   ```
-- **Read the code graph directly** once confirmed ready, per the source's read mode. For a **JSON** source, `python scripts/read_graph.py --summary` resolves the graph and prints the module inventory, layer assignment and external dependency list. For a **DB** source (GitNexus), read the ladybug DB via the gitnexus MCP (`cypher`/`query`/`context`) or the offline `python scripts/graph_source_gitnexus_reader.py --repo <path> --summary` — same kind of inventory (`references/graph-source-gitnexus.md`).
+- **Read the code graph directly** once confirmed ready, per the source's read mode. For a **JSON** source, `python scripts/read_graph.py --summary` resolves the graph and prints the module inventory, layer assignment and external dependency list. For a **DB** source (GitNexus), read the ladybug DB via the gitnexus MCP (`cypher`/`query`/`context`) or the offline `python scripts/graph_source_gitnexus_reader.py --repo <path> --summary` — same kind of inventory (`references/graph-source-gitnexus.md`). For an **MCP** source (CodeGraph), read it only via the `codegraph_explore` tool — load it via tool search first if it's listed as deferred; there is no offline path, so if the tool is not in the session's tool list at all, CodeGraph is not usable this session regardless of what Precheck reported (`references/graph-source-codegraph.md`).
 
 Then, whenever a document needs a fact the graph does not already state, query rather than infer. Full command-to-document mapping in `references/source-analysis.md`; the essentials:
 
@@ -124,7 +133,7 @@ Flags compose: `--revise api --auto-accept` regenerates only the API overlay's s
 
 On an open-ended request, settle four choices up front so the plan the user confirms is the plan they want. Ask them as a small set of questions (not a wall of prose); each maps onto machinery that already exists. Under `--auto-accept`, **skip the questions and use the defaults below**, stating them in a notice.
 
-1. **Source** — resolved at Precheck (above). If more than one code-analysis source is ready, ask which to read; if none is built but a producer is installed, ask which to build with. **Recommend understand-anything.** *(auto default: the recommended ready source, else build with understand-anything.)*
+1. **Source** — resolved at Precheck (above). If more than one code-analysis source is ready, ask which to read; if none is built, ask which of the three to bootstrap — understand-anything (agent-run, in-process), or GitNexus/CodeGraph (user runs the install+build sequence outside the agent, then restarts). **Recommend understand-anything.** *(auto default: the recommended ready source, else build with understand-anything.)*
 2. **Tier** — Spine (`--tier 1`), Diligence (`--tier 2`), or Portfolio (`--tier 3`) — how much of the documentation set to build (Step 2 describes each). *(auto default: inferred from team-size/scrutiny signals, as Step 2 already does.)*
 3. **Audience set** — which overlays: **All**, **Default + PO/BA + agents**, **Default + agents**, or a custom pick (Step 3's overlay list). Maps to `--overlay`. *(auto default: **Default + agents** — the spine plus the on-by-default agent-context overlay.)*
 4. **Per-document depth** — the target depth each document is written to (the L0–L3 ladder in `references/depth-and-audience.md`). *(auto default: deep-dive, the standard in Step 5.)*
@@ -384,8 +393,9 @@ Load only what the current task needs.
 | File | Read it when |
 |---|---|
 | `references/source-analysis.md` | Always — how to build and query the knowledge graph, and which command answers which document |
-| `references/graph-sources.md` | Always — which source (understand-anything or GitNexus) is active, and the capability-to-command dispatch table for each |
+| `references/graph-sources.md` | Always — which source (understand-anything, GitNexus, or CodeGraph) is active, and the capability-to-command dispatch table for each |
 | `references/graph-source-gitnexus.md` | The active/chosen source is GitNexus — what its ladybug DB stores, how to detect, read (MCP or the offline reader), and build/refresh it |
+| `references/graph-source-codegraph.md` | The active/chosen source is CodeGraph — what its SQLite DB stores, how to detect, the two-gate readiness check (on-disk vs. wired-to-this-session), and build/refresh it (no offline reader) |
 | `references/docs-tree.md` | Always — the canonical taxonomy, folder naming, and placement rules |
 | `references/document-catalog.md` | Before writing any document — what each doc type must present and must keep out, its primary Diátaxis mode, its target depth, and its source-of-truth |
 | `instructions/<type>.md` | Alongside the catalog when writing a document of a type that has one — the writing-craft layer (layout, which `/understand-*` feeds it, how to tag provenance); `instructions/README.md` indexes them. Craft only; the contract stays in `document-catalog.md` |
@@ -397,7 +407,7 @@ Load only what the current task needs.
 | `references/document-audit.md` | Before marking any document `complete` — the independent per-document audit protocol, the derivable-vs-external gate, and the verdict schema |
 | `references/audience-matrix.md` | The three document classes (aligned / audience-specific / shared-fact spine), the BA/PO split, and which folder owns which fact |
 | `references/document-composition.md` | Always when writing flow or audience content — the flat-file-by-default and atomic-promotion rule, the two invariants, and the durability rules (no code, no duplication, write at the slowest layer) |
-| `references/depth-and-audience.md` | The depth ladder (L0–L3), which reader consumes which depth, and which understand-anything command feeds which cell |
+| `references/depth-and-audience.md` | The depth ladder (L0–L3), which reader consumes which depth, and which command (per source — understand-anything, GitNexus, or CodeGraph) feeds which cell |
 | `references/overlay-business-analyst.md` | Writing anything under `docs/product/business-analyst/` |
 | `references/overlay-product-owner.md` | Writing anything under `docs/product/product-owner/` |
 | `references/overlay-agent-context.md` | Writing `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`, or anything under `docs/agents/` |
@@ -412,9 +422,10 @@ Templates live in `assets/templates/`. Scripts (each has a `.py` and an equivale
 - `scripts/graph_source_understand_anything.{py,js}` — understand-anything source (read_mode `json`): detection only (it writes its own `.ua/*.json`)
 - `scripts/graph_source_gitnexus.{py,js}` — GitNexus source (read_mode `db`): detection only — is `.gitnexus/lbug` present, what does `meta.json` promise, is it stale vs HEAD. No build step; the DB is read in place (`references/graph-source-gitnexus.md`)
 - `scripts/graph_source_gitnexus_reader.{py,js}` — optional offline reader for GitNexus's ladybug DB via `@ladybugdb/core` / a ladybug Python binding; prints a module/area/flow inventory (the DB-source counterpart to `read_graph`). Degrades gracefully when the driver is absent — the gitnexus MCP is the preferred read path
+- `scripts/graph_source_codegraph.{py,js}` — CodeGraph source (read_mode `mcp`): detection only — is `.codegraph/codegraph.db` present. No build step, no staleness check (CodeGraph's own file watcher keeps it current), and no offline reader — read only via the `codegraph_explore` MCP tool, gated on it actually being wired to this session (`references/graph-source-codegraph.md`)
 - `scripts/derive_flow_graph.{py,js}` — `prepare`/`write` a provisional flow graph from the code graph into `.docforge/tmp/` (git-ignored), only for a source with a code graph but no native flows (`references/domain-derivation.md`)
-- `scripts/diagnose_graphs.{py,js}` — the diagnostic probe for when `precheck_graph` reports a graph missing but a graph folder holds data; lists the known graph folders' contents with sizes, JSON validity and node/edge counts (a note for the binary lbug DB)
-- `scripts/read_graph.{py,js}` — read a **JSON** code graph (understand-anything); for a DB source use the gitnexus MCP or `graph_source_gitnexus_reader`
+- `scripts/diagnose_graphs.{py,js}` — the diagnostic probe for when `precheck_graph` reports a graph missing but a graph folder holds data; lists the known graph folders' contents with sizes, JSON validity and node/edge counts (a note for the binary lbug/SQLite DBs)
+- `scripts/read_graph.{py,js}` — read a **JSON** code graph (understand-anything); for a DB source use the gitnexus MCP or `graph_source_gitnexus_reader`; for CodeGraph use the `codegraph_explore` MCP tool (no reader exists)
 - `scripts/scaffold_docs.{py,js}` — create and audit the tree
 - `scripts/manage_manifest.{py,js}` — create and maintain `.docforge/manifest.json`: `init` the plan (all `planned`), `add` discovered flows/overlays, `set` a document's status as it lands, `status` for a summary
 - `scripts/check_staleness.{py,js}` — recompute git blob hashes for every source file recorded in the manifest's per-document `sections`. Emits one of three **document-level** statuses: `FRESH`; `PARTIAL` (one line per offending file — `PARTIAL  <doc>  section=<id>  <file_status>: <file>`, where `<file_status>` is `STALE` for a changed file or `MISSING` for a deleted one); or a document-level `STALE  <doc>  (no section granularity recorded)` for an adopted doc without section-level frontmatter. `MISSING` is never a document-level result — only a per-file substatus inside a `PARTIAL` line. Exit 0 only if every checked document is `FRESH`; documents still `planned`/`in_progress` are skipped

@@ -42,6 +42,10 @@ const { resolveFirstReady } = require("./graph_source_registry.js");
 const TMP_REL = ".docforge/tmp";
 const CONTEXT_NAME = "domain-context.json";
 
+// Main-flow budget and traversal radius for the entry-point-first strategy.
+const DEFAULT_MAX_FLOWS = 15;
+const DEFAULT_HOPS = 3;
+
 // Loose key probing — the code-graph schema varies by source, so search rather
 // than assume (mirrors read_graph.js's tolerance).
 const NODE_KEYS = ["nodes", "files", "entities", "items"];
@@ -100,7 +104,156 @@ function loadJson(p) {
   }
 }
 
-function buildContext(repo) {
+// Normalize source nodes to docforge's slim shape and index them by id.
+function slimNodesOf(nodes) {
+  const slim = [];
+  const byId = new Map();
+  for (const n of nodes) {
+    const id = firstPresent(n, ID_KEYS);
+    const record = {
+      id,
+      name: firstPresent(n, LABEL_KEYS),
+      type: firstPresent(n, KIND_KEYS),
+      path: firstPresent(n, PATH_KEYS),
+      summary: firstPresent(n, SUMMARY_KEYS),
+    };
+    slim.push(record);
+    if (id != null) byId.set(String(id), record);
+  }
+  return { slim, byId };
+}
+
+// Keep only edges that carry flow/structure signal, in slim shape.
+function flowEdgesOf(edges) {
+  const slim = [];
+  for (const e of edges) {
+    const kind = String(firstPresent(e, EDGEKIND_KEYS) || "").toLowerCase();
+    if (!FLOW_EDGE_HINTS.some((h) => kind.includes(h))) continue;
+    slim.push({
+      source: firstPresent(e, SRC_KEYS),
+      target: firstPresent(e, DST_KEYS),
+      type: firstPresent(e, EDGEKIND_KEYS),
+    });
+  }
+  return slim;
+}
+
+// Breadth-first walk from a seed over flow edges, collecting node ids reachable
+// within `hops` hops (the seed's flow neighbourhood).
+function boundedCluster(seedId, adjacency, byId, hops) {
+  const seen = new Set([String(seedId)]);
+  let frontier = [String(seedId)];
+  for (let h = 0; h < Math.max(hops, 0); h++) {
+    const next = [];
+    for (const nid of frontier) {
+      for (const target of adjacency.get(nid) || []) {
+        if (!seen.has(target)) {
+          seen.add(target);
+          next.push(target);
+        }
+      }
+    }
+    frontier = next;
+    if (frontier.length === 0) break;
+  }
+  const out = [];
+  for (const nid of seen) if (byId.has(nid)) out.push(byId.get(nid));
+  return out;
+}
+
+// Entry-point-first context: the top `maxFlows` seeds, each with its bounded
+// flow neighbourhood — dozens of nodes per flow, not the whole graph.
+function entryPointContext(doc, seeds, src, graphPath, repo, maxFlows, hops) {
+  const { slim, byId } = slimNodesOf(locateCollection(doc, NODE_KEYS));
+  const edges = flowEdgesOf(locateCollection(doc, EDGE_KEYS));
+  const adjacency = new Map();
+  for (const e of edges) {
+    if (e.source != null && e.target != null) {
+      const key = String(e.source);
+      if (!adjacency.has(key)) adjacency.set(key, []);
+      adjacency.get(key).push(String(e.target));
+    }
+  }
+
+  const main = seeds.slice(0, maxFlows);
+  const clusters = [];
+  for (const seed of main) {
+    const clusterNodes = boundedCluster(seed.id, adjacency, byId, hops);
+    const clusterIds = new Set(clusterNodes.map((n) => String(n.id)));
+    const clusterEdges = edges.filter(
+      (e) => clusterIds.has(String(e.source)) && clusterIds.has(String(e.target))
+    );
+    clusters.push({
+      entryPoint: { id: seed.id, name: seed.name, kind: seed.kind, path: seed.path },
+      rank: seed.rank,
+      nodes: clusterNodes,
+      edges: clusterEdges,
+    });
+  }
+  return {
+    strategy: "entry-point-first",
+    generatedFrom: graphPath,
+    source: src ? src.name : null,
+    repo: path.basename(path.resolve(repo)),
+    maxFlows,
+    hops,
+    entryPointCount: seeds.length,
+    mainFlows: main.length,
+    tail: Math.max(seeds.length - main.length, 0),
+    clusters,
+  };
+}
+
+// Fallback: the whole flow-signal graph in one dump (pre-entry-point
+// behaviour), used only when no entry-point signal is available.
+function flatContext(doc, src, graphPath, repo) {
+  const { slim } = slimNodesOf(locateCollection(doc, NODE_KEYS));
+  const edges = flowEdgesOf(locateCollection(doc, EDGE_KEYS));
+  const layers = Array.isArray(doc.layers) ? doc.layers : [];
+  return {
+    strategy: "flat-fallback",
+    generatedFrom: graphPath,
+    source: src ? src.name : null,
+    repo: path.basename(path.resolve(repo)),
+    nodeCount: slim.length,
+    edgeCount: edges.length,
+    nodes: slim,
+    edges,
+    layers,
+  };
+}
+
+// A DB/MCP source whose graph is not a JSON file docforge can load. It is never
+// text-loaded here (that is the crash fix) — instead the agent reads it through
+// the source's native interface.
+function nativeInterfaceContext(src, graphPath, repo, readMode) {
+  const instruction =
+    "This source's graph is not a JSON file docforge parses; do NOT dump the " +
+    "whole graph. Resolve flows entry-point-first through the source's native " +
+    "interface (references/domain-derivation.md): " +
+    (readMode === "mcp"
+      ? "for CodeGraph, use the codegraph MCP to rank entry points (route nodes, " +
+        "then exported functions with no incoming call, then call fan-out) and " +
+        "run codegraph_explore once per main entry point, documenting the top " +
+        "flows first."
+      : "read the source's native flows/processes directly and rank them " +
+        "main-first (e.g. GitNexus: cross_community processes, then step count); " +
+        "do not derive what the source already models.");
+  return {
+    strategy: readMode === "mcp" ? "mcp-explore" : "native-interface",
+    generatedFrom: graphPath,
+    source: src ? src.name : null,
+    repo: path.basename(path.resolve(repo)),
+    readMode,
+    instruction,
+  };
+}
+
+// Resolve the code graph and build the analyzer context, dispatched on the
+// source's read_mode. Only a JSON source is ever text-loaded here — a db/mcp
+// source is routed to its native interface, so a binary graph never reaches a
+// JSON reader (the crash fix).
+function buildContext(repo, maxFlows, hops) {
   const [src, graphPath] = resolveFirstReady(repo, "code_graph");
   if (!graphPath) {
     throw new Error(
@@ -108,45 +261,66 @@ function buildContext(repo) {
         "precheck_graph.js --need code for how to build it."
     );
   }
-  const doc = loadJson(graphPath);
-  const nodes = locateCollection(doc, NODE_KEYS);
-  const edges = locateCollection(doc, EDGE_KEYS);
+  const readMode = src ? src.readMode : "json";
+  const entryFn = src ? src.entryPoints : null;
 
-  const slimNodes = nodes.map((n) => ({
-    id: firstPresent(n, ID_KEYS),
-    name: firstPresent(n, LABEL_KEYS),
-    type: firstPresent(n, KIND_KEYS),
-    path: firstPresent(n, PATH_KEYS),
-    summary: firstPresent(n, SUMMARY_KEYS),
-  }));
-  const slimEdges = [];
-  for (const e of edges) {
-    const kind = String(firstPresent(e, EDGEKIND_KEYS) || "").toLowerCase();
-    if (!FLOW_EDGE_HINTS.some((h) => kind.includes(h))) continue;
-    slimEdges.push({
-      source: firstPresent(e, SRC_KEYS),
-      target: firstPresent(e, DST_KEYS),
-      type: firstPresent(e, EDGEKIND_KEYS),
-    });
+  if (readMode === "json") {
+    const doc = loadJson(graphPath);
+    const seeds = entryFn ? entryFn(repo) : [];
+    if (seeds.length) {
+      return entryPointContext(doc, seeds, src, graphPath, repo, maxFlows, hops);
+    }
+    return flatContext(doc, src, graphPath, repo);
   }
 
-  const layers = Array.isArray(doc.layers) ? doc.layers : [];
-  return {
-    generatedFrom: graphPath,
-    source: src ? src.name : null,
-    repo: path.basename(path.resolve(repo)),
-    nodeCount: slimNodes.length,
-    edgeCount: slimEdges.length,
-    nodes: slimNodes,
-    edges: slimEdges,
-    layers,
-  };
+  // db / mcp: binary graph — never loadJson it.
+  const seeds = entryFn ? entryFn(repo) : [];
+  if (seeds.length) {
+    const main = seeds.slice(0, maxFlows);
+    return {
+      strategy: "entry-point-first",
+      generatedFrom: graphPath,
+      source: src ? src.name : null,
+      repo: path.basename(path.resolve(repo)),
+      maxFlows,
+      hops,
+      entryPointCount: seeds.length,
+      mainFlows: main.length,
+      tail: Math.max(seeds.length - main.length, 0),
+      entryPoints: main,
+      note:
+        "Seeds read offline; spread each via the source's reader or MCP, main " +
+        "flows first (references/domain-derivation.md).",
+    };
+  }
+  return nativeInterfaceContext(src, graphPath, repo, readMode);
+}
+
+function reportPrepare(context) {
+  const strategy = context.strategy;
+  if (strategy === "entry-point-first") {
+    console.log(
+      `Strategy: entry-point-first — ${context.mainFlows} main flow(s) of ` +
+        `${context.entryPointCount} entry points (${context.tail} in the tail), ` +
+        `source: ${context.source}`
+    );
+  } else if (strategy === "flat-fallback") {
+    console.log(
+      `Strategy: flat-fallback (no entry-point signal) — ${context.nodeCount} ` +
+        `nodes, ${context.edgeCount} flow-signal edges, source: ${context.source}`
+    );
+  } else {
+    console.log(
+      `Strategy: ${strategy} — read via the source's native interface, source: ` +
+        `${context.source} (no graph dumped)`
+    );
+  }
 }
 
 function runPrepare(args) {
   let context;
   try {
-    context = buildContext(args.repo);
+    context = buildContext(args.repo, args.maxFlows, args.hops);
   } catch (e) {
     console.error(`PREPARE FAILED: ${e.message}`);
     return 1;
@@ -155,13 +329,11 @@ function runPrepare(args) {
   const out = path.join(path.resolve(args.repo), TMP_REL, CONTEXT_NAME);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(context, null, 2) + "\n", "utf-8");
+  console.log(`Wrote ${out}`);
+  reportPrepare(context);
   console.log(
-    `Wrote ${out} (${context.nodeCount} nodes, ${context.edgeCount} flow-signal edges, ` +
-      `source: ${context.source})`
-  );
-  console.log(
-    "Next: dispatch the docforge domain analyzer on this context " +
-      "(references/domain-derivation.md), save its JSON, then run:"
+    "Next: dispatch the docforge domain analyzer on this context, main flows " +
+      "first (references/domain-derivation.md), save its JSON, then run:"
   );
   console.log(
     `    node scripts/derive_flow_graph.js write --repo ${args.repo} --analysis <analysis.json>`
@@ -222,11 +394,13 @@ function runWrite(args) {
 }
 
 function parseArgs(argv) {
-  const args = { _: [] };
+  const args = { _: [], maxFlows: DEFAULT_MAX_FLOWS, hops: DEFAULT_HOPS };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--repo") args.repo = argv[++i];
     else if (a === "--analysis") args.analysis = argv[++i];
+    else if (a === "--max-flows") args.maxFlows = parseInt(argv[++i], 10);
+    else if (a === "--hops") args.hops = parseInt(argv[++i], 10);
     else args._.push(a);
   }
   return args;

@@ -13,11 +13,22 @@
  *     name,                       // stable id, e.g. "understand-anything"
  *     display,                    // human label
  *     capabilities: [..],         // subset of ["code_graph", "flow_graph"]
- *     readMode,                   // "json" (read with read_graph.js) or "db"
- *                                 //   (query via a native interface / MCP)
+ *     readMode,                   // "json" (read with read_graph.js), "db"
+ *                                 //   (query via a native interface / optional
+ *                                 //   offline reader), or "mcp" (query via a
+ *                                 //   native interface only — no offline reader)
  *     detect(repo) -> { code_graph: path|null, flow_graph: path|null, ... },
  *     setupHint(repo, gap) -> [lines],
+ *     entryPoints(repo) -> [seeds]   // OPTIONAL
  *   }
+ *
+ * The optional entryPoints() hook returns ranked flow-derivation seeds —
+ * [{id, name, kind, path, rank}], highest rank first — read from the source's
+ * own entry-point signal (routes, exported-uncalled functions, entry-point
+ * tags…), never a full scan. derive_flow_graph uses it to build an
+ * entry-point-first, main-flow-first context instead of dumping the whole
+ * graph; a source without it falls back to the flat dump. See
+ * references/domain-derivation.md.
  *
  * Capabilities:
  *   code_graph  — the structure/knowledge graph. Docforge's universal precondition.
@@ -30,11 +41,12 @@
 
 const { SOURCE: understandAnythingSource } = require("./graph_source_understand_anything.js");
 const { SOURCE: gitnexusSource } = require("./graph_source_gitnexus.js");
+const { SOURCE: codegraphSource } = require("./graph_source_codegraph.js");
 
 // Priority order: the first source that resolves a capability wins when the
 // caller wants a single answer. resolveAllReady() exposes every ready source
 // so the orchestrator can let the user choose.
-const SOURCES = [understandAnythingSource, gitnexusSource];
+const SOURCES = [understandAnythingSource, gitnexusSource, codegraphSource];
 
 function sourcesProviding(capability) {
   return SOURCES.filter((source) => source.capabilities.includes(capability));

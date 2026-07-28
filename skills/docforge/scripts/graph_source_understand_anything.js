@@ -15,6 +15,7 @@
  * Node.js built-ins only.
  */
 
+const fs = require("fs");
 const { findGraphFile } = require("./graph_storage.js");
 
 const SOURCE_NAME = "understand-anything";
@@ -33,11 +34,87 @@ const FLOW_GRAPH_CANDIDATES = [
   ".understand-anything/domain-graph.json",
 ];
 
+// Tags that mark a re-export shim (index.js barrels), not real flow logic —
+// excluded from entry-point seeds so they never crowd out true entry surfaces.
+const NOISE_TAGS = new Set(["barrel", "re-export"]);
+
 function detect(repo) {
   return {
     code_graph: findGraphFile(repo, CODE_GRAPH_CANDIDATES),
     flow_graph: findGraphFile(repo, FLOW_GRAPH_CANDIDATES),
   };
+}
+
+// Node ids belonging to a layer whose name reads as a service/business layer —
+// a strong 'this is where flows live' signal in the UA graph.
+function serviceLayerIds(doc) {
+  const ids = new Set();
+  const layers = doc && Array.isArray(doc.layers) ? doc.layers : [];
+  for (const layer of layers) {
+    if (!layer || typeof layer !== "object") continue;
+    const name = String(layer.name || "").toLowerCase();
+    if (name.includes("service") || name.includes("business") || name.includes("domain")) {
+      for (const nid of layer.nodeIds || []) ids.add(nid);
+    }
+  }
+  return ids;
+}
+
+// Ranked entry-point seeds for flow derivation, read from the UA code graph's
+// own semantic signal — never a full-graph scan. Signal, in priority order
+// (see references/domain-derivation.md): api-handler tag > service/pipeline
+// type > entry-point tag (minus barrels) > step type; each boosted by
+// Service-layer membership and outgoing-edge fan-out. Returns [] when the
+// graph carries no such signal, so the caller falls back to a full dump.
+function entryPoints(repo) {
+  const path = findGraphFile(repo, CODE_GRAPH_CANDIDATES);
+  if (!path) return [];
+  let doc;
+  try {
+    doc = JSON.parse(fs.readFileSync(path, "utf-8"));
+  } catch {
+    return [];
+  }
+  if (!doc || typeof doc !== "object") return [];
+
+  const nodes = doc.nodes || [];
+  const edges = doc.edges || [];
+  const serviceIds = serviceLayerIds(doc);
+
+  const fanout = new Map();
+  for (const edge of edges) {
+    if (edge && typeof edge === "object" && edge.source != null) {
+      fanout.set(edge.source, (fanout.get(edge.source) || 0) + 1);
+    }
+  }
+
+  const seeds = [];
+  for (const node of nodes) {
+    if (!node || typeof node !== "object") continue;
+    const tags = new Set((node.tags || []).map((t) => String(t).toLowerCase()));
+    const nodeType = String(node.type || "").toLowerCase();
+    if ([...tags].some((t) => NOISE_TAGS.has(t))) continue;
+
+    let tier;
+    if (tags.has("api-handler")) tier = 1000;
+    else if (nodeType === "service" || nodeType === "pipeline") tier = 800;
+    else if (tags.has("entry-point")) tier = 600;
+    else if (nodeType === "step") tier = 300;
+    else continue;
+
+    const nid = node.id;
+    const rank = tier + (serviceIds.has(nid) ? 200 : 0) + (fanout.get(nid) || 0);
+    seeds.push({
+      id: nid,
+      name: node.name,
+      kind: node.type,
+      path: node.filePath,
+      rank,
+    });
+  }
+
+  seeds.sort((a, b) => b.rank - a.rank);
+  return seeds;
 }
 
 // Lines telling the user how to produce the missing graph with this source.
@@ -64,6 +141,7 @@ const SOURCE = {
   readMode: READ_MODE,
   detect,
   setupHint,
+  entryPoints,
 };
 
 module.exports = {
@@ -75,5 +153,6 @@ module.exports = {
   FLOW_GRAPH_CANDIDATES,
   detect,
   setupHint,
+  entryPoints,
   SOURCE,
 };

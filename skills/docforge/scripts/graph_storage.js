@@ -8,8 +8,9 @@
  * any future source) produced a graph — it only knows how to find, display,
  * sanity check, and write graph files on disk. There is no single canonical
  * store: each source declares where its own graph lives (understand-anything
- * reads .ua/, GitNexus stores a ladybug DB under .gitnexus/, and docforge's
- * own derived flow graph is written to the never-committed .docforge/tmp/).
+ * reads .ua/, GitNexus stores a ladybug DB under .gitnexus/, CodeGraph stores
+ * a SQLite DB under .codegraph/, and docforge's own derived flow graph is
+ * written to the never-committed .docforge/tmp/).
  *
  * Node.js built-ins only.
  */
@@ -20,7 +21,7 @@ const path = require("path");
 // Directories a graph file may live in, for diagnostics only. Detection
 // itself is per-source (each source declares its own candidate paths); this
 // list is used solely to list folder contents on a miss.
-const KNOWN_GRAPH_DIRS = [".ua", ".understand-anything", ".gitnexus", ".docforge/tmp"];
+const KNOWN_GRAPH_DIRS = [".ua", ".understand-anything", ".gitnexus", ".codegraph", ".docforge/tmp"];
 
 function isFile(p) {
   try {

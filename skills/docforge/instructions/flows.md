@@ -8,6 +8,14 @@ Depth: `references/depth-and-audience.md`.
 ## Purpose
 Document the step-by-step execution of a key business process, in plain language.
 
+## Order of work — main flows first
+Write flows in **entry-point-centrality order**, not file order: the flows reached
+from the application's entry points (routes/API handlers, then the highest-fan-out
+services) are the main ones — document them before the long tail. `derive_flow_graph.py
+prepare` ranks them for you (its `clusters`/`entryPoints` are already in this order,
+`--max-flows` caps the main set); native sources are ranked the same way
+(GitNexus `cross_community` processes first). See `references/domain-derivation.md`.
+
 ## Data Requirements
 - Domain graph (REQUIRED — hard gate, no fallback to inspection; see SKILL.md)
 - Knowledge graph (for implementation detail when a deep-dive subfile is written)

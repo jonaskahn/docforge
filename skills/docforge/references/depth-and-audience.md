@@ -59,20 +59,28 @@ The knowledge graph gives breadth (the map), from whichever source is active
 (`references/graph-sources.md`). Depth comes from the deeper commands — `/understand-explain`
 is the engine for L2/L3 and is required there, not optional; where understand-anything isn't
 the active source, the GitNexus column is the required substitute for the same depth, not an
-optional extra.
+optional extra. CodeGraph covers the same structural rows through its one tool,
+`codegraph_explore`, but has no flow_graph capability, so it's "none" on every
+flow/product/PO row — those still resolve through understand-anything, GitNexus,
+or docforge's derivation when CodeGraph is the only ready source.
 
-| Document / layer | Depth | understand-anything command | GitNexus equivalent | What it yields |
-|---|---|---|---|---|
-| `architecture/high-level.md` (context, blocks) | L1 | `/understand` (the graph) | the lbug DB (`cypher`/`query`, or the offline reader) | module map, layers, boundaries |
-| `architecture/low-level.md` (components) | L1–L2 | graph + `/understand-explain <path>` | `context` MCP tool | component decomposition |
-| `architecture/concepts/<subsystem>/engineering.md` | L2–L3 | `/understand-explain <module>` | `context` MCP tool | internals, how it actually works |
-| invariants, failure modes, concurrency | L3 | `/understand-chat "what breaks <x> / concurrency assumptions"` | `query` or `cypher` MCP tool | the absences code can't show |
-| `flows/<flow>.md` (steps) | L0–L1 | `/understand-domain` | native `Process` nodes (`query`, or the offline reader `--flows`) | flow skeleton in business terms |
-| `flows/<flow>/business-analyst.md` (rules, once promoted) | L1–L2 | `/understand-chat "what business rules gate <flow>"` | `query` MCP tool | thresholds, exceptions |
-| `flows/<flow>/engineering.md` (mechanism, once promoted) | L2 | `/understand-explain <flow module>` | `context` MCP tool | execution detail |
-| `flows/<flow>/product-owner.md` (once promoted), PO docs | L0 | `/understand-domain` + `/understand-diff` | native `Process` nodes + `detect_changes` MCP tool | feature set, release framing |
-| `engineering/setup.md` | how-to | `/understand-onboard` | none — write from README/config inspection instead | zero-to-running (verify every command) |
-| `reference/configuration.md`, `limitations.md` | reference | targeted `/understand-chat` | `query` or `cypher` MCP tool | env vars, unhandled cases |
+| Document / layer | Depth | understand-anything command | GitNexus equivalent | CodeGraph equivalent | What it yields |
+|---|---|---|---|---|---|
+| `architecture/high-level.md` (context, blocks) | L1 | `/understand` (the graph) | the lbug DB (`cypher`/`query`, or the offline reader) | `codegraph_explore` (survey a directory/area) | module map, layers, boundaries |
+| `architecture/low-level.md` (components) | L1–L2 | graph + `/understand-explain <path>` | `context` MCP tool | `codegraph_explore <path>` | component decomposition |
+| `architecture/concepts/<subsystem>/engineering.md` | L2–L3 | `/understand-explain <module>` | `context` MCP tool | `codegraph_explore <symbol or module>` | internals, how it actually works |
+| invariants, failure modes, concurrency | L3 | `/understand-chat "what breaks <x> / concurrency assumptions"` | `query` or `cypher` MCP tool | `codegraph_explore "how does <x> work"` (blast-radius section) | the absences code can't show |
+| `flows/<flow>.md` (steps) | L0–L1 | `/understand-domain` | native `Process` nodes (`query`, or the offline reader `--flows`) | none — no flow_graph capability | flow skeleton in business terms |
+| `flows/<flow>/business-analyst.md` (rules, once promoted) | L1–L2 | `/understand-chat "what business rules gate <flow>"` | `query` MCP tool | none — no flow_graph capability | thresholds, exceptions |
+| `flows/<flow>/engineering.md` (mechanism, once promoted) | L2 | `/understand-explain <flow module>` | `context` MCP tool | `codegraph_explore <flow module>` (structural detail only, no business framing) | execution detail |
+| `flows/<flow>/product-owner.md` (once promoted), PO docs | L0 | `/understand-domain` + `/understand-diff` | native `Process` nodes + `detect_changes` MCP tool | none — no flow_graph capability | feature set, release framing |
+| `engineering/setup.md` | how-to | `/understand-onboard` | none — write from README/config inspection instead | none — write from README/config inspection instead | zero-to-running (verify every command) |
+| `reference/configuration.md`, `limitations.md` | reference | targeted `/understand-chat` | `query` or `cypher` MCP tool | `codegraph_explore` (name the config/error symbol) | env vars, unhandled cases |
+
+Flows (the `flows/<flow>` rows) are written **main-first by entry-point centrality** — the
+flows reached from routes/API handlers and the highest-fan-out services before the long tail.
+`derive_flow_graph.py prepare` ranks them (`references/domain-derivation.md`); native flow
+sources are ranked the same way.
 
 Treat every answer as evidence, not prose to paste — write in the document's own voice, at
 its own depth. See `source-analysis.md` for the full command reference and `graph-sources.md`

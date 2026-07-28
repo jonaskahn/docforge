@@ -3,13 +3,14 @@
 
 Helps diagnose "graph not found" false positives when a graph folder exists but
 scripts report graphs missing. Scans the known store locations — `.ua/`, legacy
-`.understand-anything/`, `.gitnexus/` (GitNexus's ladybug DB), and
-`.docforge/tmp/` (docforge-derived, provisional) — and reports:
+`.understand-anything/`, `.gitnexus/` (GitNexus's ladybug DB), `.codegraph/`
+(CodeGraph's SQLite DB), and `.docforge/tmp/` (docforge-derived, provisional)
+— and reports:
   - which graph folders exist and what they contain
   - whether a code (knowledge) graph and a flow (domain) graph are present
   - file sizes and modification times
   - schema structure (nodes/edges count) for JSON graphs; a note for the
-    binary ladybug DB (which is queried via the gitnexus MCP, not read here)
+    binary ladybug/SQLite DBs (queried via their MCP tools, not read here)
 
 Usage:
     python diagnose_graphs.py --repo <path>
@@ -29,11 +30,14 @@ from graph_storage import KNOWN_GRAPH_DIRS
 # code graph is the universal precondition; flow graph is optional (a source
 # emits it, or docforge derives a provisional one into .docforge/tmp/).
 # GitNexus's .gitnexus/lbug is a ladybug DB that serves both capabilities.
+# CodeGraph's .codegraph/codegraph.db serves only the code graph — it has no
+# flow_graph capability, so it is absent from the flow candidates below.
 GRAPH_CANDIDATES = {
     "code (knowledge) graph": [
         ".ua/knowledge-graph.json",
         ".understand-anything/knowledge-graph.json",
         ".gitnexus/lbug",
+        ".codegraph/codegraph.db",
     ],
     "flow (domain) graph": [
         ".ua/domain-graph.json",
@@ -43,6 +47,15 @@ GRAPH_CANDIDATES = {
     ],
 }
 REQUIRED = {"code (knowledge) graph"}
+
+# Binary DB files probe_graph() cannot parse as JSON, and the note printed for
+# each in --verbose output.
+DB_NOTES = {
+    "lbug": "ladybug DB (binary) — query via the gitnexus MCP or "
+            "scripts/graph_source_gitnexus_reader.py",
+    "codegraph.db": "SQLite DB (binary) — query via the codegraph MCP tool "
+                     "(codegraph_explore); no offline reader",
+}
 
 
 def find_graph(repo: Path, candidates: list[str]) -> Path | None:
@@ -59,9 +72,10 @@ def find_graph(repo: Path, candidates: list[str]) -> Path | None:
 
 
 def probe_graph(path: Path) -> dict:
-    """Load and inspect graph structure. The ladybug DB (.gitnexus/lbug) is a
-    binary file, not JSON — report it as such rather than as invalid JSON."""
-    if path.name == "lbug":
+    """Load and inspect graph structure. The ladybug DB (.gitnexus/lbug) and
+    CodeGraph's SQLite DB (.codegraph/codegraph.db) are binary files, not
+    JSON — report them as such rather than as invalid JSON."""
+    if path.name in DB_NOTES:
         return {
             "database": True,
             "size_bytes": path.stat().st_size,
@@ -154,8 +168,7 @@ def main() -> int:
                 if info.get("database"):
                     print(f"    - size: {info['size_bytes']:,} bytes")
                     print(f"    - mtime: {info['mtime']}")
-                    print("    - ladybug DB (binary) — query via the gitnexus MCP or "
-                          "scripts/graph_source_gitnexus_reader.py")
+                    print(f"    - {DB_NOTES.get(found.name, 'binary DB')}")
                 elif info.get("valid_json"):
                     print(f"    - size: {info['size_bytes']:,} bytes")
                     print(f"    - mtime: {info['mtime']}")

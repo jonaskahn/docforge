@@ -50,6 +50,10 @@ const READ_MECHANISM = {
   db:
     "ladybug DB — query via the gitnexus MCP, or offline with " +
     "graph_source_gitnexus_reader.js",
+  mcp:
+    "SQLite index — query via the codegraph MCP tool (codegraph_explore); " +
+    "no offline reader — confirm it is wired to this session first, else " +
+    "`codegraph install`",
 };
 
 function parseArgs(argv) {
