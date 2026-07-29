@@ -86,12 +86,19 @@ def validate() -> list[str]:
                     )
                 names[name] = identifier
             for signal in item.get("signals", []):
-                if signal.get("kind") not in {"path", "content"}:
+                kind = signal.get("kind")
+                if kind not in {"path", "content", "dependency"}:
                     errors.append(f"{dimension}/{identifier}: invalid signal kind")
-                if not isinstance(signal.get("pattern"), str) or not signal.get("pattern"):
+                if kind in {"path", "content"} and (
+                    not isinstance(signal.get("pattern"), str) or not signal.get("pattern")
+                ):
                     errors.append(f"{dimension}/{identifier}: signal needs a pattern")
-                if signal.get("kind") == "content" and not signal.get("contains"):
+                if kind == "content" and not signal.get("contains"):
                     errors.append(f"{dimension}/{identifier}: content signal needs contains")
+                if kind == "dependency" and (
+                    not signal.get("ecosystem") or not signal.get("name")
+                ):
+                    errors.append(f"{dimension}/{identifier}: dependency signal needs ecosystem and name")
     groups = set(catalog.get("groups", []))
     capabilities = set(catalog.get("capabilities", []))
     static_ids: set[str] = set()

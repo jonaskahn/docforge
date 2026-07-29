@@ -19,7 +19,15 @@ configuration, or archive/delete anything.
 First perform only safe discovery: identify the repository root, check whether
 `.docforge/manifest.json` exists, run the read-only code-graph precheck, and run
 `detect_profiles` to identify candidate shapes, platforms, frameworks, and
-concerns. Report matched evidence and recommendations. Detection proposes
+concerns. `detect_profiles` recognizes frameworks and shapes by reading
+*declared dependencies* structurally from project-definition manifests
+(`package.json`, `pyproject.toml`/`requirements.txt`, `pom.xml`,
+`build.gradle*`, `go.mod`, `Cargo.toml`, `Gemfile`, `composer.json`,
+`*.csproj`, `pubspec.yaml`), not by substring — so a declared dependency is
+strong evidence while an incidental prose mention is not. When a candidate is
+ambiguous, or the stack is not encoded in the catalog, read those manifests
+yourself to confirm or augment the framework/shape recommendation before
+presenting it. Report matched evidence and recommendations. Detection proposes
 profiles; it never confirms them on the user's behalf. When exactly one
 readable code-graph provider is ready, use it
 as the proposed default and do not ask the user to choose among absent

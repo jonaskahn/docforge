@@ -34,13 +34,19 @@
     },
     "signal": {
       "type": "object",
-      "required": ["kind", "pattern"],
+      "required": ["kind"],
       "properties": {
-        "kind": {"enum": ["path", "content"]},
+        "kind": {"enum": ["path", "content", "dependency"]},
         "pattern": {"type": "string"},
-        "contains": {"type": "string"}
+        "contains": {"type": "string"},
+        "ecosystem": {"enum": ["npm", "composer", "pip", "cargo", "go", "gem", "maven", "gradle", "nuget", "pub"]},
+        "name": {"type": "string"}
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {"if": {"properties": {"kind": {"enum": ["path", "content"]}}}, "then": {"required": ["pattern"]}},
+        {"if": {"properties": {"kind": {"const": "dependency"}}}, "then": {"required": ["ecosystem", "name"]}}
+      ]
     },
     "profile": {
       "type": "object",

@@ -476,6 +476,71 @@ class CatalogSelectionTests(unittest.TestCase):
             self.assertEqual(detected_payloads[0], detected_payloads[1])
             self.assertTrue(detected_payloads[0])
 
+    def test_structured_dependency_detection(self) -> None:
+        cases = {
+            # React app: react + express detected from declared npm dependencies.
+            "react-app": (
+                {"package.json": '{"dependencies":{"react":"^18","react-dom":"^18","express":"^4"}}'},
+                {("frameworks", "react"), ("frameworks", "express"), ("shapes", "api-service")},
+                set(),
+            ),
+            # Substring bleed: react-dom/preact alone must NOT match react.
+            "no-react": (
+                {"package.json": '{"dependencies":{"react-dom":"^18","preact":"^10"}}'},
+                set(),
+                {("frameworks", "react")},
+            ),
+            # Case insensitivity: lowercase django in requirements.txt still matches.
+            "django-lower": (
+                {"requirements.txt": "django==5.0\ngunicorn\n"},
+                {("frameworks", "django")},
+                set(),
+            ),
+            # Bleed fix: torchvision without torch must not detect pytorch/ml-system.
+            "torchvision-only": (
+                {"pyproject.toml": '[project]\nname = "x"\ndependencies = ["torchvision>=0.1"]\n'},
+                set(),
+                {("frameworks", "pytorch"), ("shapes", "ml-system")},
+            ),
+            # torch present detects both.
+            "torch": (
+                {"pyproject.toml": '[project]\nname = "x"\ndependencies = ["torch>=2.0"]\n'},
+                {("frameworks", "pytorch"), ("shapes", "ml-system")},
+                set(),
+            ),
+            # Maven groupId identifies spring-boot.
+            "spring": (
+                {"pom.xml": "<project><dependencies><dependency>"
+                 "<groupId>org.springframework.boot</groupId>"
+                 "<artifactId>spring-boot-starter-web</artifactId>"
+                 "</dependency></dependencies></project>"},
+                {("frameworks", "spring-boot")},
+                set(),
+            ),
+            # Malformed manifests must not crash and must detect nothing spurious.
+            "malformed": (
+                {"package.json": '{"dependencies": {bad', "pyproject.toml": "[project\nbroken"},
+                set(),
+                {("frameworks", "react"), ("frameworks", "pytorch")},
+            ),
+        }
+        for label, (files, expected, forbidden) in cases.items():
+            with self.subTest(case=label):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    for name, content in files.items():
+                        (repo / name).write_text(content, encoding="utf-8")
+                    outputs = []
+                    for runtime in ("py", "js"):
+                        result = run(runtime, "detect_profiles", "--repo", str(repo), "--json")
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        payload = json.loads(result.stdout)
+                        detected = {(item["dimension"], item["id"]) for item in payload["detections"]}
+                        self.assertTrue(expected <= detected, f"{label}/{runtime}: missing {expected - detected}")
+                        self.assertFalse(forbidden & detected, f"{label}/{runtime}: unexpected {forbidden & detected}")
+                        outputs.append(normalized(result.stdout, [repo]))
+                    self.assertEqual(outputs[0], outputs[1])
+
 
 class PairedRuntimeTests(unittest.TestCase):
     def test_manifest_dry_run_and_filesystem_parity(self) -> None:

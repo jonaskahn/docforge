@@ -8,7 +8,9 @@ commands.
 
 1. Query the code graph through the provider’s native skill/MCP for structure,
    boundaries, entry points, source-bearing call paths, and dependency edges.
-2. Read manifests for commands, versions, configuration, and published surface.
+2. Read manifests for commands, versions, configuration, and published
+   surface. Declared dependencies also confirm and augment the frameworks and
+   shapes `detect_profiles` proposed from the same manifests.
 3. Read a native or provisional flow graph only for a selected document that
    requires `flow_graph`.
 4. Inspect the narrow source paths needed to confirm behavior, edge cases, and

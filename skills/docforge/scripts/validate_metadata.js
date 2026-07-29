@@ -53,9 +53,10 @@ function validate() {
         }
       }
       for (const signal of item.signals || []) {
-        if (!["path", "content"].includes(signal.kind)) errors.push(`${dimension}/${item.id}: invalid signal kind`);
-        if (typeof signal.pattern !== "string" || !signal.pattern) errors.push(`${dimension}/${item.id}: signal needs a pattern`);
+        if (!["path", "content", "dependency"].includes(signal.kind)) errors.push(`${dimension}/${item.id}: invalid signal kind`);
+        if (["path", "content"].includes(signal.kind) && (typeof signal.pattern !== "string" || !signal.pattern)) errors.push(`${dimension}/${item.id}: signal needs a pattern`);
         if (signal.kind === "content" && !signal.contains) errors.push(`${dimension}/${item.id}: content signal needs contains`);
+        if (signal.kind === "dependency" && (!signal.ecosystem || !signal.name)) errors.push(`${dimension}/${item.id}: dependency signal needs ecosystem and name`);
       }
     }
   }

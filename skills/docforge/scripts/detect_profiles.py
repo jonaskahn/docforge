@@ -9,6 +9,8 @@ import json
 import sys
 from pathlib import Path, PurePosixPath
 
+import manifest_deps
+
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 CATALOG_PATH = SKILL_ROOT / ".metadata" / "catalog.json"
 DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns"]
@@ -66,6 +68,7 @@ def inventory(repo: Path) -> list[tuple[str, Path]]:
 def detect(repo: Path) -> list[dict]:
     catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     files = inventory(repo)
+    dependencies = manifest_deps.extract_dependencies(files)
     cache: dict[Path, str] = {}
     cached_bytes = 0
     results: list[dict] = []
@@ -74,6 +77,13 @@ def detect(repo: Path) -> list[dict]:
             evidence: list[str] = []
             matched_kinds: set[str] = set()
             for signal in profile.get("signals", []):
+                if signal["kind"] == "dependency":
+                    ecosystem = signal.get("ecosystem", "")
+                    key = manifest_deps.normalize(ecosystem, signal.get("name", ""))
+                    for manifest_path in dependencies.get(ecosystem, {}).get(key, []):
+                        evidence.append(manifest_path)
+                        matched_kinds.add("dependency")
+                    continue
                 for relative, path in files:
                     if not matches_path(relative, signal["pattern"]):
                         continue
@@ -100,7 +110,7 @@ def detect(repo: Path) -> list[dict]:
                 continue
             confidence = (
                 "confirmed"
-                if "path" in matched_kinds or len(evidence) >= 2
+                if matched_kinds & {"path", "dependency"} or len(evidence) >= 2
                 else "candidate"
             )
             results.append({

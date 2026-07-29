@@ -4,6 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const manifestDeps = require("./manifest_deps.js");
 
 const SKILL_ROOT = path.resolve(__dirname, "..");
 const CATALOG_PATH = path.join(SKILL_ROOT, ".metadata", "catalog.json");
@@ -65,6 +66,7 @@ function inventory(repo) {
 function detect(repo) {
   const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
   const files = inventory(repo);
+  const dependencies = manifestDeps.extractDependencies(files);
   const cache = new Map();
   let cachedBytes = 0;
   const results = [];
@@ -73,6 +75,16 @@ function detect(repo) {
       const evidence = new Set();
       const matchedKinds = new Set();
       for (const signal of profile.signals || []) {
+        if (signal.kind === "dependency") {
+          const ecosystem = signal.ecosystem || "";
+          const key = manifestDeps.normalize(ecosystem, signal.name || "");
+          const bucket = (dependencies[ecosystem] || {})[key] || [];
+          for (const manifestPath of bucket) {
+            evidence.add(manifestPath);
+            matchedKinds.add("dependency");
+          }
+          continue;
+        }
         for (const [relative, target] of files) {
           if (!matchesPath(relative, signal.pattern)) continue;
           if (signal.kind === "content") {
@@ -95,7 +107,7 @@ function detect(repo) {
       results.push({
         dimension,
         id: profile.id,
-        confidence: matchedKinds.has("path") || paths.length >= 2 ? "confirmed" : "candidate",
+        confidence: matchedKinds.has("path") || matchedKinds.has("dependency") || paths.length >= 2 ? "confirmed" : "candidate",
         evidence: paths.slice(0, MAX_EVIDENCE),
       });
     }
