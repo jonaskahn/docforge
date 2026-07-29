@@ -16,6 +16,10 @@ REQUIRED_DOC_FIELDS = {
     "requires", "target_depth", "write_order", "provenance_mode", "audit_profile",
 }
 MARKDOWN_EXCEPTIONS = {"agents-kernel.md", "claude-md.md", "claude-local-md.md"}
+PROVENANCE_FIELDS = {
+    "schema", "doc_id", "path", "generated_at", "tool_version", "tier",
+    "target_depth", "graph", "sections",
+}
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
     "detect_profiles": ["--repo", "--json", "confirmed", "candidate"],
@@ -150,16 +154,24 @@ def validate() -> list[str]:
         if template.name in MARKDOWN_EXCEPTIONS:
             continue
         text = template.read_text(encoding="utf-8")
-        if not text.startswith("---\n{"):
-            errors.append(f"{template.name}: provenance frontmatter must start at byte one")
+        if not text.startswith("---\n{\n"):
+            errors.append(f"{template.name}: provenance frontmatter must be multiline JSON at byte one")
             continue
         end = text.find("\n---\n", 4)
         try:
             frontmatter = json.loads(text[4:end]) if end >= 0 else None
         except json.JSONDecodeError:
             frontmatter = None
-        if not isinstance(frontmatter, dict) or "docforge_provenance" not in frontmatter:
+        provenance = frontmatter.get("docforge_provenance") if isinstance(frontmatter, dict) else None
+        if not isinstance(provenance, dict):
             errors.append(f"{template.name}: provenance frontmatter is not valid JSON")
+            continue
+        missing = sorted(PROVENANCE_FIELDS - set(provenance))
+        graph = provenance.get("graph")
+        if missing or not isinstance(graph, dict) or not {"provider", "flow"} <= set(graph):
+            errors.append(f"{template.name}: provenance frontmatter is missing required v1 fields")
+        if provenance.get("schema") != "1.0" or "graph_snapshot" in provenance:
+            errors.append(f"{template.name}: provenance frontmatter must use schema 1.0")
     scripts = SKILL_ROOT / "scripts"
     py_names = {path.stem for path in scripts.glob("*.py")}
     js_names = {path.stem for path in scripts.glob("*.js")}

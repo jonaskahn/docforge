@@ -17,6 +17,7 @@ const TRANSITIONS = {
   complete: new Set(["in_progress"]),
   skipped: new Set(["planned"]),
 };
+const TOOL_VERSION = "2.0.0";
 
 function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00");
@@ -89,7 +90,20 @@ function makeDocument(definition, origins, evidence = []) {
     write_order: definition.write_order,
     provenance_mode: definition.provenance_mode,
     audit_profile: definition.audit_profile,
-    provenance: { sections: [] },
+    provenance: {
+      schema: "1.0",
+      doc_id: definition.id,
+      path: definition.path,
+      generated_at: "<GENERATED_AT>",
+      tool_version: TOOL_VERSION,
+      tier: "<TIER>",
+      target_depth: definition.target_depth,
+      graph: {
+        provider: "<GRAPH_PROVIDER>",
+        flow: "<FLOW_CAPABILITY>",
+      },
+      sections: [],
+    },
     audit: null,
   };
 }

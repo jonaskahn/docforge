@@ -19,8 +19,15 @@ FORGE = re.compile(
     r"github actions|gitlab ci|codeowners)\b",
     re.IGNORECASE,
 )
-FRONTMATTER = re.compile(r"\A---\n([^\n]*)\n---\n")
+FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 MARKDOWN_EXCEPTIONS = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
+WRITTEN = {"generated", "needs_review", "complete"}
+PROVENANCE_FIELDS = {
+    "schema", "doc_id", "path", "generated_at", "tool_version", "tier",
+    "target_depth", "graph", "sections",
+}
+BLOB = re.compile(r"^[0-9a-f]{40}$")
+SCAFFOLD_TOKEN = re.compile(r"^<[A-Z][A-Z0-9_]{2,}>$")
 
 
 def fail(message: str, code: int = 1) -> int:
@@ -84,6 +91,26 @@ def title_for(doc: dict) -> str:
     return Path(doc["path"]).stem.replace("-", " ").replace("_", " ").title()
 
 
+def scaffold_provenance(doc: dict, manifest: dict) -> str:
+    value = {
+        "docforge_provenance": {
+            "schema": "1.0",
+            "doc_id": doc["id"],
+            "path": doc["path"],
+            "generated_at": "<GENERATED_AT>",
+            "tool_version": "2.0.0",
+            "tier": manifest.get("project", {}).get("tier", "<TIER>"),
+            "target_depth": doc["target_depth"],
+            "graph": {
+                "provider": "<GRAPH_PROVIDER>",
+                "flow": "<FLOW_CAPABILITY>",
+            },
+            "sections": [],
+        }
+    }
+    return "---\n" + json.dumps(value, indent=2, ensure_ascii=False) + "\n---\n"
+
+
 def index_body(doc: dict, manifest: dict) -> str:
     directory = PurePosixPath(doc["path"]).parent
     children = []
@@ -98,9 +125,6 @@ def index_body(doc: dict, manifest: dict) -> str:
         if len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md"):
             children.append(candidate)
     lines = [
-        "---",
-        '{"docforge_provenance":{"sections":[]}}',
-        "---",
         f"# {title_for(doc)}",
         "",
         "_Last reviewed: {{YYYY-MM-DD}}_",
@@ -113,7 +137,7 @@ def index_body(doc: dict, manifest: dict) -> str:
         lines.append(f"| [{title_for(child)}]({relative}) | {{{{Describe {child['id']} from repository evidence.}}}} |")
     if not children:
         lines.append("| {{document}} | {{purpose}} |")
-    return "\n".join(lines) + "\n"
+    return scaffold_provenance(doc, manifest) + "\n".join(lines) + "\n"
 
 
 def scaffold_body(doc: dict, manifest: dict) -> str:
@@ -125,7 +149,11 @@ def scaffold_body(doc: dict, manifest: dict) -> str:
     template = TEMPLATES / doc["scaffold_template"]
     if not template.is_file():
         raise ValueError(f"template not found for {doc['id']}: {doc['scaffold_template']}")
-    return template.read_text(encoding="utf-8")
+    body = template.read_text(encoding="utf-8")
+    match = FRONTMATTER.match(body)
+    if match and doc["path"] not in MARKDOWN_EXCEPTIONS:
+        body = scaffold_provenance(doc, manifest) + body[match.end():]
+    return body
 
 
 def deep_merge(existing, defaults):
@@ -195,22 +223,134 @@ def materialize(repo: Path, manifest: dict, doc_id: str) -> int:
     return 0
 
 
-def parse_frontmatter(text: str) -> dict | None:
+def parse_frontmatter(text: str) -> tuple[str, dict | None, int]:
     match = FRONTMATTER.match(text)
     if not match:
-        return None
+        return "missing", None, 0
     try:
         value = json.loads(match.group(1))
     except json.JSONDecodeError:
-        return None
-    return value if isinstance(value, dict) else None
+        return "unparseable", None, match.end()
+    if not isinstance(value, dict):
+        return "unparseable", None, match.end()
+    return "ok", value, match.end()
+
+
+def heading_anchor(value: str) -> str:
+    value = value.strip().lower()
+    value = re.sub(r"[^\w\s-]", "", value, flags=re.UNICODE)
+    return re.sub(r"[\s-]+", "-", value).strip("-")
+
+
+def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None) -> dict[str, list[str]]:
+    result = {
+        "missing provenance": [], "unparseable provenance": [],
+        "legacy provenance": [], "empty provenance": [], "invalid blob": [],
+        "unknown source": [], "unknown section": [],
+    }
+    state, frontmatter, body_start = parse_frontmatter(text)
+    if state == "missing":
+        result["missing provenance"].append(doc["path"])
+        return result
+    if state == "unparseable":
+        result["unparseable provenance"].append(doc["path"])
+        return result
+    provenance = frontmatter.get("docforge_provenance") if frontmatter else None
+    if not isinstance(provenance, dict):
+        result["missing provenance"].append(doc["path"])
+        return result
+    if "schema" not in provenance:
+        result["legacy provenance"].append(doc["path"])
+        return result
+    missing = sorted(PROVENANCE_FIELDS - set(provenance))
+    graph = provenance.get("graph")
+    if not isinstance(graph, dict) or not {"provider", "flow"} <= set(graph):
+        missing.append("graph.provider/flow")
+    if missing or provenance.get("schema") != "1.0" or "graph_snapshot" in provenance:
+        detail = ", ".join(missing) if missing else "invalid schema or obsolete graph_snapshot"
+        result["missing provenance"].append(f"{doc['path']}: {detail}")
+    sections = provenance.get("sections")
+    if not isinstance(sections, list):
+        result["missing provenance"].append(f"{doc['path']}: sections")
+        return result
+    if doc.get("status") in WRITTEN:
+        concrete = [
+            key for key in PROVENANCE_FIELDS - {"graph", "sections"}
+            if not isinstance(provenance.get(key), str)
+            or not provenance[key]
+            or SCAFFOLD_TOKEN.fullmatch(provenance[key])
+        ]
+        if isinstance(graph, dict):
+            concrete.extend(
+                f"graph.{key}" for key in ("provider", "flow")
+                if not isinstance(graph.get(key), str)
+                or not graph[key]
+                or SCAFFOLD_TOKEN.fullmatch(graph[key])
+            )
+        if concrete:
+            result["missing provenance"].append(
+                f"{doc['path']}: non-concrete {', '.join(sorted(concrete))}"
+            )
+        expected = {
+            "doc_id": doc["id"],
+            "path": doc["path"],
+            "tier": tier,
+            "target_depth": doc["target_depth"],
+        }
+        mismatched = [
+            key for key, value in expected.items()
+            if value is not None and provenance.get(key) != value
+        ]
+        if isinstance(graph, dict) and graph.get("flow") not in {"native", "derived", "none"}:
+            mismatched.append("graph.flow")
+        git_commit = provenance.get("git_commit")
+        if git_commit is not None and (
+            not isinstance(git_commit, str) or not BLOB.fullmatch(git_commit)
+        ):
+            mismatched.append("git_commit")
+        if mismatched:
+            result["missing provenance"].append(
+                f"{doc['path']}: invalid {', '.join(sorted(mismatched))}"
+            )
+        if not sections:
+            result["empty provenance"].append(doc["path"])
+    body = text[body_start:]
+    anchors = {
+        heading_anchor(match.group(2))
+        for line in body.splitlines()
+        if (match := re.match(r"^(#{1,6})\s+(.+?)\s*#*\s*$", line))
+    }
+    for section in sections:
+        section_id = section.get("id") if isinstance(section, dict) else None
+        label = section_id if isinstance(section_id, str) else "<missing>"
+        if not isinstance(section_id, str) or section_id not in anchors:
+            result["unknown section"].append(f"{doc['path']}: {label}")
+        for source in section.get("sources", []) if isinstance(section, dict) else []:
+            source_path = source.get("path", "") if isinstance(source, dict) else ""
+            blob = source.get("git_blob") if isinstance(source, dict) else None
+            if not isinstance(blob, str) or not BLOB.fullmatch(blob):
+                result["invalid blob"].append(f"{doc['path']}: {source_path or '<missing>'}")
+            if not source_path or not (repo / source_path).is_file():
+                result["unknown source"].append(f"{doc['path']}: {source_path or '<missing>'}")
+            role = source.get("role") if isinstance(source, dict) else None
+            if role not in {"code", "config", "manifest", "doc", "test", "history"}:
+                result["missing provenance"].append(f"{doc['path']}: invalid source role")
+        if not isinstance(section, dict) or not isinstance(section.get("sources"), list) or not isinstance(section.get("unresolved"), list):
+            result["missing provenance"].append(f"{doc['path']}: invalid section shape")
+    return result
 
 
 def audit(repo: Path, manifest: dict) -> int:
     findings: dict[str, list[str]] = {
         "missing": [],
         "unfilled scaffold": [],
-        "invalid provenance": [],
+        "missing provenance": [],
+        "unparseable provenance": [],
+        "legacy provenance": [],
+        "empty provenance": [],
+        "invalid blob": [],
+        "unknown source": [],
+        "unknown section": [],
         "broken links": [],
         "invalid json": [],
         "folder-only promotion": [],
@@ -249,9 +389,10 @@ def audit(repo: Path, manifest: dict) -> int:
         if forge_hits:
             findings["forge leakage"].append(f"{doc['path']}: {', '.join(forge_hits)}")
         if doc["provenance_mode"] == "sections" and doc["path"] not in MARKDOWN_EXCEPTIONS:
-            frontmatter = parse_frontmatter(text)
-            if not frontmatter or "docforge_provenance" not in frontmatter:
-                findings["invalid provenance"].append(doc["path"])
+            for kind, items in provenance_defects(
+                repo, doc, text, manifest.get("project", {}).get("tier")
+            ).items():
+                findings[kind].extend(items)
         for link in LINK.findall(text):
             clean = link.split("#", 1)[0]
             if not clean or clean.startswith(("http://", "https://", "mailto:")):

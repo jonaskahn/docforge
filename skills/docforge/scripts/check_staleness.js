@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
+const BLOB = /^[0-9a-f]{40}$/;
 
 function fail(message, code = 2) {
   process.stderr.write(`error: ${message}\n`);
@@ -18,17 +19,19 @@ function loadManifest(target) {
   return manifest;
 }
 function parseFrontmatter(target) {
-  if (!fs.existsSync(target) || !fs.statSync(target).isFile() || path.extname(target).toLowerCase() !== ".md") return null;
+  if (!fs.existsSync(target) || !fs.statSync(target).isFile() || path.extname(target).toLowerCase() !== ".md") return { state: "missing", provenance: null };
   const text = fs.readFileSync(target, "utf8");
-  if (!text.startsWith("---\n")) return null;
+  if (!text.startsWith("---\n")) return { state: "missing", provenance: null };
   const end = text.indexOf("\n---\n", 4);
-  if (end < 0) return null;
+  if (end < 0) return { state: "missing", provenance: null };
   try {
     const data = JSON.parse(text.slice(4, end));
-    const sections = data && data.docforge_provenance && data.docforge_provenance.sections;
-    return Array.isArray(sections) ? sections : null;
+    const provenance = data && data.docforge_provenance;
+    if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) return { state: "missing", provenance: null };
+    if (!("schema" in provenance)) return { state: "legacy", provenance };
+    return { state: "ok", provenance };
   } catch {
-    return null;
+    return { state: "unparseable", provenance: null };
   }
 }
 function gitBlob(target) {
@@ -39,21 +42,43 @@ function gitBlob(target) {
 }
 function syncProvenance(manifest, repo) {
   let updated = 0;
+  const results = [];
+  const failed = new Set();
   for (const doc of manifest.documents) {
-    const sections = parseFrontmatter(path.join(repo, ...doc.path.split("/")));
-    if (sections === null) continue;
-    if (!doc.provenance) doc.provenance = {};
-    doc.provenance.sections = sections;
+    if (doc.provenance_mode === "manifest") continue;
+    const parsed = parseFrontmatter(path.join(repo, ...doc.path.split("/")));
+    if (parsed.state !== "ok") {
+      failed.add(doc.path);
+      if (parsed.state === "unparseable") results.push({ doc: doc.path, status: "UNPARSEABLE", detail: "invalid frontmatter JSON" });
+      else results.push({ doc: doc.path, status: "UNTRACKED", detail: parsed.state === "legacy" ? "legacy provenance" : "missing provenance" });
+      continue;
+    }
+    doc.provenance = parsed.provenance;
     updated++;
   }
-  return updated;
+  return { updated, results, failed };
 }
-function check(manifest, repo, sectionFilter) {
+function check(manifest, repo, sectionFilter, skipped = new Set()) {
   const results = [];
   let clean = true;
   for (const doc of manifest.documents) {
     if (!WRITTEN.has(doc.status)) continue;
-    const sections = (doc.provenance && doc.provenance.sections) || [];
+    if (skipped.has(doc.path)) {
+      clean = false;
+      continue;
+    }
+    const provenance = doc.provenance;
+    if (!provenance || typeof provenance !== "object" || Array.isArray(provenance) || !Object.keys(provenance).length) {
+      results.push({ doc: doc.path, status: "UNTRACKED", detail: "missing provenance" });
+      clean = false;
+      continue;
+    }
+    if (!("schema" in provenance)) {
+      results.push({ doc: doc.path, status: "UNTRACKED", detail: "legacy provenance" });
+      clean = false;
+      continue;
+    }
+    const sections = provenance.sections || [];
     const matching = sections.filter((section) => sectionFilter === undefined || section.id === sectionFilter);
     if (!sections.length) {
       results.push({ doc: doc.path, status: "UNTRACKED", detail: "missing provenance" });
@@ -65,6 +90,10 @@ function check(manifest, repo, sectionFilter) {
     for (const section of matching) {
       for (const source of section.sources || []) {
         const sourcePath = source.path || "";
+        if (typeof source.git_blob !== "string" || !BLOB.test(source.git_blob)) {
+          stale.push({ doc: doc.path, status: "PARTIAL", section: section.id, file_status: "NO_BLOB", file: sourcePath });
+          continue;
+        }
         const current = gitBlob(path.join(repo, ...sourcePath.split("/")));
         if (current === null) {
           stale.push({ doc: doc.path, status: "PARTIAL", section: section.id, file_status: "MISSING", file: sourcePath });
@@ -111,11 +140,20 @@ function main() {
     const manifest = loadManifest(args.manifest);
     const repo = path.resolve((manifest.project && manifest.project.root) || path.resolve(path.dirname(args.manifest), ".."));
     let synchronized;
+    let syncResults = [];
+    let syncFailed = new Set();
     if (args.sync_provenance) {
-      synchronized = syncProvenance(manifest, repo);
+      const sync = syncProvenance(manifest, repo);
+      synchronized = sync.updated;
+      syncResults = sync.results;
+      syncFailed = sync.failed;
       fs.writeFileSync(args.manifest, JSON.stringify(manifest, null, 2) + "\n");
     }
-    const outcome = check(manifest, repo, args.section);
+    const outcome = check(manifest, repo, args.section, syncFailed);
+    if (syncResults.length) {
+      outcome.results.unshift(...syncResults);
+      outcome.clean = false;
+    }
     if (args.json) {
       const payload = synchronized === undefined ? outcome.results : { synchronized, results: outcome.results };
       console.log(JSON.stringify(payload, null, 2));
@@ -125,6 +163,7 @@ function main() {
       for (const result of outcome.results) {
         if (result.status === "FRESH") console.log(`FRESH      ${result.doc}`);
         else if (result.status === "UNTRACKED") console.log(`UNTRACKED  ${result.doc}  (${result.detail})`);
+        else if (result.status === "UNPARSEABLE") console.log(`UNPARSEABLE  ${result.doc}  (${result.detail})`);
         else console.log(`PARTIAL    ${result.doc}  section=${result.section}  ${result.file_status}: ${result.file}`);
       }
     }

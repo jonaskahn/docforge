@@ -24,6 +24,7 @@ TRANSITIONS = {
     "complete": {"in_progress"},
     "skipped": {"planned"},
 }
+TOOL_VERSION = "2.0.0"
 
 
 def now_iso() -> str:
@@ -118,7 +119,20 @@ def make_document(definition: dict, origins: list[dict], evidence: list[str] | N
         "write_order": definition["write_order"],
         "provenance_mode": definition["provenance_mode"],
         "audit_profile": definition["audit_profile"],
-        "provenance": {"sections": []},
+        "provenance": {
+            "schema": "1.0",
+            "doc_id": definition["id"],
+            "path": definition["path"],
+            "generated_at": "<GENERATED_AT>",
+            "tool_version": TOOL_VERSION,
+            "tier": "<TIER>",
+            "target_depth": definition["target_depth"],
+            "graph": {
+                "provider": "<GRAPH_PROVIDER>",
+                "flow": "<FLOW_CAPABILITY>",
+            },
+            "sections": [],
+        },
         "audit": None,
     }
 

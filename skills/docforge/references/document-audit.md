@@ -11,7 +11,8 @@ only:
 - its catalog content contract and audit profile;
 - target depth;
 - applicable quality checks;
-- sources cited by provenance.
+- sources cited by validated provenance v1, after the mechanical gate has
+  confirmed concrete metadata, source blobs, and heading-matched sections.
 
 Do not include writer reasoning or draft conversation. If fresh subagents are
 unavailable, start a separate cold artifact-only pass and record

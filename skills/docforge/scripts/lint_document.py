@@ -52,6 +52,15 @@ FORGE_RE = re.compile(
     r"github actions|gitlab ci|codeowners)\b",
     re.IGNORECASE,
 )
+FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+BLOB_RE = re.compile(r"^[0-9a-f]{40}$")
+SCAFFOLD_TOKEN_RE = re.compile(r"^<[A-Z][A-Z0-9_]{2,}>$")
+PROVENANCE_FIELDS = {
+    "schema", "doc_id", "path", "generated_at", "tool_version", "tier",
+    "target_depth", "graph", "sections",
+}
+SOURCE_ROLES = {"code", "config", "manifest", "doc", "test", "history"}
+MARKDOWN_EXCEPTIONS = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
 
 
 def is_external_link(target: str) -> bool:
@@ -65,11 +74,106 @@ def is_external_link(target: str) -> bool:
     )
 
 
+def heading_anchor(value: str) -> str:
+    value = re.sub(r"[^\w\s-]", "", value.strip().lower(), flags=re.UNICODE)
+    return re.sub(r"[\s-]+", "-", value).strip("-")
+
+
+def repository_root(path: Path) -> Path:
+    for parent in [path.parent, *path.parents]:
+        if (parent / ".git").exists() or (parent / ".docforge").exists():
+            return parent
+    return path.parent
+
+
+def provenance_defects(path: Path, text: str) -> list[dict]:
+    defects: list[dict] = []
+    if path.name in MARKDOWN_EXCEPTIONS:
+        return defects
+    match = FRONTMATTER_RE.match(text)
+    if not match:
+        return [{"kind": "missing provenance", "line": 1, "detail": "frontmatter absent"}]
+    try:
+        frontmatter = json.loads(match.group(1))
+    except json.JSONDecodeError as exc:
+        return [{"kind": "unparseable provenance", "line": exc.lineno + 1, "detail": exc.msg}]
+    provenance = frontmatter.get("docforge_provenance") if isinstance(frontmatter, dict) else None
+    if not isinstance(provenance, dict):
+        return [{"kind": "missing provenance", "line": 1, "detail": "docforge_provenance absent"}]
+    if "schema" not in provenance:
+        return [{"kind": "legacy provenance", "line": 1, "detail": "schema absent"}]
+    missing = sorted(PROVENANCE_FIELDS - set(provenance))
+    graph = provenance.get("graph")
+    if not isinstance(graph, dict) or not {"provider", "flow"} <= set(graph):
+        missing.append("graph.provider/flow")
+    invalid = [
+        key for key in PROVENANCE_FIELDS - {"graph", "sections"}
+        if not isinstance(provenance.get(key), str)
+        or not provenance[key]
+        or SCAFFOLD_TOKEN_RE.fullmatch(provenance[key])
+    ]
+    if isinstance(graph, dict):
+        invalid.extend(
+            f"graph.{key}" for key in ("provider", "flow")
+            if not isinstance(graph.get(key), str)
+            or not graph[key]
+            or SCAFFOLD_TOKEN_RE.fullmatch(graph[key])
+        )
+    if missing or invalid or provenance.get("schema") != "1.0" or "graph_snapshot" in provenance:
+        detail = ", ".join(missing + [f"non-concrete {item}" for item in invalid])
+        defects.append({
+            "kind": "missing provenance", "line": 1,
+            "detail": detail or "invalid schema or obsolete graph_snapshot",
+        })
+    if isinstance(graph, dict) and graph.get("flow") not in {"native", "derived", "none"}:
+        defects.append({"kind": "missing provenance", "line": 1, "detail": "invalid graph.flow"})
+    git_commit = provenance.get("git_commit")
+    if git_commit is not None and (
+        not isinstance(git_commit, str) or not BLOB_RE.fullmatch(git_commit)
+    ):
+        defects.append({"kind": "missing provenance", "line": 1, "detail": "invalid git_commit"})
+    sections = provenance.get("sections")
+    if not isinstance(sections, list):
+        defects.append({"kind": "missing provenance", "line": 1, "detail": "sections must be an array"})
+        return defects
+    if not sections:
+        defects.append({"kind": "empty provenance", "line": 1, "detail": "sections is empty"})
+    body = text[match.end():]
+    anchors = {
+        heading_anchor(heading.group(2))
+        for line in body.splitlines()
+        if (heading := HEADING_RE.match(line))
+    }
+    root = repository_root(path)
+    for section in sections:
+        section_id = section.get("id") if isinstance(section, dict) else None
+        if not isinstance(section_id, str) or section_id not in anchors:
+            defects.append({
+                "kind": "unknown section", "line": 1,
+                "detail": section_id if isinstance(section_id, str) else "<missing>",
+            })
+        if not isinstance(section, dict) or not isinstance(section.get("sources"), list) or not isinstance(section.get("unresolved"), list):
+            defects.append({"kind": "missing provenance", "line": 1, "detail": f"section {section_id or '<missing>'} shape"})
+            continue
+        for source in section["sources"]:
+            source_path = source.get("path", "") if isinstance(source, dict) else ""
+            blob = source.get("git_blob") if isinstance(source, dict) else None
+            role = source.get("role") if isinstance(source, dict) else None
+            if not isinstance(blob, str) or not BLOB_RE.fullmatch(blob):
+                defects.append({"kind": "invalid blob", "line": 1, "detail": source_path or "<missing>"})
+            if not source_path or not (root / source_path).is_file():
+                defects.append({"kind": "unknown source", "line": 1, "detail": source_path or "<missing>"})
+            if role not in SOURCE_ROLES:
+                defects.append({"kind": "missing provenance", "line": 1, "detail": f"{source_path or '<missing>'}: invalid role"})
+    return defects
+
+
 def lint_document(path: Path, require_headings: list[str]) -> dict:
     text = path.read_text(encoding="utf-8", errors="ignore")
     lines = text.split("\n")
     defects: list[dict] = []
     tokens: list[str] = []
+    defects.extend(provenance_defects(path, text))
 
     # scaffold markers + tokens, with line numbers
     for i, line in enumerate(lines, 1):

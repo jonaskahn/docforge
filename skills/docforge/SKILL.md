@@ -150,9 +150,10 @@ mechanisms, setup, and refresh behavior belong to
 2. Build and show the plan before writing. `--auto-accept` skips conversational
    pauses, not planning, evidence checks, linting, audit, or safety approvals.
 3. Write one document at a time in catalog `write_order`.
-4. Stamp provenance while writing. JSON-compatible frontmatter starts at byte
-   one for Markdown documents that support it. Exceptions record provenance in
-   the manifest.
+4. Stamp provenance while writing. Multiline provenance-v1 JSON frontmatter
+   starts at byte one for Markdown documents that support it. Replace every
+   scaffold token with concrete write metadata and source blobs. Exceptions
+   record the same full provenance shape in the manifest.
 5. A writer does not mark its own artifact complete. Mechanical lint is
    necessary but never sufficient.
 6. State a fact once in its owning document and link to it elsewhere. Describe
@@ -322,7 +323,8 @@ For the next document in `write_order`:
    ```
 
 4. Set it `in_progress`, re-ground every required claim, replace all scaffold
-   markers, and stamp section provenance.
+   markers and provenance tokens, and stamp the complete provenance-v1 shape
+   with heading-matched sections and concrete source blobs.
 5. Set it `generated`.
 6. Run the document linter and any audit-profile-specific mechanical checks.
 7. Independently audit it using
@@ -389,8 +391,10 @@ python scripts/check_staleness.py \
   --section configuration --sync-provenance
 ```
 
-`FRESH` means recorded sources still match, `PARTIAL` identifies a changed or
-missing source for one section, and `UNTRACKED` means provenance is absent.
+`FRESH` means recorded sources still match; `PARTIAL` identifies `STALE`,
+`MISSING`, or `NO_BLOB` sources for one section; `UNPARSEABLE` identifies
+malformed document frontmatter; and `UNTRACKED` means provenance is absent,
+empty, or legacy.
 Synchronization reads every manifest path, including root documents, and
 changes only each document's provenance section.
 

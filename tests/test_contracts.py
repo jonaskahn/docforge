@@ -63,6 +63,38 @@ def blob_hash(content: bytes) -> str:
     return hashlib.sha1(f"blob {len(content)}\0".encode("ascii") + content).hexdigest()
 
 
+def provenance(
+    *,
+    doc_id: str,
+    path: str,
+    tier: str,
+    target_depth: str,
+    section_id: str,
+    source_path: str,
+    source_blob: str,
+    role: str = "code",
+) -> dict:
+    return {
+        "schema": "1.0",
+        "doc_id": doc_id,
+        "path": path,
+        "generated_at": "2026-07-27T09:12:44Z",
+        "tool_version": "2.0.0",
+        "tier": tier,
+        "target_depth": target_depth,
+        "graph": {"provider": "gitnexus", "flow": "native"},
+        "sections": [{
+            "id": section_id,
+            "sources": [{"path": source_path, "git_blob": source_blob, "role": role}],
+            "unresolved": [],
+        }],
+    }
+
+
+def markdown_with_provenance(value: dict, body: str) -> str:
+    return "---\n" + json.dumps({"docforge_provenance": value}, indent=2) + "\n---\n" + body
+
+
 def normalized(text: str, roots: list[Path]) -> str:
     for root in roots:
         text = text.replace(str(root), "<REPO>")
@@ -653,11 +685,15 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             content_hash = blob_hash(source.read_bytes())
             doc = repo / "README.md"
             doc.write_text(
-                "---\n" +
-                json.dumps({"docforge_provenance": {"sections": [{"id": "overview", "sources": [
-                    {"path": "source.txt", "git_blob": content_hash}
-                ]}]}}) +
-                "\n---\n# Readme\n", encoding="utf-8",
+                markdown_with_provenance(
+                    provenance(
+                        doc_id="root_readme", path="README.md", tier="spine",
+                        target_depth="overview", section_id="readme",
+                        source_path="source.txt", source_blob=content_hash,
+                    ),
+                    "# Readme\n",
+                ),
+                encoding="utf-8",
             )
             manifest = {
                 "version": "3.0",
@@ -668,7 +704,13 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "discovery": [],
                 "documents": [{
                     "id": "root_readme", "type": "root-readme", "path": "README.md",
-                    "status": "complete", "provenance": {"sections": []},
+                    "status": "complete", "provenance": {
+                        "schema": "1.0", "doc_id": "root_readme", "path": "README.md",
+                        "generated_at": "<GENERATED_AT>", "tool_version": "2.0.0",
+                        "tier": "spine", "target_depth": "overview",
+                        "graph": {"provider": "<GRAPH_PROVIDER>", "flow": "<FLOW_CAPABILITY>"},
+                        "sections": [],
+                    },
                     "selection": {"origins": [], "evidence": []}, "audit": {"verdict": "PASS"},
                 }],
                 "metadata": {},
@@ -683,9 +725,11 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 saved = json.loads(manifest_path.read_text(encoding="utf-8"))
                 self.assertEqual(saved["documents"][0]["type"], "root-readme")
                 self.assertEqual(saved["documents"][0]["status"], "complete")
+                self.assertEqual(saved["documents"][0]["provenance"]["schema"], "1.0")
+                self.assertEqual(saved["documents"][0]["provenance"]["doc_id"], "root_readme")
             source.write_text("two\n", encoding="utf-8")
             for runtime in ("py", "js"):
-                result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--section", "overview")
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--section", "readme")
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("PARTIAL", result.stdout)
             source.unlink()
@@ -723,12 +767,145 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             for runtime in ("py", "js"):
                 self.assertEqual(run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit").returncode, 1)
+            source = repo / "source.txt"
+            source.write_text("evidence\n", encoding="utf-8")
             target = repo / "docs" / "only.md"
             target.parent.mkdir()
-            target.write_text("---\n{\"docforge_provenance\":{\"sections\":[]}}\n---\n# Only\n\nComplete evidence-backed content.\n", encoding="utf-8")
+            target.write_text(
+                markdown_with_provenance(
+                    provenance(
+                        doc_id="only", path="docs/only.md", tier="spine",
+                        target_depth="reference", section_id="only",
+                        source_path="source.txt", source_blob=blob_hash(source.read_bytes()),
+                    ),
+                    "# Only\n\nComplete evidence-backed content.\n",
+                ),
+                encoding="utf-8",
+            )
             for runtime in ("py", "js"):
                 result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_provenance_defect_categories_and_runtime_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("evidence\n", encoding="utf-8")
+            good = provenance(
+                doc_id="only", path="docs/only.md", tier="spine",
+                target_depth="reference", section_id="only",
+                source_path="source.txt", source_blob=blob_hash(source.read_bytes()),
+            )
+            document = {
+                "id": "only", "type": "generic", "path": "docs/only.md", "group": "reference",
+                "selection": {"origins": [], "evidence": []}, "status": "complete", "requires": [],
+                "scaffold_template": "generic.md", "instruction_file": None, "target_depth": "reference",
+                "write_order": 1, "provenance_mode": "sections", "audit_profile": "standard",
+                "provenance": good, "audit": None,
+            }
+            manifest = {
+                "version": "3.0", "project": {
+                    "name": "fixture", "root": str(repo), "tier": "spine",
+                    "profiles": {"shapes": [], "platforms": [], "frameworks": [], "concerns": [], "audiences": []},
+                },
+                "discovery": [], "documents": [document], "metadata": {},
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            target = repo / "docs" / "only.md"
+            target.parent.mkdir()
+            cases = {
+                "MISSING PROVENANCE": "# Only\n\nBody.\n",
+                "UNPARSEABLE PROVENANCE": "---\n{\n---\n# Only\n\nBody.\n",
+                "LEGACY PROVENANCE": "---\n" + json.dumps({"docforge_provenance": {"sections": []}}, indent=2) + "\n---\n# Only\n\nBody.\n",
+                "EMPTY PROVENANCE": markdown_with_provenance({**good, "sections": []}, "# Only\n\nBody.\n"),
+                "INVALID BLOB": markdown_with_provenance({
+                    **good,
+                    "sections": [{**good["sections"][0], "sources": [{
+                        "path": "source.txt", "git_blob": "placeholder", "role": "code",
+                    }]}],
+                }, "# Only\n\nBody.\n"),
+                "UNKNOWN SOURCE": markdown_with_provenance({
+                    **good,
+                    "sections": [{**good["sections"][0], "sources": [{
+                        "path": "missing.txt", "git_blob": "0" * 40, "role": "code",
+                    }]}],
+                }, "# Only\n\nBody.\n"),
+                "UNKNOWN SECTION": markdown_with_provenance({
+                    **good,
+                    "sections": [{**good["sections"][0], "id": "not-a-heading"}],
+                }, "# Only\n\nBody.\n"),
+            }
+            for category, text in cases.items():
+                with self.subTest(category=category):
+                    target.write_text(text, encoding="utf-8")
+                    outputs = []
+                    for runtime in ("py", "js"):
+                        result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
+                        self.assertEqual(result.returncode, 1)
+                        self.assertIn(category, result.stdout)
+                        outputs.append(normalized(result.stdout, [repo]))
+                    self.assertEqual(outputs[0], outputs[1])
+
+    def test_planned_scaffold_tokens_are_not_written_provenance_defects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                manifest_path = repo / ".docforge" / "manifest.json"
+                created = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--document", "arch_high_level")
+                self.assertEqual(created.returncode, 0, created.stderr)
+                text = (repo / "docs" / "architecture" / "high-level.md").read_text(encoding="utf-8")
+                self.assertTrue(text.startswith("---\n{\n"))
+                self.assertIn('"schema": "1.0"', text)
+                result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
+                for category in ("EMPTY PROVENANCE", "MISSING PROVENANCE", "LEGACY PROVENANCE", "UNPARSEABLE PROVENANCE"):
+                    self.assertNotIn(category, result.stdout)
+
+    def test_staleness_reports_no_blob_unparseable_and_legacy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("evidence\n", encoding="utf-8")
+            value = provenance(
+                doc_id="only", path="docs/only.md", tier="spine",
+                target_depth="reference", section_id="only",
+                source_path="source.txt", source_blob="placeholder",
+            )
+            document = {
+                "id": "only", "type": "generic", "path": "docs/only.md",
+                "status": "complete", "provenance_mode": "sections", "provenance": value,
+            }
+            manifest = {
+                "version": "3.0", "project": {"root": str(repo)},
+                "documents": [document],
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            target = repo / "docs" / "only.md"
+            target.parent.mkdir()
+            target.write_text(markdown_with_provenance(value, "# Only\n"), encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("NO_BLOB", result.stdout)
+            target.write_text("---\n{\n---\n# Only\n", encoding="utf-8")
+            outputs = []
+            for runtime in ("py", "js"):
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("UNPARSEABLE", result.stdout)
+                outputs.append(normalized(result.stdout, [repo]))
+            self.assertEqual(outputs[0], outputs[1])
+            target.write_text("---\n" + json.dumps({"docforge_provenance": {"sections": []}}, indent=2) + "\n---\n# Only\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("UNTRACKED", result.stdout)
+                self.assertIn("legacy provenance", result.stdout)
 
     def test_lint_placeholder_token_link_and_forge_cases(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -749,14 +926,49 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 self.assertTrue({"scaffold-marker", "dead-link", "forge-leakage"} <= kinds)
                 self.assertEqual(payload["tokens"], ["<EXTERNAL_CONTACT>"])
 
+    def test_lint_provenance_gate_has_paired_defects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / ".docforge").mkdir()
+            source = repo / "source.txt"
+            source.write_text("evidence\n", encoding="utf-8")
+            value = provenance(
+                doc_id="subject", path="subject.md", tier="spine",
+                target_depth="reference", section_id="frontmatter-only",
+                source_path="source.txt", source_blob="placeholder",
+            )
+            subject = repo / "subject.md"
+            subject.write_text(
+                markdown_with_provenance(value, "# Subject\n\nBody.\n"),
+                encoding="utf-8",
+            )
+            outputs = []
+            for runtime in ("py", "js"):
+                result = run(runtime, "lint_document", "--file", str(subject), "--json")
+                self.assertEqual(result.returncode, 1)
+                payload = json.loads(result.stdout)
+                kinds = {item["kind"] for item in payload["defects"]}
+                self.assertTrue({"invalid blob", "unknown section"} <= kinds)
+                outputs.append(payload["defects"])
+            self.assertEqual(outputs[0], outputs[1])
+
     def test_folder_only_promotion_is_audit_defect(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("flow\n", encoding="utf-8")
             target = repo / "docs" / "flows" / "checkout" / "README.md"
             target.parent.mkdir(parents=True)
             target.write_text(
-                "---\n{\"docforge_provenance\":{\"sections\":[]}}\n---\n"
-                "# Checkout\n\nComplete overview.\n",
+                markdown_with_provenance(
+                    provenance(
+                        doc_id="checkout", path="docs/flows/checkout/README.md",
+                        tier="diligence", target_depth="deep-dive",
+                        section_id="checkout", source_path="source.txt",
+                        source_blob=blob_hash(source.read_bytes()),
+                    ),
+                    "# Checkout\n\nComplete overview.\n",
+                ),
                 encoding="utf-8",
             )
             document = {

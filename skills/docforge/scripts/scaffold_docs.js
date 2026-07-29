@@ -10,6 +10,10 @@ const TOKEN = /<[A-Z][A-Z0-9_]{2,}>/g;
 const LINK = /\[[^\]]*\]\(([^)]+)\)/g;
 const FORGE = /\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|github actions|gitlab ci|codeowners)\b/gi;
 const MARKDOWN_EXCEPTIONS = new Set(["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"]);
+const WRITTEN = new Set(["generated", "needs_review", "complete"]);
+const PROVENANCE_FIELDS = new Set(["schema", "doc_id", "path", "generated_at", "tool_version", "tier", "target_depth", "graph", "sections"]);
+const BLOB = /^[0-9a-f]{40}$/;
+const SCAFFOLD_TOKEN = /^<[A-Z][A-Z0-9_]{2,}>$/;
 
 function fail(message, code = 1) {
   process.stderr.write(`error: ${message}\n`);
@@ -56,6 +60,25 @@ function posixDirname(value) {
 function titleFor(doc) {
   return path.posix.basename(doc.path, path.posix.extname(doc.path)).replace(/[-_]/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
+function scaffoldProvenance(doc, manifest) {
+  const value = {
+    docforge_provenance: {
+      schema: "1.0",
+      doc_id: doc.id,
+      path: doc.path,
+      generated_at: "<GENERATED_AT>",
+      tool_version: "2.0.0",
+      tier: (manifest.project || {}).tier || "<TIER>",
+      target_depth: doc.target_depth,
+      graph: {
+        provider: "<GRAPH_PROVIDER>",
+        flow: "<FLOW_CAPABILITY>",
+      },
+      sections: [],
+    },
+  };
+  return `---\n${JSON.stringify(value, null, 2)}\n---\n`;
+}
 function isDirectChild(directory, candidate) {
   const relative = path.posix.relative(directory, candidate.path);
   const parts = relative.split("/");
@@ -67,9 +90,6 @@ function indexBody(doc, manifest) {
     .filter((candidate) => candidate.id !== doc.id && isDirectChild(directory, candidate))
     .sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path));
   const lines = [
-    "---",
-    '{"docforge_provenance":{"sections":[]}}',
-    "---",
     `# ${titleFor(doc)}`,
     "",
     "_Last reviewed: {{YYYY-MM-DD}}_",
@@ -82,14 +102,19 @@ function indexBody(doc, manifest) {
     lines.push(`| [${titleFor(child)}](${relative}) | {{Describe ${child.id} from repository evidence.}} |`);
   }
   if (!children.length) lines.push("| {{document}} | {{purpose}} |");
-  return lines.join("\n") + "\n";
+  return scaffoldProvenance(doc, manifest) + lines.join("\n") + "\n";
 }
 function scaffoldBody(doc, manifest) {
   const indexes = new Set(["folder-index", "docs-index", "portfolio-index", "decision-index", "portfolio-decisions-index", "ba-index", "po-index"]);
   if (indexes.has(doc.type)) return indexBody(doc, manifest);
   const template = path.join(TEMPLATES, doc.scaffold_template);
   if (!fs.existsSync(template)) throw new Error(`template not found for ${doc.id}: ${doc.scaffold_template}`);
-  return fs.readFileSync(template, "utf8");
+  let body = fs.readFileSync(template, "utf8");
+  const parsed = parseFrontmatter(body);
+  if (parsed.state !== "missing" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
+    body = scaffoldProvenance(doc, manifest) + body.slice(parsed.end);
+  }
+  return body;
 }
 function deepMerge(existing, defaults) {
   if (Array.isArray(existing) && Array.isArray(defaults)) return existing.concat(defaults.filter((item) => !existing.some((old) => JSON.stringify(old) === JSON.stringify(item))));
@@ -151,23 +176,112 @@ function materialize(repo, manifest, docId) {
   }
 }
 function parseFrontmatter(text) {
-  if (!text.startsWith("---\n")) return null;
+  if (!text.startsWith("---\n")) return { state: "missing", value: null, end: 0 };
   const end = text.indexOf("\n---\n", 4);
-  if (end < 0) return null;
-  const line = text.slice(4, end);
-  if (line.includes("\n")) return null;
+  if (end < 0) return { state: "missing", value: null, end: 0 };
   try {
-    const value = JSON.parse(line);
-    return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+    const value = JSON.parse(text.slice(4, end));
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? { state: "ok", value, end: end + 5 }
+      : { state: "unparseable", value: null, end: end + 5 };
   } catch {
-    return null;
+    return { state: "unparseable", value: null, end: end + 5 };
   }
+}
+function headingAnchor(value) {
+  return value.trim().toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, "").replace(/[\s-]+/g, "-").replace(/^-|-$/g, "");
+}
+function provenanceDefects(repo, doc, text, tier) {
+  const result = {
+    "missing provenance": [], "unparseable provenance": [],
+    "legacy provenance": [], "empty provenance": [], "invalid blob": [],
+    "unknown source": [], "unknown section": [],
+  };
+  const parsed = parseFrontmatter(text);
+  if (parsed.state === "missing") {
+    result["missing provenance"].push(doc.path);
+    return result;
+  }
+  if (parsed.state === "unparseable") {
+    result["unparseable provenance"].push(doc.path);
+    return result;
+  }
+  const provenance = parsed.value.docforge_provenance;
+  if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
+    result["missing provenance"].push(doc.path);
+    return result;
+  }
+  if (!("schema" in provenance)) {
+    result["legacy provenance"].push(doc.path);
+    return result;
+  }
+  const missing = [...PROVENANCE_FIELDS].filter((key) => !(key in provenance)).sort();
+  const graph = provenance.graph;
+  if (!graph || typeof graph !== "object" || !("provider" in graph) || !("flow" in graph)) missing.push("graph.provider/flow");
+  if (missing.length || provenance.schema !== "1.0" || "graph_snapshot" in provenance) {
+    const detail = missing.length ? missing.join(", ") : "invalid schema or obsolete graph_snapshot";
+    result["missing provenance"].push(`${doc.path}: ${detail}`);
+  }
+  const sections = provenance.sections;
+  if (!Array.isArray(sections)) {
+    result["missing provenance"].push(`${doc.path}: sections`);
+    return result;
+  }
+  if (WRITTEN.has(doc.status)) {
+    const concrete = [...PROVENANCE_FIELDS].filter((key) => !["graph", "sections"].includes(key))
+      .filter((key) => typeof provenance[key] !== "string" || !provenance[key] || SCAFFOLD_TOKEN.test(provenance[key]));
+    if (graph && typeof graph === "object") {
+      for (const key of ["provider", "flow"]) {
+        if (typeof graph[key] !== "string" || !graph[key] || SCAFFOLD_TOKEN.test(graph[key])) concrete.push(`graph.${key}`);
+      }
+    }
+    if (concrete.length) result["missing provenance"].push(`${doc.path}: non-concrete ${concrete.sort().join(", ")}`);
+    const expected = { doc_id: doc.id, path: doc.path, tier, target_depth: doc.target_depth };
+    const invalidFields = [];
+    for (const [key, value] of Object.entries(expected)) {
+      if (value !== undefined && provenance[key] !== value) invalidFields.push(key);
+    }
+    if (graph && !["native", "derived", "none"].includes(graph.flow)) invalidFields.push("graph.flow");
+    if ("git_commit" in provenance && (typeof provenance.git_commit !== "string" || !BLOB.test(provenance.git_commit))) invalidFields.push("git_commit");
+    if (invalidFields.length) result["missing provenance"].push(`${doc.path}: invalid ${invalidFields.sort().join(", ")}`);
+    if (!sections.length) result["empty provenance"].push(doc.path);
+  }
+  const anchors = new Set();
+  for (const line of text.slice(parsed.end).split(/\r?\n/)) {
+    const match = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (match) anchors.add(headingAnchor(match[2]));
+  }
+  for (const section of sections) {
+    const sectionId = section && typeof section.id === "string" ? section.id : null;
+    if (!sectionId || !anchors.has(sectionId)) result["unknown section"].push(`${doc.path}: ${sectionId || "<missing>"}`);
+    for (const source of (section && Array.isArray(section.sources)) ? section.sources : []) {
+      const sourcePath = source && typeof source.path === "string" ? source.path : "";
+      if (!source || typeof source.git_blob !== "string" || !BLOB.test(source.git_blob)) {
+        result["invalid blob"].push(`${doc.path}: ${sourcePath || "<missing>"}`);
+      }
+      const target = path.join(repo, ...sourcePath.split("/"));
+      if (!sourcePath || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
+        result["unknown source"].push(`${doc.path}: ${sourcePath || "<missing>"}`);
+      }
+      if (!source || !["code", "config", "manifest", "doc", "test", "history"].includes(source.role)) {
+        result["missing provenance"].push(`${doc.path}: invalid source role`);
+      }
+    }
+    if (!section || !Array.isArray(section.sources) || !Array.isArray(section.unresolved)) result["missing provenance"].push(`${doc.path}: invalid section shape`);
+  }
+  return result;
 }
 function audit(repo, manifest) {
   const findings = {
     missing: [],
     "unfilled scaffold": [],
-    "invalid provenance": [],
+    "missing provenance": [],
+    "unparseable provenance": [],
+    "legacy provenance": [],
+    "empty provenance": [],
+    "invalid blob": [],
+    "unknown source": [],
+    "unknown section": [],
     "broken links": [],
     "invalid json": [],
     "folder-only promotion": [],
@@ -212,8 +326,8 @@ function audit(repo, manifest) {
     const forgeHits = [...new Set((text.match(FORGE) || []).map((item) => item.toLowerCase()))].sort();
     if (forgeHits.length) findings["forge leakage"].push(`${doc.path}: ${forgeHits.join(", ")}`);
     if (doc.provenance_mode === "sections" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
-      const frontmatter = parseFrontmatter(text);
-      if (!frontmatter || !("docforge_provenance" in frontmatter)) findings["invalid provenance"].push(doc.path);
+      const defects = provenanceDefects(repo, doc, text, (manifest.project || {}).tier);
+      for (const [kind, items] of Object.entries(defects)) findings[kind].push(...items);
     }
     for (const match of text.matchAll(LINK)) {
       const link = match[1];

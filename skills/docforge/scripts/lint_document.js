@@ -40,6 +40,11 @@ const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
 // should be an actual link, not bare text naming the file.
 const MENTION_RE = /`([A-Za-z0-9_./-]+\.md)`/g;
 const FORGE_RE = /\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|github actions|gitlab ci|codeowners)\b/gi;
+const BLOB_RE = /^[0-9a-f]{40}$/;
+const SCAFFOLD_TOKEN_RE = /^<[A-Z][A-Z0-9_]{2,}>$/;
+const PROVENANCE_FIELDS = new Set(["schema", "doc_id", "path", "generated_at", "tool_version", "tier", "target_depth", "graph", "sections"]);
+const SOURCE_ROLES = new Set(["code", "config", "manifest", "doc", "test", "history"]);
+const MARKDOWN_EXCEPTIONS = new Set(["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"]);
 
 function isExternalLink(target) {
   const t = target.trim();
@@ -51,12 +56,96 @@ function isExternalLink(target) {
     t.startsWith("<")
   );
 }
+function headingAnchor(value) {
+  return value.trim().toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, "").replace(/[\s-]+/g, "-").replace(/^-|-$/g, "");
+}
+function repositoryRoot(filePath) {
+  let current = path.dirname(filePath);
+  while (true) {
+    if (fs.existsSync(path.join(current, ".git")) || fs.existsSync(path.join(current, ".docforge"))) return current;
+    const parent = path.dirname(current);
+    if (parent === current) return path.dirname(filePath);
+    current = parent;
+  }
+}
+function provenanceDefects(filePath, text) {
+  const defects = [];
+  if (MARKDOWN_EXCEPTIONS.has(path.basename(filePath))) return defects;
+  if (!text.startsWith("---\n")) return [{ kind: "missing provenance", line: 1, detail: "frontmatter absent" }];
+  const end = text.indexOf("\n---\n", 4);
+  if (end < 0) return [{ kind: "missing provenance", line: 1, detail: "frontmatter absent" }];
+  let frontmatter;
+  try {
+    frontmatter = JSON.parse(text.slice(4, end));
+  } catch (error) {
+    return [{ kind: "unparseable provenance", line: 1, detail: error.message }];
+  }
+  const provenance = frontmatter && frontmatter.docforge_provenance;
+  if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
+    return [{ kind: "missing provenance", line: 1, detail: "docforge_provenance absent" }];
+  }
+  if (!("schema" in provenance)) return [{ kind: "legacy provenance", line: 1, detail: "schema absent" }];
+  const missing = [...PROVENANCE_FIELDS].filter((key) => !(key in provenance)).sort();
+  const graph = provenance.graph;
+  if (!graph || typeof graph !== "object" || !("provider" in graph) || !("flow" in graph)) missing.push("graph.provider/flow");
+  const invalid = [...PROVENANCE_FIELDS].filter((key) => !["graph", "sections"].includes(key))
+    .filter((key) => typeof provenance[key] !== "string" || !provenance[key] || SCAFFOLD_TOKEN_RE.test(provenance[key]));
+  if (graph && typeof graph === "object") {
+    for (const key of ["provider", "flow"]) {
+      if (typeof graph[key] !== "string" || !graph[key] || SCAFFOLD_TOKEN_RE.test(graph[key])) invalid.push(`graph.${key}`);
+    }
+  }
+  if (missing.length || invalid.length || provenance.schema !== "1.0" || "graph_snapshot" in provenance) {
+    const detail = [...missing, ...invalid.map((item) => `non-concrete ${item}`)].join(", ")
+      || "invalid schema or obsolete graph_snapshot";
+    defects.push({ kind: "missing provenance", line: 1, detail });
+  }
+  if (graph && !["native", "derived", "none"].includes(graph.flow)) defects.push({ kind: "missing provenance", line: 1, detail: "invalid graph.flow" });
+  if ("git_commit" in provenance && (typeof provenance.git_commit !== "string" || !BLOB_RE.test(provenance.git_commit))) {
+    defects.push({ kind: "missing provenance", line: 1, detail: "invalid git_commit" });
+  }
+  const sections = provenance.sections;
+  if (!Array.isArray(sections)) {
+    defects.push({ kind: "missing provenance", line: 1, detail: "sections must be an array" });
+    return defects;
+  }
+  if (!sections.length) defects.push({ kind: "empty provenance", line: 1, detail: "sections is empty" });
+  const anchors = new Set();
+  for (const line of text.slice(end + 5).split(/\r?\n/)) {
+    const match = line.match(HEADING_RE);
+    if (match) anchors.add(headingAnchor(match[2]));
+  }
+  const root = repositoryRoot(filePath);
+  for (const section of sections) {
+    const sectionId = section && typeof section.id === "string" ? section.id : null;
+    if (!sectionId || !anchors.has(sectionId)) defects.push({ kind: "unknown section", line: 1, detail: sectionId || "<missing>" });
+    if (!section || !Array.isArray(section.sources) || !Array.isArray(section.unresolved)) {
+      defects.push({ kind: "missing provenance", line: 1, detail: `section ${sectionId || "<missing>"} shape` });
+      continue;
+    }
+    for (const source of section.sources) {
+      const sourcePath = source && typeof source.path === "string" ? source.path : "";
+      if (!source || typeof source.git_blob !== "string" || !BLOB_RE.test(source.git_blob)) {
+        defects.push({ kind: "invalid blob", line: 1, detail: sourcePath || "<missing>" });
+      }
+      const target = path.join(root, ...sourcePath.split("/"));
+      if (!sourcePath || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
+        defects.push({ kind: "unknown source", line: 1, detail: sourcePath || "<missing>" });
+      }
+      if (!source || !SOURCE_ROLES.has(source.role)) {
+        defects.push({ kind: "missing provenance", line: 1, detail: `${sourcePath || "<missing>"}: invalid role` });
+      }
+    }
+  }
+  return defects;
+}
 
 function checkDocument(filePath, requireHeadings) {
   const text = fs.readFileSync(filePath, "utf8");
   const lines = text.split("\n");
   const defects = [];
   const tokens = [];
+  defects.push(...provenanceDefects(filePath, text));
 
   // scaffold markers + tokens, with line numbers
   for (let i = 0; i < lines.length; i++) {

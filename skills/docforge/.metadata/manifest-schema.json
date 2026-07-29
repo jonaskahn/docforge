@@ -53,6 +53,65 @@
         "id": {"type": "string"}
       }
     },
+    "provenance": {
+      "type": "object",
+      "required": ["schema", "doc_id", "path", "generated_at", "tool_version", "tier", "target_depth", "graph", "sections"],
+      "properties": {
+        "schema": {"const": "1.0"},
+        "doc_id": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "generated_at": {"type": "string", "minLength": 1},
+        "tool_version": {"type": "string", "minLength": 1},
+        "tier": {"type": "string", "minLength": 1},
+        "target_depth": {"type": "string", "minLength": 1},
+        "graph": {
+          "type": "object",
+          "required": ["provider", "flow"],
+          "properties": {
+            "provider": {"type": "string", "minLength": 1},
+            "flow": {
+              "anyOf": [
+                {"enum": ["native", "derived", "none"]},
+                {"type": "string", "pattern": "^<[A-Z][A-Z0-9_]{2,}>$"}
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "git_commit": {
+          "anyOf": [
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            {"type": "string", "pattern": "^<[A-Z][A-Z0-9_]{2,}>$"}
+          ]
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "sources", "unresolved"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["path", "git_blob", "role"],
+                  "properties": {
+                    "path": {"type": "string", "minLength": 1},
+                    "git_blob": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                    "role": {"enum": ["code", "config", "manifest", "doc", "test", "history"]}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "unresolved": {"type": "array", "items": {"type": "string"}}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "document": {
       "type": "object",
       "required": ["id", "type", "path", "group", "selection", "status", "requires", "scaffold_template", "target_depth", "write_order", "provenance_mode", "audit_profile", "provenance", "audit"],
@@ -77,9 +136,46 @@
         "write_order": {"type": "integer"},
         "provenance_mode": {"enum": ["sections", "manifest"]},
         "audit_profile": {"type": "string"},
-        "provenance": {"type": "object"},
+        "provenance": {"$ref": "#/definitions/provenance"},
         "audit": {"type": ["object", "null"]}
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {"enum": ["generated", "needs_review", "complete"]}
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "allOf": [
+                  {"$ref": "#/definitions/provenance"},
+                  {
+                    "properties": {
+                      "doc_id": {"type": "string", "pattern": "^(?!<).+$"},
+                      "path": {"type": "string", "pattern": "^(?!<).+$"},
+                      "generated_at": {"type": "string", "format": "date-time", "pattern": "^(?!<).+$"},
+                      "tool_version": {"type": "string", "pattern": "^(?!<).+$"},
+                      "tier": {"enum": ["spine", "diligence", "portfolio"]},
+                      "target_depth": {"type": "string", "pattern": "^(?!<).+$"},
+                      "graph": {
+                        "properties": {
+                          "provider": {"type": "string", "pattern": "^(?!<).+$"},
+                          "flow": {"enum": ["native", "derived", "none"]}
+                        }
+                      },
+                      "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                      "sections": {"type": "array", "minItems": 1}
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
