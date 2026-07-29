@@ -9,6 +9,7 @@ import re
 import sys
 from pathlib import Path
 
+from _util import read_json
 from provenance_frontmatter import PROVENANCE_FIELDS, SCHEMA_VERSION, parse_frontmatter
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
@@ -29,10 +30,6 @@ PUBLIC_CONTRACTS = {
 }
 
 
-def read_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
 def validate() -> list[str]:
     errors: list[str] = []
     metadata = SKILL_ROOT / ".metadata"
@@ -47,9 +44,9 @@ def validate() -> list[str]:
         provenance_schema = read_json(provenance_schema_path)
         if provenance_schema.get("properties", {}).get("schema", {}).get("const") != SCHEMA_VERSION:
             errors.append("provenance schema must require schema 2.0")
-    if catalog.get("version") != "2.2.0":
-        errors.append("catalog version must be 2.2.0")
-    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.2.0":
+    if catalog.get("version") != "2.3.0":
+        errors.append("catalog version must be 2.3.0")
+    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.3.0":
         errors.append("catalog schema version disagrees with catalog")
     if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.1":
         errors.append("manifest schema must require version 3.1")
@@ -247,7 +244,7 @@ def validate() -> list[str]:
     plugin = read_json(REPO_ROOT / ".claude-plugin" / "plugin.json")
     market = read_json(REPO_ROOT / ".claude-plugin" / "marketplace.json")["plugins"][0]
     versions = {meta.get("version"), plugin.get("version"), market.get("version"), catalog.get("version")}
-    if versions != {"2.2.0"}:
+    if versions != {"2.3.0"}:
         errors.append(f"release versions disagree: {sorted(str(item) for item in versions)}")
     skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     skill_match = re.search(r"^description: (.+)$", skill_text, re.MULTILINE)

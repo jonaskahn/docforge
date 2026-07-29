@@ -12,6 +12,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { fail, loadManifest } = require("./_util.js");
 const pf = require("./provenance_frontmatter.js");
 
 const MANIFEST_CURRENT = "3.1";
@@ -19,24 +20,10 @@ const MANIFEST_LEGACY = "3.0";
 const MARKDOWN_EXCEPTIONS = new Set(["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"]);
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
-
-function fail(message, code = 1) {
-  console.error(`error: ${message}`);
-  return code;
-}
-
-function loadManifest(target) {
-  if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
-    throw new Error(`manifest not found: ${target}`);
-  }
-  const data = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (data.version !== MANIFEST_CURRENT && data.version !== MANIFEST_LEGACY) {
-    throw new Error(
-      `manifest must use version ${MANIFEST_CURRENT} or ${MANIFEST_LEGACY}: ${target}; older manifests are unsupported`,
-    );
-  }
-  return data;
-}
+const MANIFEST_LOAD = {
+  allowedVersions: [MANIFEST_CURRENT, MANIFEST_LEGACY],
+  unsupportedHint: "older manifests are unsupported",
+};
 
 function needsProvenanceMigration(provenance) {
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) return false;
@@ -368,7 +355,7 @@ function migrateManifestObject(manifest, demoteIncomplete = false) {
 }
 
 function migrate(repo, manifestPath, dryRun) {
-  const manifest = loadManifest(manifestPath);
+  const manifest = loadManifest(manifestPath, MANIFEST_LOAD);
   const reports = [];
   const requireComplete = {};
   for (const doc of manifest.documents || []) {
@@ -402,7 +389,7 @@ function migrate(repo, manifestPath, dryRun) {
 
 function ensureMigrated(repo, manifestPath) {
   migrate(repo, manifestPath, false);
-  return loadManifest(manifestPath);
+  return loadManifest(manifestPath, MANIFEST_LOAD);
 }
 
 function main(argv) {

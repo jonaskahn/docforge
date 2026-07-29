@@ -45,7 +45,7 @@ SUMMARY_LABELS = ["File", "Function", "Method", "Class", "Interface",
                   "Community", "Process", "Route", "Tool"]
 
 
-def fail(lines: list[str]) -> int:
+def abort_lines(lines: list[str]) -> int:
     for line in lines:
         print(line, file=sys.stderr)
     return 1
@@ -192,10 +192,10 @@ def main() -> int:
     db_path = args.db
     if not db_path:
         if not args.repo:
-            return fail(["--repo <path> or --db <path/to/lbug> is required"])
+            return abort_lines(["--repo <path> or --db <path/to/lbug> is required"])
         db_path = find_graph_file(args.repo, [".gitnexus/lbug"])
         if not db_path:
-            return fail([
+            return abort_lines([
                 f"No .gitnexus/lbug found from {args.repo} up to the git root.",
                 "Build a GitNexus index first: npx gitnexus analyze "
                 "(see references/graph-source-gitnexus.md).",
@@ -203,12 +203,12 @@ def main() -> int:
 
     module = load_binding()
     if module is None:
-        return fail(HINT)
+        return abort_lines(HINT)
 
     try:
         connection = open_connection(module, db_path)
     except Exception as error:  # noqa: BLE001
-        return fail([f"Failed to open {db_path}: {error}", "", *HINT])
+        return abort_lines([f"Failed to open {db_path}: {error}", "", *HINT])
 
     query = make_query(connection)
 

@@ -16,6 +16,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
+const { fail, readJson } = require("./_util.js");
 const pf = require("./provenance_frontmatter.js");
 const { ensureTmpDirGitignored } = require("./graph_storage.js");
 
@@ -40,23 +41,6 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00");
-}
-function fail(message, code = 1) {
-  process.stderr.write(`error: ${message}\n`);
-  return code;
-}
-function readJson(target) {
-  if (!fs.existsSync(target)) throw new Error(`file not found: ${target}`);
-  let value;
-  try {
-    value = JSON.parse(fs.readFileSync(target, "utf8"));
-  } catch (error) {
-    throw new Error(`invalid JSON in ${target}: ${error.message}`);
-  }
-  if (!value || Array.isArray(value) || typeof value !== "object") {
-    throw new Error(`expected a JSON object: ${target}`);
-  }
-  return value;
 }
 function findUa(repo, name) {
   for (const directory of UA_DIRS) {

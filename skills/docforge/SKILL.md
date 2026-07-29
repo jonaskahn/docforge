@@ -3,7 +3,7 @@ name: docforge
 description: Catalog-driven repository documentation with bounded graph-grounded retrieval, manifest 3.1, YAML provenance 2.0, independent audits, and equivalent Python/Node tools.
 ---
 
-# Docforge 2.0
+# Docforge
 
 Docforge builds a durable documentation system from repository evidence. The
 canonical machine contract is `.metadata/catalog.json`; prose explains that
@@ -508,6 +508,10 @@ Use Node by replacing `python scripts/name.py` with
   completion gate.
 - [`references/quality-bar.md`](references/quality-bar.md): mechanical and
   whole-tree acceptance.
+- [`references/host-neutrality.md`](references/host-neutrality.md): neutral
+  vocabulary and forge-confinement craft.
+- [`references/portfolio.md`](references/portfolio.md): portfolio collection
+  procedure and cross-repository diligence specifics.
 - `instructions/*.md`: document-specific writing craft only.
 - `assets/templates/*`: output scaffolds only.
 

@@ -13,7 +13,8 @@ This file owns mechanical and whole-tree acceptance.
 - no links into Docforge’s internal `references/` directory;
 - one primary mode and the catalog’s must-present/keep-out contract;
 - required review date uses `_Last reviewed: YYYY-MM-DD_`;
-- provider and forge neutrality outside their explicit integration references.
+- provider and forge neutrality outside their explicit integration references
+  (vocabulary and confinement craft: [`host-neutrality.md`](host-neutrality.md)).
 
 Mechanical success does not complete a document; the independent audit in
 `document-audit.md` does.

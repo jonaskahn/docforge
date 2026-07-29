@@ -35,11 +35,11 @@ mechanism, constraints, and tradeoffs.
 | configuration | every read setting, default, scope, sensitivity, validation | secrets or aspirational settings | Reference | reference |
 | limitations-register | known bounds, trigger, impact, workaround, source evidence | hidden issues or roadmap promises | Reference | deep-dive |
 | dependencies-inventory | direct dependencies/integrations, purpose, criticality, failure behavior | generated lockfile dump | Reference | deep-dive |
-| constraints | hard bounds and non-goals | temporary shortcuts | Explanation | deep-dive |
+| constraints | hard bounds with source and design implication; deliberate non-goals | temporary shortcuts, tech-debt items, user-visible limitations | Explanation | deep-dive |
 | tech-debt-register | shortcut, consequence, evidence, remediation direction | hard constraints | Reference | deep-dive |
 | security-policy | supported scope, reporting path, response expectations, safe harbor | threat-model detail | Reference | router |
-| threat-model | assets, trust boundaries, threats, controls, residual risk | disclosure workflow | Explanation | deep-dive |
-| data-handling | data classes, lifecycle, access, retention, deletion | invented compliance claims | Reference | deep-dive |
+| threat-model | assets, trust boundaries, threats, controls, accepted residual risk | disclosure workflow; credentials; unremediated vulnerability detail | Explanation | deep-dive |
+| data-handling | data classes, lifecycle, access, retention, deletion | invented compliance claims; credentials; internal hostnames; individual names as security contacts | Reference | deep-dive |
 | deployment | environments, artifact path, rollout, rollback, verification | incident procedures | How-to | deep-dive |
 | observability | signals, ownership, correlation, alert intent, blind spots | provider marketing | Reference | deep-dive |
 | decision-index / adr | indexed decisions; for each ADR context, decision, alternatives, consequences, status | rewritten history | Explanation | deep-dive |
@@ -103,6 +103,18 @@ mechanism, constraints, and tradeoffs.
 | agents-flow / agents-glossary | compact flow/term lookup grounded in declared flow evidence and linked owners | inferred flows or duplicated business prose | Reference | reference |
 | security-posture / portfolio-operations | cross-repo controls, gaps, shared dependencies, operational coupling | member-level repetition | Explanation | deep-dive |
 | portfolio-decision / portfolio-glossary | cross-repository decision evidence or shared terminology with member links | repository-local ADR duplication | Reference | deep-dive |
+
+## Risk-register routing
+
+Route each bound by who can change it and whether it is user-visible: fixable by
+us later → `tech-debt-register`; imposed from outside and immovable →
+`constraints`; deliberate or accepted and user-visible → `limitations-register`.
+Never cross-file them. For `threat-model`, keep the analysis proportionate; the
+accepted-risk section is the reviewer's signal that analysis was performed.
+When more rigor is warranted, use a trust-boundary data-flow with STRIDE per
+element and one response per threat (mitigate / eliminate / transfer / accept)
+tied to a testable control — link `data-handling` classifications; do not
+restate the inventory.
 
 ## Typed profile behavior
 

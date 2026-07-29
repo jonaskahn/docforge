@@ -31,7 +31,7 @@ const HINT = [
   "See references/graph-source-gitnexus.md.",
 ];
 
-function fail(lines) {
+function abortLines(lines) {
   for (const line of lines) console.error(line);
   process.exit(1);
 }
@@ -62,10 +62,10 @@ function main() {
 
   let dbPath = args.db;
   if (!dbPath) {
-    if (!args.repo) fail(["--repo <path> or --db <path/to/lbug> is required"]);
+    if (!args.repo) abortLines(["--repo <path> or --db <path/to/lbug> is required"]);
     dbPath = findGraphFile(args.repo, [".gitnexus/lbug"]);
     if (!dbPath) {
-      fail([
+      abortLines([
         `No .gitnexus/lbug found from ${args.repo} up to the git root.`,
         "Build a GitNexus index first: npx gitnexus analyze (see references/graph-source-gitnexus.md).",
       ]);
@@ -73,14 +73,14 @@ function main() {
   }
 
   const lbug = loadLbug();
-  if (!lbug) fail(HINT);
+  if (!lbug) abortLines(HINT);
 
   let conn;
   try {
     const db = new lbug.Database(dbPath, 0, true, /* readOnly */ true);
     conn = new lbug.Connection(db);
   } catch (error) {
-    fail([`Failed to open ${dbPath}: ${error.message}`, "", ...HINT]);
+    abortLines([`Failed to open ${dbPath}: ${error.message}`, "", ...HINT]);
   }
 
   const query = (cypher) => {

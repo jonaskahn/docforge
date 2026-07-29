@@ -4,6 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { readJson } = require("./_util.js");
 const pf = require("./provenance_frontmatter.js");
 const SKILL_ROOT = path.resolve(__dirname, "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..");
@@ -19,9 +20,6 @@ const PUBLIC_CONTRACTS = {
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
 };
 
-function readJson(target) {
-  return JSON.parse(fs.readFileSync(target, "utf8"));
-}
 function validate() {
   const errors = [];
   const metadata = path.join(SKILL_ROOT, ".metadata");
@@ -38,8 +36,8 @@ function validate() {
       errors.push("provenance schema must require schema 2.0");
     }
   }
-  if (catalog.version !== "2.2.0") errors.push("catalog version must be 2.2.0");
-  if ((((catalogSchema.properties || {}).version || {}).const) !== "2.2.0") errors.push("catalog schema version disagrees with catalog");
+  if (catalog.version !== "2.3.0") errors.push("catalog version must be 2.3.0");
+  if ((((catalogSchema.properties || {}).version || {}).const) !== "2.3.0") errors.push("catalog schema version disagrees with catalog");
   if ((((manifestSchema.properties || {}).version || {}).const) !== "3.1") errors.push("manifest schema must require version 3.1");
   if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.1") errors.push("flow index schema must require version 1.1");
   const flowItem = ((((flowIndexSchema.properties || {}).flows || {}).items || {}).properties) || {};
@@ -200,7 +198,7 @@ function validate() {
   const plugin = readJson(path.join(REPO_ROOT, ".claude-plugin", "plugin.json"));
   const market = readJson(path.join(REPO_ROOT, ".claude-plugin", "marketplace.json")).plugins[0];
   const versions = new Set([meta.version, plugin.version, market.version, catalog.version]);
-  if (versions.size !== 1 || !versions.has("2.2.0")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
+  if (versions.size !== 1 || !versions.has("2.3.0")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
   const skillText = fs.readFileSync(path.join(SKILL_ROOT, "SKILL.md"), "utf8");
   const skillMatch = skillText.match(/^description: (.+)$/m);
   const entryDescription = (((meta.skills || {}).entries || [{}])[0] || {}).description;

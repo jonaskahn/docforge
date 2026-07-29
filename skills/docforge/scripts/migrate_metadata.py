@@ -16,6 +16,7 @@ import json
 import sys
 from pathlib import Path
 
+from _util import fail, load_manifest
 from provenance_frontmatter import (
     FLOW_VALUES,
     LEGACY_SCHEMA,
@@ -34,24 +35,10 @@ MANIFEST_LEGACY = "3.0"
 MARKDOWN_EXCEPTIONS = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
-
-
-def fail(message: str, code: int = 1) -> int:
-    print(f"error: {message}", file=sys.stderr)
-    return code
-
-
-def load_manifest(path: Path) -> dict:
-    if not path.is_file():
-        raise ValueError(f"manifest not found: {path}")
-    data = json.loads(path.read_text(encoding="utf-8"))
-    version = data.get("version")
-    if version not in {MANIFEST_CURRENT, MANIFEST_LEGACY}:
-        raise ValueError(
-            f"manifest must use version {MANIFEST_CURRENT} or {MANIFEST_LEGACY}: {path}; "
-            "older manifests are unsupported"
-        )
-    return data
+MANIFEST_LOAD = {
+    "allowed_versions": (MANIFEST_CURRENT, MANIFEST_LEGACY),
+    "unsupported_hint": "older manifests are unsupported",
+}
 
 
 def needs_provenance_migration(provenance: dict | None) -> bool:
@@ -395,7 +382,7 @@ def migrate_manifest_object(manifest: dict, *, demote_incomplete: bool = False) 
 
 
 def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict], bool]:
-    manifest = load_manifest(manifest_path)
+    manifest = load_manifest(manifest_path, **MANIFEST_LOAD)
     reports: list[dict] = []
     # Snapshot written status before any demotion so file conversion can still
     # require complete provenance 2.0 for previously published documents.
@@ -446,7 +433,7 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
 def ensure_migrated(repo: Path, manifest_path: Path) -> dict:
     """Migrate in place and return the loaded current manifest."""
     migrate(repo, manifest_path, dry_run=False)
-    return load_manifest(manifest_path)
+    return load_manifest(manifest_path, **MANIFEST_LOAD)
 
 
 def main() -> int:

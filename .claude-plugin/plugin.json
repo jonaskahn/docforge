@@ -1,7 +1,7 @@
 {
   "name": "docforge",
   "description": "Catalog-driven repository documentation with bounded graph-grounded retrieval, manifest 3.1, YAML provenance 2.0, independent audits, and equivalent Python/Node tools.",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "author": {
     "name": "Jonas Kahn",
     "url": "https://github.com/jonaskahn"

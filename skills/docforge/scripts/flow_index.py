@@ -22,6 +22,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from _util import fail, read_json
 from provenance_frontmatter import emit_yaml, scaffold_provenance
 
 INDEX_REL = Path(".docforge/flow-index.json")
@@ -62,23 +63,6 @@ SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-
-
-def fail(message: str, code: int = 1) -> int:
-    print(f"error: {message}", file=sys.stderr)
-    return code
-
-
-def read_json(path: Path) -> dict:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as error:
-        raise ValueError(f"file not found: {path}") from error
-    except json.JSONDecodeError as error:
-        raise ValueError(f"invalid JSON in {path}: {error}") from error
-    if not isinstance(value, dict):
-        raise ValueError(f"expected a JSON object: {path}")
-    return value
 
 
 def find_ua(repo: Path, name: str) -> Path | None:

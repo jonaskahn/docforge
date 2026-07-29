@@ -14,8 +14,12 @@ sections — a boundary test decides which, not a judgment call:
 - **Scale and performance envelope** — a tested numeric boundary, not a behavior.
 
 Within an entry, state trigger, impact, workaround, and evidence in that consistent order.
-State impact the way a risk register states it — who is affected and how, not just what
-breaks. Use frank language; do not soften impact, and do not turn a remediation hope into a
-current fact — "not currently planned" is honest, "coming soon" is a promise this document
-cannot keep. Order entries by how often a reader will hit them, not by discovery date or
-file location.
+State impact in the reader's terms — "imports over 2 GB fail," not "the buffer is bounded
+at 2 GB." Always give the workaround where one exists; a limitation without one reads as a
+wall. Distinguish deliberate trade-offs from accidental gaps: a bound with stated reasoning
+reads as judgment; the same bound unexplained reads as an oversight. Use frank language; do
+not soften impact, and do not turn a remediation hope into a current fact — "not currently
+planned" is honest, "coming soon" is a promise this document cannot keep. Date the review:
+without a review date a reader cannot tell whether a missing entry means "no such
+limitation" or "nobody has looked." Order entries by how often a reader will hit them, not
+by discovery date or file location.

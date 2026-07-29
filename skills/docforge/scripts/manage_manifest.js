@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 "use strict";
-/** Create and maintain a Docforge 2.0 manifest from the canonical catalog. */
+/** Create and maintain a Docforge manifest from the canonical catalog. */
 
 const fs = require("fs");
 const path = require("path");
+const { dumpJson, fail, loadManifest } = require("./_util.js");
 const { detect: detectProfiles } = require("./detect_profiles.js");
 const pf = require("./provenance_frontmatter.js");
 
@@ -25,29 +26,14 @@ const MANIFEST_VERSION = "3.1";
 function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00");
 }
-function dumpJson(value) {
-  return JSON.stringify(value, null, 2) + "\n";
-}
-function fail(message, code = 1) {
-  process.stderr.write(`error: ${message}\n`);
-  return code;
-}
+const MANIFEST_HINT =
+  "run migrate_metadata.js for 3.0, or replace unsupported older manifests";
+
 function loadCatalog() {
   return JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
 }
 function manifestPath(repo) {
   return path.join(repo, ".docforge", "manifest.json");
-}
-function loadManifest(repo) {
-  const target = manifestPath(repo);
-  if (!fs.existsSync(target)) throw new Error(`manifest not found: ${target}`);
-  const data = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (data.version !== MANIFEST_VERSION) {
-    throw new Error(
-      `manifest must use version ${MANIFEST_VERSION}: ${target}; run migrate_metadata.js for 3.0, or replace unsupported older manifests`,
-    );
-  }
-  return data;
 }
 function flowIsMainPriority(row) {
   if (row.priority === "main") return true;
@@ -291,7 +277,9 @@ function pathMatches(pattern, actual) {
 function cmdAdd(args) {
   required(args, ["repo", "type", "id", "path"]);
   try {
-    const manifest = loadManifest(args.repo);
+    const manifest = loadManifest(manifestPath(args.repo), {
+      unsupportedHint: MANIFEST_HINT,
+    });
     const catalog = loadCatalog();
     const definition = dynamicDefinition(catalog, args.type);
     validateRelativePath(args.path);
@@ -344,7 +332,9 @@ function cmdSet(args) {
   required(args, ["repo", "id", "status"]);
   if (!STATUSES.includes(args.status)) return fail(`invalid status: ${args.status}`, 2);
   try {
-    const manifest = loadManifest(args.repo);
+    const manifest = loadManifest(manifestPath(args.repo), {
+      unsupportedHint: MANIFEST_HINT,
+    });
     const doc = findDocument(manifest, args.id);
     const old = doc.status;
     if (old === args.status) {
@@ -369,7 +359,9 @@ function cmdAudit(args) {
   if (!["subagent", "cold-pass"].includes(args.mode)) return fail(`invalid audit mode: ${args.mode}`, 2);
   if (!["PASS", "FAIL"].includes(args.verdict)) return fail(`invalid audit verdict: ${args.verdict}`, 2);
   try {
-    const manifest = loadManifest(args.repo);
+    const manifest = loadManifest(manifestPath(args.repo), {
+      unsupportedHint: MANIFEST_HINT,
+    });
     const doc = findDocument(manifest, args.id);
     if (doc.status !== "generated") return fail(`${args.id} must be generated before audit`, 2);
     validateRelativePath(args.report);
@@ -385,7 +377,9 @@ function cmdAudit(args) {
 function cmdStatus(args) {
   required(args, ["repo"]);
   try {
-    const manifest = loadManifest(args.repo);
+    const manifest = loadManifest(manifestPath(args.repo), {
+      unsupportedHint: MANIFEST_HINT,
+    });
     const project = manifest.project;
     console.log(`repo: ${project.name}  tier: ${project.tier}`);
     for (const dimension of PROFILE_DIMENSIONS) {

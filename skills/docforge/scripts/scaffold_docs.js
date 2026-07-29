@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 "use strict";
-/** Preview, materialize, or audit the exact tree in a Docforge 3.0 manifest. */
+/** Preview, materialize, or audit the exact tree in a Docforge manifest. */
 
 const fs = require("fs");
 const path = require("path");
+const { fail, loadManifest } = require("./_util.js");
 const pf = require("./provenance_frontmatter.js");
 const TEMPLATES = path.resolve(__dirname, "..", "assets", "templates");
 const PLACEHOLDER = /\{\{[^}]+\}\}|TODO\([^)]*\)/g;
@@ -16,23 +17,11 @@ const SCALAR_PROVENANCE_FIELDS = new Set(
   [...pf.PROVENANCE_FIELDS].filter((key) => !["graph", "sections", "generator"].includes(key)),
 );
 
-function fail(message, code = 1) {
-  process.stderr.write(`error: ${message}\n`);
-  return code;
-}
 function resolveManifest(value, repo) {
   if (path.isAbsolute(value)) return value;
   const direct = path.resolve(value);
   const repoRelative = path.resolve(repo, value);
   return fs.existsSync(direct) ? direct : repoRelative;
-}
-function loadManifest(target) {
-  if (!fs.existsSync(target) || !fs.statSync(target).isFile()) throw new Error(`manifest not found: ${target}`);
-  const manifest = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (manifest.version !== "3.1" || !Array.isArray(manifest.documents)) {
-    throw new Error(`manifest must use version 3.1: ${target}; run migrate_metadata.js for 3.0 manifests`);
-  }
-  return manifest;
 }
 function activeDocuments(manifest) {
   return manifest.documents.filter((doc) => doc.status !== "skipped");
@@ -392,7 +381,9 @@ function main() {
     const modes = [Boolean(args.dry_run), Boolean(args.document), Boolean(args.audit)].filter(Boolean).length;
     if (modes !== 1) throw new Error("choose exactly one of --dry-run, --document, or --audit");
     if (!fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) return fail(`not a directory: ${args.repo}`, 2);
-    const manifest = loadManifest(resolveManifest(args.manifest, args.repo));
+    const manifest = loadManifest(resolveManifest(args.manifest, args.repo), {
+      requireDocuments: true,
+    });
     if (args.dry_run) return preview(manifest);
     if (args.document) return materialize(args.repo, manifest, args.document);
     return audit(args.repo, manifest);

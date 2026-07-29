@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Preview, materialize, or audit the exact tree in a Docforge 3.0 manifest."""
+"""Preview, materialize, or audit the exact tree in a Docforge manifest."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import re
 import sys
 from pathlib import Path, PurePosixPath
 
+from _util import fail, load_manifest
 from provenance_frontmatter import (
     BLOB,
     FLOW_VALUES,
@@ -35,29 +36,12 @@ WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_PROVENANCE_FIELDS = PROVENANCE_FIELDS - {"graph", "sections", "generator"}
 
 
-def fail(message: str, code: int = 1) -> int:
-    print(f"error: {message}", file=sys.stderr)
-    return code
-
-
 def resolve_manifest(value: Path, repo: Path) -> Path:
     if value.is_absolute():
         return value
     direct = value.resolve()
     repo_relative = (repo / value).resolve()
     return direct if direct.exists() else repo_relative
-
-
-def load_manifest(path: Path) -> dict:
-    if not path.is_file():
-        raise ValueError(f"manifest not found: {path}")
-    manifest = json.loads(path.read_text(encoding="utf-8"))
-    if manifest.get("version") != "3.1" or not isinstance(manifest.get("documents"), list):
-        raise ValueError(
-            f"manifest must use version 3.1: {path}; "
-            "run migrate_metadata.py for 3.0 manifests"
-        )
-    return manifest
 
 
 def active_documents(manifest: dict) -> list[dict]:
@@ -441,7 +425,10 @@ def main() -> int:
     if not args.repo.is_dir():
         return fail(f"not a directory: {args.repo}", 2)
     try:
-        manifest = load_manifest(resolve_manifest(args.manifest, args.repo))
+        manifest = load_manifest(
+            resolve_manifest(args.manifest, args.repo),
+            require_documents=True,
+        )
     except (ValueError, json.JSONDecodeError) as exc:
         return fail(str(exc), 2)
     if args.dry_run:

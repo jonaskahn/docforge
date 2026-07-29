@@ -15,7 +15,10 @@ correction. Either framing beats a bare severity adjective. Order entries by the
 impose if left untouched, or by proximity to the next place someone will touch that code —
 not alphabetically, not by discovery date.
 
-Separate debt from hard constraints and from ordinary backlog work with one test each: if
-undoing the shortcut requires redesigning intent rather than spending effort, it is a
-constraint, not debt; if it is unstarted work with no shortcut currently in place, it is
-backlog, not debt. Prefer evidence-backed specificity over severity adjectives.
+Separate debt from hard constraints, limitations, and ordinary backlog with one litmus:
+could we fix this with engineering effort? Yes → tech debt (a to-do with interest). No, it
+is imposed from outside (physics, law, vendor) → constraint (nothing to pay down). It is a
+deliberate user-visible boundary → limitation. Unstarted work with no shortcut in place is
+backlog, not debt. Never cross-file them: a constraint in the debt register is noise a
+reader cannot action, and debt dressed as a limitation hides a remediable cause. Prefer
+evidence-backed specificity over severity adjectives.

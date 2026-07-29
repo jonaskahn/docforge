@@ -1,35 +1,16 @@
 #!/usr/bin/env node
 "use strict";
-/** Check Docforge 2.0 section provenance using only JSON and Node built-ins. */
+/** Check Docforge section provenance using only JSON and Node built-ins. */
 
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const { fail, loadManifest } = require("./_util.js");
 const { ensureMigrated } = require("./migrate_metadata.js");
 const pf = require("./provenance_frontmatter.js");
 
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
-const MANIFEST_VERSION = "3.1";
 
-function fail(message, code = 2) {
-  process.stderr.write(`error: ${message}\n`);
-  return code;
-}
-function loadManifest(target) {
-  if (!fs.existsSync(target) || !fs.statSync(target).isFile()) throw new Error(`manifest not found: ${target}`);
-  const manifest = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (manifest.version !== MANIFEST_VERSION) {
-    throw new Error(`manifest must use version ${MANIFEST_VERSION}: ${target}; run migrate_metadata.js for 3.0 manifests`);
-  }
-  return manifest;
-}
-function parseFrontmatter(target) {
-  if (!fs.existsSync(target) || !fs.statSync(target).isFile() || path.extname(target).toLowerCase() !== ".md") {
-    return { state: "missing", provenance: null };
-  }
-  const parsed = pf.parseFrontmatter(fs.readFileSync(target, "utf8"));
-  return { state: parsed.state, provenance: parsed.provenance };
-}
 function gitBlob(target) {
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return null;
   const content = fs.readFileSync(target);
@@ -43,7 +24,13 @@ function syncProvenance(manifest, repo) {
   for (const doc of manifest.documents) {
     if (doc.provenance_mode === "manifest") continue;
     const filePath = path.join(repo, ...doc.path.split("/"));
-    const parsed = parseFrontmatter(filePath);
+    let parsed;
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile() || path.extname(filePath).toLowerCase() !== ".md") {
+      parsed = { state: "missing", provenance: null };
+    } else {
+      const codec = pf.parseFrontmatter(fs.readFileSync(filePath, "utf8"));
+      parsed = { state: codec.state, provenance: codec.provenance };
+    }
     if (parsed.state === "obsolete" && parsed.provenance) {
       const text = fs.readFileSync(filePath, "utf8");
       const { body } = pf.splitFrontmatter(text);
@@ -197,7 +184,7 @@ function main() {
     return outcome.clean ? 0 : 1;
   } catch (error) {
     usage();
-    return fail(error.message);
+    return fail(error.message, 2);
   }
 }
 process.exit(main());

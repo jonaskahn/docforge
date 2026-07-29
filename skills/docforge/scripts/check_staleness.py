@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Docforge 2.0 section provenance using only JSON and the standard library."""
+"""Check Docforge section provenance using only JSON and the standard library."""
 
 from __future__ import annotations
 
@@ -9,43 +9,17 @@ import json
 import sys
 from pathlib import Path
 
+from _util import fail, load_manifest
 from migrate_metadata import ensure_migrated
 from provenance_frontmatter import (
     BLOB,
     migrate_v1_to_v2,
-    parse_frontmatter as codec_parse_frontmatter,
+    parse_frontmatter,
     rewrite_frontmatter,
     split_frontmatter,
 )
 
 WRITTEN = {"generated", "needs_review", "complete"}
-MANIFEST_VERSION = "3.1"
-
-
-def fail(message: str, code: int = 2) -> int:
-    print(f"error: {message}", file=sys.stderr)
-    return code
-
-
-def load_manifest(path: Path) -> dict:
-    if not path.is_file():
-        raise ValueError(f"manifest not found: {path}")
-    manifest = json.loads(path.read_text(encoding="utf-8"))
-    if manifest.get("version") != MANIFEST_VERSION:
-        raise ValueError(
-            f"manifest must use version {MANIFEST_VERSION}: {path}; "
-            "run migrate_metadata.py for 3.0 manifests"
-        )
-    return manifest
-
-
-def parse_frontmatter(path: Path) -> tuple[str, dict | None]:
-    if not path.is_file() or path.suffix.lower() != ".md":
-        return "missing", None
-    state, provenance, _ = codec_parse_frontmatter(
-        path.read_text(encoding="utf-8", errors="replace")
-    )
-    return state, provenance
 
 
 def git_blob(path: Path) -> str | None:
@@ -64,7 +38,12 @@ def sync_provenance(manifest: dict, repo: Path) -> tuple[int, list[dict], set[st
         if doc.get("provenance_mode") == "manifest":
             continue
         doc_path = repo / doc["path"]
-        state, provenance = parse_frontmatter(doc_path)
+        if not doc_path.is_file() or doc_path.suffix.lower() != ".md":
+            state, provenance = "missing", None
+        else:
+            state, provenance, _ = parse_frontmatter(
+                doc_path.read_text(encoding="utf-8", errors="replace")
+            )
         if state == "obsolete" and isinstance(provenance, dict):
             text = doc_path.read_text(encoding="utf-8", errors="replace")
             _raw, body, _ = split_frontmatter(text)
@@ -167,7 +146,7 @@ def main() -> int:
     try:
         raw = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        return fail(str(exc))
+        return fail(str(exc), 2)
     repo = Path(raw.get("project", {}).get("root") or manifest_path.parent.parent).resolve()
     try:
         if args.sync_provenance:
@@ -175,7 +154,7 @@ def main() -> int:
         else:
             manifest = load_manifest(manifest_path)
     except ValueError as exc:
-        return fail(str(exc))
+        return fail(str(exc), 2)
     synchronized = None
     sync_results: list[dict] = []
     sync_failed: set[str] = set()

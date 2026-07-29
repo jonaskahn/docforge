@@ -75,7 +75,8 @@ docs-portfolio/
 ```
 
 Actual cross-repository decisions are dynamic entries under
-`docs-portfolio/decisions/`.
+`docs-portfolio/decisions/`. Collection procedure and cross-repository writing
+specifics live in [`portfolio.md`](portfolio.md).
 
 ## Typed profiles
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create and maintain a Docforge 2.0 manifest from the canonical catalog."""
+"""Create and maintain a Docforge manifest from the canonical catalog."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
+from _util import dump_json, fail, load_manifest
 from detect_profiles import detect as detect_profiles
 from provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 
@@ -34,13 +35,9 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def dump_json(value: dict) -> str:
-    return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
-
-
-def fail(message: str, code: int = 1) -> int:
-    print(f"error: {message}", file=sys.stderr)
-    return code
+MANIFEST_HINT = (
+    "run migrate_metadata.py for 3.0, or replace unsupported older manifests"
+)
 
 
 def load_catalog() -> dict:
@@ -49,19 +46,6 @@ def load_catalog() -> dict:
 
 def manifest_path(repo: Path) -> Path:
     return repo / MANIFEST_REL
-
-
-def load_manifest(repo: Path) -> dict:
-    path = manifest_path(repo)
-    if not path.is_file():
-        raise ValueError(f"manifest not found: {path}")
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("version") != MANIFEST_VERSION:
-        raise ValueError(
-            f"manifest must use version {MANIFEST_VERSION}: {path}; "
-            "run migrate_metadata.py for 3.0, or replace unsupported older manifests"
-        )
-    return data
 
 
 def flow_is_main_priority(row: dict) -> bool:
@@ -336,7 +320,10 @@ def cmd_add(args: argparse.Namespace) -> int:
     flow_index = None
     flow_row = None
     try:
-        manifest = load_manifest(args.repo)
+        manifest = load_manifest(
+            manifest_path(args.repo),
+            unsupported_hint=MANIFEST_HINT,
+        )
         catalog = load_catalog()
         definition = dynamic_definition(catalog, args.type)
         validate_relative_path(args.path)
@@ -401,7 +388,10 @@ def find_document(manifest: dict, doc_id: str) -> dict:
 
 def cmd_set(args: argparse.Namespace) -> int:
     try:
-        manifest = load_manifest(args.repo)
+        manifest = load_manifest(
+            manifest_path(args.repo),
+            unsupported_hint=MANIFEST_HINT,
+        )
         doc = find_document(manifest, args.id)
     except ValueError as exc:
         return fail(str(exc), 2)
@@ -425,7 +415,10 @@ def cmd_set(args: argparse.Namespace) -> int:
 
 def cmd_audit(args: argparse.Namespace) -> int:
     try:
-        manifest = load_manifest(args.repo)
+        manifest = load_manifest(
+            manifest_path(args.repo),
+            unsupported_hint=MANIFEST_HINT,
+        )
         doc = find_document(manifest, args.id)
     except ValueError as exc:
         return fail(str(exc), 2)
@@ -448,7 +441,10 @@ def cmd_audit(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     try:
-        manifest = load_manifest(args.repo)
+        manifest = load_manifest(
+            manifest_path(args.repo),
+            unsupported_hint=MANIFEST_HINT,
+        )
     except ValueError as exc:
         return fail(str(exc), 2)
     project = manifest["project"]

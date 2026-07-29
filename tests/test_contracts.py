@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-free Docforge 2.0 contract fixtures."""
+"""Dependency-free Docforge contract fixtures."""
 
 from __future__ import annotations
 
