@@ -5,8 +5,9 @@ This file owns mechanical and whole-tree acceptance.
 ## Per-document mechanical checks
 
 - no `{{...}}` scaffold marker or retired TODO punt;
-- complete provenance-v1 multiline JSON at byte one when supported, with
+- complete provenance-2.0 restricted YAML at byte one when supported, with
   concrete write metadata, valid source blobs, and heading-matched sections;
+- valid, accessible illustrations that satisfy `illustration.md` when present;
 - no dead relative links;
 - no invented claims or untyped external unknowns;
 - no links into Docforge’s internal `references/` directory;

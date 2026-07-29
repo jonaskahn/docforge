@@ -14,6 +14,7 @@ registry; see references/adding-a-graph-source.md for the interface.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from graph_storage import find_graph_file
@@ -37,6 +38,26 @@ FLOW_GRAPH_CANDIDATES = [
 # Tags that mark a re-export shim (index.js barrels), not real flow logic —
 # excluded from entry-point seeds so they never crowd out true entry surfaces.
 NOISE_TAGS = frozenset({"barrel", "re-export"})
+ENTRY_NAME = re.compile(
+    r"^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|"
+    r"[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle|"
+    r"[Cc]reate|[Uu]pdate|[Dd]elete|[Ss]ave|[Gg]et|[Pp]ost|[Pp]ut|"
+    r"[Pp]atch|[Ss]end)(?:[A-Z0-9_]|$)",
+)
+CORE_ENTRY_NAME = re.compile(
+    r"^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|"
+    r"[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle)"
+    r"(?:[A-Z0-9_]|$)",
+)
+SURFACE_NAME = re.compile(
+    r"(controller|handler|processor|consumer|listener|worker|job|command|aggregator)$",
+    re.IGNORECASE,
+)
+ENTRY_PATH = re.compile(
+    r"(controllers?|handlers?|processors?|consumers?|workers?|jobs?|commands?|"
+    r"aggregators?|routes?|endpoints?)",
+    re.IGNORECASE,
+)
 
 
 def detect(repo: Path) -> dict:
@@ -55,7 +76,7 @@ def _service_layer_ids(doc: dict) -> set:
         if not isinstance(layer, dict):
             continue
         name = str(layer.get("name", "")).lower()
-        if "service" in name or "business" in name or "domain" in name:
+        if any(word in name for word in ("service", "business", "domain", "application", "presentation", "api")):
             for nid in layer.get("nodeIds", []) or []:
                 ids.add(nid)
     return ids
@@ -112,6 +133,33 @@ def entry_points(repo: Path) -> list[dict]:
             tier = 600
         elif node_type == "step":
             tier = 300
+        elif (
+            (
+                node_type == "class"
+                and SURFACE_NAME.search(str(node.get("name", "")))
+                and (
+                    nid in service_ids
+                    or ENTRY_PATH.search(str(node.get("filePath", "")))
+                )
+            )
+            or (
+                node_type == "function"
+                and (
+                    (
+                        ENTRY_PATH.search(str(node.get("filePath", "")))
+                        and ENTRY_NAME.search(str(node.get("name", "")))
+                    )
+                    or (
+                        nid in service_ids
+                        and CORE_ENTRY_NAME.search(str(node.get("name", "")))
+                    )
+                )
+            )
+        ):
+            # UA knowledge graphs may expose only file/class/function nodes and
+            # containment edges. Layer, path, and entry-like naming are then
+            # candidate signals; they are not mislabeled as native flows.
+            tier = 200
         else:
             continue
 

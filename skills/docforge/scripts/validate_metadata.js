@@ -4,17 +4,19 @@
 
 const fs = require("fs");
 const path = require("path");
+const pf = require("./provenance_frontmatter.js");
 const SKILL_ROOT = path.resolve(__dirname, "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..");
 const REQUIRED = new Set(["id", "type", "path", "group", "selection", "scaffold_template", "requires", "target_depth", "write_order", "provenance_mode", "audit_profile"]);
 const EXCEPTIONS = new Set(["agents-kernel.md", "claude-md.md", "claude-local-md.md"]);
-const PROVENANCE_FIELDS = new Set(["schema", "doc_id", "path", "generated_at", "tool_version", "tier", "target_depth", "graph", "sections"]);
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
   detect_profiles: ["--repo", "--json", "confirmed", "candidate"],
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--section", "--json", "--sync-provenance"],
+  flow_index: ["harvest", "render", "--repo", "--gitnexus-export", "--main-limit", "--output"],
+  migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
 };
 
 function readJson(target) {
@@ -26,9 +28,20 @@ function validate() {
   const catalog = readJson(path.join(metadata, "catalog.json"));
   const catalogSchema = readJson(path.join(metadata, "catalog-schema.json"));
   const manifestSchema = readJson(path.join(metadata, "manifest-schema.json"));
-  if (catalog.version !== "2.0.0") errors.push("catalog version must be 2.0.0");
-  if ((((catalogSchema.properties || {}).version || {}).const) !== "2.0.0") errors.push("catalog schema version disagrees with catalog");
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.0") errors.push("manifest schema must require version 3.0");
+  const flowIndexSchema = readJson(path.join(metadata, "flow-index-schema.json"));
+  const provenanceSchemaPath = path.join(metadata, "provenance-schema.json");
+  if (!fs.existsSync(provenanceSchemaPath)) {
+    errors.push("provenance-schema.json is missing");
+  } else {
+    const provenanceSchema = readJson(provenanceSchemaPath);
+    if ((((provenanceSchema.properties || {}).schema || {}).const) !== pf.SCHEMA_VERSION) {
+      errors.push("provenance schema must require schema 2.0");
+    }
+  }
+  if (catalog.version !== "2.1.0") errors.push("catalog version must be 2.1.0");
+  if ((((catalogSchema.properties || {}).version || {}).const) !== "2.1.0") errors.push("catalog schema version disagrees with catalog");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.1") errors.push("manifest schema must require version 3.1");
+  if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.0") errors.push("flow index schema must require version 1.0");
   const tiers = new Set(catalog.tiers.map((item) => item.id));
   const dimensions = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
   const schemaProfileRequired = new Set(((((catalogSchema.properties || {}).profiles || {}).required) || []));
@@ -103,24 +116,32 @@ function validate() {
   for (const name of fs.readdirSync(templates).filter((name) => name.endsWith(".md")).sort()) {
     if (EXCEPTIONS.has(name)) continue;
     const text = fs.readFileSync(path.join(templates, name), "utf8");
-    if (!text.startsWith("---\n{\n")) {
-      errors.push(`${name}: provenance frontmatter must be multiline JSON at byte one`);
+    if (!text.startsWith("---\ndocforge_provenance:\n")) {
+      errors.push(`${name}: provenance frontmatter must be YAML docforge_provenance at byte one`);
       continue;
     }
-    const end = text.indexOf("\n---\n", 4);
-    let frontmatter = null;
-    try { frontmatter = end >= 0 ? JSON.parse(text.slice(4, end)) : null; } catch {}
-    const provenance = frontmatter && frontmatter.docforge_provenance;
+    const parsed = pf.parseFrontmatter(text);
+    if (parsed.state !== "ok") {
+      errors.push(`${name}: provenance frontmatter state is ${parsed.state}`);
+      continue;
+    }
+    const provenance = parsed.provenance;
     if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
-      errors.push(`${name}: provenance frontmatter is not valid JSON`);
+      errors.push(`${name}: provenance frontmatter is not valid YAML`);
       continue;
     }
-    const missing = [...PROVENANCE_FIELDS].filter((key) => !(key in provenance));
+    const missing = [...pf.PROVENANCE_FIELDS].filter((key) => !(key in provenance));
     const graph = provenance.graph;
+    const generator = provenance.generator;
     if (missing.length || !graph || typeof graph !== "object" || !("provider" in graph) || !("flow" in graph)) {
-      errors.push(`${name}: provenance frontmatter is missing required v1 fields`);
+      errors.push(`${name}: provenance frontmatter is missing required fields`);
     }
-    if (provenance.schema !== "1.0" || "graph_snapshot" in provenance) errors.push(`${name}: provenance frontmatter must use schema 1.0`);
+    if (!generator || typeof generator !== "object" || !("name" in generator) || !("version" in generator)) {
+      errors.push(`${name}: provenance frontmatter is missing generator`);
+    }
+    if (provenance.schema !== pf.SCHEMA_VERSION || "graph_snapshot" in provenance) {
+      errors.push(`${name}: provenance frontmatter must use schema 2.0`);
+    }
   }
   const scripts = path.join(SKILL_ROOT, "scripts");
   const names = fs.readdirSync(scripts);
@@ -139,7 +160,7 @@ function validate() {
   const plugin = readJson(path.join(REPO_ROOT, ".claude-plugin", "plugin.json"));
   const market = readJson(path.join(REPO_ROOT, ".claude-plugin", "marketplace.json")).plugins[0];
   const versions = new Set([meta.version, plugin.version, market.version, catalog.version]);
-  if (versions.size !== 1 || !versions.has("2.0.0")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
+  if (versions.size !== 1 || !versions.has("2.1.0")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
   const skillText = fs.readFileSync(path.join(SKILL_ROOT, "SKILL.md"), "utf8");
   const skillMatch = skillText.match(/^description: (.+)$/m);
   const entryDescription = (((meta.skills || {}).entries || [{}])[0] || {}).description;

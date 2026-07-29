@@ -162,9 +162,9 @@ function main() {
         console.log(`  ${String(name || "(unnamed)")}  [${steps} steps]`);
       }
       if (flows.length > args.limit) console.log(`  ... ${flows.length - args.limit} more (raise --limit)`);
-      console.log("\n  These are the flow documents to build under docs/flows/. Process labels");
-      console.log("  are code-derived (Entry → Terminal); keep them faithful, rename to business");
-      console.log("  language only where a node summary supports it (references/flow-derivation.md).\n");
+      console.log("\n  These are code-derived Entry → Terminal candidates, not one document each.");
+      console.log("  Group them by entryPointId in the flow index, then document only ranked main");
+      console.log("  entries whose behavior is confirmed (references/flow-derivation.md).\n");
     }
   }
 

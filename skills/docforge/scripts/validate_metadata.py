@@ -9,6 +9,8 @@ import re
 import sys
 from pathlib import Path
 
+from provenance_frontmatter import PROVENANCE_FIELDS, SCHEMA_VERSION, parse_frontmatter
+
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent
 REQUIRED_DOC_FIELDS = {
@@ -16,16 +18,14 @@ REQUIRED_DOC_FIELDS = {
     "requires", "target_depth", "write_order", "provenance_mode", "audit_profile",
 }
 MARKDOWN_EXCEPTIONS = {"agents-kernel.md", "claude-md.md", "claude-local-md.md"}
-PROVENANCE_FIELDS = {
-    "schema", "doc_id", "path", "generated_at", "tool_version", "tier",
-    "target_depth", "graph", "sections",
-}
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
     "detect_profiles": ["--repo", "--json", "confirmed", "candidate"],
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
     "check_staleness": ["--manifest", "--section", "--json", "--sync-provenance"],
+    "flow_index": ["harvest", "render", "--repo", "--gitnexus-export", "--main-limit", "--output"],
+    "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
 }
 
 
@@ -39,12 +39,22 @@ def validate() -> list[str]:
     catalog = read_json(metadata / "catalog.json")
     catalog_schema = read_json(metadata / "catalog-schema.json")
     manifest_schema = read_json(metadata / "manifest-schema.json")
-    if catalog.get("version") != "2.0.0":
-        errors.append("catalog version must be 2.0.0")
-    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.0.0":
+    flow_index_schema = read_json(metadata / "flow-index-schema.json")
+    provenance_schema_path = metadata / "provenance-schema.json"
+    if not provenance_schema_path.is_file():
+        errors.append("provenance-schema.json is missing")
+    else:
+        provenance_schema = read_json(provenance_schema_path)
+        if provenance_schema.get("properties", {}).get("schema", {}).get("const") != SCHEMA_VERSION:
+            errors.append("provenance schema must require schema 2.0")
+    if catalog.get("version") != "2.1.0":
+        errors.append("catalog version must be 2.1.0")
+    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.1.0":
         errors.append("catalog schema version disagrees with catalog")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.0":
-        errors.append("manifest schema must require version 3.0")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.1":
+        errors.append("manifest schema must require version 3.1")
+    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.0":
+        errors.append("flow index schema must require version 1.0")
     tiers = {item["id"] for item in catalog.get("tiers", [])}
     dimensions = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
     profiles = catalog.get("profiles", {})
@@ -161,24 +171,25 @@ def validate() -> list[str]:
         if template.name in MARKDOWN_EXCEPTIONS:
             continue
         text = template.read_text(encoding="utf-8")
-        if not text.startswith("---\n{\n"):
-            errors.append(f"{template.name}: provenance frontmatter must be multiline JSON at byte one")
+        if not text.startswith("---\ndocforge_provenance:\n"):
+            errors.append(f"{template.name}: provenance frontmatter must be YAML docforge_provenance at byte one")
             continue
-        end = text.find("\n---\n", 4)
-        try:
-            frontmatter = json.loads(text[4:end]) if end >= 0 else None
-        except json.JSONDecodeError:
-            frontmatter = None
-        provenance = frontmatter.get("docforge_provenance") if isinstance(frontmatter, dict) else None
+        state, provenance, _ = parse_frontmatter(text)
+        if state != "ok":
+            errors.append(f"{template.name}: provenance frontmatter state is {state}")
+            continue
         if not isinstance(provenance, dict):
-            errors.append(f"{template.name}: provenance frontmatter is not valid JSON")
+            errors.append(f"{template.name}: provenance frontmatter is not valid YAML")
             continue
         missing = sorted(PROVENANCE_FIELDS - set(provenance))
         graph = provenance.get("graph")
+        generator = provenance.get("generator")
         if missing or not isinstance(graph, dict) or not {"provider", "flow"} <= set(graph):
-            errors.append(f"{template.name}: provenance frontmatter is missing required v1 fields")
-        if provenance.get("schema") != "1.0" or "graph_snapshot" in provenance:
-            errors.append(f"{template.name}: provenance frontmatter must use schema 1.0")
+            errors.append(f"{template.name}: provenance frontmatter is missing required fields")
+        if not isinstance(generator, dict) or not {"name", "version"} <= set(generator):
+            errors.append(f"{template.name}: provenance frontmatter is missing generator")
+        if provenance.get("schema") != SCHEMA_VERSION or "graph_snapshot" in provenance:
+            errors.append(f"{template.name}: provenance frontmatter must use schema 2.0")
     scripts = SKILL_ROOT / "scripts"
     py_names = {path.stem for path in scripts.glob("*.py")}
     js_names = {path.stem for path in scripts.glob("*.js")}
@@ -196,7 +207,7 @@ def validate() -> list[str]:
     plugin = read_json(REPO_ROOT / ".claude-plugin" / "plugin.json")
     market = read_json(REPO_ROOT / ".claude-plugin" / "marketplace.json")["plugins"][0]
     versions = {meta.get("version"), plugin.get("version"), market.get("version"), catalog.get("version")}
-    if versions != {"2.0.0"}:
+    if versions != {"2.1.0"}:
         errors.append(f"release versions disagree: {sorted(str(item) for item in versions)}")
     skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     skill_match = re.search(r"^description: (.+)$", skill_text, re.MULTILINE)

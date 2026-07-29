@@ -1,20 +1,18 @@
 ---
-{
-  "docforge_provenance": {
-    "schema": "1.0",
-    "doc_id": "<DOC_ID>",
-    "path": "<DOCUMENT_PATH>",
-    "generated_at": "<GENERATED_AT>",
-    "tool_version": "2.0.0",
-    "tier": "<TIER>",
-    "target_depth": "<TARGET_DEPTH>",
-    "graph": {
-      "provider": "<GRAPH_PROVIDER>",
-      "flow": "<FLOW_CAPABILITY>"
-    },
-    "sections": []
-  }
-}
+docforge_provenance:
+  schema: "2.0"
+  doc_id: "<DOC_ID>"
+  path: "<DOCUMENT_PATH>"
+  generated_at: "<GENERATED_AT>"
+  generator:
+    name: "docforge"
+    version: "2.1.0"
+  tier: "<TIER>"
+  target_depth: "<TARGET_DEPTH>"
+  graph:
+    provider: "<GRAPH_PROVIDER>"
+    flow: "<FLOW_CAPABILITY>"
+  sections: []
 ---
 # Low-level architecture
 
@@ -23,6 +21,17 @@ _Last reviewed: {{YYYY-MM-DD}}_
 Component-level decomposition. Zooms into the building blocks named in
 [high-level.md](high-level.md). Describes responsibilities and relationships in prose;
 never pastes code or anchors to a private symbol a rename would break.
+
+## Layout
+
+```text
+{{repository}}/
+├── {{source directory}}/    {{one-line responsibility}}
+├── {{service directory}}/   {{one-line responsibility}}
+└── {{test directory}}/      {{one-line responsibility}}
+```
+
+{{One sentence: what the grouping reveals about ownership or runtime boundaries.}}
 
 ## Components
 

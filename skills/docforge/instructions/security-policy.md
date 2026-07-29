@@ -1,5 +1,10 @@
 # Security-policy writing craft
 
+**Preferred illustration:** Follow
+[`../references/illustration.md`](../references/illustration.md); disclosure
+policy is procedural prose, not a diagram, unless an evidenced lifecycle needs
+three or more states.
+
 Write disclosure instructions as a calm, unambiguous procedure — the human-readable
 companion to a `security.txt` (RFC 9116): the same facts a machine-readable Contact and
 Policy field point to, in prose a reporter can act on without guessing.

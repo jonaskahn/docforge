@@ -1,5 +1,9 @@
 # Product-overview writing craft
 
+**Preferred illustration:** Follow
+[`../references/illustration.md`](../references/illustration.md); this
+orientation page normally uses prose, with a table only for enumerable facts.
+
 Shape the page like a compressed PR/FAQ (Amazon's "Working Backwards" frame), not a feature
 list: a press-release-style opening, then FAQ-depth answers. Order matters:
 

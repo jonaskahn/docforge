@@ -1,20 +1,18 @@
 ---
-{
-  "docforge_provenance": {
-    "schema": "1.0",
-    "doc_id": "<DOC_ID>",
-    "path": "<DOCUMENT_PATH>",
-    "generated_at": "<GENERATED_AT>",
-    "tool_version": "2.0.0",
-    "tier": "<TIER>",
-    "target_depth": "<TARGET_DEPTH>",
-    "graph": {
-      "provider": "<GRAPH_PROVIDER>",
-      "flow": "<FLOW_CAPABILITY>"
-    },
-    "sections": []
-  }
-}
+docforge_provenance:
+  schema: "2.0"
+  doc_id: "<DOC_ID>"
+  path: "<DOCUMENT_PATH>"
+  generated_at: "<GENERATED_AT>"
+  generator:
+    name: "docforge"
+    version: "2.1.0"
+  tier: "<TIER>"
+  target_depth: "<TARGET_DEPTH>"
+  graph:
+    provider: "<GRAPH_PROVIDER>"
+    flow: "<FLOW_CAPABILITY>"
+  sections: []
 ---
 # High-level architecture
 
@@ -31,10 +29,12 @@ neighbours and the contracts between them, not the internals.}}
 
 ```mermaid
 flowchart LR
-  U[{{actor / upstream}}] --> S[{{this system}}]
-  S --> D[{{datastore / downstream}}]
-  S --> X[{{external service}}]
+  Upstream["{{actor / upstream}}"] --> System["{{this system}}"]
+  System --> Datastore["{{datastore / downstream}}"]
+  System --> External["{{external service}}"]
 ```
+
+{{One sentence: what crosses each boundary and why the relationship matters.}}
 
 ## Building blocks
 

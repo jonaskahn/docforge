@@ -1,6 +1,6 @@
 {
   "$schema": "catalog-schema.json",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "tiers": [
     {"id": "spine", "order": 10},
     {"id": "diligence", "order": 20},
@@ -183,7 +183,7 @@
     {"id":"tech_debt","type":"tech-debt-register","path":"docs/architecture/tech-debt.md","group":"architecture","selection":{"mode":"static","min_tier":"diligence","selectors":{},"condition":null},"scaffold_template":"tech-debt.md","instruction_file":"tech-debt-register.md","requires":["code_graph","git_history"],"target_depth":"deep-dive","write_order":14,"provenance_mode":"sections","audit_profile":"risk"},
     {"id":"concepts_index","type":"folder-index","path":"docs/architecture/concepts/README.md","group":"architecture","selection":{"mode":"static","min_tier":"diligence","selectors":{},"condition":null},"scaffold_template":"generic.md","instruction_file":null,"requires":["code_graph"],"target_depth":"orientation","write_order":15,"provenance_mode":"sections","audit_profile":"router"},
     {"id":"decisions_index","type":"decision-index","path":"docs/architecture/decisions/README.md","group":"records","selection":{"mode":"static","min_tier":"diligence","selectors":{},"condition":null},"scaffold_template":"generic.md","instruction_file":"decision-records.md","requires":["git_history"],"target_depth":"orientation","write_order":80,"provenance_mode":"sections","audit_profile":"router"},
-    {"id":"flows_index","type":"folder-index","path":"docs/flows/README.md","group":"flows","selection":{"mode":"static","min_tier":"diligence","selectors":{},"condition":null},"scaffold_template":"generic.md","instruction_file":null,"requires":[],"target_depth":"orientation","write_order":21,"provenance_mode":"sections","audit_profile":"router"},
+    {"id":"flows_index","type":"flow-index","path":"docs/flows/README.md","group":"flows","selection":{"mode":"static","min_tier":"spine","selectors":{},"condition":null},"scaffold_template":"flow-index.md","instruction_file":null,"requires":["code_graph"],"target_depth":"orientation","write_order":21,"provenance_mode":"sections","audit_profile":"router"},
     {"id":"conventions","type":"conventions","path":"docs/engineering/conventions.md","group":"engineering","selection":{"mode":"static","min_tier":"diligence","selectors":{},"condition":"conventions_source"},"scaffold_template":"generic.md","instruction_file":null,"requires":["manifests"],"target_depth":"deep-dive","write_order":53,"provenance_mode":"sections","audit_profile":"standard"},
     {"id":"release_guide","type":"release-guide","path":"docs/engineering/release.md","group":"engineering","selection":{"mode":"static","min_tier":"diligence","selectors":{},"condition":null},"scaffold_template":"generic.md","instruction_file":null,"requires":["manifests","git_history"],"target_depth":"deep-dive","write_order":54,"provenance_mode":"sections","audit_profile":"procedure"},
     {"id":"operations_index","type":"folder-index","path":"docs/operations/README.md","group":"operations","selection":{"mode":"static","min_tier":"diligence","selectors":{},"condition":null},"scaffold_template":"generic.md","instruction_file":null,"requires":[],"target_depth":"orientation","write_order":70,"provenance_mode":"sections","audit_profile":"router"},

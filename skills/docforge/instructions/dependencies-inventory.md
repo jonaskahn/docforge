@@ -1,5 +1,10 @@
 # Dependency-inventory writing craft
 
+**Preferred illustration:** Follow
+[`../references/illustration.md`](../references/illustration.md); the compact
+risk table is primary, with a flowchart only for an evidenced dependency map
+whose relationships matter.
+
 Lead with a compact risk-oriented table, ordered by criticality — the dependency whose
 failure or removal would hurt most goes first, not the alphabetically first package. Give
 short integration notes only for dependencies whose failure or replacement changes system

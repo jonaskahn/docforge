@@ -11,7 +11,7 @@ only:
 - its catalog content contract and audit profile;
 - target depth;
 - applicable quality checks;
-- sources cited by validated provenance v1, after the mechanical gate has
+- sources cited by validated provenance 2.0, after the mechanical gate has
   confirmed concrete metadata, source blobs, and heading-matched sections.
 
 Do not include writer reasoning or draft conversation. If fresh subagents are

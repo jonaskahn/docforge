@@ -58,7 +58,7 @@ const SUMMARY_KEYS = ["summary", "description", "explanation", "doc"];
 const SRC_KEYS = ["source", "from", "src", "start"];
 const DST_KEYS = ["target", "to", "dst", "end"];
 const EDGEKIND_KEYS = ["type", "kind", "relation", "label"];
-const FLOW_EDGE_HINTS = ["call", "import", "contain", "handle", "route", "step", "entry"];
+const FLOW_EDGE_HINTS = ["call", "import", "handle", "route", "step", "entry"];
 
 function firstPresent(d, keys) {
   for (const k of keys) {

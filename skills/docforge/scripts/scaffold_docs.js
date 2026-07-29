@@ -4,6 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const pf = require("./provenance_frontmatter.js");
 const TEMPLATES = path.resolve(__dirname, "..", "assets", "templates");
 const PLACEHOLDER = /\{\{[^}]+\}\}|TODO\([^)]*\)/g;
 const TOKEN = /<[A-Z][A-Z0-9_]{2,}>/g;
@@ -11,9 +12,9 @@ const LINK = /\[[^\]]*\]\(([^)]+)\)/g;
 const FORGE = /\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|github actions|gitlab ci|codeowners)\b/gi;
 const MARKDOWN_EXCEPTIONS = new Set(["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"]);
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
-const PROVENANCE_FIELDS = new Set(["schema", "doc_id", "path", "generated_at", "tool_version", "tier", "target_depth", "graph", "sections"]);
-const BLOB = /^[0-9a-f]{40}$/;
-const SCAFFOLD_TOKEN = /^<[A-Z][A-Z0-9_]{2,}>$/;
+const SCALAR_PROVENANCE_FIELDS = new Set(
+  [...pf.PROVENANCE_FIELDS].filter((key) => !["graph", "sections", "generator"].includes(key)),
+);
 
 function fail(message, code = 1) {
   process.stderr.write(`error: ${message}\n`);
@@ -28,7 +29,9 @@ function resolveManifest(value, repo) {
 function loadManifest(target) {
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) throw new Error(`manifest not found: ${target}`);
   const manifest = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (manifest.version !== "3.0" || !Array.isArray(manifest.documents)) throw new Error(`manifest must use version 3.0: ${target}; manifest v2 is unsupported in Docforge 2.0`);
+  if (manifest.version !== "3.1" || !Array.isArray(manifest.documents)) {
+    throw new Error(`manifest must use version 3.1: ${target}; run migrate_metadata.js for 3.0 manifests`);
+  }
   return manifest;
 }
 function activeDocuments(manifest) {
@@ -61,23 +64,11 @@ function titleFor(doc) {
   return path.posix.basename(doc.path, path.posix.extname(doc.path)).replace(/[-_]/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 function scaffoldProvenance(doc, manifest) {
-  const value = {
-    docforge_provenance: {
-      schema: "1.0",
-      doc_id: doc.id,
-      path: doc.path,
-      generated_at: "<GENERATED_AT>",
-      tool_version: "2.0.0",
-      tier: (manifest.project || {}).tier || "<TIER>",
-      target_depth: doc.target_depth,
-      graph: {
-        provider: "<GRAPH_PROVIDER>",
-        flow: "<FLOW_CAPABILITY>",
-      },
-      sections: [],
-    },
-  };
-  return `---\n${JSON.stringify(value, null, 2)}\n---\n`;
+  const provenance = pf.scaffoldProvenance(doc.id, doc.path, {
+    tier: (manifest.project || {}).tier || "<TIER>",
+    target_depth: doc.target_depth,
+  });
+  return pf.emitYaml(provenance);
 }
 function isDirectChild(directory, candidate) {
   const relative = path.posix.relative(directory, candidate.path);
@@ -110,7 +101,7 @@ function scaffoldBody(doc, manifest) {
   const template = path.join(TEMPLATES, doc.scaffold_template);
   if (!fs.existsSync(template)) throw new Error(`template not found for ${doc.id}: ${doc.scaffold_template}`);
   let body = fs.readFileSync(template, "utf8");
-  const parsed = parseFrontmatter(body);
+  const parsed = pf.parseFrontmatter(body);
   if (parsed.state !== "missing" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
     body = scaffoldProvenance(doc, manifest) + body.slice(parsed.end);
   }
@@ -175,29 +166,13 @@ function materialize(repo, manifest, docId) {
     return fail(error.message, 2);
   }
 }
-function parseFrontmatter(text) {
-  if (!text.startsWith("---\n")) return { state: "missing", value: null, end: 0 };
-  const end = text.indexOf("\n---\n", 4);
-  if (end < 0) return { state: "missing", value: null, end: 0 };
-  try {
-    const value = JSON.parse(text.slice(4, end));
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? { state: "ok", value, end: end + 5 }
-      : { state: "unparseable", value: null, end: end + 5 };
-  } catch {
-    return { state: "unparseable", value: null, end: end + 5 };
-  }
-}
-function headingAnchor(value) {
-  return value.trim().toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, "").replace(/[\s-]+/g, "-").replace(/^-|-$/g, "");
-}
 function provenanceDefects(repo, doc, text, tier) {
   const result = {
     "missing provenance": [], "unparseable provenance": [],
-    "legacy provenance": [], "empty provenance": [], "invalid blob": [],
-    "unknown source": [], "unknown section": [],
+    "legacy provenance": [], "obsolete schema": [], "empty provenance": [],
+    "invalid blob": [], "unknown source": [], "unknown section": [],
   };
-  const parsed = parseFrontmatter(text);
+  const parsed = pf.parseFrontmatter(text);
   if (parsed.state === "missing") {
     result["missing provenance"].push(doc.path);
     return result;
@@ -206,19 +181,27 @@ function provenanceDefects(repo, doc, text, tier) {
     result["unparseable provenance"].push(doc.path);
     return result;
   }
-  const provenance = parsed.value.docforge_provenance;
+  if (parsed.state === "obsolete") {
+    result["obsolete schema"].push(`${doc.path}: run migrate_metadata.js`);
+    return result;
+  }
+  if (parsed.state === "legacy") {
+    result["legacy provenance"].push(doc.path);
+    return result;
+  }
+  const provenance = parsed.provenance;
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
     result["missing provenance"].push(doc.path);
     return result;
   }
-  if (!("schema" in provenance)) {
-    result["legacy provenance"].push(doc.path);
-    return result;
-  }
-  const missing = [...PROVENANCE_FIELDS].filter((key) => !(key in provenance)).sort();
+  const missing = [...pf.PROVENANCE_FIELDS].filter((key) => !(key in provenance)).sort();
   const graph = provenance.graph;
   if (!graph || typeof graph !== "object" || !("provider" in graph) || !("flow" in graph)) missing.push("graph.provider/flow");
-  if (missing.length || provenance.schema !== "1.0" || "graph_snapshot" in provenance) {
+  const generator = provenance.generator;
+  if (!generator || typeof generator !== "object" || !("name" in generator) || !("version" in generator)) {
+    missing.push("generator.name/version");
+  }
+  if (missing.length || provenance.schema !== "2.0" || "graph_snapshot" in provenance) {
     const detail = missing.length ? missing.join(", ") : "invalid schema or obsolete graph_snapshot";
     result["missing provenance"].push(`${doc.path}: ${detail}`);
   }
@@ -228,11 +211,22 @@ function provenanceDefects(repo, doc, text, tier) {
     return result;
   }
   if (WRITTEN.has(doc.status)) {
-    const concrete = [...PROVENANCE_FIELDS].filter((key) => !["graph", "sections"].includes(key))
-      .filter((key) => typeof provenance[key] !== "string" || !provenance[key] || SCAFFOLD_TOKEN.test(provenance[key]));
+    const concrete = [...SCALAR_PROVENANCE_FIELDS]
+      .filter((key) => typeof provenance[key] !== "string" || !provenance[key] || pf.SCAFFOLD_TOKEN.test(provenance[key]));
+    if (generator && typeof generator === "object") {
+      for (const key of ["name", "version"]) {
+        if (typeof generator[key] !== "string" || !generator[key] || pf.SCAFFOLD_TOKEN.test(generator[key])) {
+          concrete.push(`generator.${key}`);
+        }
+      }
+    } else if (!concrete.includes("generator")) {
+      concrete.push("generator");
+    }
     if (graph && typeof graph === "object") {
       for (const key of ["provider", "flow"]) {
-        if (typeof graph[key] !== "string" || !graph[key] || SCAFFOLD_TOKEN.test(graph[key])) concrete.push(`graph.${key}`);
+        if (typeof graph[key] !== "string" || !graph[key] || pf.SCAFFOLD_TOKEN.test(graph[key])) {
+          concrete.push(`graph.${key}`);
+        }
       }
     }
     if (concrete.length) result["missing provenance"].push(`${doc.path}: non-concrete ${concrete.sort().join(", ")}`);
@@ -241,8 +235,8 @@ function provenanceDefects(repo, doc, text, tier) {
     for (const [key, value] of Object.entries(expected)) {
       if (value !== undefined && provenance[key] !== value) invalidFields.push(key);
     }
-    if (graph && !["native", "derived", "none"].includes(graph.flow)) invalidFields.push("graph.flow");
-    if ("git_commit" in provenance && (typeof provenance.git_commit !== "string" || !BLOB.test(provenance.git_commit))) invalidFields.push("git_commit");
+    if (graph && !pf.FLOW_VALUES.has(graph.flow)) invalidFields.push("graph.flow");
+    if ("git_commit" in provenance && (typeof provenance.git_commit !== "string" || !pf.BLOB.test(provenance.git_commit))) invalidFields.push("git_commit");
     if (invalidFields.length) result["missing provenance"].push(`${doc.path}: invalid ${invalidFields.sort().join(", ")}`);
     if (!sections.length) result["empty provenance"].push(doc.path);
   }
@@ -256,20 +250,23 @@ function provenanceDefects(repo, doc, text, tier) {
     if (!sectionId || !anchors.has(sectionId)) result["unknown section"].push(`${doc.path}: ${sectionId || "<missing>"}`);
     for (const source of (section && Array.isArray(section.sources)) ? section.sources : []) {
       const sourcePath = source && typeof source.path === "string" ? source.path : "";
-      if (!source || typeof source.git_blob !== "string" || !BLOB.test(source.git_blob)) {
+      if (!source || typeof source.git_blob !== "string" || !pf.BLOB.test(source.git_blob)) {
         result["invalid blob"].push(`${doc.path}: ${sourcePath || "<missing>"}`);
       }
       const target = path.join(repo, ...sourcePath.split("/"));
       if (!sourcePath || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
         result["unknown source"].push(`${doc.path}: ${sourcePath || "<missing>"}`);
       }
-      if (!source || !["code", "config", "manifest", "doc", "test", "history"].includes(source.role)) {
+      if (!source || !pf.SOURCE_ROLES.has(source.role)) {
         result["missing provenance"].push(`${doc.path}: invalid source role`);
       }
     }
     if (!section || !Array.isArray(section.sources) || !Array.isArray(section.unresolved)) result["missing provenance"].push(`${doc.path}: invalid section shape`);
   }
   return result;
+}
+function headingAnchor(value) {
+  return value.trim().toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, "").replace(/[\s-]+/g, "-").replace(/^-|-$/g, "");
 }
 function audit(repo, manifest) {
   const findings = {
@@ -278,6 +275,7 @@ function audit(repo, manifest) {
     "missing provenance": [],
     "unparseable provenance": [],
     "legacy provenance": [],
+    "obsolete schema": [],
     "empty provenance": [],
     "invalid blob": [],
     "unknown source": [],

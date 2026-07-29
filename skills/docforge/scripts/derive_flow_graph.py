@@ -57,7 +57,7 @@ SRC_KEYS = ["source", "from", "src", "start"]
 DST_KEYS = ["target", "to", "dst", "end"]
 EDGEKIND_KEYS = ["type", "kind", "relation", "label"]
 # Edge kinds that carry flow/structure signal for the analyzer.
-FLOW_EDGE_HINTS = ("call", "import", "contain", "handle", "route", "step", "entry")
+FLOW_EDGE_HINTS = ("call", "import", "handle", "route", "step", "entry")
 
 
 def first_present(node: dict, keys: list[str]):

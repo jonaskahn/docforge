@@ -70,8 +70,10 @@ read-only inventory, not a replacement for GitNexus’s richer MCP responses.
 
 - Architecture: query communities, high-connectivity symbols, and
   representative call paths.
-- Dynamic flows: enumerate actual Process nodes, rank main/cross-community
-  processes, then add one manifest entry per real flow.
+- Flow index: enumerate Routes and Processes, group Processes by
+  `entryPointId`, preserve terminal/community reach, and rank one candidate per
+  entry. Add manifest documents only for main rows; a Process node is not
+  automatically a business flow.
 - BA views: translate process steps into business language and confirm every
   decision rule in source.
 - PO views: connect shipped entry points and releases to features; never derive

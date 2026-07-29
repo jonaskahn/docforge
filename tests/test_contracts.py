@@ -8,11 +8,21 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "skills" / "docforge" / "scripts"))
+from provenance_frontmatter import (
+    SCHEMA_VERSION,
+    emit_yaml,
+    migrate_v1_to_v2,
+    parse_frontmatter,
+    scaffold_provenance,
+    wrap_document,
+)
 SCRIPTS = ROOT / "skills" / "docforge" / "scripts"
 PORTFOLIO_PATHS = {
     "docs-portfolio/README.md",
@@ -33,6 +43,31 @@ def run(runtime: str, script: str, *args: str, cwd: Path | None = None) -> subpr
 
 def load_manifest(repo: Path) -> dict:
     return json.loads((repo / ".docforge" / "manifest.json").read_text(encoding="utf-8"))
+
+
+def write_flow_index(repo: Path, *, status: str = "main") -> None:
+    target = repo / ".docforge" / "flow-index.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps({
+        "version": "1.0",
+        "generated_at": "2026-07-29T00:00:00+00:00",
+        "project": "fixture",
+        "sources": ["fixture"],
+        "providers": ["gitnexus"],
+        "summary": {"total": 1, "main": int(status == "main"), "deferred": int(status == "deferred"), "confirmed": 0},
+        "flows": [{
+            "id": "flow-checkout",
+            "name": "Checkout",
+            "slug": "checkout",
+            "entry_ref": {"kind": "http", "signature": "POST /checkout", "filePath": "src/checkout.py", "symbol": "checkout"},
+            "area": "Checkout",
+            "evidence": [{"provider": "gitnexus", "artifact": "fixture", "nodeId": "checkout"}],
+            "confidence": "candidate",
+            "reach": {"steps": 3, "boundaries": 1, "churn": 0},
+            "rank": 515,
+            "status": status,
+        }],
+    }, indent=2) + "\n", encoding="utf-8")
 
 
 def initialize(
@@ -75,11 +110,11 @@ def provenance(
     role: str = "code",
 ) -> dict:
     return {
-        "schema": "1.0",
+        "schema": "2.0",
         "doc_id": doc_id,
         "path": path,
         "generated_at": "2026-07-27T09:12:44Z",
-        "tool_version": "2.0.0",
+        "generator": {"name": "docforge", "version": "2.1.0"},
         "tier": tier,
         "target_depth": target_depth,
         "graph": {"provider": "gitnexus", "flow": "native"},
@@ -92,7 +127,7 @@ def provenance(
 
 
 def markdown_with_provenance(value: dict, body: str) -> str:
-    return "---\n" + json.dumps({"docforge_provenance": value}, indent=2) + "\n---\n" + body
+    return emit_yaml(value) + (body if body.endswith("\n") or not body else body + "\n")
 
 
 def normalized(text: str, roots: list[Path]) -> str:
@@ -170,7 +205,7 @@ class CatalogSelectionTests(unittest.TestCase):
                 result = initialize("py", repo, tier)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.0")
+                self.assertEqual(manifest["version"], "3.1")
                 self.assertEqual(manifest["project"]["tier"], tier)
                 self.assertEqual(
                     manifest["project"]["profiles"]["audiences"],
@@ -298,6 +333,7 @@ class CatalogSelectionTests(unittest.TestCase):
                 ],
             )
 
+            write_flow_index(repo)
             result = run("py", "manage_manifest", "add", "--repo", str(repo), "--type", "flow",
                          "--id", "flow-checkout", "--path", "docs/flows/checkout.md")
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -323,6 +359,133 @@ class CatalogSelectionTests(unittest.TestCase):
             self.assertNotIn("flow_graph", docs["po_features"]["requires"])
             self.assertNotIn("flow_graph", docs["po_metrics"]["requires"])
             self.assertNotIn("flow_graph", docs["po_release_notes"]["requires"])
+
+    def test_flow_index_groups_processes_and_matches_runtime_peers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            export = root / "gitnexus-export.json"
+            processes = []
+            for entry in range(10):
+                for terminal in range(3):
+                    processes.append({
+                        "id": f"proc-{entry}-{terminal}",
+                        "heuristicLabel": f"Entry{entry} -> Terminal{terminal}",
+                        "processType": "cross_community" if terminal == 0 else "intra_community",
+                        "stepCount": terminal + 2,
+                        "communities": ["comm-a", "comm-b"],
+                        "entryPointId": f"Function:src/handlers/Entry{entry}.py:Entry{entry}",
+                        "terminalId": f"Function:src/services/Terminal.py:Terminal{terminal}",
+                    })
+            export.write_text(json.dumps({
+                "routes": [],
+                "processes": processes,
+                "communities": [
+                    {"id": "comm-a", "heuristicLabel": "API"},
+                    {"id": "comm-b", "heuristicLabel": "Services"},
+                ],
+            }), encoding="utf-8")
+
+            indexes = []
+            for runtime in ("py", "js"):
+                repo = root / runtime
+                repo.mkdir()
+                result = run(
+                    runtime, "flow_index", "harvest",
+                    "--repo", str(repo),
+                    "--gitnexus-export", str(export),
+                    "--main-limit", "3",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                index = json.loads((repo / ".docforge/flow-index.json").read_text())
+                self.assertEqual(index["summary"]["total"], 10)
+                self.assertEqual(index["summary"]["main"], 3)
+                self.assertEqual(index["summary"]["deferred"], 7)
+                self.assertTrue(all(len(row["evidence"][0]["terminalIds"]) == 3 for row in index["flows"]))
+                render = run(runtime, "flow_index", "render", "--repo", str(repo))
+                self.assertEqual(render.returncode, 0, render.stderr)
+                matrix = (repo / "docs/flows/README.md").read_text()
+                self.assertIn("| deferred |", matrix)
+                indexes.append(index["flows"])
+            self.assertEqual(indexes[0], indexes[1])
+
+            easy_export = root / "easy-export.json"
+            easy_export.write_text(json.dumps({
+                "routes": [],
+                "processes": [processes[0]],
+                "communities": [],
+            }), encoding="utf-8")
+            easy_repo = root / "easy"
+            easy_repo.mkdir()
+            result = run("py", "flow_index", "harvest", "--repo", str(easy_repo),
+                         "--gitnexus-export", str(easy_export))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((easy_repo / ".docforge/flow-index.json").read_text())["summary"]["total"],
+                1,
+            )
+
+    def test_flow_index_augments_partial_ua_domain_graph_across_runtimes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            domain = {
+                "nodes": [
+                    {"id": "domain:orders", "type": "domain", "name": "Orders"},
+                    {"id": "flow:create-order", "type": "flow", "name": "Create Order",
+                     "domainMeta": {"entryPoint": "POST /orders", "entryType": "http"}},
+                    {"id": "step:create-order:receive", "type": "step", "name": "Receive",
+                     "filePath": "src/Controllers/OrderController.cs"},
+                ],
+                "edges": [
+                    {"source": "domain:orders", "target": "flow:create-order", "type": "contains_flow"},
+                    {"source": "flow:create-order", "target": "step:create-order:receive", "type": "flow_step"},
+                ],
+            }
+            knowledge = {
+                "nodes": [
+                    {"id": "class:controller", "type": "class", "name": "OrderController",
+                     "filePath": "src/Controllers/OrderController.cs"},
+                    {"id": "function:get", "type": "function", "name": "GetOrders",
+                     "filePath": "src/Controllers/OrderController.cs"},
+                    {"id": "function:helper", "type": "function", "name": "formatDate",
+                     "filePath": "src/Controllers/OrderController.cs"},
+                ],
+                "edges": [
+                    {"source": "class:controller", "target": "function:get", "type": "contains"},
+                    {"source": "class:controller", "target": "function:helper", "type": "contains"},
+                ],
+                "layers": [{"name": "Presentation / API", "nodeIds": ["class:controller", "function:get", "function:helper"]}],
+            }
+            outputs = []
+            for runtime in ("py", "js"):
+                repo = root / runtime
+                ua = repo / ".ua"
+                ua.mkdir(parents=True)
+                (ua / "domain-graph.json").write_text(json.dumps(domain), encoding="utf-8")
+                (ua / "knowledge-graph.json").write_text(json.dumps(knowledge), encoding="utf-8")
+                result = run(runtime, "flow_index", "harvest", "--repo", str(repo), "--main-limit", "2")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                index = json.loads((repo / ".docforge/flow-index.json").read_text())
+                self.assertEqual(index["summary"]["confirmed"], 1)
+                self.assertEqual({row["name"] for row in index["flows"]},
+                                 {"Create Order", "OrderController", "GetOrders"})
+                self.assertEqual(index["flows"][0]["name"], "Create Order")
+                outputs.append(index["flows"])
+            for rows in outputs:
+                for row in rows:
+                    for evidence in row["evidence"]:
+                        evidence["artifact"] = Path(evidence["artifact"]).name
+            self.assertEqual(outputs[0], outputs[1])
+
+    def test_manage_manifest_only_adds_main_indexed_flows(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(initialize("py", repo, "diligence").returncode, 0)
+            write_flow_index(repo, status="deferred")
+            rejected = run("py", "manage_manifest", "add", "--repo", str(repo),
+                           "--type", "flow", "--id", "flow-checkout",
+                           "--path", "docs/flows/checkout.md")
+            self.assertEqual(rejected.returncode, 2)
+            self.assertIn("only main flows become documents", rejected.stderr)
 
     def test_audience_profile_paths_are_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -585,6 +748,7 @@ class PairedRuntimeTests(unittest.TestCase):
             self.assertEqual(listed, {doc["path"] for doc in py_manifest["documents"]})
 
             for runtime, repo in (("py", py_repo), ("js", js_repo)):
+                write_flow_index(repo)
                 add = run(runtime, "manage_manifest", "add", "--repo", str(repo), "--type", "flow",
                           "--id", "flow-checkout", "--path", "docs/flows/checkout.md")
                 self.assertEqual(add.returncode, 0, add.stderr)
@@ -761,7 +925,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 encoding="utf-8",
             )
             manifest = {
-                "version": "3.0",
+                "version": "3.1",
                 "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
@@ -770,11 +934,9 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "documents": [{
                     "id": "root_readme", "type": "root-readme", "path": "README.md",
                     "status": "complete", "provenance": {
-                        "schema": "1.0", "doc_id": "root_readme", "path": "README.md",
-                        "generated_at": "<GENERATED_AT>", "tool_version": "2.0.0",
-                        "tier": "spine", "target_depth": "overview",
-                        "graph": {"provider": "<GRAPH_PROVIDER>", "flow": "<FLOW_CAPABILITY>"},
-                        "sections": [],
+                        **scaffold_provenance(
+                            "root_readme", "README.md", tier="spine", target_depth="overview",
+                        ),
                     },
                     "selection": {"origins": [], "evidence": []}, "audit": {"verdict": "PASS"},
                 }],
@@ -790,7 +952,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 saved = json.loads(manifest_path.read_text(encoding="utf-8"))
                 self.assertEqual(saved["documents"][0]["type"], "root-readme")
                 self.assertEqual(saved["documents"][0]["status"], "complete")
-                self.assertEqual(saved["documents"][0]["provenance"]["schema"], "1.0")
+                self.assertEqual(saved["documents"][0]["provenance"]["schema"], "2.0")
                 self.assertEqual(saved["documents"][0]["provenance"]["doc_id"], "root_readme")
             source.write_text("two\n", encoding="utf-8")
             for runtime in ("py", "js"):
@@ -821,7 +983,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "provenance": {"sections": []}, "audit": None,
             }
             manifest = {
-                "version": "3.0", "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                "version": "3.1", "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }}, "discovery": [],
@@ -869,7 +1031,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "provenance": good, "audit": None,
             }
             manifest = {
-                "version": "3.0", "project": {
+                "version": "3.1", "project": {
                     "name": "fixture", "root": str(repo), "tier": "spine",
                     "profiles": {"shapes": [], "platforms": [], "frameworks": [], "concerns": [], "audiences": []},
                 },
@@ -883,7 +1045,38 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             cases = {
                 "MISSING PROVENANCE": "# Only\n\nBody.\n",
                 "UNPARSEABLE PROVENANCE": "---\n{\n---\n# Only\n\nBody.\n",
-                "LEGACY PROVENANCE": "---\n" + json.dumps({"docforge_provenance": {"sections": []}}, indent=2) + "\n---\n# Only\n\nBody.\n",
+                "LEGACY PROVENANCE": """---
+docforge_provenance:
+  doc_id: "x"
+  path: "docs/x.md"
+  generated_at: "2026-07-27T09:12:44Z"
+  generator:
+    name: "docforge"
+    version: "2.1.0"
+  tier: "spine"
+  target_depth: "orientation"
+  graph:
+    provider: "gitnexus"
+    flow: "native"
+  sections: []
+---
+# Only
+
+Body.
+""",
+                "OBSOLETE SCHEMA": "---\n" + json.dumps({
+                    "docforge_provenance": {
+                        "schema": "1.0",
+                        "doc_id": "only",
+                        "path": "docs/only.md",
+                        "generated_at": "2026-07-27T09:12:44Z",
+                        "tool_version": "2.0.0",
+                        "tier": "spine",
+                        "target_depth": "reference",
+                        "graph": {"provider": "gitnexus", "flow": "native"},
+                        "sections": good["sections"],
+                    },
+                }, indent=2) + "\n---\n# Only\n\nBody.\n",
                 "EMPTY PROVENANCE": markdown_with_provenance({**good, "sections": []}, "# Only\n\nBody.\n"),
                 "INVALID BLOB": markdown_with_provenance({
                     **good,
@@ -923,10 +1116,13 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 created = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--document", "arch_high_level")
                 self.assertEqual(created.returncode, 0, created.stderr)
                 text = (repo / "docs" / "architecture" / "high-level.md").read_text(encoding="utf-8")
-                self.assertTrue(text.startswith("---\n{\n"))
-                self.assertIn('"schema": "1.0"', text)
+                self.assertTrue(text.startswith("---\ndocforge_provenance:\n"))
+                self.assertIn('schema: "2.0"', text)
                 result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
-                for category in ("EMPTY PROVENANCE", "MISSING PROVENANCE", "LEGACY PROVENANCE", "UNPARSEABLE PROVENANCE"):
+                for category in (
+                    "EMPTY PROVENANCE", "MISSING PROVENANCE", "LEGACY PROVENANCE",
+                    "UNPARSEABLE PROVENANCE", "OBSOLETE SCHEMA",
+                ):
                     self.assertNotIn(category, result.stdout)
 
     def test_staleness_reports_no_blob_unparseable_and_legacy(self) -> None:
@@ -944,7 +1140,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "status": "complete", "provenance_mode": "sections", "provenance": value,
             }
             manifest = {
-                "version": "3.0", "project": {"root": str(repo)},
+                "version": "3.1", "project": {"root": str(repo)},
                 "documents": [document],
             }
             manifest_path = repo / ".docforge" / "manifest.json"
@@ -960,17 +1156,93 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             target.write_text("---\n{\n---\n# Only\n", encoding="utf-8")
             outputs = []
             for runtime in ("py", "js"):
+                # Reset broken frontmatter so each runtime exercises regeneration.
+                target.write_text("---\n{\n---\n# Only\n", encoding="utf-8")
                 result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
-                self.assertEqual(result.returncode, 1)
-                self.assertIn("UNPARSEABLE", result.stdout)
+                self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+                # ensure_migrated regenerates unparseable frontmatter from the
+                # manifest, then staleness reports the preserved invalid blob.
+                self.assertTrue(target.read_text(encoding="utf-8").startswith("---\ndocforge_provenance:\n"))
+                self.assertIn("NO_BLOB", result.stdout)
                 outputs.append(normalized(result.stdout, [repo]))
             self.assertEqual(outputs[0], outputs[1])
-            target.write_text("---\n" + json.dumps({"docforge_provenance": {"sections": []}}, indent=2) + "\n---\n# Only\n", encoding="utf-8")
+            # Schema-less legacy is reported when not syncing; --sync-provenance
+            # regenerates a 2.0 scaffold from the manifest instead.
+            target.write_text("""---
+docforge_provenance:
+  doc_id: "x"
+  path: "docs/x.md"
+  generated_at: "2026-07-27T09:12:44Z"
+  generator:
+    name: "docforge"
+    version: "2.1.0"
+  tier: "spine"
+  target_depth: "orientation"
+  graph:
+    provider: "gitnexus"
+    flow: "native"
+  sections: []
+---
+# Only
+
+Body.
+""", encoding="utf-8")
+            document["provenance"] = {"sections": []}
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("UNTRACKED", result.stdout)
+            for runtime in ("py", "js"):
+                target.write_text("""---
+docforge_provenance:
+  doc_id: "x"
+  path: "docs/x.md"
+  generated_at: "2026-07-27T09:12:44Z"
+  generator:
+    name: "docforge"
+    version: "2.1.0"
+  tier: "spine"
+  target_depth: "orientation"
+  graph:
+    provider: "gitnexus"
+    flow: "native"
+  sections: []
+---
+# Only
+
+Body.
+""", encoding="utf-8")
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
+                self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+                self.assertTrue(target.read_text(encoding="utf-8").startswith("---\ndocforge_provenance:\n"))
+                self.assertIn('schema: "2.0"', target.read_text(encoding="utf-8"))
+            document["provenance"] = value
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            target.write_text(
+                "---\n" + json.dumps({
+                    "docforge_provenance": {
+                        "schema": "1.0",
+                        "doc_id": "only",
+                        "path": "docs/only.md",
+                        "generated_at": "2026-07-27T09:12:44Z",
+                        "tool_version": "2.0.0",
+                        "tier": "spine",
+                        "target_depth": "reference",
+                        "graph": {"provider": "gitnexus", "flow": "native"},
+                        "sections": value["sections"],
+                    },
+                }, indent=2) + "\n---\n# Only\n",
+                encoding="utf-8",
+            )
             for runtime in ("py", "js"):
                 result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
                 self.assertEqual(result.returncode, 1)
-                self.assertIn("UNTRACKED", result.stdout)
-                self.assertIn("legacy provenance", result.stdout)
+                self.assertIn("Synchronized provenance", result.stdout)
+                self.assertIn("NO_BLOB", result.stdout)
+                migrated = target.read_text(encoding="utf-8")
+                self.assertTrue(migrated.startswith("---\ndocforge_provenance:\n"), migrated[:80])
+                self.assertIn('schema: "2.0"', migrated)
 
     def test_lint_placeholder_token_link_and_forge_cases(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1045,7 +1317,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "provenance": {"sections": []}, "audit": None,
             }
             manifest = {
-                "version": "3.0",
+                "version": "3.1",
                 "project": {"name": "fixture", "root": str(repo), "tier": "diligence", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
@@ -1060,6 +1332,183 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("FOLDER-ONLY PROMOTION", result.stdout)
+
+
+class ProvenanceCodecAndMigrationTests(unittest.TestCase):
+    def test_yaml_round_trip_and_runtime_parity(self) -> None:
+        value = provenance(
+            doc_id="roundtrip", path="docs/roundtrip.md", tier="spine",
+            target_depth="reference", section_id="body",
+            source_path="source.txt", source_blob="a" * 40,
+        )
+        text = markdown_with_provenance(value, "# Body\n\nContent.\n")
+        state, parsed, _end = parse_frontmatter(text)
+        self.assertEqual(state, "ok")
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(parsed["sections"], value["sections"])
+        self.assertEqual(parsed["schema"], SCHEMA_VERSION)
+
+        node_script = """
+const pf = require(process.argv[1]);
+const value = JSON.parse(process.argv[2]);
+process.stdout.write(pf.emitYaml(value));
+"""
+        py_out = emit_yaml(value)
+        result = subprocess.run(
+            ["node", "-e", node_script, str(SCRIPTS / "provenance_frontmatter.js"), json.dumps(value)],
+            cwd=ROOT, text=True, capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, py_out)
+
+        wrapped = wrap_document(value, "# Wrapped\n")
+        self.assertTrue(wrapped.startswith("---\ndocforge_provenance:\n"))
+        self.assertIn("# Wrapped\n", wrapped)
+
+    def test_rejected_yaml_constructs(self) -> None:
+        from provenance_frontmatter import YamlCodecError, parse_yaml_mapping
+
+        for raw in ['a: &id 1\n', 'a: *id\n', 'a: |\n  x\n', 'a: [1, 2]\n']:
+            with self.assertRaises(YamlCodecError):
+                parse_yaml_mapping(raw)
+
+    def test_migrate_v1_to_v2_preserves_sections(self) -> None:
+        legacy = {
+            "schema": "1.0",
+            "doc_id": "legacy",
+            "path": "legacy.md",
+            "generated_at": "2026-07-27T09:12:44Z",
+            "tool_version": "2.0.0",
+            "tier": "spine",
+            "target_depth": "reference",
+            "graph": {"provider": "gitnexus", "flow": "native"},
+            "sections": [{"id": "body", "sources": [], "unresolved": []}],
+        }
+        migrated = migrate_v1_to_v2(legacy, "# Body\n")
+        self.assertEqual(migrated["schema"], SCHEMA_VERSION)
+        self.assertEqual(migrated["generator"], {"name": "docforge", "version": "2.0.0"})
+        self.assertEqual(migrated["sections"], legacy["sections"])
+        self.assertTrue(migrated["content_hash"].startswith("sha256:"))
+
+    def test_migrate_metadata_idempotent_and_regenerates_unparseable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("evidence\n", encoding="utf-8")
+            blob = blob_hash(source.read_bytes())
+            legacy_provenance = {
+                "schema": "1.0",
+                "doc_id": "readme",
+                "path": "README.md",
+                "generated_at": "2026-07-27T09:12:44Z",
+                "tool_version": "2.0.0",
+                "tier": "spine",
+                "target_depth": "overview",
+                "graph": {"provider": "gitnexus", "flow": "native"},
+                "sections": [{
+                    "id": "readme",
+                    "sources": [{"path": "source.txt", "git_blob": blob, "role": "code"}],
+                    "unresolved": [],
+                }],
+            }
+            readme = repo / "README.md"
+            readme.write_text(
+                "---\n" + json.dumps({"docforge_provenance": legacy_provenance}, indent=2) + "\n---\n# Readme\n",
+                encoding="utf-8",
+            )
+            unparseable = repo / "docs" / "broken.md"
+            unparseable.parent.mkdir(parents=True)
+            unparseable.write_text("---\n{\n---\n# Broken\n", encoding="utf-8")
+            manifest = {
+                "version": "3.0",
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                    "shapes": [], "platforms": [], "frameworks": [],
+                    "concerns": [], "audiences": [],
+                }},
+                "discovery": [],
+                "documents": [
+                    {
+                        "id": "readme", "type": "root-readme", "path": "README.md",
+                        "status": "complete", "provenance": legacy_provenance,
+                        "provenance_mode": "sections", "target_depth": "overview",
+                    },
+                    {
+                        "id": "broken", "type": "generic", "path": "docs/broken.md",
+                        "status": "complete", "provenance": {"sections": []},
+                        "provenance_mode": "sections", "target_depth": "orientation",
+                    },
+                ],
+                "metadata": {},
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            for runtime in ("py", "js"):
+                # Reset fixtures between runtimes so each starts from JSON 1.0 / broken.
+                readme.write_text(
+                    "---\n" + json.dumps({"docforge_provenance": legacy_provenance}, indent=2) + "\n---\n# Readme\n",
+                    encoding="utf-8",
+                )
+                unparseable.write_text("---\n{\n---\n# Broken\n", encoding="utf-8")
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+                result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                self.assertIn("REGENERATED", result.stdout)
+                self.assertIn("docs/broken.md", result.stdout)
+
+                readme_text = readme.read_text(encoding="utf-8")
+                self.assertTrue(readme_text.startswith("---\ndocforge_provenance:\n"), readme_text[:80])
+                self.assertIn('schema: "2.0"', readme_text)
+                self.assertIn("generator:", readme_text)
+                self.assertIn("# Readme", readme_text)
+
+                broken_text = unparseable.read_text(encoding="utf-8")
+                self.assertTrue(broken_text.startswith("---\ndocforge_provenance:\n"), broken_text[:80])
+                self.assertIn('schema: "2.0"', broken_text)
+                self.assertIn('doc_id: "broken"', broken_text)
+                self.assertIn("# Broken", broken_text)
+
+                saved = load_manifest(repo)
+                self.assertEqual(saved["version"], "3.1")
+                self.assertEqual(saved["documents"][0]["provenance"]["schema"], "2.0")
+                self.assertIn("generator", saved["documents"][0]["provenance"])
+                self.assertEqual(saved["documents"][1]["provenance"]["schema"], "2.0")
+                self.assertEqual(saved["documents"][1]["provenance"]["doc_id"], "broken")
+
+                again = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
+                self.assertEqual(again.returncode, 0, again.stderr + again.stdout)
+                self.assertNotIn("REGENERATED", again.stdout)
+
+    def test_obsolete_schema_defect_names_migrate_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            value = {
+                "schema": "1.0",
+                "doc_id": "subject",
+                "path": "subject.md",
+                "generated_at": "2026-07-27T09:12:44Z",
+                "tool_version": "2.0.0",
+                "tier": "spine",
+                "target_depth": "reference",
+                "graph": {"provider": "gitnexus", "flow": "native"},
+                "sections": [],
+            }
+            subject = repo / "subject.md"
+            subject.write_text(
+                "---\n" + json.dumps({"docforge_provenance": value}, indent=2) + "\n---\n# Subject\n\nBody.\n",
+                encoding="utf-8",
+            )
+            for runtime in ("py", "js"):
+                result = run(runtime, "lint_document", "--file", str(subject), "--json")
+                self.assertEqual(result.returncode, 1)
+                payload = json.loads(result.stdout)
+                kinds = {item["kind"] for item in payload["defects"]}
+                self.assertIn("obsolete schema", kinds)
+                details = {item["detail"] for item in payload["defects"] if item["kind"] == "obsolete schema"}
+                self.assertTrue(any("migrate_metadata" in detail for detail in details))
 
 
 if __name__ == "__main__":

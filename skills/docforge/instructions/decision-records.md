@@ -1,5 +1,9 @@
 # Decision-record writing craft
 
+**Preferred illustration:** Follow
+[`../references/illustration.md`](../references/illustration.md); ADRs normally
+use prose, with a table for parallel alternatives and consequences.
+
 Each record follows Nygard's ADR shape — title, status, context, decision, consequences —
 which the scaffold already carries; the craft is in how the title and consequences read.
 State the title as the decided outcome, not the topic ("Use Postgres for session storage,"

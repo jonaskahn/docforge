@@ -37,6 +37,10 @@ const FLOW_GRAPH_CANDIDATES = [
 // Tags that mark a re-export shim (index.js barrels), not real flow logic —
 // excluded from entry-point seeds so they never crowd out true entry surfaces.
 const NOISE_TAGS = new Set(["barrel", "re-export"]);
+const ENTRY_NAME = /^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle|[Cc]reate|[Uu]pdate|[Dd]elete|[Ss]ave|[Gg]et|[Pp]ost|[Pp]ut|[Pp]atch|[Ss]end)(?:[A-Z0-9_]|$)/;
+const CORE_ENTRY_NAME = /^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle)(?:[A-Z0-9_]|$)/;
+const SURFACE_NAME = /(controller|handler|processor|consumer|listener|worker|job|command|aggregator)$/i;
+const ENTRY_PATH = /(controllers?|handlers?|processors?|consumers?|workers?|jobs?|commands?|aggregators?|routes?|endpoints?)/i;
 
 function detect(repo) {
   return {
@@ -53,7 +57,7 @@ function serviceLayerIds(doc) {
   for (const layer of layers) {
     if (!layer || typeof layer !== "object") continue;
     const name = String(layer.name || "").toLowerCase();
-    if (name.includes("service") || name.includes("business") || name.includes("domain")) {
+    if (["service", "business", "domain", "application", "presentation", "api"].some((word) => name.includes(word))) {
       for (const nid of layer.nodeIds || []) ids.add(nid);
     }
   }
@@ -100,6 +104,18 @@ function entryPoints(repo) {
     else if (nodeType === "service" || nodeType === "pipeline") tier = 800;
     else if (tags.has("entry-point")) tier = 600;
     else if (nodeType === "step") tier = 300;
+    else if (
+      (nodeType === "class"
+        && SURFACE_NAME.test(String(node.name || ""))
+        && (serviceIds.has(node.id) || ENTRY_PATH.test(String(node.filePath || "")))) ||
+      (nodeType === "function"
+        && ((ENTRY_PATH.test(String(node.filePath || "")) && ENTRY_NAME.test(String(node.name || "")))
+          || (serviceIds.has(node.id) && CORE_ENTRY_NAME.test(String(node.name || "")))))
+    ) {
+      // Some UA graphs expose only file/class/function nodes and containment
+      // edges. These are candidate entry signals, never native flow claims.
+      tier = 200;
+    }
     else continue;
 
     const nid = node.id;

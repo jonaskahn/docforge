@@ -36,6 +36,7 @@ docs/
   product/overview.md
   architecture/README.md
   architecture/high-level.md
+  flows/README.md
   engineering/README.md
   engineering/setup.md
   engineering/testing.md
@@ -50,6 +51,11 @@ Diligence adds detailed architecture, discovered flows and decisions, risk and
 dependency records, security, operations/runbook indexes, release/contribution
 guidance, and a glossary. Conditional conventions documents appear only when a
 conventions source exists.
+
+`docs/flows/README.md` exists at Spine as the rendered complete candidate
+matrix backed by `.docforge/flow-index.json`. Diligence adds
+`docs/flows/{slug}.md` only for rows ranked `main`; deferred rows remain in the
+matrix and do not create placeholder files.
 
 ### Portfolio
 

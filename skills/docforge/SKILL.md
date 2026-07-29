@@ -1,6 +1,6 @@
 ---
 name: docforge
-description: Catalog-driven repository documentation with typed repository profiles, code-graph grounding, conditional flow evidence, manifest 3.0 provenance, independent audits, and equivalent Python/Node tools.
+description: Catalog-driven repository documentation with bounded graph-grounded retrieval, manifest 3.1, YAML provenance 2.0, independent audits, and equivalent Python/Node tools.
 ---
 
 # Docforge 2.0
@@ -158,7 +158,7 @@ mechanisms, setup, and refresh behavior belong to
 2. Build and show the plan before writing. `--auto-accept` skips conversational
    pauses, not planning, evidence checks, linting, audit, or safety approvals.
 3. Write one document at a time in catalog `write_order`.
-4. Stamp provenance while writing. Multiline provenance-v1 JSON frontmatter
+4. Stamp provenance while writing. Restricted YAML provenance-2.0 frontmatter
    starts at byte one for Markdown documents that support it. Replace every
    scaffold token with concrete write metadata and source blobs. Exceptions
    record the same full provenance shape in the manifest.
@@ -179,11 +179,12 @@ mechanisms, setup, and refresh behavior belong to
   conversational confirmation pauses. It never authorizes installation, global
   configuration, graph construction or refresh, archive/delete actions, or any
   other separately approved side effect.
-- `--resume`: load the version-3 manifest and continue the first non-complete,
-  non-skipped document in write order.
+- `--resume`: run `migrate_metadata` when needed, load the version-3.1
+  manifest, and continue the first non-complete, non-skipped document in write
+  order.
 - `--status`: print manifest state only.
-- `--revise all` / `--revise <area>`: check provenance, re-ground stale
-  sections in scope, and preserve fresh sections.
+- `--revise all` / `--revise <area>`: run `migrate_metadata` when needed, check
+  provenance, re-ground stale sections in scope, and preserve fresh sections.
 
 An explicit single-document request still requires graph precheck, re-grounding,
 mechanical lint, independent audit, and manifest state updates.
@@ -206,6 +207,11 @@ Collect a graph-grounded inventory of boundaries, entry points, public
 surfaces, functional areas, candidate flows, tests, configuration, hotspots,
 and operational paths. Exact preparation and query dispatch live in
 [`references/graph-sources.md`](references/graph-sources.md).
+Use the bounded evidence ladder in
+[`references/source-analysis.md`](references/source-analysis.md). Fan out
+independent read-only evidence questions according to
+[`references/parallel-execution.md`](references/parallel-execution.md); only
+the orchestrator mutates the manifest.
 
 Inspect repository manifests, code, existing documentation, CI/deployment
 configuration, git history, and child repositories. Existing documents are
@@ -232,10 +238,14 @@ document shared by selected profiles appears once, with every applicable
 selection origin retained. Selected child paths automatically pull in their
 cataloged ancestor indexes.
 
-Conditional entries are selected only when their evidence exists. Actual
-flows, decisions, runbooks, datasets, concepts, migrations, backlog
+Conditional entries are selected only when their evidence exists. Actual flow
+documents, decisions, runbooks, datasets, concepts, migrations, backlog
 traceability, and portfolio decisions are dynamic and must be added after
-discovery. Never seed an example artifact to stand in for discovery.
+discovery. Harvest every evidenced flow candidate into
+`.docforge/flow-index.json` during analysis; after the plan gate, render it as
+`docs/flows/README.md` when that document reaches its write turn. Add dynamic
+flow documents only for rows ranked `main`. Never seed an example artifact to
+stand in for discovery.
 
 ### 3. Initialize and preview
 
@@ -321,7 +331,8 @@ For the next document in `write_order`:
 1. Check every capability in its `requires` list.
 2. Read its content contract in
    [`references/document-catalog.md`](references/document-catalog.md), then its
-   optional `instruction_file` for writing craft.
+   optional `instruction_file` for writing craft. Select and author any visual
+   using [`references/illustration.md`](references/illustration.md).
 3. Materialize that document and selected ancestor indexes:
 
    ```sh
@@ -331,7 +342,7 @@ For the next document in `write_order`:
    ```
 
 4. Set it `in_progress`, re-ground every required claim, replace all scaffold
-   markers and provenance tokens, and stamp the complete provenance-v1 shape
+   markers and provenance tokens, and stamp the complete provenance-2.0 shape
    with heading-matched sections and concrete source blobs.
 5. Set it `generated`.
 6. Run the document linter and any audit-profile-specific mechanical checks.
@@ -366,6 +377,10 @@ writer reasoning. When subagents are unavailable, perform a separate cold,
 artifact-only pass and record `mode: cold-pass`. Mechanical checks alone never
 produce a completion verdict.
 
+Independent artifact-only audits may run concurrently, but their manifest
+results are recorded serially by the orchestrator as required by
+[`references/parallel-execution.md`](references/parallel-execution.md).
+
 ### 6. Whole-tree gate
 
 After all selected documents pass individually:
@@ -384,9 +399,10 @@ independent audit again.
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `3.0`; there is no secondary runtime state file.
-Manifest v2 is intentionally unsupported in Docforge 2.0 and must be replaced
-after the user confirms a new profile-backed plan.
+Its schema version is `3.1`; there is no secondary runtime state file.
+Manifest 3.0 and provenance 1.0 are migrated by `migrate_metadata` before
+resume, revision, or provenance synchronization. Older or malformed metadata
+requires re-grounding rather than a silent rewrite.
 
 Check staleness with:
 
@@ -419,6 +435,9 @@ flags exit `2`.
   manifest-backed audit.
 - `precheck_graph.{py,js}`: `--need code|flow`.
 - `check_staleness.{py,js}`: `--section`, JSON output, and provenance sync.
+- `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade.
+- `flow_index.{py,js}`: harvest and rank complete flow candidates, then render
+  the flow matrix; GitNexus input uses deterministic MCP-export JSON.
 - `validate_metadata.{py,js}`: registry/schema/path/version/peer validation.
 - Graph adapters, readers, derivation, document lint, and child-repository
   discovery retain paired contracts.
@@ -436,6 +455,12 @@ Use Node by replacing `python scripts/name.py` with
   dispatch and provider selection.
 - [`references/document-composition.md`](references/document-composition.md):
   topic ownership, promotion, durability, and no-duplication.
+- [`references/source-analysis.md`](references/source-analysis.md): bounded
+  evidence retrieval and whole-file escalation.
+- [`references/parallel-execution.md`](references/parallel-execution.md):
+  read-only fan-out and serialized shared-state updates.
+- [`references/illustration.md`](references/illustration.md): visual form
+  selection, syntax constraints, accessibility, and depth budgets.
 - [`references/provenance-tracking.md`](references/provenance-tracking.md):
   metadata format and staleness semantics.
 - [`references/document-audit.md`](references/document-audit.md): independent

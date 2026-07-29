@@ -135,7 +135,17 @@ Resolve flow data native-first:
 3. otherwise derive `.docforge/tmp/flow-graph.json` from the selected code graph
    through [`flow-derivation.md`](flow-derivation.md).
 
+Before choosing flow documents, harvest the complete
+`.docforge/flow-index.json` through `flow_index.py|js`. GitNexus Process nodes
+are grouped by `entryPointId`; they are candidate path evidence, not one
+document each. Understand Anything native flow nodes are confirmed entries,
+then its knowledge graph is scanned for additional candidates because a domain
+graph may cover only the main flows. The rendered `docs/flows/README.md`
+matrix retains main and deferred candidates; only main entries become dynamic
+flow documents.
+
 The derived result is explicitly provisional. Confirm business rules and
-failure behavior against source before publishing them. CodeGraph can provide
-excellent structural paths, routes, and source for derivation, but Docforge
-does not relabel that code graph as a native business flow graph.
+failure behavior against source before publishing them. Containment edges do
+not establish execution order. CodeGraph can provide excellent structural
+paths, routes, and source for derivation, but Docforge does not relabel that
+code graph as a native business flow graph.

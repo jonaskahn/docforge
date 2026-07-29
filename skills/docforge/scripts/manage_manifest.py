@@ -11,10 +11,12 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 from detect_profiles import detect as detect_profiles
+from provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 CATALOG_PATH = SKILL_ROOT / ".metadata" / "catalog.json"
 MANIFEST_REL = Path(".docforge/manifest.json")
+FLOW_INDEX_REL = Path(".docforge/flow-index.json")
 STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]
 TRANSITIONS = {
     "planned": {"in_progress", "skipped"},
@@ -24,7 +26,8 @@ TRANSITIONS = {
     "complete": {"in_progress"},
     "skipped": {"planned"},
 }
-TOOL_VERSION = "2.0.0"
+TOOL_VERSION = GENERATOR_VERSION
+MANIFEST_VERSION = "3.1"
 
 
 def now_iso() -> str:
@@ -53,11 +56,39 @@ def load_manifest(repo: Path) -> dict:
     if not path.is_file():
         raise ValueError(f"manifest not found: {path}")
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("version") != "3.0":
+    if data.get("version") != MANIFEST_VERSION:
         raise ValueError(
-            f"manifest must use version 3.0: {path}; manifest v2 is unsupported in Docforge 2.0"
+            f"manifest must use version {MANIFEST_VERSION}: {path}; "
+            "run migrate_metadata.py for 3.0, or replace unsupported older manifests"
         )
     return data
+
+
+def load_main_flow(repo: Path, doc_id: str, doc_path: str) -> tuple[dict, dict]:
+    path = repo / FLOW_INDEX_REL
+    if not path.is_file():
+        raise ValueError(
+            f"flow index not found: {path}; run flow_index.py harvest before adding flow documents"
+        )
+    try:
+        index = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError(f"invalid flow index: {path}: {error}") from error
+    slug = PurePosixPath(doc_path).stem
+    row = next(
+        (
+            item for item in index.get("flows", [])
+            if item.get("id") == doc_id or item.get("slug") == slug
+        ),
+        None,
+    )
+    if row is None:
+        raise ValueError(f"flow is not present in {FLOW_INDEX_REL}: {doc_id}")
+    if row.get("status") not in {"main", "documented"}:
+        raise ValueError(
+            f"flow {doc_id} is {row.get('status', 'unranked')}; only main flows become documents"
+        )
+    return index, row
 
 
 def save_manifest(repo: Path, manifest: dict) -> None:
@@ -119,20 +150,11 @@ def make_document(definition: dict, origins: list[dict], evidence: list[str] | N
         "write_order": definition["write_order"],
         "provenance_mode": definition["provenance_mode"],
         "audit_profile": definition["audit_profile"],
-        "provenance": {
-            "schema": "1.0",
-            "doc_id": definition["id"],
-            "path": definition["path"],
-            "generated_at": "<GENERATED_AT>",
-            "tool_version": TOOL_VERSION,
-            "tier": "<TIER>",
-            "target_depth": definition["target_depth"],
-            "graph": {
-                "provider": "<GRAPH_PROVIDER>",
-                "flow": "<FLOW_CAPABILITY>",
-            },
-            "sections": [],
-        },
+        "provenance": scaffold_provenance(
+            definition["id"],
+            definition["path"],
+            target_depth=definition["target_depth"],
+        ),
         "audit": None,
     }
 
@@ -185,7 +207,7 @@ def add_ancestor_indexes(catalog: dict, selected: list[dict]) -> None:
         item["path"]: item for item in catalog["documents"]
         if item["selection"]["mode"] == "static" and item["type"] in {
             "folder-index", "docs-index", "portfolio-index",
-            "decision-index", "portfolio-decisions-index",
+            "decision-index", "portfolio-decisions-index", "flow-index",
         }
     }
     selected_paths = {item["path"] for item in selected}
@@ -262,7 +284,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         return fail(str(exc), 2)
     docs = selected_static_documents(catalog, args.repo, args.tier, profiles)
     manifest = {
-        "version": "3.0",
+        "version": MANIFEST_VERSION,
         "generated_at": now_iso(),
         "project": {
             "name": args.name or args.repo.resolve().name,
@@ -299,11 +321,15 @@ def path_matches(pattern: str, actual: str) -> bool:
 
 
 def cmd_add(args: argparse.Namespace) -> int:
+    flow_index = None
+    flow_row = None
     try:
         manifest = load_manifest(args.repo)
         catalog = load_catalog()
         definition = dynamic_definition(catalog, args.type)
         validate_relative_path(args.path)
+        if args.type == "flow":
+            flow_index, flow_row = load_main_flow(args.repo, args.id, args.path)
     except ValueError as exc:
         return fail(str(exc), 2)
     ranks = {item["id"]: item["order"] for item in catalog["tiers"]}
@@ -321,6 +347,12 @@ def cmd_add(args: argparse.Namespace) -> int:
             )
             return fail(f"dynamic type {args.type} requires profile {requirements}", 2)
     evidence = condition_evidence(args.repo, rule.get("condition"))
+    if flow_row is not None:
+        evidence = [str(FLOW_INDEX_REL), *[
+            str(item.get("artifact"))
+            for item in flow_row.get("evidence", [])
+            if item.get("artifact")
+        ]]
     if rule.get("condition") == "ticket_evidence" and not evidence:
         return fail(f"dynamic type {args.type} requires ticket evidence in the repository", 2)
     if not path_matches(definition["path"], args.path):
@@ -341,6 +373,9 @@ def cmd_add(args: argparse.Namespace) -> int:
     manifest["documents"].append(doc)
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
     save_manifest(args.repo, manifest)
+    if flow_index is not None and flow_row is not None:
+        flow_row["status"] = "documented"
+        (args.repo / FLOW_INDEX_REL).write_text(dump_json(flow_index), encoding="utf-8")
     print(f"Added {args.id} ({args.path}) as dynamic type {args.type}.")
     return 0
 

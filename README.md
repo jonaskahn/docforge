@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-2.0.0-10b981?style=flat-square)](meta.json)
+  [![Version](https://img.shields.io/badge/version-2.1.0-10b981?style=flat-square)](meta.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -110,7 +110,8 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 
 1. **PRECHECK** — require one supported code graph.
 2. **ANALYZE** — read graph data, source, config, manifests, existing docs, CI, deployment files, git history, and child repositories.
-3. **PLAN** — choose a named tier and typed profiles, initialize manifest 3.0, then preview its exact tree.
+3. **PLAN** — choose a named tier and typed profiles, harvest a complete ranked
+   flow index, initialize manifest 3.1, then preview its exact tree.
 4. **WRITE** — generate one document at a time in dependency order.
 5. **AUDIT** — use a fresh artifact-only reviewer when supported, otherwise a recorded cold artifact-only pass; derivable gaps force a rewrite.
 6. **TRACK** — stamp section-level source paths and git blob hashes so later runs update only what drifted.
@@ -136,7 +137,14 @@ CodeGraph is ready, the normal intake reports and uses that provider; absent
 competitor indexes are not gaps and stay hidden unless you request provider
 comparison or troubleshooting.
 
-Only catalog entries declaring `flow_graph` require flow data. They prefer native flow data; when only a code graph is available, Docforge derives a provisional, entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
+Docforge writes every evidenced flow candidate to `.docforge/flow-index.json`
+and renders the full main/deferred matrix in `docs/flows/README.md`; only main
+rows become deep-dive flow documents. GitNexus Processes are grouped by entry
+point, while Understand Anything domain flows are augmented from its knowledge
+graph. Only catalog entries declaring `flow_graph` require detailed flow data.
+They prefer native flow data; when only a code graph is available, Docforge
+derives a provisional, entry-point-first flow graph in the git-ignored
+`.docforge/tmp/` workspace.
 
 Provider capabilities and setup live in [graph dispatch](skills/docforge/references/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/references/flow-derivation.md).
 

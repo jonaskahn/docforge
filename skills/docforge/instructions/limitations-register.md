@@ -1,5 +1,9 @@
 # Limitations-register writing craft
 
+**Preferred illustration:** Follow
+[`../references/illustration.md`](../references/illustration.md); use tables
+for comparable limits and prose for trigger, impact, workaround, and evidence.
+
 Use one entry per observable limitation, and place it in exactly one of the register's
 sections — a boundary test decides which, not a judgment call:
 

@@ -6,13 +6,20 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import sys
 from pathlib import Path
 
-FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+from migrate_metadata import ensure_migrated
+from provenance_frontmatter import (
+    BLOB,
+    migrate_v1_to_v2,
+    parse_frontmatter as codec_parse_frontmatter,
+    rewrite_frontmatter,
+    split_frontmatter,
+)
+
 WRITTEN = {"generated", "needs_review", "complete"}
-BLOB = re.compile(r"^[0-9a-f]{40}$")
+MANIFEST_VERSION = "3.1"
 
 
 def fail(message: str, code: int = 2) -> int:
@@ -24,10 +31,10 @@ def load_manifest(path: Path) -> dict:
     if not path.is_file():
         raise ValueError(f"manifest not found: {path}")
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    if manifest.get("version") != "3.0":
+    if manifest.get("version") != MANIFEST_VERSION:
         raise ValueError(
-            f"manifest must use version 3.0: {path}; "
-            "manifest v2 is unsupported in Docforge 2.0"
+            f"manifest must use version {MANIFEST_VERSION}: {path}; "
+            "run migrate_metadata.py for 3.0 manifests"
         )
     return manifest
 
@@ -35,19 +42,10 @@ def load_manifest(path: Path) -> dict:
 def parse_frontmatter(path: Path) -> tuple[str, dict | None]:
     if not path.is_file() or path.suffix.lower() != ".md":
         return "missing", None
-    match = FRONTMATTER.match(path.read_text(encoding="utf-8", errors="replace"))
-    if not match:
-        return "missing", None
-    try:
-        data = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return "unparseable", None
-    provenance = data.get("docforge_provenance") if isinstance(data, dict) else None
-    if not isinstance(provenance, dict):
-        return "missing", None
-    if "schema" not in provenance:
-        return "legacy", provenance
-    return "ok", provenance
+    state, provenance, _ = codec_parse_frontmatter(
+        path.read_text(encoding="utf-8", errors="replace")
+    )
+    return state, provenance
 
 
 def git_blob(path: Path) -> str | None:
@@ -65,11 +63,22 @@ def sync_provenance(manifest: dict, repo: Path) -> tuple[int, list[dict], set[st
     for doc in manifest["documents"]:
         if doc.get("provenance_mode") == "manifest":
             continue
-        state, provenance = parse_frontmatter(repo / doc["path"])
+        doc_path = repo / doc["path"]
+        state, provenance = parse_frontmatter(doc_path)
+        if state == "obsolete" and isinstance(provenance, dict):
+            text = doc_path.read_text(encoding="utf-8", errors="replace")
+            _raw, body, _ = split_frontmatter(text)
+            migrated = migrate_v1_to_v2(provenance, body)
+            doc_path.write_text(rewrite_frontmatter(text, migrated), encoding="utf-8")
+            doc["provenance"] = migrated
+            updated += 1
+            continue
         if state != "ok":
             failed.add(doc["path"])
             if state == "unparseable":
-                results.append({"doc": doc["path"], "status": "UNPARSEABLE", "detail": "invalid frontmatter JSON"})
+                results.append({"doc": doc["path"], "status": "UNPARSEABLE", "detail": "invalid frontmatter"})
+            elif state == "obsolete":
+                results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "obsolete schema"})
             else:
                 detail = "legacy provenance" if state == "legacy" else "missing provenance"
                 results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": detail})
@@ -96,6 +105,10 @@ def check(
         provenance = doc.get("provenance")
         if not isinstance(provenance, dict) or not provenance:
             results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "missing provenance"})
+            clean = False
+            continue
+        if provenance.get("schema") != "2.0" or "tool_version" in provenance:
+            results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "obsolete schema"})
             clean = False
             continue
         if "schema" not in provenance:
@@ -150,17 +163,25 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--sync-provenance", action="store_true")
     args = parser.parse_args()
+    manifest_path = args.manifest.resolve()
     try:
-        manifest = load_manifest(args.manifest)
-    except (ValueError, json.JSONDecodeError) as exc:
+        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
         return fail(str(exc))
-    repo = Path(manifest.get("project", {}).get("root") or args.manifest.parent.parent).resolve()
+    repo = Path(raw.get("project", {}).get("root") or manifest_path.parent.parent).resolve()
+    try:
+        if args.sync_provenance:
+            manifest = ensure_migrated(repo, manifest_path)
+        else:
+            manifest = load_manifest(manifest_path)
+    except ValueError as exc:
+        return fail(str(exc))
     synchronized = None
     sync_results: list[dict] = []
     sync_failed: set[str] = set()
     if args.sync_provenance:
         synchronized, sync_results, sync_failed = sync_provenance(manifest, repo)
-        args.manifest.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     results, clean = check(manifest, repo, args.section, sync_failed)
     if sync_results:
         results = sync_results + results

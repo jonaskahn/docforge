@@ -1,20 +1,18 @@
 ---
-{
-  "docforge_provenance": {
-    "schema": "1.0",
-    "doc_id": "<DOC_ID>",
-    "path": "<DOCUMENT_PATH>",
-    "generated_at": "<GENERATED_AT>",
-    "tool_version": "2.0.0",
-    "tier": "<TIER>",
-    "target_depth": "<TARGET_DEPTH>",
-    "graph": {
-      "provider": "<GRAPH_PROVIDER>",
-      "flow": "<FLOW_CAPABILITY>"
-    },
-    "sections": []
-  }
-}
+docforge_provenance:
+  schema: "2.0"
+  doc_id: "<DOC_ID>"
+  path: "<DOCUMENT_PATH>"
+  generated_at: "<GENERATED_AT>"
+  generator:
+    name: "docforge"
+    version: "2.1.0"
+  tier: "<TIER>"
+  target_depth: "<TARGET_DEPTH>"
+  graph:
+    provider: "<GRAPH_PROVIDER>"
+    flow: "<FLOW_CAPABILITY>"
+  sections: []
 ---
 # Process flows
 
@@ -28,6 +26,16 @@ The business process as actually executed by the system — business-language st
 1. {{step, in business language}} — enforced in {{the `<module>` by path, not a private symbol}}
 2. {{step}} — enforced in {{the `<module>` by path}}
 3. {{...}}
+
+```mermaid
+flowchart TD
+  StartEvent["{{trigger}}"] --> StepOne["{{first action}}"]
+  StepOne --> Gateway{"{{business condition}}"}
+  Gateway -->|yes| SuccessEnd["{{success result}}"]
+  Gateway -->|no| FailureEnd["{{failure or recovery}}"]
+```
+
+{{One sentence: which branch a reader must understand before changing the flow.}}
 
 **Decision points:** {{where the flow branches, and on what business condition}} — see [business-rules.md](./business-rules.md#{{rule-slug}})
 

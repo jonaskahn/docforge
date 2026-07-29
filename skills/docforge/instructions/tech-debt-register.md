@@ -1,5 +1,9 @@
 # Technical-debt writing craft
 
+**Preferred illustration:** Follow
+[`../references/illustration.md`](../references/illustration.md); use a table
+for comparable register fields and prose for each item's judgment.
+
 Name each debt item by the shortcut taken, not a vague quality label — "the retry loop has
 no backoff," not "reliability issues." Use the same sequence for every entry: mechanism,
 consequence, trigger for action, credible remediation direction.

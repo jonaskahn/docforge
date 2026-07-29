@@ -39,6 +39,15 @@ import re
 import sys
 from pathlib import Path
 
+from provenance_frontmatter import (
+    BLOB,
+    FLOW_VALUES,
+    PROVENANCE_FIELDS,
+    SCAFFOLD_TOKEN,
+    SOURCE_ROLES,
+    parse_frontmatter as codec_parse_frontmatter,
+)
+
 SCAFFOLD_RE = re.compile(r"\{\{.*?\}\}")
 TOKEN_RE = re.compile(r"<[A-Z][A-Z0-9_]*>")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
@@ -52,14 +61,11 @@ FORGE_RE = re.compile(
     r"github actions|gitlab ci|codeowners)\b",
     re.IGNORECASE,
 )
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
-BLOB_RE = re.compile(r"^[0-9a-f]{40}$")
-SCAFFOLD_TOKEN_RE = re.compile(r"^<[A-Z][A-Z0-9_]{2,}>$")
-PROVENANCE_FIELDS = {
-    "schema", "doc_id", "path", "generated_at", "tool_version", "tier",
-    "target_depth", "graph", "sections",
-}
-SOURCE_ROLES = {"code", "config", "manifest", "doc", "test", "history"}
+FENCE_RE = re.compile(r"^(`{3,})(\w*)")
+MERMAID_FORBIDDEN_RE = re.compile(r"(?:^|\s)(style\s|classDef|click\s)")
+MERMAID_RESERVED_NODE_RE = re.compile(r"\b(end|graph|subgraph)\b\s*[\[\(\{]", re.IGNORECASE)
+TREE_GLYPH_RE = re.compile(r"[│├└┌]")
+SCALAR_PROVENANCE_FIELDS = PROVENANCE_FIELDS - {"graph", "sections", "generator"}
 MARKDOWN_EXCEPTIONS = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
 
 
@@ -86,50 +92,95 @@ def repository_root(path: Path) -> Path:
     return path.parent
 
 
+def illustration_defects(text: str) -> list[dict]:
+    defects: list[dict] = []
+    in_fence = False
+    fence_marker = ""
+    fence_lang = ""
+    for i, line in enumerate(text.splitlines(), 1):
+        stripped = line.strip()
+        fence_match = FENCE_RE.match(stripped)
+        if fence_match:
+            marker = fence_match.group(1)
+            lang = fence_match.group(2)
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker
+                fence_lang = lang
+            elif marker == fence_marker:
+                in_fence = False
+                fence_marker = ""
+                fence_lang = ""
+            continue
+        if not in_fence:
+            continue
+        if fence_lang == "mermaid":
+            if MERMAID_FORBIDDEN_RE.search(line) or MERMAID_RESERVED_NODE_RE.search(line):
+                defects.append({
+                    "kind": "invalid mermaid", "line": i,
+                    "detail": "forbidden directive or reserved node id",
+                })
+        elif fence_lang not in {"text", "ascii"} and TREE_GLYPH_RE.search(line):
+            defects.append({
+                "kind": "untagged ascii fence", "line": i,
+                "detail": "tree glyphs in non-text fence",
+            })
+    return defects
+
+
 def provenance_defects(path: Path, text: str) -> list[dict]:
     defects: list[dict] = []
     if path.name in MARKDOWN_EXCEPTIONS:
         return defects
-    match = FRONTMATTER_RE.match(text)
-    if not match:
+    state, provenance, body_start = codec_parse_frontmatter(text)
+    if state == "missing":
         return [{"kind": "missing provenance", "line": 1, "detail": "frontmatter absent"}]
-    try:
-        frontmatter = json.loads(match.group(1))
-    except json.JSONDecodeError as exc:
-        return [{"kind": "unparseable provenance", "line": exc.lineno + 1, "detail": exc.msg}]
-    provenance = frontmatter.get("docforge_provenance") if isinstance(frontmatter, dict) else None
+    if state == "unparseable":
+        return [{"kind": "unparseable provenance", "line": 1, "detail": "frontmatter unparseable"}]
+    if state == "obsolete":
+        return [{"kind": "obsolete schema", "line": 1, "detail": "run migrate_metadata.py"}]
+    if state == "legacy":
+        return [{"kind": "legacy provenance", "line": 1, "detail": "schema absent"}]
     if not isinstance(provenance, dict):
         return [{"kind": "missing provenance", "line": 1, "detail": "docforge_provenance absent"}]
-    if "schema" not in provenance:
-        return [{"kind": "legacy provenance", "line": 1, "detail": "schema absent"}]
     missing = sorted(PROVENANCE_FIELDS - set(provenance))
     graph = provenance.get("graph")
     if not isinstance(graph, dict) or not {"provider", "flow"} <= set(graph):
         missing.append("graph.provider/flow")
+    generator = provenance.get("generator")
+    if not isinstance(generator, dict) or not {"name", "version"} <= set(generator):
+        missing.append("generator.name/version")
     invalid = [
-        key for key in PROVENANCE_FIELDS - {"graph", "sections"}
+        key for key in SCALAR_PROVENANCE_FIELDS
         if not isinstance(provenance.get(key), str)
         or not provenance[key]
-        or SCAFFOLD_TOKEN_RE.fullmatch(provenance[key])
+        or SCAFFOLD_TOKEN.fullmatch(provenance[key])
     ]
+    if isinstance(generator, dict):
+        for key in ("name", "version"):
+            value = generator.get(key)
+            if not isinstance(value, str) or not value or SCAFFOLD_TOKEN.fullmatch(value):
+                invalid.append(f"generator.{key}")
+    elif "generator" not in invalid:
+        invalid.append("generator")
     if isinstance(graph, dict):
         invalid.extend(
             f"graph.{key}" for key in ("provider", "flow")
             if not isinstance(graph.get(key), str)
             or not graph[key]
-            or SCAFFOLD_TOKEN_RE.fullmatch(graph[key])
+            or SCAFFOLD_TOKEN.fullmatch(graph[key])
         )
-    if missing or invalid or provenance.get("schema") != "1.0" or "graph_snapshot" in provenance:
+    if missing or invalid or provenance.get("schema") != "2.0" or "graph_snapshot" in provenance:
         detail = ", ".join(missing + [f"non-concrete {item}" for item in invalid])
         defects.append({
             "kind": "missing provenance", "line": 1,
             "detail": detail or "invalid schema or obsolete graph_snapshot",
         })
-    if isinstance(graph, dict) and graph.get("flow") not in {"native", "derived", "none"}:
+    if isinstance(graph, dict) and graph.get("flow") not in FLOW_VALUES:
         defects.append({"kind": "missing provenance", "line": 1, "detail": "invalid graph.flow"})
     git_commit = provenance.get("git_commit")
     if git_commit is not None and (
-        not isinstance(git_commit, str) or not BLOB_RE.fullmatch(git_commit)
+        not isinstance(git_commit, str) or not BLOB.fullmatch(git_commit)
     ):
         defects.append({"kind": "missing provenance", "line": 1, "detail": "invalid git_commit"})
     sections = provenance.get("sections")
@@ -138,7 +189,7 @@ def provenance_defects(path: Path, text: str) -> list[dict]:
         return defects
     if not sections:
         defects.append({"kind": "empty provenance", "line": 1, "detail": "sections is empty"})
-    body = text[match.end():]
+    body = text[body_start:]
     anchors = {
         heading_anchor(heading.group(2))
         for line in body.splitlines()
@@ -159,7 +210,7 @@ def provenance_defects(path: Path, text: str) -> list[dict]:
             source_path = source.get("path", "") if isinstance(source, dict) else ""
             blob = source.get("git_blob") if isinstance(source, dict) else None
             role = source.get("role") if isinstance(source, dict) else None
-            if not isinstance(blob, str) or not BLOB_RE.fullmatch(blob):
+            if not isinstance(blob, str) or not BLOB.fullmatch(blob):
                 defects.append({"kind": "invalid blob", "line": 1, "detail": source_path or "<missing>"})
             if not source_path or not (root / source_path).is_file():
                 defects.append({"kind": "unknown source", "line": 1, "detail": source_path or "<missing>"})
@@ -174,6 +225,7 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
     defects: list[dict] = []
     tokens: list[str] = []
     defects.extend(provenance_defects(path, text))
+    defects.extend(illustration_defects(text))
 
     # scaffold markers + tokens, with line numbers
     for i, line in enumerate(lines, 1):

@@ -9,6 +9,17 @@ import re
 import sys
 from pathlib import Path, PurePosixPath
 
+from provenance_frontmatter import (
+    BLOB,
+    FLOW_VALUES,
+    PROVENANCE_FIELDS,
+    SCAFFOLD_TOKEN,
+    SOURCE_ROLES,
+    emit_yaml,
+    parse_frontmatter as codec_parse_frontmatter,
+    scaffold_provenance as build_provenance,
+)
+
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = SKILL_ROOT / "assets" / "templates"
 PLACEHOLDER = re.compile(r"\{\{[^}]+\}\}|TODO\([^)]*\)")
@@ -19,15 +30,9 @@ FORGE = re.compile(
     r"github actions|gitlab ci|codeowners)\b",
     re.IGNORECASE,
 )
-FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 MARKDOWN_EXCEPTIONS = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
 WRITTEN = {"generated", "needs_review", "complete"}
-PROVENANCE_FIELDS = {
-    "schema", "doc_id", "path", "generated_at", "tool_version", "tier",
-    "target_depth", "graph", "sections",
-}
-BLOB = re.compile(r"^[0-9a-f]{40}$")
-SCAFFOLD_TOKEN = re.compile(r"^<[A-Z][A-Z0-9_]{2,}>$")
+SCALAR_PROVENANCE_FIELDS = PROVENANCE_FIELDS - {"graph", "sections", "generator"}
 
 
 def fail(message: str, code: int = 1) -> int:
@@ -47,10 +52,10 @@ def load_manifest(path: Path) -> dict:
     if not path.is_file():
         raise ValueError(f"manifest not found: {path}")
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    if manifest.get("version") != "3.0" or not isinstance(manifest.get("documents"), list):
+    if manifest.get("version") != "3.1" or not isinstance(manifest.get("documents"), list):
         raise ValueError(
-            f"manifest must use version 3.0: {path}; "
-            "manifest v2 is unsupported in Docforge 2.0"
+            f"manifest must use version 3.1: {path}; "
+            "run migrate_metadata.py for 3.0 manifests"
         )
     return manifest
 
@@ -92,23 +97,13 @@ def title_for(doc: dict) -> str:
 
 
 def scaffold_provenance(doc: dict, manifest: dict) -> str:
-    value = {
-        "docforge_provenance": {
-            "schema": "1.0",
-            "doc_id": doc["id"],
-            "path": doc["path"],
-            "generated_at": "<GENERATED_AT>",
-            "tool_version": "2.0.0",
-            "tier": manifest.get("project", {}).get("tier", "<TIER>"),
-            "target_depth": doc["target_depth"],
-            "graph": {
-                "provider": "<GRAPH_PROVIDER>",
-                "flow": "<FLOW_CAPABILITY>",
-            },
-            "sections": [],
-        }
-    }
-    return "---\n" + json.dumps(value, indent=2, ensure_ascii=False) + "\n---\n"
+    provenance = build_provenance(
+        doc["id"],
+        doc["path"],
+        tier=manifest.get("project", {}).get("tier", "<TIER>"),
+        target_depth=doc["target_depth"],
+    )
+    return emit_yaml(provenance)
 
 
 def index_body(doc: dict, manifest: dict) -> str:
@@ -150,9 +145,9 @@ def scaffold_body(doc: dict, manifest: dict) -> str:
     if not template.is_file():
         raise ValueError(f"template not found for {doc['id']}: {doc['scaffold_template']}")
     body = template.read_text(encoding="utf-8")
-    match = FRONTMATTER.match(body)
-    if match and doc["path"] not in MARKDOWN_EXCEPTIONS:
-        body = scaffold_provenance(doc, manifest) + body[match.end():]
+    state, _, body_start = codec_parse_frontmatter(body)
+    if state != "missing" and doc["path"] not in MARKDOWN_EXCEPTIONS:
+        body = scaffold_provenance(doc, manifest) + body[body_start:]
     return body
 
 
@@ -223,19 +218,6 @@ def materialize(repo: Path, manifest: dict, doc_id: str) -> int:
     return 0
 
 
-def parse_frontmatter(text: str) -> tuple[str, dict | None, int]:
-    match = FRONTMATTER.match(text)
-    if not match:
-        return "missing", None, 0
-    try:
-        value = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return "unparseable", None, match.end()
-    if not isinstance(value, dict):
-        return "unparseable", None, match.end()
-    return "ok", value, match.end()
-
-
 def heading_anchor(value: str) -> str:
     value = value.strip().lower()
     value = re.sub(r"[^\w\s-]", "", value, flags=re.UNICODE)
@@ -245,28 +227,33 @@ def heading_anchor(value: str) -> str:
 def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None) -> dict[str, list[str]]:
     result = {
         "missing provenance": [], "unparseable provenance": [],
-        "legacy provenance": [], "empty provenance": [], "invalid blob": [],
-        "unknown source": [], "unknown section": [],
+        "legacy provenance": [], "obsolete schema": [], "empty provenance": [],
+        "invalid blob": [], "unknown source": [], "unknown section": [],
     }
-    state, frontmatter, body_start = parse_frontmatter(text)
+    state, provenance, body_start = codec_parse_frontmatter(text)
     if state == "missing":
         result["missing provenance"].append(doc["path"])
         return result
     if state == "unparseable":
         result["unparseable provenance"].append(doc["path"])
         return result
-    provenance = frontmatter.get("docforge_provenance") if frontmatter else None
+    if state == "obsolete":
+        result["obsolete schema"].append(f"{doc['path']}: run migrate_metadata.py")
+        return result
+    if state == "legacy":
+        result["legacy provenance"].append(doc["path"])
+        return result
     if not isinstance(provenance, dict):
         result["missing provenance"].append(doc["path"])
-        return result
-    if "schema" not in provenance:
-        result["legacy provenance"].append(doc["path"])
         return result
     missing = sorted(PROVENANCE_FIELDS - set(provenance))
     graph = provenance.get("graph")
     if not isinstance(graph, dict) or not {"provider", "flow"} <= set(graph):
         missing.append("graph.provider/flow")
-    if missing or provenance.get("schema") != "1.0" or "graph_snapshot" in provenance:
+    generator = provenance.get("generator")
+    if not isinstance(generator, dict) or not {"name", "version"} <= set(generator):
+        missing.append("generator.name/version")
+    if missing or provenance.get("schema") != "2.0" or "graph_snapshot" in provenance:
         detail = ", ".join(missing) if missing else "invalid schema or obsolete graph_snapshot"
         result["missing provenance"].append(f"{doc['path']}: {detail}")
     sections = provenance.get("sections")
@@ -275,11 +262,18 @@ def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None
         return result
     if doc.get("status") in WRITTEN:
         concrete = [
-            key for key in PROVENANCE_FIELDS - {"graph", "sections"}
+            key for key in SCALAR_PROVENANCE_FIELDS
             if not isinstance(provenance.get(key), str)
             or not provenance[key]
             or SCAFFOLD_TOKEN.fullmatch(provenance[key])
         ]
+        if isinstance(generator, dict):
+            for key in ("name", "version"):
+                value = generator.get(key)
+                if not isinstance(value, str) or not value or SCAFFOLD_TOKEN.fullmatch(value):
+                    concrete.append(f"generator.{key}")
+        elif "generator" not in concrete:
+            concrete.append("generator")
         if isinstance(graph, dict):
             concrete.extend(
                 f"graph.{key}" for key in ("provider", "flow")
@@ -301,7 +295,7 @@ def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None
             key for key, value in expected.items()
             if value is not None and provenance.get(key) != value
         ]
-        if isinstance(graph, dict) and graph.get("flow") not in {"native", "derived", "none"}:
+        if isinstance(graph, dict) and graph.get("flow") not in FLOW_VALUES:
             mismatched.append("graph.flow")
         git_commit = provenance.get("git_commit")
         if git_commit is not None and (
@@ -333,7 +327,7 @@ def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None
             if not source_path or not (repo / source_path).is_file():
                 result["unknown source"].append(f"{doc['path']}: {source_path or '<missing>'}")
             role = source.get("role") if isinstance(source, dict) else None
-            if role not in {"code", "config", "manifest", "doc", "test", "history"}:
+            if role not in SOURCE_ROLES:
                 result["missing provenance"].append(f"{doc['path']}: invalid source role")
         if not isinstance(section, dict) or not isinstance(section.get("sources"), list) or not isinstance(section.get("unresolved"), list):
             result["missing provenance"].append(f"{doc['path']}: invalid section shape")
@@ -347,6 +341,7 @@ def audit(repo: Path, manifest: dict) -> int:
         "missing provenance": [],
         "unparseable provenance": [],
         "legacy provenance": [],
+        "obsolete schema": [],
         "empty provenance": [],
         "invalid blob": [],
         "unknown source": [],

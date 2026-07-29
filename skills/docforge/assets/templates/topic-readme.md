@@ -1,20 +1,18 @@
 ---
-{
-  "docforge_provenance": {
-    "schema": "1.0",
-    "doc_id": "<DOC_ID>",
-    "path": "<DOCUMENT_PATH>",
-    "generated_at": "<GENERATED_AT>",
-    "tool_version": "2.0.0",
-    "tier": "<TIER>",
-    "target_depth": "<TARGET_DEPTH>",
-    "graph": {
-      "provider": "<GRAPH_PROVIDER>",
-      "flow": "<FLOW_CAPABILITY>"
-    },
-    "sections": []
-  }
-}
+docforge_provenance:
+  schema: "2.0"
+  doc_id: "<DOC_ID>"
+  path: "<DOCUMENT_PATH>"
+  generated_at: "<GENERATED_AT>"
+  generator:
+    name: "docforge"
+    version: "2.1.0"
+  tier: "<TIER>"
+  target_depth: "<TARGET_DEPTH>"
+  graph:
+    provider: "<GRAPH_PROVIDER>"
+    flow: "<FLOW_CAPABILITY>"
+  sections: []
 ---
 # {{Topic name — a flow or a subsystem, in business or plain-technical words}}
 
@@ -49,7 +47,15 @@ a rename would break.}}
 
 {{Include a Mermaid sequence or flowchart diagram whenever this has more than one step or
 any branch/error path — not optional at that point. Prose above must still stand alone
-without it. Omit only for a genuinely single-step topic.}}
+without it. Omit only for a genuinely single-step topic. Follow illustration.md.}}
+
+```mermaid
+sequenceDiagram
+  participant Actor as {{actor}}
+  participant System as {{this system}}
+  Actor->>System: {{request}}
+  System-->>Actor: {{result}}
+```
 
 ## Go deeper
 

@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Docforge Flow Index 1.0",
+  "type": "object",
+  "required": ["version", "generated_at", "project", "sources", "providers", "summary", "flows"],
+  "properties": {
+    "version": {"const": "1.0"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "project": {"type": "string"},
+    "sources": {"type": "array", "items": {"type": "string"}},
+    "providers": {"type": "array", "items": {"enum": ["gitnexus", "understand-anything"]}, "uniqueItems": true},
+    "summary": {
+      "type": "object",
+      "required": ["total", "main", "deferred", "confirmed"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "main": {"type": "integer", "minimum": 0},
+        "deferred": {"type": "integer", "minimum": 0},
+        "confirmed": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "flows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "slug", "entry_ref", "area", "evidence", "confidence", "reach", "rank", "status"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^flow-[a-z0-9][a-z0-9-]*$"},
+          "name": {"type": "string", "minLength": 1},
+          "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "entry_ref": {
+            "type": "object",
+            "required": ["kind", "signature", "filePath", "symbol"],
+            "properties": {
+              "kind": {"enum": ["http", "queue", "schedule", "cli", "ui", "internal"]},
+              "signature": {"type": "string", "minLength": 1},
+              "filePath": {"type": ["string", "null"]},
+              "symbol": {"type": ["string", "null"]}
+            },
+            "additionalProperties": false
+          },
+          "area": {"type": "string"},
+          "evidence": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+          "confidence": {"enum": ["confirmed", "candidate"]},
+          "reach": {
+            "type": "object",
+            "required": ["steps", "boundaries", "churn"],
+            "properties": {
+              "steps": {"type": "integer", "minimum": 0},
+              "boundaries": {"type": "integer", "minimum": 0},
+              "churn": {"type": "integer", "minimum": 0}
+            },
+            "additionalProperties": false
+          },
+          "rank": {"type": "integer"},
+          "status": {"enum": ["main", "deferred", "documented", "skipped"]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -157,9 +157,9 @@ def print_flows(query, limit: int) -> None:
         print(f"  {str(row.get('name') or '(unnamed)')}  [{row.get('steps')} steps]")
     if len(flows) > limit:
         print(f"  ... {len(flows) - limit} more (raise --limit)")
-    print("\n  These are the flow documents to build under docs/flows/. Process labels")
-    print("  are code-derived (Entry → Terminal); keep them faithful, rename to business")
-    print("  language only where a node summary supports it (references/flow-derivation.md).\n")
+    print("\n  These are code-derived Entry → Terminal candidates, not one document each.")
+    print("  Group them by entryPointId in the flow index, then document only ranked main")
+    print("  entries whose behavior is confirmed (references/flow-derivation.md).\n")
 
 
 def print_deps(query, limit: int) -> None:

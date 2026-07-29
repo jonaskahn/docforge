@@ -1,5 +1,10 @@
 # Setup-guide writing craft
 
+**Preferred illustration:** Follow
+[`../references/illustration.md`](../references/illustration.md); use prose and
+commands by default, with an ASCII timeline only when sequencing is otherwise
+ambiguous.
+
 This is a how-to, not a tutorial (Diataxis distinction): the reader already wants to run
 the thing, not learn why it works. Write a single verified path from prerequisites to a
 running instance — one path, not a menu of alternatives.

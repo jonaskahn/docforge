@@ -1,5 +1,10 @@
 # Product-capability writing craft
 
+**Preferred illustration:** Follow
+[`../references/illustration.md`](../references/illustration.md); prefer a
+Markdown table of capabilities; add a Mermaid flowchart only when capability
+dependencies need a relationship map.
+
 Group capabilities by user outcome rather than module or team boundary. Give each
 capability a short, verb-first, outcome-named title — Jobs-to-be-Done phrasing for what the
 user can now do, not what was built ("Export filtered results," not "Export module"). State

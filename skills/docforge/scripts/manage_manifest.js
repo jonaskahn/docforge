@@ -5,9 +5,11 @@
 const fs = require("fs");
 const path = require("path");
 const { detect: detectProfiles } = require("./detect_profiles.js");
+const pf = require("./provenance_frontmatter.js");
 
 const SKILL_ROOT = path.resolve(__dirname, "..");
 const CATALOG_PATH = path.join(SKILL_ROOT, ".metadata", "catalog.json");
+const FLOW_INDEX_REL = path.join(".docforge", "flow-index.json");
 const STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"];
 const TRANSITIONS = {
   planned: new Set(["in_progress", "skipped"]),
@@ -17,7 +19,8 @@ const TRANSITIONS = {
   complete: new Set(["in_progress"]),
   skipped: new Set(["planned"]),
 };
-const TOOL_VERSION = "2.0.0";
+const TOOL_VERSION = pf.GENERATOR_VERSION;
+const MANIFEST_VERSION = "3.1";
 
 function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00");
@@ -39,8 +42,31 @@ function loadManifest(repo) {
   const target = manifestPath(repo);
   if (!fs.existsSync(target)) throw new Error(`manifest not found: ${target}`);
   const data = JSON.parse(fs.readFileSync(target, "utf8"));
-  if (data.version !== "3.0") throw new Error(`manifest must use version 3.0: ${target}; manifest v2 is unsupported in Docforge 2.0`);
+  if (data.version !== MANIFEST_VERSION) {
+    throw new Error(
+      `manifest must use version ${MANIFEST_VERSION}: ${target}; run migrate_metadata.js for 3.0, or replace unsupported older manifests`,
+    );
+  }
   return data;
+}
+function loadMainFlow(repo, docId, docPath) {
+  const target = path.join(repo, FLOW_INDEX_REL);
+  if (!fs.existsSync(target)) {
+    throw new Error(`flow index not found: ${target}; run flow_index.js harvest before adding flow documents`);
+  }
+  let index;
+  try {
+    index = JSON.parse(fs.readFileSync(target, "utf8"));
+  } catch (error) {
+    throw new Error(`invalid flow index: ${target}: ${error.message}`);
+  }
+  const slug = path.posix.basename(docPath, path.posix.extname(docPath));
+  const row = (index.flows || []).find((item) => item.id === docId || item.slug === slug);
+  if (!row) throw new Error(`flow is not present in ${FLOW_INDEX_REL}: ${docId}`);
+  if (!["main", "documented"].includes(row.status)) {
+    throw new Error(`flow ${docId} is ${row.status || "unranked"}; only main flows become documents`);
+  }
+  return [index, row];
 }
 function saveManifest(repo, manifest) {
   const docs = manifest.documents;
@@ -90,20 +116,9 @@ function makeDocument(definition, origins, evidence = []) {
     write_order: definition.write_order,
     provenance_mode: definition.provenance_mode,
     audit_profile: definition.audit_profile,
-    provenance: {
-      schema: "1.0",
-      doc_id: definition.id,
-      path: definition.path,
-      generated_at: "<GENERATED_AT>",
-      tool_version: TOOL_VERSION,
-      tier: "<TIER>",
+    provenance: pf.scaffoldProvenance(definition.id, definition.path, {
       target_depth: definition.target_depth,
-      graph: {
-        provider: "<GRAPH_PROVIDER>",
-        flow: "<FLOW_CAPABILITY>",
-      },
-      sections: [],
-    },
+    }),
     audit: null,
   };
 }
@@ -142,7 +157,7 @@ function matchingOrigins(rule, profiles) {
   return origins;
 }
 function addAncestorIndexes(catalog, selected) {
-  const indexTypes = new Set(["folder-index", "docs-index", "portfolio-index", "decision-index", "portfolio-decisions-index"]);
+  const indexTypes = new Set(["folder-index", "docs-index", "portfolio-index", "decision-index", "portfolio-decisions-index", "flow-index"]);
   const definitions = new Map(catalog.documents
     .filter((item) => item.selection.mode === "static" && indexTypes.has(item.type))
     .map((item) => [item.path, item]));
@@ -239,7 +254,7 @@ function cmdInit(args) {
   }
   const docs = selectedStaticDocuments(catalog, args.repo, args.tier, profiles);
   const manifest = {
-    version: "3.0",
+    version: MANIFEST_VERSION,
     generated_at: nowIso(),
     project: {
       name: args.name || path.basename(path.resolve(args.repo)),
@@ -274,6 +289,9 @@ function cmdAdd(args) {
     const catalog = loadCatalog();
     const definition = dynamicDefinition(catalog, args.type);
     validateRelativePath(args.path);
+    let flowIndex = null;
+    let flowRow = null;
+    if (args.type === "flow") [flowIndex, flowRow] = loadMainFlow(args.repo, args.id, args.path);
     const ranks = Object.fromEntries(catalog.tiers.map((item) => [item.id, item.order]));
     const rule = definition.selection;
     if (ranks[rule.min_tier] > ranks[manifest.project.tier]) return fail(`dynamic type ${args.type} requires tier ${rule.min_tier}`, 2);
@@ -286,7 +304,10 @@ function cmdAdd(args) {
         .join(", ");
       return fail(`dynamic type ${args.type} requires profile ${requirements}`, 2);
     }
-    const evidence = conditionEvidence(args.repo, rule.condition);
+    let evidence = conditionEvidence(args.repo, rule.condition);
+    if (flowRow) {
+      evidence = [FLOW_INDEX_REL, ...(flowRow.evidence || []).map((item) => String(item.artifact || "")).filter(Boolean)];
+    }
     if (rule.condition === "ticket_evidence" && !evidence.length) return fail(`dynamic type ${args.type} requires ticket evidence in the repository`, 2);
     if (!pathMatches(definition.path, args.path)) return fail(`path '${args.path}' does not match catalog pattern '${definition.path}'`, 2);
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(args.id)) return fail(`document id must use lowercase letters, digits, hyphens, or underscores: ${args.id}`, 2);
@@ -298,6 +319,10 @@ function cmdAdd(args) {
     manifest.documents.push(makeDocument(actual, origins, evidence));
     manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
     saveManifest(args.repo, manifest);
+    if (flowIndex && flowRow) {
+      flowRow.status = "documented";
+      fs.writeFileSync(path.join(args.repo, FLOW_INDEX_REL), dumpJson(flowIndex));
+    }
     console.log(`Added ${args.id} (${args.path}) as dynamic type ${args.type}.`);
     return 0;
   } catch (error) {
