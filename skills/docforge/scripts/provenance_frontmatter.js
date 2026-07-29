@@ -65,12 +65,79 @@ function scaffoldProvenance(docId, pathValue, options = {}) {
   };
 }
 
-function migrateV1ToV2(provenance, body = "") {
+function inferSourceRole(pathValue) {
+  const lower = String(pathValue).replace(/\\/g, "/").toLowerCase();
+  const name = lower.split("/").pop() || "";
+  if (["/test/", "/tests/", "/__tests__/", "_test.", ".test.", ".spec."].some((m) => lower.includes(m))) {
+    return "test";
+  }
+  if (
+    [
+      "package.json", "pyproject.toml", "cargo.toml", "go.mod", "gemfile",
+      "pom.xml", "composer.json", "build.gradle", "build.gradle.kts",
+    ].includes(name)
+    || name.endsWith(".csproj")
+    || name.endsWith(".gemspec")
+  ) {
+    return "manifest";
+  }
+  if (
+    [".yml", ".yaml", ".toml", ".ini", ".cfg", ".conf", ".env", ".properties"].some((ext) => name.endsWith(ext))
+    || `/${lower}/`.includes("/config/")
+    || name.startsWith(".")
+  ) {
+    return "config";
+  }
+  if ([".md", ".rst", ".txt", ".adoc"].some((ext) => name.endsWith(ext)) || lower.startsWith("docs/")) {
+    return "doc";
+  }
+  return "code";
+}
+
+function inferProviderFromSnapshot(snapshot) {
+  const lower = String(snapshot).replace(/\\/g, "/").toLowerCase();
+  if (`/${lower}`.includes("/.ua/") || lower.startsWith(".ua/") || lower.includes("understand-anything")) {
+    return "understand-anything";
+  }
+  if (lower.includes("gitnexus")) return "gitnexus";
+  if (lower.includes("codegraph")) return "codegraph";
+  return null;
+}
+
+function normalizeSections(sections) {
+  if (!Array.isArray(sections)) return [];
+  const normalized = [];
+  for (const section of sections) {
+    if (!section || typeof section !== "object" || Array.isArray(section)) continue;
+    const sources = [];
+    if (Array.isArray(section.sources)) {
+      for (const source of section.sources) {
+        if (!source || typeof source !== "object" || Array.isArray(source)) continue;
+        const pathValue = source.path;
+        const blob = source.git_blob;
+        if (typeof pathValue !== "string" || !pathValue || typeof blob !== "string" || !blob) continue;
+        const role = SOURCE_ROLES.has(source.role) ? source.role : inferSourceRole(pathValue);
+        sources.push({ path: pathValue, git_blob: blob, role });
+      }
+    }
+    normalized.push({
+      id: String(section.id || "main"),
+      sources,
+      unresolved: Array.isArray(section.unresolved) ? section.unresolved.slice() : [],
+    });
+  }
+  return normalized;
+}
+
+function migrateV1ToV2(provenance, body = "", defaults = {}) {
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
     throw new YamlCodecError("provenance must be an object");
   }
+  const opts = defaults && typeof defaults === "object" && !Array.isArray(defaults) ? defaults : {};
   if (provenance.schema === SCHEMA_VERSION && provenance.generator) {
-    return { ...provenance };
+    const migrated = { ...provenance };
+    if (Array.isArray(migrated.sections)) migrated.sections = normalizeSections(migrated.sections);
+    return migrated;
   }
   if (
     provenance.schema !== LEGACY_SCHEMA
@@ -81,18 +148,37 @@ function migrateV1ToV2(provenance, body = "") {
   }
   let toolVersion = provenance.tool_version || GENERATOR_VERSION;
   if (typeof toolVersion !== "string" || !toolVersion) toolVersion = GENERATOR_VERSION;
+  const pathValue = provenance.path || provenance.doc || opts.path || "";
+  const docId = provenance.doc_id || opts.doc_id || "";
+  let graph;
+  if (provenance.graph && typeof provenance.graph === "object" && !Array.isArray(provenance.graph)) {
+    graph = {
+      provider: String(provenance.graph.provider || opts.provider || "<GRAPH_PROVIDER>"),
+      flow: String(provenance.graph.flow || opts.flow || "<FLOW_CAPABILITY>"),
+    };
+  } else {
+    let inferred = null;
+    if (typeof provenance.graph_snapshot === "string" && provenance.graph_snapshot) {
+      inferred = inferProviderFromSnapshot(provenance.graph_snapshot);
+    }
+    graph = {
+      provider: String(inferred || opts.provider || "<GRAPH_PROVIDER>"),
+      flow: String(opts.flow || "<FLOW_CAPABILITY>"),
+    };
+    if (inferred === "understand-anything" && graph.flow === "<FLOW_CAPABILITY>") {
+      graph.flow = "native";
+    }
+  }
   const migrated = {
     schema: SCHEMA_VERSION,
-    doc_id: provenance.doc_id || "",
-    path: provenance.path || "",
-    generated_at: provenance.generated_at || "",
+    doc_id: String(docId),
+    path: String(pathValue),
+    generated_at: String(provenance.generated_at || opts.generated_at || ""),
     generator: { name: GENERATOR_NAME, version: toolVersion },
-    tier: provenance.tier || "",
-    target_depth: provenance.target_depth || "",
-    graph: provenance.graph && typeof provenance.graph === "object"
-      ? provenance.graph
-      : { provider: "<GRAPH_PROVIDER>", flow: "<FLOW_CAPABILITY>" },
-    sections: Array.isArray(provenance.sections) ? provenance.sections : [],
+    tier: String(provenance.tier || opts.tier || ""),
+    target_depth: String(provenance.target_depth || opts.target_depth || ""),
+    graph,
+    sections: normalizeSections(provenance.sections),
   };
   if (typeof provenance.git_commit === "string") migrated.git_commit = provenance.git_commit;
   if (typeof provenance.content_hash === "string") migrated.content_hash = provenance.content_hash;
@@ -372,6 +458,9 @@ module.exports = {
   quoteScalar,
   contentHash,
   scaffoldProvenance,
+  inferSourceRole,
+  inferProviderFromSnapshot,
+  normalizeSections,
   migrateV1ToV2,
   emitYaml,
   wrapDocument,

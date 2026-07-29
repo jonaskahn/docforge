@@ -402,7 +402,11 @@ independent audit again.
 Its schema version is `3.1`; there is no secondary runtime state file.
 Manifest 3.0 and provenance 1.0 are migrated by `migrate_metadata` before
 resume, revision, or provenance synchronization. Older or malformed metadata
-requires re-grounding rather than a silent rewrite.
+requires re-grounding rather than a silent rewrite. When migration reports
+`FAILED` for a document, the agent must regenerate that document's provenance
+(status is already `in_progress`): re-ground claims, stamp concrete
+provenance 2.0, lint, and audit before completion. See
+[`references/provenance-tracking.md`](references/provenance-tracking.md).
 
 Check staleness with:
 
@@ -435,7 +439,9 @@ flags exit `2`.
   manifest-backed audit.
 - `precheck_graph.{py,js}`: `--need code|flow`.
 - `check_staleness.{py,js}`: `--section`, JSON output, and provenance sync.
-- `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade.
+- `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade;
+  incomplete or unconvertible written documents are reported as `FAILED` and
+  demoted to `in_progress` for agent regeneration.
 - `flow_index.{py,js}`: harvest and rank complete flow candidates, then render
   the flow matrix; GitNexus input uses deterministic MCP-export JSON.
 - `validate_metadata.{py,js}`: registry/schema/path/version/peer validation.

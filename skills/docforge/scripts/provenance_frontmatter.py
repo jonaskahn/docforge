@@ -78,30 +78,149 @@ def scaffold_provenance(
     }
 
 
-def migrate_v1_to_v2(provenance: dict, body: str = "") -> dict:
+def infer_source_role(path: str) -> str:
+    """Best-effort role for schema-less sources that omit `role`."""
+    lower = path.replace("\\", "/").lower()
+    name = lower.rsplit("/", 1)[-1]
+    if any(
+        marker in lower
+        for marker in ("/test/", "/tests/", "/__tests__/", "_test.", ".test.", ".spec.")
+    ):
+        return "test"
+    if name in {
+        "package.json", "pyproject.toml", "cargo.toml", "go.mod", "gemfile",
+        "pom.xml", "composer.json", "build.gradle", "build.gradle.kts",
+    } or name.endswith((".csproj", ".gemspec")):
+        return "manifest"
+    if (
+        name.endswith((".yml", ".yaml", ".toml", ".ini", ".cfg", ".conf", ".env", ".properties"))
+        or "/config/" in f"/{lower}/"
+        or name.startswith(".")
+    ):
+        return "config"
+    if name.endswith((".md", ".rst", ".txt", ".adoc")) or lower.startswith("docs/"):
+        return "doc"
+    return "code"
+
+
+def infer_provider_from_snapshot(snapshot: str) -> str | None:
+    """Map obsolete graph_snapshot paths to a provider id when possible."""
+    lower = snapshot.replace("\\", "/").lower()
+    if "/.ua/" in f"/{lower}" or lower.startswith(".ua/") or "understand-anything" in lower:
+        return "understand-anything"
+    if "gitnexus" in lower:
+        return "gitnexus"
+    if "codegraph" in lower:
+        return "codegraph"
+    return None
+
+
+def normalize_sections(sections: Any) -> list[dict]:
+    """Normalize section evidence, filling role/unresolved for pre-2.0 shapes."""
+    if not isinstance(sections, list):
+        return []
+    normalized: list[dict] = []
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        sources: list[dict] = []
+        raw_sources = section.get("sources")
+        if isinstance(raw_sources, list):
+            for source in raw_sources:
+                if not isinstance(source, dict):
+                    continue
+                path = source.get("path")
+                blob = source.get("git_blob")
+                if not isinstance(path, str) or not path or not isinstance(blob, str) or not blob:
+                    continue
+                role = source.get("role")
+                if role not in SOURCE_ROLES:
+                    role = infer_source_role(path)
+                sources.append({"path": path, "git_blob": blob, "role": role})
+        unresolved = section.get("unresolved")
+        normalized.append({
+            "id": str(section.get("id") or "main"),
+            "sources": sources,
+            "unresolved": list(unresolved) if isinstance(unresolved, list) else [],
+        })
+    return normalized
+
+
+def migrate_v1_to_v2(
+    provenance: dict,
+    body: str = "",
+    defaults: dict | None = None,
+) -> dict:
+    """Convert schema 1.0 / tool_version / schema-less legacy provenance to 2.0.
+
+    Schema-less shapes may use `doc` instead of `path`/`doc_id` and
+    `graph_snapshot` instead of `graph`. Optional `defaults` fills gaps from
+    the manifest entry (doc_id, path, tier, target_depth, provider, flow).
+    """
     if not isinstance(provenance, dict):
         raise YamlCodecError("provenance must be an object")
+    defaults = defaults if isinstance(defaults, dict) else {}
     schema = provenance.get("schema")
     if schema == SCHEMA_VERSION and "generator" in provenance:
-        return dict(provenance)
+        migrated = dict(provenance)
+        if isinstance(migrated.get("sections"), list):
+            migrated["sections"] = normalize_sections(migrated["sections"])
+        return migrated
     if schema != LEGACY_SCHEMA and "tool_version" not in provenance and schema is not None:
         raise YamlCodecError(f"unsupported provenance schema: {schema}")
     tool_version = provenance.get("tool_version") or GENERATOR_VERSION
     if not isinstance(tool_version, str) or not tool_version:
         tool_version = GENERATOR_VERSION
+    path = (
+        provenance.get("path")
+        or provenance.get("doc")
+        or defaults.get("path")
+        or ""
+    )
+    doc_id = provenance.get("doc_id") or defaults.get("doc_id") or ""
+    graph: dict[str, str]
+    if isinstance(provenance.get("graph"), dict):
+        graph = {
+            "provider": str(
+                provenance["graph"].get("provider")
+                or defaults.get("provider")
+                or "<GRAPH_PROVIDER>"
+            ),
+            "flow": str(
+                provenance["graph"].get("flow")
+                or defaults.get("flow")
+                or "<FLOW_CAPABILITY>"
+            ),
+        }
+    else:
+        inferred = None
+        snapshot = provenance.get("graph_snapshot")
+        if isinstance(snapshot, str) and snapshot:
+            inferred = infer_provider_from_snapshot(snapshot)
+        graph = {
+            "provider": str(
+                inferred or defaults.get("provider") or "<GRAPH_PROVIDER>"
+            ),
+            "flow": str(defaults.get("flow") or "<FLOW_CAPABILITY>"),
+        }
+        if inferred == "understand-anything" and graph["flow"] == "<FLOW_CAPABILITY>":
+            graph["flow"] = "native"
     migrated = {
         "schema": SCHEMA_VERSION,
-        "doc_id": provenance.get("doc_id", ""),
-        "path": provenance.get("path", ""),
-        "generated_at": provenance.get("generated_at", ""),
+        "doc_id": str(doc_id),
+        "path": str(path),
+        "generated_at": str(
+            provenance.get("generated_at")
+            or defaults.get("generated_at")
+            or ""
+        ),
         "generator": {"name": GENERATOR_NAME, "version": tool_version},
-        "tier": provenance.get("tier", ""),
-        "target_depth": provenance.get("target_depth", ""),
-        "graph": provenance.get("graph") if isinstance(provenance.get("graph"), dict) else {
-            "provider": "<GRAPH_PROVIDER>",
-            "flow": "<FLOW_CAPABILITY>",
-        },
-        "sections": provenance.get("sections") if isinstance(provenance.get("sections"), list) else [],
+        "tier": str(provenance.get("tier") or defaults.get("tier") or ""),
+        "target_depth": str(
+            provenance.get("target_depth") or defaults.get("target_depth") or ""
+        ),
+        "graph": graph,
+        "sections": normalize_sections(provenance.get("sections")),
     }
     if isinstance(provenance.get("git_commit"), str):
         migrated["git_commit"] = provenance["git_commit"]

@@ -77,21 +77,41 @@ only in the corresponding manifest document entry.
 
 ## Migration
 
-JSON provenance 1.0 (`tool_version`, schema `1.0`) is obsolete. Run:
+JSON provenance 1.0 (`tool_version`, schema `1.0`) and schema-less pre-2.0
+YAML (including `doc` / `graph_snapshot` shapes) are obsolete. Run:
 
 ```sh
 python scripts/migrate_metadata.py --repo <repo>
 ```
 
 The command is idempotent. It rewrites convertible frontmatter to YAML 2.0,
-migrates embedded manifest provenance objects, and bumps the manifest from
-`3.0` to `3.1`. When frontmatter is missing, unparseable, legacy, or otherwise
-unconvertible, it regenerates a provenance-2.0 YAML scaffold from the manifest
-entry (`doc_id`, `path`, `tier`, `target_depth`, graph tokens) and keeps the
-Markdown body. Regenerated documents need a later write pass to refill
-`sections` and concrete source blobs. `--revise`, `--resume`, and
-`check_staleness --sync-provenance` invoke the same migration before their own
-work. Lint reports `obsolete schema` and names this command.
+preserves section evidence (inferring source `role` and adding empty
+`unresolved` when absent), migrates embedded manifest provenance objects, and
+bumps the manifest from `3.0` to `3.1`.
+
+When frontmatter is missing or unparseable, conversion throws, or the result
+for a previously written document is still incomplete (scaffold tokens, empty
+`sections`, invalid `graph.flow`), migration reports `FAILED`, writes a
+best-effort provenance-2.0 scaffold (keeping the Markdown body), clears the
+audit record, and sets the document status to `in_progress` so the agent can
+regenerate concrete provenance and re-ground claims. Planned documents that
+only need a scaffold are reported as `REGENERATED` without a status demotion.
+`--revise`, `--resume`, and `check_staleness --sync-provenance` invoke the same
+migration before their own work. Lint reports `obsolete schema` and names this
+command.
+
+### Agent regeneration after `FAILED`
+
+For every `FAILED` path:
+
+1. Treat the document as the next write turn (`in_progress`).
+2. Re-ground required claims from the graph and cited sources.
+3. Replace every scaffold token with concrete write metadata and heading-matched
+   `sections` with valid `git_blob` / `role` values.
+4. Set `generated`, run mechanical lint, then an independent audit before
+   `complete`.
+
+Do not leave a written document on scaffold tokens or an empty `sections` array.
 
 ## Manifest aggregation
 

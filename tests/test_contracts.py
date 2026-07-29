@@ -1156,18 +1156,27 @@ Body.
             target.write_text("---\n{\n---\n# Only\n", encoding="utf-8")
             outputs = []
             for runtime in ("py", "js"):
-                # Reset broken frontmatter so each runtime exercises regeneration.
+                # Reset broken frontmatter and written status so each runtime
+                # exercises failed migration + agent demotion.
+                document["status"] = "complete"
+                document["provenance"] = value
+                document["audit"] = {"mode": "cold-pass", "verdict": "PASS"}
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
                 target.write_text("---\n{\n---\n# Only\n", encoding="utf-8")
                 result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
-                self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
-                # ensure_migrated regenerates unparseable frontmatter from the
-                # manifest, then staleness reports the preserved invalid blob.
-                self.assertTrue(target.read_text(encoding="utf-8").startswith("---\ndocforge_provenance:\n"))
-                self.assertIn("NO_BLOB", result.stdout)
+                self.assertTrue(
+                    target.read_text(encoding="utf-8").startswith("---\ndocforge_provenance:\n"),
+                    target.read_text(encoding="utf-8")[:80],
+                )
+                self.assertIn('schema: "2.0"', target.read_text(encoding="utf-8"))
+                saved = load_manifest(repo)
+                self.assertEqual(saved["documents"][0]["status"], "in_progress")
+                self.assertIsNone(saved["documents"][0].get("audit"))
                 outputs.append(normalized(result.stdout, [repo]))
             self.assertEqual(outputs[0], outputs[1])
             # Schema-less legacy is reported when not syncing; --sync-provenance
-            # regenerates a 2.0 scaffold from the manifest instead.
+            # converts it to provenance 2.0 and demotes incomplete written docs
+            # to in_progress for agent regeneration.
             target.write_text("""---
 docforge_provenance:
   doc_id: "x"
@@ -1187,6 +1196,7 @@ docforge_provenance:
 
 Body.
 """, encoding="utf-8")
+            document["status"] = "complete"
             document["provenance"] = {"sections": []}
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             for runtime in ("py", "js"):
@@ -1194,6 +1204,10 @@ Body.
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("UNTRACKED", result.stdout)
             for runtime in ("py", "js"):
+                document["status"] = "complete"
+                document["provenance"] = {"sections": []}
+                document["audit"] = {"mode": "cold-pass", "verdict": "PASS"}
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
                 target.write_text("""---
 docforge_provenance:
   doc_id: "x"
@@ -1214,10 +1228,15 @@ docforge_provenance:
 Body.
 """, encoding="utf-8")
                 result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
-                self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
                 self.assertTrue(target.read_text(encoding="utf-8").startswith("---\ndocforge_provenance:\n"))
                 self.assertIn('schema: "2.0"', target.read_text(encoding="utf-8"))
+                saved = load_manifest(repo)
+                self.assertEqual(saved["documents"][0]["status"], "in_progress")
+                self.assertIsNone(saved["documents"][0].get("audit"))
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            document["status"] = "complete"
             document["provenance"] = value
+            document["audit"] = {"mode": "cold-pass", "verdict": "PASS"}
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             target.write_text(
                 "---\n" + json.dumps({
@@ -1391,6 +1410,160 @@ process.stdout.write(pf.emitYaml(value));
         self.assertEqual(migrated["sections"], legacy["sections"])
         self.assertTrue(migrated["content_hash"].startswith("sha256:"))
 
+    def test_migrate_schema_less_doc_graph_snapshot_preserves_sections(self) -> None:
+        blob = "8eb720c92a52ffc34673bc0e83b6b4d5ea714ee9"
+        schema_less = {
+            "doc": "docs/architecture/concepts/README.md",
+            "generated_at": "2026-07-27T00:00:00Z",
+            "graph_snapshot": ".ua/knowledge-graph.json",
+            "sections": [{
+                "id": "main",
+                "sources": [
+                    {"path": "docs/architecture/concepts/auth-rbac.md", "git_blob": blob},
+                    {"path": "docs/architecture/concepts/queue-system.md", "git_blob": blob},
+                ],
+            }],
+        }
+        migrated = migrate_v1_to_v2(
+            schema_less,
+            "# Concepts\n",
+            defaults={
+                "doc_id": "concepts_index",
+                "path": "docs/architecture/concepts/README.md",
+                "tier": "diligence",
+                "target_depth": "orientation",
+            },
+        )
+        self.assertEqual(migrated["schema"], SCHEMA_VERSION)
+        self.assertEqual(migrated["doc_id"], "concepts_index")
+        self.assertEqual(migrated["path"], "docs/architecture/concepts/README.md")
+        self.assertEqual(migrated["generated_at"], "2026-07-27T00:00:00Z")
+        self.assertEqual(migrated["tier"], "diligence")
+        self.assertEqual(migrated["target_depth"], "orientation")
+        self.assertEqual(
+            migrated["graph"],
+            {"provider": "understand-anything", "flow": "native"},
+        )
+        self.assertEqual(len(migrated["sections"]), 1)
+        self.assertEqual(migrated["sections"][0]["id"], "main")
+        self.assertEqual(migrated["sections"][0]["unresolved"], [])
+        self.assertEqual(
+            migrated["sections"][0]["sources"],
+            [
+                {
+                    "path": "docs/architecture/concepts/auth-rbac.md",
+                    "git_blob": blob,
+                    "role": "doc",
+                },
+                {
+                    "path": "docs/architecture/concepts/queue-system.md",
+                    "git_blob": blob,
+                    "role": "doc",
+                },
+            ],
+        )
+
+    def test_migrate_metadata_preserves_schema_less_file_sections(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            blob = "8eb720c92a52ffc34673bc0e83b6b4d5ea714ee9"
+            concepts = repo / "docs" / "architecture" / "concepts"
+            concepts.mkdir(parents=True)
+            for name in ("auth-rbac.md", "queue-system.md", "search-index.md", "kafka-integration.md"):
+                (concepts / name).write_text(f"# {name}\n", encoding="utf-8")
+            readme = concepts / "README.md"
+            readme.write_text(
+                "---\n"
+                "docforge_provenance:\n"
+                "  doc: docs/architecture/concepts/README.md\n"
+                "  generated_at: 2026-07-27T00:00:00Z\n"
+                "  graph_snapshot: .ua/knowledge-graph.json\n"
+                "  sections:\n"
+                "    - id: main\n"
+                "      sources:\n"
+                "        - path: docs/architecture/concepts/auth-rbac.md\n"
+                f"          git_blob: {blob}\n"
+                "        - path: docs/architecture/concepts/queue-system.md\n"
+                f"          git_blob: {blob}\n"
+                "        - path: docs/architecture/concepts/search-index.md\n"
+                f"          git_blob: {blob}\n"
+                "        - path: docs/architecture/concepts/kafka-integration.md\n"
+                f"          git_blob: {blob}\n"
+                "---\n"
+                "# Concepts\n",
+                encoding="utf-8",
+            )
+            manifest = {
+                "version": "3.0",
+                "project": {
+                    "name": "fixture",
+                    "root": str(repo),
+                    "tier": "diligence",
+                    "profiles": {
+                        "shapes": [], "platforms": [], "frameworks": [],
+                        "concerns": [], "audiences": [],
+                    },
+                },
+                "discovery": [],
+                "documents": [{
+                    "id": "concepts_index",
+                    "type": "folder-index",
+                    "path": "docs/architecture/concepts/README.md",
+                    "status": "complete",
+                    "provenance": {},
+                    "provenance_mode": "sections",
+                    "target_depth": "orientation",
+                }],
+                "metadata": {},
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            for runtime in ("py", "js"):
+                readme.write_text(
+                    "---\n"
+                    "docforge_provenance:\n"
+                    "  doc: docs/architecture/concepts/README.md\n"
+                    "  generated_at: 2026-07-27T00:00:00Z\n"
+                    "  graph_snapshot: .ua/knowledge-graph.json\n"
+                    "  sections:\n"
+                    "    - id: main\n"
+                    "      sources:\n"
+                    "        - path: docs/architecture/concepts/auth-rbac.md\n"
+                    f"          git_blob: {blob}\n"
+                    "        - path: docs/architecture/concepts/queue-system.md\n"
+                    f"          git_blob: {blob}\n"
+                    "        - path: docs/architecture/concepts/search-index.md\n"
+                    f"          git_blob: {blob}\n"
+                    "        - path: docs/architecture/concepts/kafka-integration.md\n"
+                    f"          git_blob: {blob}\n"
+                    "---\n"
+                    "# Concepts\n",
+                    encoding="utf-8",
+                )
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                self.assertNotIn("REGENERATED", result.stdout)
+                text = readme.read_text(encoding="utf-8")
+                self.assertTrue(text.startswith("---\ndocforge_provenance:\n"), text[:80])
+                self.assertIn('schema: "2.0"', text)
+                self.assertIn('doc_id: "concepts_index"', text)
+                self.assertIn('generated_at: "2026-07-27T00:00:00Z"', text)
+                self.assertIn('tier: "diligence"', text)
+                self.assertIn('provider: "understand-anything"', text)
+                self.assertIn('flow: "native"', text)
+                self.assertIn('path: "docs/architecture/concepts/auth-rbac.md"', text)
+                self.assertIn(f'git_blob: "{blob}"', text)
+                self.assertIn('role: "doc"', text)
+                self.assertNotIn("graph_snapshot", text)
+                self.assertNotIn("<GENERATED_AT>", text)
+                self.assertNotIn("<TIER>", text)
+                self.assertNotIn("sections: []", text)
+                saved = load_manifest(repo)
+                sections = saved["documents"][0]["provenance"]["sections"]
+                self.assertEqual(len(sections), 1)
+                self.assertEqual(len(sections[0]["sources"]), 4)
+
     def test_migrate_metadata_idempotent_and_regenerates_unparseable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1455,9 +1628,10 @@ process.stdout.write(pf.emitYaml(value));
                 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
-                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-                self.assertIn("REGENERATED", result.stdout)
+                self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+                self.assertIn("FAILED", result.stdout)
                 self.assertIn("docs/broken.md", result.stdout)
+                self.assertIn("agent must regenerate provenance", result.stdout)
 
                 readme_text = readme.read_text(encoding="utf-8")
                 self.assertTrue(readme_text.startswith("---\ndocforge_provenance:\n"), readme_text[:80])
@@ -1477,10 +1651,14 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertIn("generator", saved["documents"][0]["provenance"])
                 self.assertEqual(saved["documents"][1]["provenance"]["schema"], "2.0")
                 self.assertEqual(saved["documents"][1]["provenance"]["doc_id"], "broken")
+                self.assertEqual(saved["documents"][1]["status"], "in_progress")
+                self.assertIsNone(saved["documents"][1].get("audit"))
 
                 again = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(again.returncode, 0, again.stderr + again.stdout)
-                self.assertNotIn("REGENERATED", again.stdout)
+                self.assertNotIn("FAILED  docs/broken.md", again.stdout)
+                self.assertNotIn("REGENERATED  docs/broken.md", again.stdout)
+                self.assertEqual(load_manifest(repo)["documents"][1]["status"], "in_progress")
 
     def test_obsolete_schema_defect_names_migrate_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
