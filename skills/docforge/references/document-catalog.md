@@ -43,7 +43,7 @@ mechanism, constraints, and tradeoffs.
 | deployment | environments, artifact path, rollout, rollback, verification | incident procedures | How-to | deep-dive |
 | observability | signals, ownership, correlation, alert intent, blind spots | provider marketing | Reference | deep-dive |
 | decision-index / adr | indexed decisions; for each ADR context, decision, alternatives, consequences, status | rewritten history | Explanation | deep-dive |
-| flow-index | every evidence-backed candidate, normalized entry reference, area, confidence, reach, and main/deferred/documented/skipped status | one row per heuristic process, invented execution order, or placeholder flow links | Reference | orientation |
+| flow-index | every evidence-backed candidate, normalized entry reference, area, confidence, reach, priority, and main/deferred/placeholder/documented/skipped status | one row per heuristic process or invented execution order | Reference | orientation |
 | flow | trigger, actors, ordered steps, branches, rules, failures, outcome | hand-inferred flow inventory | Explanation | deep-dive |
 | concept | one durable concept, responsibility, relationships, invariants, failure boundaries | symbol-by-symbol implementation tour | Explanation | deep-dive |
 | runbook | symptom, safety, diagnosis, remediation, verification, escalation | architectural tutorial | How-to | deep-dive |

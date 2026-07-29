@@ -45,28 +45,44 @@ def load_manifest(repo: Path) -> dict:
     return json.loads((repo / ".docforge" / "manifest.json").read_text(encoding="utf-8"))
 
 
-def write_flow_index(repo: Path, *, status: str = "main") -> None:
+def write_flow_index(
+    repo: Path,
+    *,
+    status: str = "main",
+    priority: str | None = None,
+) -> None:
     target = repo / ".docforge" / "flow-index.json"
     target.parent.mkdir(parents=True, exist_ok=True)
+    resolved_priority = priority or (status if status in {"main", "deferred"} else "main")
+    flow = {
+        "id": "flow-checkout",
+        "name": "Checkout",
+        "slug": "checkout",
+        "entry_ref": {"kind": "http", "signature": "POST /checkout", "filePath": "src/checkout.py", "symbol": "checkout"},
+        "area": "Checkout",
+        "evidence": [{"provider": "gitnexus", "artifact": "fixture", "nodeId": "checkout"}],
+        "confidence": "candidate",
+        "reach": {"steps": 3, "boundaries": 1, "churn": 0},
+        "rank": 515,
+        "priority": resolved_priority,
+        "status": status,
+    }
     target.write_text(json.dumps({
         "version": "1.0",
         "generated_at": "2026-07-29T00:00:00+00:00",
         "project": "fixture",
         "sources": ["fixture"],
         "providers": ["gitnexus"],
-        "summary": {"total": 1, "main": int(status == "main"), "deferred": int(status == "deferred"), "confirmed": 0},
-        "flows": [{
-            "id": "flow-checkout",
-            "name": "Checkout",
-            "slug": "checkout",
-            "entry_ref": {"kind": "http", "signature": "POST /checkout", "filePath": "src/checkout.py", "symbol": "checkout"},
-            "area": "Checkout",
-            "evidence": [{"provider": "gitnexus", "artifact": "fixture", "nodeId": "checkout"}],
-            "confidence": "candidate",
-            "reach": {"steps": 3, "boundaries": 1, "churn": 0},
-            "rank": 515,
-            "status": status,
-        }],
+        "summary": {
+            "total": 1,
+            "main": int(resolved_priority == "main"),
+            "deferred": int(resolved_priority == "deferred"),
+            "placeholder": int(status == "placeholder"),
+            "documented": int(status == "documented"),
+            "skipped": int(status == "skipped"),
+            "confirmed": 0,
+        },
+        "flows": [flow],
     }, indent=2) + "\n", encoding="utf-8")
 
 
@@ -155,6 +171,9 @@ class CatalogSelectionTests(unittest.TestCase):
             self.assertIn(question, skill)
         self.assertIn("Always wait for explicit confirmation", skill)
         self.assertIn("including when Auto-accept was selected", skill)
+        self.assertIn("`--revise flow`", skill)
+        self.assertIn("revising flows", skill)
+        self.assertIn("NOTICE listing main-priority flows", skill)
         self.assertNotIn("Ask exactly one applicable question at a time", skill)
         self.assertNotIn("[1] Starter", skill)
         self.assertNotIn("Reply with, for example: `2 R`", skill)
@@ -476,6 +495,97 @@ class CatalogSelectionTests(unittest.TestCase):
                         evidence["artifact"] = Path(evidence["artifact"]).name
             self.assertEqual(outputs[0], outputs[1])
 
+    def test_flow_index_revise_merges_stubs_and_notices_across_runtimes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            export = root / "export.json"
+            processes = [
+                {
+                    "id": f"proc-{index}",
+                    "entryPointId": f"Function:src/handlers/h{index}.ts:handle{index}",
+                    "terminalId": f"Function:src/db.ts:query{index}",
+                    "processType": "cross_community",
+                    "stepCount": 4 + index,
+                    "communities": ["comm-a", "comm-b"],
+                }
+                for index in range(5)
+            ]
+            export.write_text(json.dumps({
+                "routes": [],
+                "processes": processes,
+                "communities": [
+                    {"id": "comm-a", "heuristicLabel": "API"},
+                    {"id": "comm-b", "heuristicLabel": "Services"},
+                ],
+            }), encoding="utf-8")
+
+            for runtime in ("py", "js"):
+                repo = root / runtime
+                repo.mkdir()
+                harvest = run(
+                    runtime, "flow_index", "harvest",
+                    "--repo", str(repo),
+                    "--gitnexus-export", str(export),
+                    "--main-limit", "2",
+                )
+                self.assertEqual(harvest.returncode, 0, harvest.stderr)
+                index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(index["summary"]["main"], 2)
+                self.assertEqual(index["summary"]["deferred"], 3)
+
+                # Preserve a documented row and a skipped row across revise.
+                index["flows"][0]["status"] = "documented"
+                index["flows"][-1]["status"] = "skipped"
+                filled = repo / "docs" / "flows" / f"{index['flows'][0]['slug']}.md"
+                filled.parent.mkdir(parents=True, exist_ok=True)
+                filled.write_text(
+                    "# Existing documented flow\n\nConcrete prose without placeholders.\n",
+                    encoding="utf-8",
+                )
+                (repo / ".docforge/flow-index.json").write_text(
+                    json.dumps(index, indent=2) + "\n", encoding="utf-8",
+                )
+
+                revise = run(
+                    runtime, "flow_index", "revise",
+                    "--repo", str(repo),
+                    "--gitnexus-export", str(export),
+                    "--main-limit", "2",
+                )
+                self.assertEqual(revise.returncode, 0, revise.stderr)
+                self.assertIn("NOTICE: main-priority flows eligible for full documentation:", revise.stdout)
+                self.assertIn('"placeholder"', revise.stdout)
+
+                revised = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                statuses = {row["slug"]: row["status"] for row in revised["flows"]}
+                self.assertEqual(statuses[index["flows"][0]["slug"]], "documented")
+                self.assertEqual(statuses[index["flows"][-1]["slug"]], "skipped")
+                self.assertGreaterEqual(revised["summary"]["placeholder"], 3)
+                self.assertEqual(revised["summary"]["documented"], 1)
+                self.assertEqual(revised["summary"]["skipped"], 1)
+                self.assertEqual(revised["summary"]["main"], 2)
+
+                # Documented file must not be overwritten; placeholders get stubs.
+                self.assertEqual(
+                    filled.read_text(encoding="utf-8"),
+                    "# Existing documented flow\n\nConcrete prose without placeholders.\n",
+                )
+                stub_count = 0
+                for row in revised["flows"]:
+                    if row["status"] != "placeholder":
+                        continue
+                    stub = repo / "docs" / "flows" / f"{row['slug']}.md"
+                    self.assertTrue(stub.is_file(), stub)
+                    self.assertIn("Status: `placeholder`", stub.read_text(encoding="utf-8"))
+                    stub_count += 1
+                self.assertEqual(stub_count, revised["summary"]["placeholder"])
+
+                render = run(runtime, "flow_index", "render", "--repo", str(repo))
+                self.assertEqual(render.returncode, 0, render.stderr)
+                matrix = (repo / "docs/flows/README.md").read_text(encoding="utf-8")
+                self.assertIn("| placeholder |", matrix)
+                self.assertIn(f"](./{index['flows'][0]['slug']}.md)", matrix)
+
     def test_manage_manifest_only_adds_main_indexed_flows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -485,7 +595,26 @@ class CatalogSelectionTests(unittest.TestCase):
                            "--type", "flow", "--id", "flow-checkout",
                            "--path", "docs/flows/checkout.md")
             self.assertEqual(rejected.returncode, 2)
-            self.assertIn("only main flows become documents", rejected.stderr)
+            self.assertIn("only main-priority flows become documents", rejected.stderr)
+
+            write_flow_index(repo, status="placeholder", priority="deferred")
+            rejected_placeholder = run(
+                "py", "manage_manifest", "add", "--repo", str(repo),
+                "--type", "flow", "--id", "flow-checkout",
+                "--path", "docs/flows/checkout.md",
+            )
+            self.assertEqual(rejected_placeholder.returncode, 2)
+            self.assertIn("only main-priority flows become documents", rejected_placeholder.stderr)
+
+            write_flow_index(repo, status="placeholder", priority="main")
+            accepted = run(
+                "py", "manage_manifest", "add", "--repo", str(repo),
+                "--type", "flow", "--id", "flow-checkout",
+                "--path", "docs/flows/checkout.md",
+            )
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+            self.assertEqual(index["flows"][0]["status"], "documented")
 
     def test_audience_profile_paths_are_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

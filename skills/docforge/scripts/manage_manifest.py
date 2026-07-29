@@ -64,6 +64,14 @@ def load_manifest(repo: Path) -> dict:
     return data
 
 
+def flow_is_main_priority(row: dict) -> bool:
+    if row.get("priority") == "main":
+        return True
+    if row.get("priority") == "deferred":
+        return False
+    return row.get("status") in {"main", "documented"}
+
+
 def load_main_flow(repo: Path, doc_id: str, doc_path: str) -> tuple[dict, dict]:
     path = repo / FLOW_INDEX_REL
     if not path.is_file():
@@ -84,11 +92,14 @@ def load_main_flow(repo: Path, doc_id: str, doc_path: str) -> tuple[dict, dict]:
     )
     if row is None:
         raise ValueError(f"flow is not present in {FLOW_INDEX_REL}: {doc_id}")
-    if row.get("status") not in {"main", "documented"}:
-        raise ValueError(
-            f"flow {doc_id} is {row.get('status', 'unranked')}; only main flows become documents"
-        )
-    return index, row
+    status = row.get("status", "unranked")
+    if status in {"main", "documented"}:
+        return index, row
+    if status == "placeholder" and flow_is_main_priority(row):
+        return index, row
+    raise ValueError(
+        f"flow {doc_id} is {status}; only main-priority flows become documents"
+    )
 
 
 def save_manifest(repo: Path, manifest: dict) -> None:

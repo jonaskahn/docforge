@@ -53,9 +53,10 @@ guidance, and a glossary. Conditional conventions documents appear only when a
 conventions source exists.
 
 `docs/flows/README.md` exists at Spine as the rendered complete candidate
-matrix backed by `.docforge/flow-index.json`. Diligence adds
-`docs/flows/{slug}.md` only for rows ranked `main`; deferred rows remain in the
-matrix and do not create placeholder files.
+matrix backed by `.docforge/flow-index.json`. Revise flow creates stub
+`docs/flows/{slug}.md` files for every harvested candidate. Diligence adds
+full deep-dive flow documents only for main-priority rows; deferred-priority
+stubs remain discoverable in the matrix until promoted.
 
 ### Portfolio
 

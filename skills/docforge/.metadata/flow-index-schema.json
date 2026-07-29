@@ -16,6 +16,9 @@
         "total": {"type": "integer", "minimum": 0},
         "main": {"type": "integer", "minimum": 0},
         "deferred": {"type": "integer", "minimum": 0},
+        "placeholder": {"type": "integer", "minimum": 0},
+        "documented": {"type": "integer", "minimum": 0},
+        "skipped": {"type": "integer", "minimum": 0},
         "confirmed": {"type": "integer", "minimum": 0}
       },
       "additionalProperties": false
@@ -54,7 +57,8 @@
             "additionalProperties": false
           },
           "rank": {"type": "integer"},
-          "status": {"enum": ["main", "deferred", "documented", "skipped"]}
+          "priority": {"enum": ["main", "deferred"]},
+          "status": {"enum": ["main", "deferred", "placeholder", "documented", "skipped"]}
         },
         "additionalProperties": false
       }

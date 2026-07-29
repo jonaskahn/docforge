@@ -49,6 +49,11 @@ function loadManifest(repo) {
   }
   return data;
 }
+function flowIsMainPriority(row) {
+  if (row.priority === "main") return true;
+  if (row.priority === "deferred") return false;
+  return ["main", "documented"].includes(row.status);
+}
 function loadMainFlow(repo, docId, docPath) {
   const target = path.join(repo, FLOW_INDEX_REL);
   if (!fs.existsSync(target)) {
@@ -63,10 +68,10 @@ function loadMainFlow(repo, docId, docPath) {
   const slug = path.posix.basename(docPath, path.posix.extname(docPath));
   const row = (index.flows || []).find((item) => item.id === docId || item.slug === slug);
   if (!row) throw new Error(`flow is not present in ${FLOW_INDEX_REL}: ${docId}`);
-  if (!["main", "documented"].includes(row.status)) {
-    throw new Error(`flow ${docId} is ${row.status || "unranked"}; only main flows become documents`);
-  }
-  return [index, row];
+  const status = row.status || "unranked";
+  if (["main", "documented"].includes(status)) return [index, row];
+  if (status === "placeholder" && flowIsMainPriority(row)) return [index, row];
+  throw new Error(`flow ${docId} is ${status}; only main-priority flows become documents`);
 }
 function saveManifest(repo, manifest) {
   const docs = manifest.documents;

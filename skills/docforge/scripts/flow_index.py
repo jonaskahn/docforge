@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Harvest, rank, and render Docforge's complete repository flow index.
+"""Harvest, rank, revise, and render Docforge's complete repository flow index.
 
 Understand Anything JSON is read directly. GitNexus is consumed through a
 small JSON export produced by its MCP/cypher interface, keeping this tool
 standard-library-only and equivalent to its Node peer.
 
   python flow_index.py harvest --repo <repo> [--gitnexus-export <json>]
+  python flow_index.py revise --repo <repo> [--gitnexus-export <json>]
   python flow_index.py render --repo <repo>
 """
 
@@ -391,8 +392,71 @@ def finalize(rows: list[dict], main_limit: int, repo: Path | None = None) -> lis
         slug = base if used[base] == 1 else f"{base}-{used[base]}"
         row["slug"] = slug
         row["id"] = f"flow-{slug}"
-        row["status"] = "main" if index < max(main_limit, 0) else "deferred"
+        priority = "main" if index < max(main_limit, 0) else "deferred"
+        row["priority"] = priority
+        row["status"] = priority
     return rows
+
+
+def load_existing_index(repo: Path) -> dict | None:
+    path = repo / INDEX_REL
+    if not path.is_file():
+        return None
+    try:
+        return read_json(path)
+    except ValueError:
+        return None
+
+
+def prior_by_key(existing: dict | None) -> dict[str, dict]:
+    if not existing:
+        return {}
+    return {row_key(row): row for row in existing.get("flows", []) if isinstance(row, dict)}
+
+
+def apply_revise_statuses(rows: list[dict], prior: dict[str, dict]) -> list[dict]:
+    """Preserve documented/skipped; mark everything else placeholder; keep stable ids."""
+    for row in rows:
+        previous = prior.get(row_key(row))
+        if previous is None:
+            row["status"] = "placeholder"
+            continue
+        prior_status = previous.get("status")
+        if prior_status in {"documented", "skipped"}:
+            row["status"] = prior_status
+            # Keep durable path identity for existing docs/stubs.
+            if previous.get("slug"):
+                row["slug"] = previous["slug"]
+                row["id"] = previous.get("id") or f"flow-{previous['slug']}"
+            if previous.get("priority") in {"main", "deferred"}:
+                row["priority"] = previous["priority"]
+        else:
+            row["status"] = "placeholder"
+            if previous.get("slug") and (previous.get("status") in {"placeholder", "main", "deferred"}):
+                # Prefer prior slug when a stub already exists under that name.
+                row["slug"] = previous["slug"]
+                row["id"] = previous.get("id") or f"flow-{previous['slug']}"
+    return rows
+
+
+def row_priority(row: dict) -> str | None:
+    if row.get("priority") in {"main", "deferred"}:
+        return row["priority"]
+    if row["status"] in {"main", "deferred"}:
+        return row["status"]
+    return None
+
+
+def summary_for(rows: list[dict]) -> dict:
+    return {
+        "total": len(rows),
+        "main": sum(row_priority(row) == "main" for row in rows),
+        "deferred": sum(row_priority(row) == "deferred" for row in rows),
+        "placeholder": sum(row["status"] == "placeholder" for row in rows),
+        "documented": sum(row["status"] == "documented" for row in rows),
+        "skipped": sum(row["status"] == "skipped" for row in rows),
+        "confirmed": sum(row["confidence"] == "confirmed" for row in rows),
+    }
 
 
 def write_index(repo: Path, rows: list[dict], sources: list[str]) -> Path:
@@ -403,12 +467,7 @@ def write_index(repo: Path, rows: list[dict], sources: list[str]) -> Path:
         "project": repo.resolve().name,
         "sources": sources,
         "providers": providers,
-        "summary": {
-            "total": len(rows),
-            "main": sum(row["status"] == "main" for row in rows),
-            "deferred": sum(row["status"] == "deferred" for row in rows),
-            "confirmed": sum(row["confidence"] == "confirmed" for row in rows),
-        },
+        "summary": summary_for(rows),
         "flows": rows,
     }
     path = repo / INDEX_REL
@@ -417,7 +476,78 @@ def write_index(repo: Path, rows: list[dict], sources: list[str]) -> Path:
     return path
 
 
-def markdown(index: dict, tier: str = "spine") -> str:
+def stub_body(row: dict) -> str:
+    name = row["name"]
+    slug = row["slug"]
+    entry = row["entry_ref"]
+    signature = entry.get("signature") or name
+    provenance = scaffold_provenance(
+        row["id"],
+        f"docs/flows/{slug}.md",
+        tier="diligence",
+        target_depth="deep-dive",
+        provider="unknown",
+        flow="derived",
+        generated_at=now_iso(),
+    )
+    return emit_yaml(provenance) + "\n".join([
+        f"# {name}",
+        "",
+        "_Last reviewed: {{YYYY-MM-DD}}_",
+        "",
+        f"Placeholder flow candidate for `{signature}`.",
+        "",
+        "Status: `placeholder` — awaiting full flow documentation.",
+        "",
+        f"- Area: {row.get('area') or 'Unclassified'}",
+        f"- Trigger kind: {entry.get('kind')}",
+        f"- Entry: `{signature}`",
+        "",
+        "{{Write this document from the evidence required by its catalog entry.}}",
+        "",
+    ])
+
+
+def is_scaffold_or_placeholder(text: str) -> bool:
+    return (
+        "{{" in text
+        or "TODO(" in text
+        or "Status: `placeholder`" in text
+        or "<DOC_ID>" in text
+    )
+
+
+def ensure_stubs(repo: Path, rows: list[dict]) -> list[dict]:
+    """Create stub markdown for placeholder rows; never overwrite filled docs."""
+    created: list[dict] = []
+    flows_dir = repo / "docs" / "flows"
+    flows_dir.mkdir(parents=True, exist_ok=True)
+    for row in rows:
+        if row["status"] != "placeholder":
+            continue
+        target = flows_dir / f"{row['slug']}.md"
+        if target.is_file():
+            existing = target.read_text(encoding="utf-8")
+            if not is_scaffold_or_placeholder(existing):
+                continue
+        target.write_text(stub_body(row), encoding="utf-8")
+        created.append({
+            "id": row["id"],
+            "slug": row["slug"],
+            "path": f"docs/flows/{row['slug']}.md",
+            "priority": row.get("priority", "deferred"),
+            "name": row["name"],
+        })
+    return created
+
+
+def flow_doc_exists(repo: Path | None, slug: str) -> bool:
+    if repo is None:
+        return False
+    return (repo / "docs" / "flows" / f"{slug}.md").is_file()
+
+
+def markdown(index: dict, tier: str = "spine", repo: Path | None = None) -> str:
     generated = index["generated_at"]
     provider = ", ".join(index.get("providers") or []) or "unknown"
     provenance = scaffold_provenance(
@@ -432,8 +562,9 @@ def markdown(index: dict, tier: str = "spine") -> str:
     lines = [
         "# Flow index",
         "",
-        "This is the complete evidence-backed flow candidate index. `main` rows have",
-        "priority for deep-dive documentation; `deferred` rows remain discoverable.",
+        "This is the complete evidence-backed flow candidate index. `main` priority",
+        "rows get deep-dive documentation; `placeholder` rows have stub files;",
+        "`deferred` priority rows remain discoverable.",
         "",
         "| Status | Flow | Trigger | Entry point | Area | Confidence | Reach |",
         "|---|---|---|---|---|---|---|",
@@ -441,7 +572,9 @@ def markdown(index: dict, tier: str = "spine") -> str:
     for row in index.get("flows", []):
         entry = row["entry_ref"]
         name = row["name"].replace("|", "\\|")
-        if row["status"] == "documented":
+        if row["status"] in {"documented", "placeholder"} and flow_doc_exists(repo, row["slug"]):
+            name = f"[{name}](./{row['slug']}.md)"
+        elif row["status"] == "documented":
             name = f"[{name}](./{row['slug']}.md)"
         signature = str(entry.get("signature") or "").replace("|", "\\|")
         area = str(row.get("area") or "").replace("|", "\\|")
@@ -461,21 +594,26 @@ def markdown(index: dict, tier: str = "spine") -> str:
     return emit_yaml(provenance) + "\n".join(lines)
 
 
-def cmd_harvest(args: argparse.Namespace) -> int:
+def collect_candidates(args: argparse.Namespace) -> tuple[list[dict], list[str]]:
     rows: list[dict] = []
     sources: list[str] = []
     domain = find_ua(args.repo, "domain-graph.json")
     knowledge = find_ua(args.repo, "knowledge-graph.json")
+    if domain:
+        rows.extend(harvest_ua_domain(domain))
+        sources.append(str(domain.relative_to(args.repo)))
+    if knowledge:
+        rows.extend(harvest_ua_knowledge(knowledge))
+        sources.append(str(knowledge.relative_to(args.repo)))
+    if args.gitnexus_export:
+        rows.extend(harvest_gitnexus(args.gitnexus_export))
+        sources.append(str(args.gitnexus_export))
+    return rows, sources
+
+
+def cmd_harvest(args: argparse.Namespace) -> int:
     try:
-        if domain:
-            rows.extend(harvest_ua_domain(domain))
-            sources.append(str(domain.relative_to(args.repo)))
-        if knowledge:
-            rows.extend(harvest_ua_knowledge(knowledge))
-            sources.append(str(knowledge.relative_to(args.repo)))
-        if args.gitnexus_export:
-            rows.extend(harvest_gitnexus(args.gitnexus_export))
-            sources.append(str(args.gitnexus_export))
+        rows, sources = collect_candidates(args)
     except ValueError as error:
         return fail(str(error), 2)
     if not rows:
@@ -486,11 +624,67 @@ def cmd_harvest(args: argparse.Namespace) -> int:
         )
     rows = finalize(rows, args.main_limit, args.repo)
     target = write_index(args.repo, rows, sources)
+    summary = summary_for(rows)
     print(
-        f"Wrote {target} — {len(rows)} flow candidates "
-        f"({sum(row['status'] == 'main' for row in rows)} main, "
-        f"{sum(row['status'] == 'deferred' for row in rows)} deferred)."
+        f"Wrote {target} — {summary['total']} flow candidates "
+        f"({summary['main']} main, {summary['deferred']} deferred)."
     )
+    return 0
+
+
+def cmd_revise(args: argparse.Namespace) -> int:
+    try:
+        rows, sources = collect_candidates(args)
+    except ValueError as error:
+        return fail(str(error), 2)
+    if not rows:
+        return fail(
+            "no flow candidates found; provide UA graphs or --gitnexus-export "
+            "from the GitNexus MCP",
+            2,
+        )
+    existing = load_existing_index(args.repo)
+    prior = prior_by_key(existing)
+    if existing and existing.get("sources"):
+        for source in existing["sources"]:
+            if source not in sources:
+                sources.append(source)
+    rows = finalize(rows, args.main_limit, args.repo)
+    rows = apply_revise_statuses(rows, prior)
+    stubs = ensure_stubs(args.repo, rows)
+    target = write_index(args.repo, rows, sources)
+    summary = summary_for(rows)
+    main_priority = [
+        {
+            "id": row["id"],
+            "slug": row["slug"],
+            "path": f"docs/flows/{row['slug']}.md",
+            "name": row["name"],
+            "status": row["status"],
+        }
+        for row in rows
+        if row.get("priority") == "main" and row["status"] != "skipped"
+    ]
+    documented = [row["id"] for row in rows if row["status"] == "documented"]
+    print(
+        f"Revised {target} — {summary['total']} flows "
+        f"({summary['placeholder']} placeholder, {summary['documented']} documented, "
+        f"{summary['main']} main-priority)."
+    )
+    print(f"Created/refreshed {len(stubs)} placeholder stub(s).")
+    if main_priority:
+        print("NOTICE: main-priority flows eligible for full documentation:")
+        for item in main_priority:
+            print(f"  - {item['name']} ({item['path']}) [{item['status']}]")
+    report = {
+        "index": str(target),
+        "summary": summary,
+        "stubs": stubs,
+        "main_priority": main_priority,
+        "documented": documented,
+        "update_existing": documented,
+    }
+    print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -508,7 +702,7 @@ def cmd_render(args: argparse.Namespace) -> int:
             pass
     target = args.output or args.repo / "docs/flows/README.md"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(markdown(index, tier), encoding="utf-8")
+    target.write_text(markdown(index, tier, args.repo), encoding="utf-8")
     print(f"Rendered {target} — {len(index.get('flows', []))} indexed flows.")
     return 0
 
@@ -516,11 +710,18 @@ def cmd_render(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
+
+    def add_harvest_flags(command: argparse.ArgumentParser) -> None:
+        command.add_argument("--repo", required=True, type=Path)
+        command.add_argument("--gitnexus-export", type=Path)
+        command.add_argument("--main-limit", type=int, default=15)
+
     harvest = sub.add_parser("harvest")
-    harvest.add_argument("--repo", required=True, type=Path)
-    harvest.add_argument("--gitnexus-export", type=Path)
-    harvest.add_argument("--main-limit", type=int, default=15)
+    add_harvest_flags(harvest)
     harvest.set_defaults(func=cmd_harvest)
+    revise = sub.add_parser("revise")
+    add_harvest_flags(revise)
+    revise.set_defaults(func=cmd_revise)
     render = sub.add_parser("render")
     render.add_argument("--repo", required=True, type=Path)
     render.add_argument("--output", type=Path)

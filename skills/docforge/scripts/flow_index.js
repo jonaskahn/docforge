@@ -278,9 +278,65 @@ function finalize(rows, mainLimit, repo = null) {
     const slug = used.get(base) === 1 ? base : `${base}-${used.get(base)}`;
     row.slug = slug;
     row.id = `flow-${slug}`;
-    row.status = index < Math.max(mainLimit, 0) ? "main" : "deferred";
+    const priority = index < Math.max(mainLimit, 0) ? "main" : "deferred";
+    row.priority = priority;
+    row.status = priority;
   });
   return rows;
+}
+function loadExistingIndex(repo) {
+  const target = path.join(repo, INDEX_REL);
+  if (!fs.existsSync(target)) return null;
+  try {
+    return readJson(target);
+  } catch {
+    return null;
+  }
+}
+function priorByKey(existing) {
+  if (!existing) return new Map();
+  return new Map((existing.flows || []).filter((row) => row && typeof row === "object").map((row) => [rowKey(row), row]));
+}
+function applyReviseStatuses(rows, prior) {
+  for (const row of rows) {
+    const previous = prior.get(rowKey(row));
+    if (!previous) {
+      row.status = "placeholder";
+      continue;
+    }
+    const priorStatus = previous.status;
+    if (priorStatus === "documented" || priorStatus === "skipped") {
+      row.status = priorStatus;
+      if (previous.slug) {
+        row.slug = previous.slug;
+        row.id = previous.id || `flow-${previous.slug}`;
+      }
+      if (previous.priority === "main" || previous.priority === "deferred") row.priority = previous.priority;
+    } else {
+      row.status = "placeholder";
+      if (previous.slug && ["placeholder", "main", "deferred"].includes(previous.status)) {
+        row.slug = previous.slug;
+        row.id = previous.id || `flow-${previous.slug}`;
+      }
+    }
+  }
+  return rows;
+}
+function rowPriority(row) {
+  if (row.priority === "main" || row.priority === "deferred") return row.priority;
+  if (row.status === "main" || row.status === "deferred") return row.status;
+  return null;
+}
+function summaryFor(rows) {
+  return {
+    total: rows.length,
+    main: rows.filter((row) => rowPriority(row) === "main").length,
+    deferred: rows.filter((row) => rowPriority(row) === "deferred").length,
+    placeholder: rows.filter((row) => row.status === "placeholder").length,
+    documented: rows.filter((row) => row.status === "documented").length,
+    skipped: rows.filter((row) => row.status === "skipped").length,
+    confirmed: rows.filter((row) => row.confidence === "confirmed").length,
+  };
 }
 function writeIndex(repo, rows, sources) {
   const providers = [...new Set(rows.flatMap((row) => row.evidence.map((item) => item.provider)))].sort();
@@ -290,12 +346,7 @@ function writeIndex(repo, rows, sources) {
     project: path.basename(path.resolve(repo)),
     sources,
     providers,
-    summary: {
-      total: rows.length,
-      main: rows.filter((row) => row.status === "main").length,
-      deferred: rows.filter((row) => row.status === "deferred").length,
-      confirmed: rows.filter((row) => row.confidence === "confirmed").length,
-    },
+    summary: summaryFor(rows),
     flows: rows,
   };
   const target = path.join(repo, INDEX_REL);
@@ -303,7 +354,57 @@ function writeIndex(repo, rows, sources) {
   fs.writeFileSync(target, JSON.stringify(value, null, 2) + "\n");
   return target;
 }
-function markdown(index, tier = "spine") {
+function stubBody(row) {
+  const entry = row.entry_ref;
+  const signature = entry.signature || row.name;
+  const provenance = pf.scaffoldProvenance(row.id, `docs/flows/${row.slug}.md`, {
+    tier: "diligence",
+    target_depth: "deep-dive",
+    provider: "unknown",
+    flow: "derived",
+    generated_at: nowIso(),
+  });
+  return pf.emitYaml(provenance) + [
+    `# ${row.name}`, "",
+    "_Last reviewed: {{YYYY-MM-DD}}_", "",
+    `Placeholder flow candidate for \`${signature}\`.`, "",
+    "Status: `placeholder` — awaiting full flow documentation.", "",
+    `- Area: ${row.area || "Unclassified"}`,
+    `- Trigger kind: ${entry.kind}`,
+    `- Entry: \`${signature}\``, "",
+    "{{Write this document from the evidence required by its catalog entry.}}", "",
+  ].join("\n");
+}
+function isScaffoldOrPlaceholder(text) {
+  return text.includes("{{") || text.includes("TODO(") || text.includes("Status: `placeholder`") || text.includes("<DOC_ID>");
+}
+function ensureStubs(repo, rows) {
+  const created = [];
+  const flowsDir = path.join(repo, "docs", "flows");
+  fs.mkdirSync(flowsDir, { recursive: true });
+  for (const row of rows) {
+    if (row.status !== "placeholder") continue;
+    const target = path.join(flowsDir, `${row.slug}.md`);
+    if (fs.existsSync(target)) {
+      const existing = fs.readFileSync(target, "utf8");
+      if (!isScaffoldOrPlaceholder(existing)) continue;
+    }
+    fs.writeFileSync(target, stubBody(row));
+    created.push({
+      id: row.id,
+      slug: row.slug,
+      path: `docs/flows/${row.slug}.md`,
+      priority: row.priority || "deferred",
+      name: row.name,
+    });
+  }
+  return created;
+}
+function flowDocExists(repo, slug) {
+  if (!repo) return false;
+  return fs.existsSync(path.join(repo, "docs", "flows", `${slug}.md`));
+}
+function markdown(index, tier = "spine", repo = null) {
   const generated = index.generated_at;
   const provider = (index.providers || []).join(", ") || "unknown";
   const provenance = pf.scaffoldProvenance("flows_index", "docs/flows/README.md", {
@@ -315,15 +416,20 @@ function markdown(index, tier = "spine") {
   });
   const lines = [
     "# Flow index", "",
-    "This is the complete evidence-backed flow candidate index. `main` rows have",
-    "priority for deep-dive documentation; `deferred` rows remain discoverable.", "",
+    "This is the complete evidence-backed flow candidate index. `main` priority",
+    "rows get deep-dive documentation; `placeholder` rows have stub files;",
+    "`deferred` priority rows remain discoverable.", "",
     "| Status | Flow | Trigger | Entry point | Area | Confidence | Reach |",
     "|---|---|---|---|---|---|---|",
   ];
   for (const row of index.flows || []) {
     const entry = row.entry_ref;
     let name = row.name.replace(/\|/g, "\\|");
-    if (row.status === "documented") name = `[${name}](./${row.slug}.md)`;
+    if ((row.status === "documented" || row.status === "placeholder") && flowDocExists(repo, row.slug)) {
+      name = `[${name}](./${row.slug}.md)`;
+    } else if (row.status === "documented") {
+      name = `[${name}](./${row.slug}.md)`;
+    }
     const signature = String(entry.signature || "").replace(/\|/g, "\\|");
     const area = String(row.area || "").replace(/\|/g, "\\|");
     lines.push(`| ${row.status} | ${name} | ${entry.kind} | \`${signature}\` | ${area} | ${row.confidence} | ${row.reach.steps} steps / ${row.reach.boundaries} boundaries / ${row.reach.churn || 0} changes |`);
@@ -331,29 +437,7 @@ function markdown(index, tier = "spine") {
   lines.push("", `_Generated ${generated}; source of truth: \`.docforge/flow-index.json\`._`, "");
   return pf.emitYaml(provenance) + lines.join("\n");
 }
-function parseArgs(argv) {
-  if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
-  const command = argv[0];
-  if (!["harvest", "render"].includes(command)) throw new Error(`unknown command: ${command}`);
-  const allowed = command === "harvest" ? new Set(["repo", "gitnexus-export", "main-limit"]) : new Set(["repo", "output"]);
-  const args = { command, main_limit: 15 };
-  for (let index = 1; index < argv.length; index++) {
-    const token = argv[index];
-    if (!token.startsWith("--")) throw new Error(`unexpected argument: ${token}`);
-    const raw = token.slice(2);
-    if (!allowed.has(raw)) throw new Error(`unknown option: ${token}`);
-    if (index + 1 >= argv.length || argv[index + 1].startsWith("--")) throw new Error(`option requires a value: ${token}`);
-    const key = raw.replace(/-/g, "_");
-    args[key] = argv[++index];
-  }
-  args.main_limit = Number(args.main_limit);
-  if (!Number.isInteger(args.main_limit)) throw new Error("--main-limit must be an integer");
-  return args;
-}
-function usage() {
-  console.log("usage: flow_index.js harvest --repo <path> [--gitnexus-export <json>] [--main-limit <n>] | render --repo <path> [--output <path>]");
-}
-function cmdHarvest(args) {
+function collectCandidates(args) {
   const rows = [];
   const sources = [];
   const domain = findUa(args.repo, "domain-graph.json");
@@ -370,10 +454,80 @@ function cmdHarvest(args) {
     rows.push(...harvestGitnexus(args.gitnexus_export));
     sources.push(args.gitnexus_export);
   }
+  return [rows, sources];
+}
+function parseArgs(argv) {
+  if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
+  const command = argv[0];
+  if (!["harvest", "revise", "render"].includes(command)) throw new Error(`unknown command: ${command}`);
+  const allowed = command === "render" ? new Set(["repo", "output"]) : new Set(["repo", "gitnexus-export", "main-limit"]);
+  const args = { command, main_limit: 15 };
+  for (let index = 1; index < argv.length; index++) {
+    const token = argv[index];
+    if (!token.startsWith("--")) throw new Error(`unexpected argument: ${token}`);
+    const raw = token.slice(2);
+    if (!allowed.has(raw)) throw new Error(`unknown option: ${token}`);
+    if (index + 1 >= argv.length || argv[index + 1].startsWith("--")) throw new Error(`option requires a value: ${token}`);
+    const key = raw.replace(/-/g, "_");
+    args[key] = argv[++index];
+  }
+  args.main_limit = Number(args.main_limit);
+  if (!Number.isInteger(args.main_limit)) throw new Error("--main-limit must be an integer");
+  return args;
+}
+function usage() {
+  console.log("usage: flow_index.js harvest|revise --repo <path> [--gitnexus-export <json>] [--main-limit <n>] | render --repo <path> [--output <path>]");
+}
+function cmdHarvest(args) {
+  const [rows, sources] = collectCandidates(args);
   if (!rows.length) return fail("no flow candidates found; provide UA graphs or --gitnexus-export from the GitNexus MCP", 2);
   const finalRows = finalize(rows, args.main_limit, args.repo);
   const target = writeIndex(args.repo, finalRows, sources);
-  console.log(`Wrote ${target} — ${finalRows.length} flow candidates (${finalRows.filter((row) => row.status === "main").length} main, ${finalRows.filter((row) => row.status === "deferred").length} deferred).`);
+  const summary = summaryFor(finalRows);
+  console.log(`Wrote ${target} — ${summary.total} flow candidates (${summary.main} main, ${summary.deferred} deferred).`);
+  return 0;
+}
+function cmdRevise(args) {
+  const [rows, sources] = collectCandidates(args);
+  if (!rows.length) return fail("no flow candidates found; provide UA graphs or --gitnexus-export from the GitNexus MCP", 2);
+  const existing = loadExistingIndex(args.repo);
+  const prior = priorByKey(existing);
+  if (existing && existing.sources) {
+    for (const source of existing.sources) {
+      if (!sources.includes(source)) sources.push(source);
+    }
+  }
+  let finalRows = finalize(rows, args.main_limit, args.repo);
+  finalRows = applyReviseStatuses(finalRows, prior);
+  const stubs = ensureStubs(args.repo, finalRows);
+  const target = writeIndex(args.repo, finalRows, sources);
+  const summary = summaryFor(finalRows);
+  const mainPriority = finalRows
+    .filter((row) => row.priority === "main" && row.status !== "skipped")
+    .map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      path: `docs/flows/${row.slug}.md`,
+      name: row.name,
+      status: row.status,
+    }));
+  const documented = finalRows.filter((row) => row.status === "documented").map((row) => row.id);
+  console.log(`Revised ${target} — ${summary.total} flows (${summary.placeholder} placeholder, ${summary.documented} documented, ${summary.main} main-priority).`);
+  console.log(`Created/refreshed ${stubs.length} placeholder stub(s).`);
+  if (mainPriority.length) {
+    console.log("NOTICE: main-priority flows eligible for full documentation:");
+    for (const item of mainPriority) {
+      console.log(`  - ${item.name} (${item.path}) [${item.status}]`);
+    }
+  }
+  console.log(JSON.stringify({
+    index: target,
+    summary,
+    stubs,
+    main_priority: mainPriority,
+    documented,
+    update_existing: documented,
+  }, null, 2));
   return 0;
 }
 function cmdRender(args) {
@@ -389,7 +543,7 @@ function cmdRender(args) {
   }
   const target = args.output || path.join(args.repo, "docs", "flows", "README.md");
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, markdown(index, tier));
+  fs.writeFileSync(target, markdown(index, tier, args.repo));
   console.log(`Rendered ${target} — ${(index.flows || []).length} indexed flows.`);
   return 0;
 }
@@ -402,7 +556,9 @@ function main() {
       return 0;
     }
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) return fail(`not a directory: ${args.repo || ""}`, 2);
-    return args.command === "harvest" ? cmdHarvest(args) : cmdRender(args);
+    if (args.command === "harvest") return cmdHarvest(args);
+    if (args.command === "revise") return cmdRevise(args);
+    return cmdRender(args);
   } catch (error) {
     return fail(error.message, 2);
   }

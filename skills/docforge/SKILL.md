@@ -49,8 +49,8 @@ Ask only what remains unresolved, in this order:
 1. **Goal or action.** For a repository without a manifest, offer creating a
    new documentation plan or planning without writing. When a manifest exists,
    also offer resuming it, checking status or staleness, revising a named area,
-   or replacing the plan. Briefly distinguish inspection, planning, writing,
-   and read-only reporting.
+   revising flows, or replacing the plan. Briefly distinguish inspection,
+   planning, writing, and read-only reporting.
 2. **Documentation tier.** For a new or plan-only scope, offer Spine
    (essential repository documentation), Diligence (Spine plus flows, risks,
    security, operations, dependencies, and ADRs), Portfolio (Diligence plus
@@ -81,10 +81,10 @@ Ask only what remains unresolved, in this order:
 
 Collect the applicable answers as one response. If the user supplied one or
 more choices in the original request, retain them and include only unresolved
-questions in the intake. For Resume, Status, or Revise, omit tier, audience,
-and shape questions that the existing manifest already resolves. If the reply
-leaves a material choice missing or ambiguous, ask one concise follow-up
-containing only those unresolved choices.
+questions in the intake. For Resume, Status, Revise, or Revise flow, omit tier,
+audience, and shape questions that the existing manifest already resolves. If
+the reply leaves a material choice missing or ambiguous, ask one concise
+follow-up containing only those unresolved choices.
 
 After resolving the answers, display one confirmation summary containing the
 action, tier, every selected profile dimension, selected graph provider and its
@@ -94,12 +94,13 @@ summary, including when Auto-accept was selected. Only after confirmation may
 Docforge initialize or replace a manifest or begin deeper planning. Later
 plan-tree pauses follow the selected execution mode.
 
-Show only currently valid choices. Do not offer Resume, Status, or Revise when
-no manifest exists, and do not present a provider that needs setup as ready. If
-no code graph is ready, explain that global installation/MCP wiring is user-run
-and that an agent-run repository index build or refresh needs separate explicit
-approval; selecting a setup path is not that approval. If a manifest exists,
-include its tier, typed profiles, and incomplete count in the first explanation.
+Show only currently valid choices. Do not offer Resume, Status, Revise, or
+Revise flow when no manifest exists, and do not present a provider that needs
+setup as ready. If no code graph is ready, explain that global
+installation/MCP wiring is user-run and that an agent-run repository index
+build or refresh needs separate explicit approval; selecting a setup path is
+not that approval. If a manifest exists, include its tier, typed profiles, and
+incomplete count in the first explanation.
 Report existing documentation and candidate repository shapes with a brief
 evidence note, such as an API schema, web framework manifest, library package
 manifest, pipeline configuration, or infrastructure files.
@@ -185,6 +186,16 @@ mechanisms, setup, and refresh behavior belong to
 - `--status`: print manifest state only.
 - `--revise all` / `--revise <area>`: run `migrate_metadata` when needed, check
   provenance, re-ground stale sections in scope, and preserve fresh sections.
+- `--revise flow` / natural-language **revise flow**: run `migrate_metadata`
+  when needed, precheck `--need flow`, then run `flow_index revise` to
+  re-harvest candidates, upsert every row into `.docforge/flow-index.json`,
+  set non-documented/non-skipped rows to `placeholder`, create stub
+  `docs/flows/{slug}.md` files for all found candidates, re-ground existing
+  documented flow docs, and fully write main-priority flows. Always display a
+  NOTICE listing main-priority flows being generated; pause for confirmation in
+  review mode, or display and continue under `--auto-accept`. Then render
+  `docs/flows/README.md`. Distinct from `--revise <area>`, which re-grounds
+  prose sections without re-harvesting the flow index.
 
 An explicit single-document request still requires graph precheck, re-grounding,
 mechanical lint, independent audit, and manifest state updates.
@@ -243,8 +254,10 @@ documents, decisions, runbooks, datasets, concepts, migrations, backlog
 traceability, and portfolio decisions are dynamic and must be added after
 discovery. Harvest every evidenced flow candidate into
 `.docforge/flow-index.json` during analysis; after the plan gate, render it as
-`docs/flows/README.md` when that document reaches its write turn. Add dynamic
-flow documents only for rows ranked `main`. Never seed an example artifact to
+`docs/flows/README.md` when that document reaches its write turn. On revise
+flow, upsert all candidates as `placeholder` with stubs, update existing
+documented flows, and add dynamic deep-dive flow documents only for
+main-priority rows (with a user NOTICE). Never seed an example artifact to
 stand in for discovery.
 
 ### 3. Initialize and preview
@@ -442,8 +455,9 @@ flags exit `2`.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade;
   incomplete or unconvertible written documents are reported as `FAILED` and
   demoted to `in_progress` for agent regeneration.
-- `flow_index.{py,js}`: harvest and rank complete flow candidates, then render
-  the flow matrix; GitNexus input uses deterministic MCP-export JSON.
+- `flow_index.{py,js}`: harvest, revise (merge + placeholder stubs + main
+  NOTICE), and render the flow matrix; GitNexus input uses deterministic
+  MCP-export JSON.
 - `validate_metadata.{py,js}`: registry/schema/path/version/peer validation.
 - Graph adapters, readers, derivation, document lint, and child-repository
   discovery retain paired contracts.

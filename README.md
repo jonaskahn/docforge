@@ -138,13 +138,14 @@ competitor indexes are not gaps and stay hidden unless you request provider
 comparison or troubleshooting.
 
 Docforge writes every evidenced flow candidate to `.docforge/flow-index.json`
-and renders the full main/deferred matrix in `docs/flows/README.md`; only main
-rows become deep-dive flow documents. GitNexus Processes are grouped by entry
-point, while Understand Anything domain flows are augmented from its knowledge
-graph. Only catalog entries declaring `flow_graph` require detailed flow data.
-They prefer native flow data; when only a code graph is available, Docforge
-derives a provisional, entry-point-first flow graph in the git-ignored
-`.docforge/tmp/` workspace.
+and renders the full matrix in `docs/flows/README.md`. Harvest ranks candidates
+as main/deferred; revise flow upserts them as `placeholder` with stub files and
+fully documents main-priority flows (with an explicit user notice). GitNexus
+Processes are grouped by entry point, while Understand Anything domain flows
+are augmented from its knowledge graph. Only catalog entries declaring
+`flow_graph` require detailed flow data. They prefer native flow data; when
+only a code graph is available, Docforge derives a provisional,
+entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
 
 Provider capabilities and setup live in [graph dispatch](skills/docforge/references/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/references/flow-derivation.md).
 

@@ -16,12 +16,12 @@ docforge_provenance:
 ---
 # Flow index
 
-This index lists every evidence-backed flow candidate. **Main** rows are
-prioritized for deep-dive documentation; **deferred** rows remain discoverable
-without creating placeholder documents.
+This index lists every evidence-backed flow candidate. **Main** priority rows
+are prioritized for deep-dive documentation; **placeholder** rows have stub
+files; **deferred** priority rows remain discoverable until promoted.
 
 | Status | Flow | Trigger | Entry point | Area | Confidence | Reach |
 |---|---|---|---|---|---|---|
-| {{main / deferred / documented / skipped}} | {{flow}} | {{trigger kind}} | `{{normalized entry signature}}` | {{area}} | {{confirmed / candidate}} | {{steps / boundaries}} |
+| {{main / deferred / placeholder / documented / skipped}} | {{flow}} | {{trigger kind}} | `{{normalized entry signature}}` | {{area}} | {{confirmed / candidate}} | {{steps / boundaries}} |
 
 The machine-readable source of truth is `.docforge/flow-index.json`.

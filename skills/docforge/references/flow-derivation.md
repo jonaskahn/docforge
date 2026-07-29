@@ -12,14 +12,21 @@ Run:
 ```sh
 python scripts/flow_index.py harvest --repo <repo> \
   [--gitnexus-export <mcp-export.json>] [--main-limit 15]
+
+python scripts/flow_index.py revise --repo <repo> \
+  [--gitnexus-export <mcp-export.json>] [--main-limit 15]
 ```
 
 The equivalent Node command uses `flow_index.js`. Harvest writes
-`.docforge/flow-index.json` during repository discovery. After the manifest
-tree has passed the plan gate and `flows_index` reaches its write turn, run
-`flow_index.py|js render --repo <repo>` to project that machine record into
-`docs/flows/README.md`. Rendering is document writing and never precedes the
-plan gate.
+`.docforge/flow-index.json` during repository discovery with `main` /
+`deferred` statuses. Revise re-harvests, merges with the existing index
+(preserving `documented` and `skipped`), sets other rows to `placeholder`,
+creates stub `docs/flows/{slug}.md` files for every placeholder candidate, and
+prints a NOTICE listing main-priority flows eligible for full documentation.
+After the manifest tree has passed the plan gate and `flows_index` reaches its
+write turn, run `flow_index.py|js render --repo <repo>` to project that machine
+record into `docs/flows/README.md`. Rendering is document writing and never
+precedes the plan gate.
 
 For GitNexus, export `Route`, `Process`, and `Community` properties through its
 MCP/cypher interface. Processes are heuristic Entry-to-Terminal paths, not
@@ -43,9 +50,13 @@ names. A knowledge graph containing only `contains` edges supplies structure,
 not an ordered call flow.
 
 Every row records a normalized `entry_ref`, evidence, confidence, reach, rank,
-and one of `main`, `deferred`, `documented`, or `skipped`. Only `main` rows may
-be added as dynamic `docs/flows/{slug}.md` documents. Deferred rows remain in
-the index and are not placeholder documents.
+optional `priority` (`main` or `deferred`), and one of `main`, `deferred`,
+`placeholder`, `documented`, or `skipped`. Harvest assigns `main`/`deferred`
+status from rank position. Revise assigns `placeholder` to every non-documented,
+non-skipped row and writes stub markdown for each. Only main-priority rows
+(`priority: main`, or harvest status `main`/`documented`) may be added as
+dynamic deep-dive `docs/flows/{slug}.md` documents in the manifest. Deferred
+priority rows keep their stubs and index entries until promoted.
 
 ## Derive main-flow detail
 

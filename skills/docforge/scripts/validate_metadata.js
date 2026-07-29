@@ -15,7 +15,7 @@ const PUBLIC_CONTRACTS = {
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--section", "--json", "--sync-provenance"],
-  flow_index: ["harvest", "render", "--repo", "--gitnexus-export", "--main-limit", "--output"],
+  flow_index: ["harvest", "revise", "render", "--repo", "--gitnexus-export", "--main-limit", "--output"],
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
 };
 
