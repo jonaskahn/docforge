@@ -24,7 +24,7 @@ PUBLIC_CONTRACTS = {
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
     "check_staleness": ["--manifest", "--section", "--json", "--sync-provenance"],
-    "flow_index": ["harvest", "revise", "render", "--repo", "--gitnexus-export", "--main-limit", "--output"],
+    "flow_index": ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
     "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
 }
 
@@ -53,8 +53,19 @@ def validate() -> list[str]:
         errors.append("catalog schema version disagrees with catalog")
     if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.1":
         errors.append("manifest schema must require version 3.1")
-    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.0":
-        errors.append("flow index schema must require version 1.0")
+    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.1":
+        errors.append("flow index schema must require version 1.1")
+    flow_item = (
+        flow_index_schema.get("properties", {})
+        .get("flows", {})
+        .get("items", {})
+        .get("properties", {})
+    )
+    for field in ("display_name", "family", "doc_role", "composed_into", "doc_path"):
+        if field not in flow_item:
+            errors.append(f"flow index schema must define flow.{field}")
+    if flow_item.get("doc_role", {}).get("enum") != ["standalone", "member", "index_only"]:
+        errors.append("flow index schema doc_role must be standalone|member|index_only")
     tiers = {item["id"] for item in catalog.get("tiers", [])}
     dimensions = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
     profiles = catalog.get("profiles", {})

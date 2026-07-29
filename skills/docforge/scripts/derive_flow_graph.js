@@ -12,12 +12,15 @@
  * .docforge/tmp/flow-graph.json: provisional, git-ignored, regenerated each
  * run, never committed.
  *
- * The reasoning step is agent-mediated (a script cannot infer business domains):
+ * The reasoning step is agent-mediated (a script cannot infer business domains).
+ * After flow_index harvest|revise, prefer the compact pack: main-priority rows
+ * from .docforge/flow-index.json, .docforge/tmp/communities.md (deduped
+ * labels), and this prepare context when no native flow graph exists:
  *
  *   node derive_flow_graph.js prepare --repo <path>
  *   # -> writes .docforge/tmp/flow-context.json (compact code-graph digest)
- *   # The agent dispatches the Docforge flow analyzer on that context per
- *   # references/flow-derivation.md and saves its JSON to <analysis.json>.
+ *   # The agent analyzes main-priority flows per references/flow-derivation.md
+ *   # into .docforge/tmp/flow-analysis.json (or another --analysis path).
  *   node derive_flow_graph.js write --repo <path> --analysis <analysis.json>
  *   # -> validates and writes .docforge/tmp/flow-graph.json (+ .gitignore)
  *

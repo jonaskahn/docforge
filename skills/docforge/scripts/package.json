@@ -1,0 +1,5 @@
+{
+  "type": "commonjs",
+  "private": true,
+  "description": "Keep DocForge Node scripts as CommonJS even when installed under a parent package with \"type\": \"module\" (e.g. ~/.agents)."
+}

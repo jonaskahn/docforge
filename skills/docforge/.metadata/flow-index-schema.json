@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Docforge Flow Index 1.0",
+  "title": "Docforge Flow Index 1.1",
   "type": "object",
   "required": ["version", "generated_at", "project", "sources", "providers", "summary", "flows"],
   "properties": {
-    "version": {"const": "1.0"},
+    "version": {"const": "1.1"},
     "generated_at": {"type": "string", "format": "date-time"},
     "project": {"type": "string"},
     "sources": {"type": "array", "items": {"type": "string"}},
@@ -27,11 +27,16 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "name", "slug", "entry_ref", "area", "evidence", "confidence", "reach", "rank", "status"],
+        "required": ["id", "name", "slug", "entry_ref", "area", "evidence", "confidence", "reach", "rank", "status", "display_name", "doc_role", "doc_path"],
         "properties": {
           "id": {"type": "string", "pattern": "^flow-[a-z0-9][a-z0-9-]*$"},
           "name": {"type": "string", "minLength": 1},
+          "display_name": {"type": "string", "minLength": 1},
           "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "family": {"type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "doc_role": {"enum": ["standalone", "member", "index_only"]},
+          "composed_into": {"type": ["string", "null"], "pattern": "^flow-[a-z0-9][a-z0-9-]*$"},
+          "doc_path": {"type": ["string", "null"]},
           "entry_ref": {
             "type": "object",
             "required": ["kind", "signature", "filePath", "symbol"],

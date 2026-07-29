@@ -15,7 +15,7 @@ const PUBLIC_CONTRACTS = {
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--section", "--json", "--sync-provenance"],
-  flow_index: ["harvest", "revise", "render", "--repo", "--gitnexus-export", "--main-limit", "--output"],
+  flow_index: ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
 };
 
@@ -41,7 +41,15 @@ function validate() {
   if (catalog.version !== "2.1.0") errors.push("catalog version must be 2.1.0");
   if ((((catalogSchema.properties || {}).version || {}).const) !== "2.1.0") errors.push("catalog schema version disagrees with catalog");
   if ((((manifestSchema.properties || {}).version || {}).const) !== "3.1") errors.push("manifest schema must require version 3.1");
-  if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.0") errors.push("flow index schema must require version 1.0");
+  if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.1") errors.push("flow index schema must require version 1.1");
+  const flowItem = ((((flowIndexSchema.properties || {}).flows || {}).items || {}).properties) || {};
+  for (const field of ["display_name", "family", "doc_role", "composed_into", "doc_path"]) {
+    if (!(field in flowItem)) errors.push(`flow index schema must define flow.${field}`);
+  }
+  const docRoles = ((flowItem.doc_role || {}).enum) || [];
+  if (docRoles.length !== 3 || !["standalone", "member", "index_only"].every((item) => docRoles.includes(item))) {
+    errors.push("flow index schema doc_role must be standalone|member|index_only");
+  }
   const tiers = new Set(catalog.tiers.map((item) => item.id));
   const dimensions = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
   const schemaProfileRequired = new Set(((((catalogSchema.properties || {}).profiles || {}).required) || []));

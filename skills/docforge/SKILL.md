@@ -188,14 +188,24 @@ mechanisms, setup, and refresh behavior belong to
   provenance, re-ground stale sections in scope, and preserve fresh sections.
 - `--revise flow` / natural-language **revise flow**: run `migrate_metadata`
   when needed, precheck `--need flow`, then run `flow_index revise` to
-  re-harvest candidates, upsert every row into `.docforge/flow-index.json`,
-  set non-documented/non-skipped rows to `placeholder`, create stub
-  `docs/flows/{slug}.md` files for all found candidates, re-ground existing
-  documented flow docs, and fully write main-priority flows. Always display a
-  NOTICE listing main-priority flows being generated; pause for confirmation in
-  review mode, or display and continue under `--auto-accept`. Then render
-  `docs/flows/README.md`. Distinct from `--revise <area>`, which re-grounds
-  prose sections without re-harvesting the flow index.
+  re-harvest candidates (with community-label and near-candidate dedup), upsert
+  every row into `.docforge/flow-index.json` (schema 1.1), set
+  non-documented/non-skipped rows to `placeholder`, create stub markdown
+  **only for main-priority standalone** placeholders, prune orphan deferred /
+  member / index-only scaffolds, and emit compact `.docforge/tmp/communities.md`
+  when a GitNexus export is present. Next, run `flow_index organize emit`, have
+  the agent write `.docforge/tmp/flow-organization.json` (descriptive names,
+  families, composition), and `flow_index organize apply` before deep-dive
+  analysis. Then build an analysis pack from main-priority **standalone**
+  flow-index rows, the compact communities summary, and (when no native flow
+  graph) `derive_flow_graph prepare` context; the agent/LLM analyzes those
+  standalone mains only into `.docforge/tmp/flow-analysis.json`, then runs
+  `derive_flow_graph write` when a provisional graph is required. Re-ground
+  existing documented flow docs and fully write main standalone flows. Always
+  display a NOTICE listing main-priority flows being generated; pause for
+  confirmation in review mode, or display and continue under `--auto-accept`.
+  Then render `docs/flows/README.md`. Distinct from `--revise <area>`, which
+  re-grounds prose sections without re-harvesting the flow index.
 
 An explicit single-document request still requires graph precheck, re-grounding,
 mechanical lint, independent audit, and manifest state updates.
@@ -455,9 +465,9 @@ flags exit `2`.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade;
   incomplete or unconvertible written documents are reported as `FAILED` and
   demoted to `in_progress` for agent regeneration.
-- `flow_index.{py,js}`: harvest, revise (merge + placeholder stubs + main
-  NOTICE), and render the flow matrix; GitNexus input uses deterministic
-  MCP-export JSON.
+- `flow_index.{py,js}`: harvest, revise (label/candidate dedup, compact
+  communities summary, placeholder stubs, main NOTICE), and render the flow
+  matrix; GitNexus input uses deterministic MCP-export JSON.
 - `validate_metadata.{py,js}`: registry/schema/path/version/peer validation.
 - Graph adapters, readers, derivation, document lint, and child-repository
   discovery retain paired contracts.
