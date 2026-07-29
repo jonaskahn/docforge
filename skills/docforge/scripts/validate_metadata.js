@@ -11,7 +11,7 @@ const REQUIRED = new Set(["id", "type", "path", "group", "selection", "scaffold_
 const EXCEPTIONS = new Set(["agents-kernel.md", "claude-md.md", "claude-local-md.md"]);
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
-  detect_profiles: ["--repo", "--json", "confirmed", "candidate"],
+  detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--section", "--json", "--sync-provenance"],
@@ -38,8 +38,8 @@ function validate() {
       errors.push("provenance schema must require schema 2.0");
     }
   }
-  if (catalog.version !== "2.1.0") errors.push("catalog version must be 2.1.0");
-  if ((((catalogSchema.properties || {}).version || {}).const) !== "2.1.0") errors.push("catalog schema version disagrees with catalog");
+  if (catalog.version !== "2.2.0") errors.push("catalog version must be 2.2.0");
+  if ((((catalogSchema.properties || {}).version || {}).const) !== "2.2.0") errors.push("catalog schema version disagrees with catalog");
   if ((((manifestSchema.properties || {}).version || {}).const) !== "3.1") errors.push("manifest schema must require version 3.1");
   if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.1") errors.push("flow index schema must require version 1.1");
   const flowItem = ((((flowIndexSchema.properties || {}).flows || {}).items || {}).properties) || {};
@@ -78,8 +78,40 @@ function validate() {
         if (["path", "content"].includes(signal.kind) && (typeof signal.pattern !== "string" || !signal.pattern)) errors.push(`${dimension}/${item.id}: signal needs a pattern`);
         if (signal.kind === "content" && !signal.contains) errors.push(`${dimension}/${item.id}: content signal needs contains`);
         if (signal.kind === "dependency" && (!signal.ecosystem || !signal.name)) errors.push(`${dimension}/${item.id}: dependency signal needs ecosystem and name`);
+        if (signal.strength != null && !["strong", "weak"].includes(signal.strength)) {
+          errors.push(`${dimension}/${item.id}: signal strength must be strong|weak`);
+        }
+        if (signal.weight != null && (typeof signal.weight !== "number" || signal.weight <= 0 || signal.weight > 1)) {
+          errors.push(`${dimension}/${item.id}: signal weight must be in (0, 1]`);
+        }
       }
     }
+  }
+  const crossAliases = new Map();
+  for (const dimension of dimensions) {
+    for (const item of (catalog.profiles || {})[dimension] || []) {
+      for (const name of [item.id, ...(item.aliases || [])]) {
+        if (typeof name !== "string") continue;
+        if (!crossAliases.has(name)) crossAliases.set(name, []);
+        crossAliases.get(name).push(`${dimension}:${item.id}`);
+      }
+    }
+  }
+  for (const name of [...crossAliases.keys()].sort()) {
+    const owners = crossAliases.get(name);
+    if (owners.length > 1) errors.push(`cross-dimension profile name collision ${name}: ${owners.join(", ")}`);
+  }
+  for (const hint of catalog.cue_hints || []) {
+    if (!hint || typeof hint !== "object" || !hint.cue || !hint.note) {
+      errors.push("cue_hints entries require cue and note");
+    }
+  }
+  const gateSchemaPath = path.join(metadata, "discovery-gate-schema.json");
+  if (!fs.existsSync(gateSchemaPath)) errors.push("discovery-gate-schema.json is missing");
+  else {
+    const gateSchema = readJson(gateSchemaPath);
+    if (!(((gateSchema.definitions || {}).judgment))) errors.push("discovery-gate-schema.json must define judgment");
+    if (!(((gateSchema.definitions || {}).pack))) errors.push("discovery-gate-schema.json must define pack");
   }
   const groups = new Set(catalog.groups);
   const capabilities = new Set(catalog.capabilities);
@@ -168,7 +200,7 @@ function validate() {
   const plugin = readJson(path.join(REPO_ROOT, ".claude-plugin", "plugin.json"));
   const market = readJson(path.join(REPO_ROOT, ".claude-plugin", "marketplace.json")).plugins[0];
   const versions = new Set([meta.version, plugin.version, market.version, catalog.version]);
-  if (versions.size !== 1 || !versions.has("2.1.0")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
+  if (versions.size !== 1 || !versions.has("2.2.0")) errors.push(`release versions disagree: ${[...versions].map(String).sort().join(", ")}`);
   const skillText = fs.readFileSync(path.join(SKILL_ROOT, "SKILL.md"), "utf8");
   const skillMatch = skillText.match(/^description: (.+)$/m);
   const entryDescription = (((meta.skills || {}).entries || [{}])[0] || {}).description;

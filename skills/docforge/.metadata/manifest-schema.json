@@ -37,8 +37,24 @@
           "dimension": {"enum": ["shapes", "platforms", "frameworks", "concerns"]},
           "id": {"type": "string"},
           "confidence": {"enum": ["confirmed", "candidate"]},
-          "evidence": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
-        }
+          "evidence": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "match_strength": {"enum": ["strong", "weak"]},
+          "cues": {"type": "array", "items": {"type": "string"}},
+          "ambiguous_with": {"type": "array"},
+          "prefer_rank": {"type": "integer"},
+          "gate_action": {"type": "string"},
+          "gate_reason": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "discovery_gate": {
+      "type": ["object", "null"],
+      "properties": {
+        "version": {"const": 1},
+        "decisions": {"type": "array"},
+        "notes_for_user": {"type": "string"},
+        "applied": {"type": "object"}
       }
     },
     "documents": {"type": "array", "items": {"$ref": "#/definitions/document"}},

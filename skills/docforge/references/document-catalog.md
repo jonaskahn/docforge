@@ -77,6 +77,8 @@ mechanism, constraints, and tradeoffs.
 | output-exit-contract | stdout/stderr ownership, formats, exit codes, stability, scripting behavior | prose-only examples without verified output | Reference | reference |
 | host-integration / extension-points | host contract, activation, contribution points, permissions, compatibility, sandbox, failure | host product tutorial | Explanation | deep-dive |
 | model-lifecycle / model-card | datasets, training/evaluation, artifact lineage, inference, limitations, drift, ownership | unsupported quality or safety claims | Explanation | deep-dive |
+| persistence | entities, storage mapping, migrations, transactions, consistency, failure recovery | ORM tutorial or invented schema | Explanation | deep-dive |
+| ai-integration | model/provider boundary, prompts/inputs, outputs, evaluation, safety, privacy, failure | unsupported model quality claims or training-system docs (see model-lifecycle) | Explanation | deep-dive |
 | gameplay-systems / assets-and-scenes | system boundaries, scenes/assets, loading, save state, platform builds | design-document aspiration | Explanation | deep-dive |
 | performance-budgets | evidenced CPU/GPU/memory/storage/timing limits, measurement, degradation | invented targets | Reference | reference |
 | hardware-map / firmware-lifecycle | boards, peripherals, protocols, boot/update states, memory/power, failure | generic component datasheets | Explanation | deep-dive |

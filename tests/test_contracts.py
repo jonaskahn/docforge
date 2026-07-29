@@ -1091,6 +1091,124 @@ class CatalogSelectionTests(unittest.TestCase):
                         outputs.append(normalized(result.stdout, [repo]))
                     self.assertEqual(outputs[0], outputs[1])
 
+    def test_weak_vs_strong_signal_confidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src" / "models").mkdir(parents=True)
+            (repo / "src" / "models" / "user.py").write_text("class User: pass\n", encoding="utf-8")
+            outputs = []
+            for runtime in ("py", "js"):
+                result = run(runtime, "detect_profiles", "--repo", str(repo), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                payload = json.loads(result.stdout)
+                by_id = {
+                    (item["dimension"], item["id"]): item
+                    for item in payload["detections"]
+                }
+                ml = by_id.get(("shapes", "ml-system"))
+                self.assertIsNotNone(ml)
+                self.assertEqual(ml["confidence"], "candidate")
+                self.assertEqual(ml["match_strength"], "weak")
+                self.assertTrue(any(cue.startswith("path:") for cue in ml["cues"]))
+                outputs.append(normalized(result.stdout, [repo]))
+            self.assertEqual(outputs[0], outputs[1])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "requirements.txt").write_text("django==5.0\n", encoding="utf-8")
+            (repo / "app" / "models").mkdir(parents=True)
+            (repo / "app" / "models" / "user.py").write_text("from django.db import models\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "detect_profiles", "--repo", str(repo), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                by_id = {
+                    (item["dimension"], item["id"]): item
+                    for item in json.loads(result.stdout)["detections"]
+                }
+                self.assertEqual(by_id[("concerns", "persistence")]["confidence"], "confirmed")
+                self.assertEqual(by_id[("frameworks", "django")]["confidence"], "confirmed")
+                if ("shapes", "ml-system") in by_id:
+                    self.assertEqual(by_id[("shapes", "ml-system")]["confidence"], "candidate")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "package.json").write_text(
+                '{"dependencies":{"openai":"^4.0.0"}}',
+                encoding="utf-8",
+            )
+            for runtime in ("py", "js"):
+                result = run(runtime, "detect_profiles", "--repo", str(repo), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                by_id = {
+                    (item["dimension"], item["id"]): item
+                    for item in json.loads(result.stdout)["detections"]
+                }
+                self.assertEqual(by_id[("concerns", "ai-ml")]["confidence"], "confirmed")
+                self.assertEqual(by_id[("concerns", "ai-ml")]["match_strength"], "strong")
+
+    def test_discovery_gate_pack_and_judgment(self) -> None:
+        from discovery_gate import apply_judgment, validate_judgment
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "requirements.txt").write_text("django==5.0\n", encoding="utf-8")
+            (repo / "app" / "models").mkdir(parents=True)
+            (repo / "app" / "models" / "user.py").write_text("class User: pass\n", encoding="utf-8")
+            packs = []
+            for runtime in ("py", "js"):
+                result = run(runtime, "detect_profiles", "--repo", str(repo), "--emit-gate-pack")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                pack = json.loads(result.stdout)
+                self.assertTrue(pack["needs_gate"])
+                self.assertIn("cues", pack)
+                self.assertIn("catalog_ids", pack)
+                packs.append(normalized(result.stdout, [repo]))
+            self.assertEqual(packs[0], packs[1])
+            pack = json.loads(run("py", "detect_profiles", "--repo", str(repo), "--emit-gate-pack").stdout)
+            good = {
+                "version": 1,
+                "decisions": [
+                    {
+                        "dimension": "concerns",
+                        "id": "persistence",
+                        "action": "promote",
+                        "confidence": "confirmed",
+                        "reason": "Django ORM entities under app/models/.",
+                        "grounded_cues": ["path:models", "dep:pip:django"],
+                    },
+                    {
+                        "dimension": "shapes",
+                        "id": "ml-system",
+                        "action": "drop",
+                        "confidence": "suppressed",
+                        "reason": "models/ is ORM; no training stack.",
+                        "grounded_cues": ["path:models"],
+                    },
+                ],
+                "notes_for_user": "Treating models/ as persistence.",
+            }
+            self.assertEqual(validate_judgment(good, pack), [])
+            applied = apply_judgment(pack["detections"], good, pack)
+            self.assertTrue(applied["ok"])
+            recommended_ids = {(row["dimension"], row["id"]) for row in applied["recommended"]}
+            dismissed_ids = {(row["dimension"], row["id"]) for row in applied["dismissed"]}
+            self.assertIn(("concerns", "persistence"), recommended_ids)
+            self.assertIn(("shapes", "ml-system"), dismissed_ids)
+            bad = {
+                "version": 1,
+                "decisions": [{
+                    "dimension": "concerns",
+                    "id": "not-a-real-concern",
+                    "action": "propose",
+                    "confidence": "candidate",
+                    "reason": "invented",
+                }],
+                "notes_for_user": "bad",
+            }
+            self.assertTrue(validate_judgment(bad, pack))
+            failed = apply_judgment(pack["detections"], bad, pack)
+            self.assertFalse(failed["ok"])
+
 
 class PairedRuntimeTests(unittest.TestCase):
     def test_manifest_dry_run_and_filesystem_parity(self) -> None:

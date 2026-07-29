@@ -24,14 +24,20 @@ concerns. `detect_profiles` recognizes frameworks and shapes by reading
 (`package.json`, `pyproject.toml`/`requirements.txt`, `pom.xml`,
 `build.gradle*`, `go.mod`, `Cargo.toml`, `Gemfile`, `composer.json`,
 `*.csproj`, `pubspec.yaml`), not by substring — so a declared dependency is
-strong evidence while an incidental prose mention is not. When a candidate is
-ambiguous, or the stack is not encoded in the catalog, read those manifests
-yourself to confirm or augment the framework/shape recommendation before
-presenting it. Report matched evidence and recommendations. Detection proposes
-profiles; it never confirms them on the user's behalf. When exactly one
-readable code-graph provider is ready, use it
-as the proposed default and do not ask the user to choose among absent
-providers. This read-only provider selection is not permission to build,
+**strong** evidence. Path fragments and content keywords are **weak** cues:
+they never alone confirm a profile. The same noun or team term can mean
+different aspects across projects, stacks, and domain language.
+
+When the pack from `detect_profiles --emit-gate-pack` sets `needs_gate`, run the
+**discovery gate** before presenting profile choices: follow
+`references/discovery-gate.md`, ground decisions only in the bounded pack, and
+emit judgment JSON (`promote` / `keep` / `demote` / `drop` / `propose`). Apply
+it with `discovery_gate` helpers; on invalid judgment, fail open to
+deterministic ranks. Present **recommended** vs **also possible** with evidence
+and gate reasons. Detection and the gate propose profiles; they never confirm
+them on the user's behalf. When exactly one readable code-graph provider is
+ready, use it as the proposed default and do not ask the user to choose among
+absent providers. This read-only provider selection is not permission to build,
 refresh, install, or configure anything.
 
 ### Scope intake
@@ -56,7 +62,8 @@ Ask only what remains unresolved, in this order:
    security, operations, dependencies, and ADRs), Portfolio (Diligence plus
    `docs-portfolio/` diligence views), or a grounded recommendation that
    Docforge will explain after inspection.
-3. **Repository profiles.** Show detected recommendations with evidence, then
+3. **Repository profiles.** After detect (and the discovery gate when
+   `needs_gate`), show ranked multi-aspect recommendations with evidence, then
    let the user confirm or edit each applicable dimension:
    - shapes describe what the repository delivers;
    - platforms describe where it runs;
@@ -64,7 +71,8 @@ Ask only what remains unresolved, in this order:
      adding framework-specific trees;
    - concerns describe evidenced cross-cutting behavior;
    - audiences describe whom the documentation serves.
-   Permit multiple values in every dimension. Offer Engineers + beginners as
+   Permit multiple values in every dimension — one overloaded cue may map to
+   several aspects when evidence supports it. Offer Engineers + beginners as
    the default audience starting point (and the manifest CLI default when no
    audience flag is supplied); BA + PO, coding agents, operators, and security
    reviewers add their catalog-owned views.
@@ -457,7 +465,10 @@ flags exit `2`.
 
 - `manage_manifest.{py,js}`: `init`, `add`, `set`, `status`, and `audit`.
 - `detect_profiles.{py,js}`: read-only shape/platform/framework/concern
-  recommendations with evidence and `confirmed|candidate` confidence.
+  recommendations with strong/weak match strength, cue bags, and
+  `confirmed|candidate` confidence; `--emit-gate-pack` for agent intake.
+- `discovery_gate.{py,js}`: validate/apply discovery-gate judgment JSON
+  (offline; fail-open).
 - `scaffold_docs.{py,js}`: exact dry-run, one-document materialization, and
   manifest-backed audit.
 - `precheck_graph.{py,js}`: `--need code|flow`.

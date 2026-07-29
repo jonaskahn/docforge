@@ -268,6 +268,7 @@ function cmdInit(args) {
       profiles,
     },
     discovery: detectProfiles(fs.realpathSync(args.repo)),
+    discovery_gate: null,
     documents: docs,
     metadata: {},
   };

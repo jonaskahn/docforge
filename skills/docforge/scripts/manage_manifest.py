@@ -304,6 +304,7 @@ def cmd_init(args: argparse.Namespace) -> int:
             "profiles": profiles,
         },
         "discovery": detect_profiles(args.repo),
+        "discovery_gate": None,
         "documents": docs,
         "metadata": {},
     }

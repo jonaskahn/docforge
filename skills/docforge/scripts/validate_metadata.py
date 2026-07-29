@@ -20,7 +20,7 @@ REQUIRED_DOC_FIELDS = {
 MARKDOWN_EXCEPTIONS = {"agents-kernel.md", "claude-md.md", "claude-local-md.md"}
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
-    "detect_profiles": ["--repo", "--json", "confirmed", "candidate"],
+    "detect_profiles": ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
     "check_staleness": ["--manifest", "--section", "--json", "--sync-provenance"],
@@ -47,9 +47,9 @@ def validate() -> list[str]:
         provenance_schema = read_json(provenance_schema_path)
         if provenance_schema.get("properties", {}).get("schema", {}).get("const") != SCHEMA_VERSION:
             errors.append("provenance schema must require schema 2.0")
-    if catalog.get("version") != "2.1.0":
-        errors.append("catalog version must be 2.1.0")
-    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.1.0":
+    if catalog.get("version") != "2.2.0":
+        errors.append("catalog version must be 2.2.0")
+    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.2.0":
         errors.append("catalog schema version disagrees with catalog")
     if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.1":
         errors.append("manifest schema must require version 3.1")
@@ -120,6 +120,35 @@ def validate() -> list[str]:
                     not signal.get("ecosystem") or not signal.get("name")
                 ):
                     errors.append(f"{dimension}/{identifier}: dependency signal needs ecosystem and name")
+                strength = signal.get("strength")
+                if strength is not None and strength not in {"strong", "weak"}:
+                    errors.append(f"{dimension}/{identifier}: signal strength must be strong|weak")
+                weight = signal.get("weight")
+                if weight is not None and (
+                    not isinstance(weight, (int, float)) or weight <= 0 or weight > 1
+                ):
+                    errors.append(f"{dimension}/{identifier}: signal weight must be in (0, 1]")
+    cross_aliases: dict[str, list[str]] = {}
+    for dimension in dimensions:
+        for item in profiles.get(dimension, []):
+            for name in [item.get("id"), *item.get("aliases", [])]:
+                if isinstance(name, str):
+                    cross_aliases.setdefault(name, []).append(f"{dimension}:{item.get('id')}")
+    for name, owners in sorted(cross_aliases.items()):
+        if len(owners) > 1:
+            errors.append(f"cross-dimension profile name collision {name}: {', '.join(owners)}")
+    for hint in catalog.get("cue_hints", []):
+        if not isinstance(hint, dict) or not hint.get("cue") or not hint.get("note"):
+            errors.append("cue_hints entries require cue and note")
+    gate_schema_path = metadata / "discovery-gate-schema.json"
+    if not gate_schema_path.is_file():
+        errors.append("discovery-gate-schema.json is missing")
+    else:
+        gate_schema = read_json(gate_schema_path)
+        if "judgment" not in gate_schema.get("definitions", {}):
+            errors.append("discovery-gate-schema.json must define judgment")
+        if "pack" not in gate_schema.get("definitions", {}):
+            errors.append("discovery-gate-schema.json must define pack")
     groups = set(catalog.get("groups", []))
     capabilities = set(catalog.get("capabilities", []))
     static_ids: set[str] = set()
@@ -218,7 +247,7 @@ def validate() -> list[str]:
     plugin = read_json(REPO_ROOT / ".claude-plugin" / "plugin.json")
     market = read_json(REPO_ROOT / ".claude-plugin" / "marketplace.json")["plugins"][0]
     versions = {meta.get("version"), plugin.get("version"), market.get("version"), catalog.get("version")}
-    if versions != {"2.1.0"}:
+    if versions != {"2.2.0"}:
         errors.append(f"release versions disagree: {sorted(str(item) for item in versions)}")
     skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     skill_match = re.search(r"^description: (.+)$", skill_text, re.MULTILINE)

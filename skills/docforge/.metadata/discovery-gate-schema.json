@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Docforge Discovery Gate",
+  "definitions": {
+    "pack": {
+      "type": "object",
+      "required": ["repo", "detections", "cues", "catalog_ids", "needs_gate"],
+      "properties": {
+        "repo": {"type": "string"},
+        "detections": {"type": "array"},
+        "strong_detections": {"type": "array"},
+        "weak_detections": {"type": "array"},
+        "cues": {"type": "array"},
+        "excerpts": {"type": "array"},
+        "dependencies": {"type": "object"},
+        "catalog_ids": {"type": "object"},
+        "query_hints": {"type": "object"},
+        "cue_hints": {"type": "array"},
+        "needs_gate": {"type": "boolean"}
+      }
+    },
+    "judgment": {
+      "type": "object",
+      "required": ["version", "decisions", "notes_for_user"],
+      "properties": {
+        "version": {"const": 1},
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["dimension", "id", "action", "confidence", "reason"],
+            "properties": {
+              "dimension": {"enum": ["shapes", "platforms", "frameworks", "concerns", "audiences"]},
+              "id": {"type": "string"},
+              "action": {"enum": ["promote", "keep", "demote", "drop", "propose"]},
+              "confidence": {"enum": ["confirmed", "candidate", "suppressed"]},
+              "reason": {"type": "string", "minLength": 1},
+              "grounded_cues": {"type": "array", "items": {"type": "string"}}
+            },
+            "additionalProperties": false
+          }
+        },
+        "notes_for_user": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}
