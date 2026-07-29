@@ -57,12 +57,17 @@ limitations, or glossary definitions.
 
 ## Atomic promotion
 
-A flow or concept begins as one flat file. Promote it to
+A flow or concept begins as one flat file, scaffolded from
+[`topic-readme.md`](../assets/templates/topic-readme.md). Promote it to
 `<topic>/README.md` only in the same operation that writes at least one real
-deep-dive sibling. Move the shared content into the README, update links, and
-materialize the deep dive atomically. A folder containing only README is a
-defect. Building a deep-dive means writing it and promoting in the same pass —
-never adding the link first and the file later.
+deep-dive sibling, scaffolded from
+[`audience-deepdive.md`](../assets/templates/audience-deepdive.md) (its
+comment block shapes the file per audience — business-analyst.md,
+engineering.md, or product-owner.md). Move the shared content into the
+README, update links, and materialize the deep dive atomically. A folder
+containing only README is a defect. Building a deep-dive means writing it
+and promoting in the same pass — never adding the link first and the file
+later.
 
 ## Durability
 

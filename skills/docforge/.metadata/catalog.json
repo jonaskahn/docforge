@@ -2737,8 +2737,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "testing-guide.md",
+      "instruction_file": "testing-guide.md",
       "requires": [
         "manifests"
       ],
@@ -2777,8 +2777,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "configuration.md",
+      "instruction_file": "configuration.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -2971,8 +2971,8 @@
         "selectors": {},
         "condition": "conventions_source"
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "conventions.md",
+      "instruction_file": "conventions.md",
       "requires": [
         "manifests"
       ],
@@ -2992,8 +2992,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "release-guide.md",
+      "instruction_file": "release-guide.md",
       "requires": [
         "manifests",
         "git_history"
@@ -3033,8 +3033,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "deployment.md",
+      "instruction_file": "deployment.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3055,8 +3055,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "observability.md",
+      "instruction_file": "observability.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3096,8 +3096,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "glossary.md",
+      "instruction_file": "glossary.md",
       "requires": [
         "code_graph"
       ],
@@ -3155,8 +3155,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "threat-model.md",
+      "instruction_file": "threat-model.md",
       "requires": [
         "code_graph"
       ],
@@ -3176,8 +3176,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "data-handling.md",
+      "instruction_file": "data-handling.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3238,8 +3238,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "ownership.md",
+      "instruction_file": "ownership.md",
       "requires": [
         "git_history"
       ],
@@ -3303,8 +3303,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "system-context.md",
+      "instruction_file": "system-context.md",
       "requires": [
         "code_graph"
       ],
@@ -3345,8 +3345,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "security-posture.md",
+      "instruction_file": "security-posture.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3367,8 +3367,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "portfolio-operations.md",
+      "instruction_file": "security-posture.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3389,8 +3389,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "diligence-index.md",
+      "instruction_file": "diligence-index.md",
       "requires": [
         "manifests",
         "git_history"
@@ -3411,8 +3411,8 @@
         "selectors": {},
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "portfolio-glossary.md",
+      "instruction_file": "glossary.md",
       "requires": [
         "code_graph"
       ],
@@ -3437,8 +3437,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "quickstart.md",
+      "instruction_file": "quickstart.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3464,8 +3464,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "api-reference.md",
+      "instruction_file": "api-reference.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3515,8 +3515,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "api-versioning.md",
+      "instruction_file": "api-versioning.md",
       "requires": [
         "code_graph",
         "git_history"
@@ -3541,8 +3541,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "api-rate-limits.md",
+      "instruction_file": "api-rate-limits.md",
       "requires": [
         "code_graph"
       ],
@@ -3566,8 +3566,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "api-authentication.md",
+      "instruction_file": "api-authentication.md",
       "requires": [
         "code_graph"
       ],
@@ -3591,8 +3591,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "data-flow.md",
+      "instruction_file": "data-flow.md",
       "requires": [
         "code_graph",
         "flow_graph"
@@ -3640,8 +3640,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "data-quality.md",
+      "instruction_file": "data-quality.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3666,8 +3666,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "data-types.md",
+      "instruction_file": "data-types.md",
       "requires": [
         "code_graph"
       ],
@@ -3692,8 +3692,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "rendering.md",
+      "instruction_file": "rendering.md",
       "requires": [
         "code_graph"
       ],
@@ -3718,8 +3718,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "state-management.md",
+      "instruction_file": "rendering.md",
       "requires": [
         "code_graph"
       ],
@@ -3744,8 +3744,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "ui-components.md",
+      "instruction_file": "ui-components.md",
       "requires": [
         "code_graph"
       ],
@@ -3770,8 +3770,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "styling.md",
+      "instruction_file": "styling.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3797,8 +3797,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "browser-support.md",
+      "instruction_file": "browser-support.md",
       "requires": [
         "manifests"
       ],
@@ -3822,8 +3822,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "compatibility.md",
+      "instruction_file": "compatibility.md",
       "requires": [
         "manifests"
       ],
@@ -3870,8 +3870,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "publishing.md",
+      "instruction_file": "publishing.md",
       "requires": [
         "manifests",
         "git_history"
@@ -3896,8 +3896,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "environments.md",
+      "instruction_file": "environments.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3922,8 +3922,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "network.md",
+      "instruction_file": "network.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3948,8 +3948,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "infrastructure-apply.md",
+      "instruction_file": "infrastructure-apply.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -3974,8 +3974,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "infrastructure-state.md",
+      "instruction_file": "infrastructure-apply.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4000,8 +4000,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "disaster-recovery.md",
+      "instruction_file": "disaster-recovery.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4026,8 +4026,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "resources.md",
+      "instruction_file": "resources.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4052,8 +4052,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "access.md",
+      "instruction_file": "resources.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4078,8 +4078,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "content-model.md",
+      "instruction_file": "content-model.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4105,8 +4105,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "application-lifecycle.md",
+      "instruction_file": "application-lifecycle.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4132,8 +4132,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "ui-navigation-state.md",
+      "instruction_file": "ui-navigation-state.md",
       "requires": [
         "code_graph"
       ],
@@ -4158,8 +4158,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "platform-integration.md",
+      "instruction_file": "platform-integration.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4185,8 +4185,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "platform-permissions.md",
+      "instruction_file": "platform-permissions.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4213,8 +4213,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "platform-compatibility.md",
+      "instruction_file": "platform-compatibility.md",
       "requires": [
         "code_graph",
         "manifests",
@@ -4244,8 +4244,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "application-distribution.md",
+      "instruction_file": "application-distribution.md",
       "requires": [
         "manifests",
         "git_history"
@@ -4270,8 +4270,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "offline-installation.md",
+      "instruction_file": "offline-installation.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4296,8 +4296,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "triggers-and-jobs.md",
+      "instruction_file": "triggers-and-jobs.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4322,8 +4322,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "job-reliability.md",
+      "instruction_file": "job-reliability.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4348,8 +4348,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "command-reference.md",
+      "instruction_file": "command-reference.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4374,8 +4374,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "output-exit-contract.md",
+      "instruction_file": "output-exit-contract.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4400,8 +4400,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "host-integration.md",
+      "instruction_file": "host-integration.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4426,8 +4426,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "extension-points.md",
+      "instruction_file": "host-integration.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4452,8 +4452,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "model-lifecycle.md",
+      "instruction_file": "model-lifecycle.md",
       "requires": [
         "code_graph",
         "manifests",
@@ -4479,8 +4479,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "model-card.md",
+      "instruction_file": "model-card.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4505,8 +4505,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "gameplay-systems.md",
+      "instruction_file": "gameplay-systems.md",
       "requires": [
         "code_graph"
       ],
@@ -4530,8 +4530,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "assets-and-scenes.md",
+      "instruction_file": "gameplay-systems.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4557,8 +4557,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "performance-budgets.md",
+      "instruction_file": "performance-budgets.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4583,8 +4583,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "hardware-map.md",
+      "instruction_file": "hardware-map.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4609,8 +4609,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "firmware-lifecycle.md",
+      "instruction_file": "hardware-map.md",
       "requires": [
         "code_graph",
         "manifests",
@@ -4636,8 +4636,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "flashing-recovery.md",
+      "instruction_file": "flashing-recovery.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4662,8 +4662,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "contract-system.md",
+      "instruction_file": "contract-system.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4688,8 +4688,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "economic-invariants.md",
+      "instruction_file": "contract-system.md",
       "requires": [
         "code_graph",
         "git_history"
@@ -4714,8 +4714,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "network-deployment.md",
+      "instruction_file": "network-deployment.md",
       "requires": [
         "code_graph",
         "manifests",
@@ -4741,8 +4741,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "accessibility.md",
+      "instruction_file": "accessibility.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4767,8 +4767,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "localization.md",
+      "instruction_file": "localization.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4793,8 +4793,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "persistence.md",
+      "instruction_file": "persistence.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -4819,8 +4819,8 @@
         },
         "condition": null
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "ai-integration.md",
+      "instruction_file": "ai-integration.md",
       "requires": [
         "code_graph",
         "manifests"
@@ -5336,7 +5336,7 @@
         "selectors": {},
         "condition": "discovered_flow"
       },
-      "scaffold_template": "generic.md",
+      "scaffold_template": "topic-readme.md",
       "instruction_file": "flows.md",
       "requires": [
         "flow_graph"
@@ -5426,7 +5426,7 @@
         "selectors": {},
         "condition": "discovered_concept"
       },
-      "scaffold_template": "generic.md",
+      "scaffold_template": "topic-readme.md",
       "instruction_file": "architecture-low-level.md",
       "requires": [
         "code_graph"
@@ -5451,8 +5451,8 @@
         },
         "condition": "discovered_migration"
       },
-      "scaffold_template": "generic.md",
-      "instruction_file": null,
+      "scaffold_template": "migration.md",
+      "instruction_file": "migration.md",
       "requires": [
         "code_graph",
         "git_history"
