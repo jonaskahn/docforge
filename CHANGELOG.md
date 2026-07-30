@@ -2,10 +2,15 @@
 
 ## Unreleased — Whole-repo Claude plugin (no mirror)
 
-- Keep a single tree for Agent Skills and Claude Code: marketplace
-  `"source": "./"` with root [`skills/`](skills/) and [`agents/`](agents/).
+- Keep a single tree for Agent Skills and Claude Code: root [`skills/`](skills/)
+  and [`agents/`](agents/). Marketplace entry uses an HTTPS git URL plugin
+  source (`https://github.com/jonaskahn/docforge.git`) so installs do not
+  require SSH host keys; `"source": "./"` failed to register in Claude Code.
 - Dropped the experimental `docforge-plugin/` sync mirror to avoid duplicating
   the cartridge in git.
+- Register both skills explicitly and add [`commands/`](commands/) wrappers so
+  Claude Code exposes `/docforge` and `/docforge-revise` (plugin skills alone
+  appear as `/docforge:docforge` and `/docforge:docforge-revise`).
 
 ## 2.6.0 — Claude-native Docforge agents
 

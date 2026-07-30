@@ -5,5 +5,12 @@
   "author": {
     "name": "Jonas Kahn",
     "url": "https://github.com/jonaskahn"
-  }
+  },
+  "skills": [
+    "./skills/docforge",
+    "./skills/docforge-revise"
+  ],
+  "commands": [
+    "./commands/"
+  ]
 }

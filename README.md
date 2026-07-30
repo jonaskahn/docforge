@@ -50,17 +50,36 @@ external network access and were not executed during this README update.
 ### CLAUDE CODE CARTRIDGE
 
 Docforge also ships a native [Claude Code marketplace manifest](.claude-plugin/marketplace.json).
-The whole repository is the plugin (`"source": "./"`), so `skills/` and
-`agents/` are shared with the Agent Skills path — no mirrored package:
+The marketplace lists the GitHub repo as the plugin source, so root `skills/` and
+`agents/` stay the single tree (shared with Agent Skills — no mirrored package):
 
 ```text
 /plugin marketplace add jonaskahn/docforge
 /plugin install docforge@docforge
 ```
 
+If a prior add left a broken cache entry, remove and re-add first:
+
+```text
+/plugin marketplace remove docforge
+/plugin marketplace add jonaskahn/docforge
+/plugin install docforge@docforge
+```
+
+Claude Code’s GitHub shorthand clones over SSH by default. This marketplace
+lists an HTTPS git URL so install does not need `github.com` in
+`~/.ssh/known_hosts`. If you still prefer SSH elsewhere, either add the host
+key (`ssh-keyscan github.com >> ~/.ssh/known_hosts`) or set
+`CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`.
+
 Both install paths load [`skills/docforge`](skills/docforge/SKILL.md) and
-[`skills/docforge-revise`](skills/docforge-revise/SKILL.md). These
-package-declared plugin commands were not executed during this README update.
+[`skills/docforge-revise`](skills/docforge-revise/SKILL.md). Claude Code
+plugin skills are namespaced (`/docforge:docforge`, `/docforge:docforge-revise`);
+[`commands/`](commands/) also registers the bare `/docforge` and
+`/docforge-revise` slash commands. After updating the marketplace, run
+`/plugin marketplace update docforge` then reinstall or `/reload-plugins`.
+These package-declared plugin commands were not executed during this README
+update.
 
 ## ▓▒░ START GAME ░▒▓
 
@@ -237,7 +256,8 @@ re-export of its paired implementation under the subsystem folders in
 `python` / `node` / `bun` / `deno` once and locks one engine for the
 session — there is no separate runtime-precheck CLI.
 [`.claude-plugin/`](.claude-plugin/) packages the Claude Code marketplace
-path with the repo root as the plugin; Agent Skills install discovers
+path; the marketplace entry installs this GitHub repo as the plugin (root
+`skills/` + `agents/`). Agent Skills install discovers
 [`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) and
 [`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md)
 directly (no root `meta.json`).
