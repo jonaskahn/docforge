@@ -1,0 +1,428 @@
+[
+  {
+    "id": "browser",
+    "order": 10,
+    "aliases": [
+      "web-browser"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "public/index.html"
+      },
+      {
+        "kind": "path",
+        "pattern": "index.html"
+      }
+    ],
+    "query_hints": [
+      "browser support, rendering, storage, and network constraints"
+    ]
+  },
+  {
+    "id": "pwa",
+    "order": 20,
+    "aliases": [
+      "progressive-web-app"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/manifest.webmanifest"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/service-worker.*"
+      }
+    ],
+    "query_hints": [
+      "installation, offline behavior, caching, updates, and browser support"
+    ]
+  },
+  {
+    "id": "wasm",
+    "order": 30,
+    "aliases": [
+      "webassembly"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/*.wasm"
+      },
+      {
+        "kind": "content",
+        "pattern": "Cargo.toml",
+        "contains": "wasm-bindgen",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "host boundary, memory, packaging, and browser/runtime compatibility"
+    ]
+  },
+  {
+    "id": "ios",
+    "order": 40,
+    "aliases": [
+      "iphone"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.pbxproj",
+        "contains": "iphoneos",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "ios/Podfile"
+      }
+    ],
+    "query_hints": [
+      "iOS lifecycle, entitlements, device compatibility, signing, and App Store distribution"
+    ]
+  },
+  {
+    "id": "ipados",
+    "order": 50,
+    "aliases": [
+      "ipad"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.pbxproj",
+        "contains": "TARGETED_DEVICE_FAMILY = \"1,2\"",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "iPad windowing, input, layout, compatibility, and distribution"
+    ]
+  },
+  {
+    "id": "android",
+    "order": 60,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/AndroidManifest.xml"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/build.gradle*"
+      }
+    ],
+    "query_hints": [
+      "Android lifecycle, permissions, API levels, signing, and Play distribution"
+    ]
+  },
+  {
+    "id": "macos",
+    "order": 70,
+    "aliases": [
+      "mac",
+      "osx",
+      "macos-desktop"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.pbxproj",
+        "contains": "SDKROOT = macosx",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.swift",
+        "contains": "import AppKit",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "macOS lifecycle, entitlements, system integration, compatibility, signing, notarization, and distribution"
+    ]
+  },
+  {
+    "id": "windows",
+    "order": 80,
+    "aliases": [
+      "win"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/*.sln"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.csproj",
+        "contains": "-windows",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "Windows lifecycle, capabilities, installers, signing, updates, and Store distribution"
+    ]
+  },
+  {
+    "id": "linux",
+    "order": 90,
+    "aliases": [
+      "gnu-linux"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/*.desktop"
+      },
+      {
+        "kind": "path",
+        "pattern": "snapcraft.yaml"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/*.AppImage"
+      }
+    ],
+    "query_hints": [
+      "desktop integration, distro compatibility, packaging, signing, and repositories"
+    ]
+  },
+  {
+    "id": "watchos",
+    "order": 100,
+    "aliases": [
+      "apple-watch"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.pbxproj",
+        "contains": "watchos",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "watch lifecycle, complications, background work, pairing, and distribution"
+    ]
+  },
+  {
+    "id": "wearos",
+    "order": 110,
+    "aliases": [
+      "wear-os"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/AndroidManifest.xml",
+        "contains": "android.hardware.type.watch",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "wearable lifecycle, tiles, complications, power, and distribution"
+    ]
+  },
+  {
+    "id": "tvos",
+    "order": 120,
+    "aliases": [
+      "apple-tv"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.pbxproj",
+        "contains": "appletvos",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "focus navigation, media, remote input, compatibility, and distribution"
+    ]
+  },
+  {
+    "id": "android-tv",
+    "order": 130,
+    "aliases": [
+      "google-tv"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/AndroidManifest.xml",
+        "contains": "android.software.leanback",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "TV navigation, media, remote input, compatibility, and distribution"
+    ]
+  },
+  {
+    "id": "visionos",
+    "order": 140,
+    "aliases": [
+      "apple-vision"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.pbxproj",
+        "contains": "xros",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "spatial lifecycle, windows, volumes, immersive spaces, input, and distribution"
+    ]
+  },
+  {
+    "id": "xr",
+    "order": 150,
+    "aliases": [
+      "vr",
+      "ar"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "package.json",
+        "contains": "webxr",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/OpenXR*",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "spatial coordinate systems, input, comfort, performance, and device compatibility"
+    ]
+  },
+  {
+    "id": "automotive",
+    "order": 160,
+    "aliases": [
+      "car"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/AndroidManifest.xml",
+        "contains": "androidx.car",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "driver-distraction constraints, vehicle integration, lifecycle, and distribution"
+    ]
+  },
+  {
+    "id": "cloud",
+    "order": 170,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "serverless.*"
+      },
+      {
+        "kind": "path",
+        "pattern": "app.yaml"
+      }
+    ],
+    "query_hints": [
+      "regions, services, identity, configuration, deployment, and recovery"
+    ]
+  },
+  {
+    "id": "container",
+    "order": 180,
+    "aliases": [
+      "containers"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "Dockerfile"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/Dockerfile"
+      },
+      {
+        "kind": "path",
+        "pattern": "compose.y*ml"
+      }
+    ],
+    "query_hints": [
+      "images, runtime configuration, health, networking, and deployment"
+    ]
+  },
+  {
+    "id": "edge",
+    "order": 190,
+    "aliases": [
+      "edge-runtime"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "wrangler.toml"
+      },
+      {
+        "kind": "path",
+        "pattern": "vercel.json"
+      }
+    ],
+    "query_hints": [
+      "edge runtime limits, regions, storage, routing, and deployment"
+    ]
+  },
+  {
+    "id": "embedded-linux",
+    "order": 200,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/yocto/**",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/buildroot/**",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "board support, image construction, services, updates, and recovery"
+    ]
+  },
+  {
+    "id": "rtos",
+    "order": 210,
+    "aliases": [
+      "real-time-os"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "FreeRTOSConfig.h"
+      },
+      {
+        "kind": "path",
+        "pattern": "west.yml"
+      }
+    ],
+    "query_hints": [
+      "tasks, scheduling, interrupts, timing, memory, and recovery"
+    ]
+  }
+]

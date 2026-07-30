@@ -1,0 +1,27 @@
+{
+  "id": "model_lifecycle",
+  "type": "model-lifecycle",
+  "path": "docs/architecture/model-lifecycle.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "ml-system"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "model-lifecycle.md",
+  "instruction_file": "model-lifecycle.md",
+  "requires": [
+    "code_graph",
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture"
+}

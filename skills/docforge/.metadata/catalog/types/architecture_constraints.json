@@ -1,0 +1,22 @@
+{
+  "id": "architecture_constraints",
+  "type": "constraints",
+  "path": "docs/architecture/constraints.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "constraints.md",
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 12,
+  "provenance_mode": "sections",
+  "audit_profile": "risk"
+}

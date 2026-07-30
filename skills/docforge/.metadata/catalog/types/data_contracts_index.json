@@ -1,0 +1,23 @@
+{
+  "id": "data_contracts_index",
+  "type": "folder-index",
+  "path": "docs/architecture/contracts/README.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "data-pipeline"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "generic.md",
+  "instruction_file": null,
+  "requires": [],
+  "target_depth": "orientation",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "router"
+}

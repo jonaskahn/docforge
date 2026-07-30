@@ -1,0 +1,27 @@
+{
+  "id": "api_reference",
+  "type": "api-reference",
+  "path": "docs/reference/api.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "api-service",
+        "library-sdk"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "api-reference.md",
+  "instruction_file": "api-reference.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 64,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

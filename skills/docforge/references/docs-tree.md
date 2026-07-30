@@ -1,7 +1,7 @@
 # Documentation tree
 
 This file owns paths, naming, tiers, and placement. The canonical selectable
-path list is `.metadata/catalog.json`.
+path list is `.metadata/catalog/` (queried via `scripts/query_catalog.py`).
 
 ## Naming and placement
 
@@ -13,8 +13,9 @@ path list is `.metadata/catalog.json`.
 - Collection folders use plural nouns; single-subject areas use singular nouns.
 - Every selected folder index is a manifest document. Its table is generated
   from selected manifest entries, never from a generic empty list.
-- Actual flows, decisions, runbooks, datasets, concepts, migrations, and
-  portfolio decisions are dynamically discovered. Do not create example files.
+- Actual flows, decisions, runbooks, datasets, concepts, migrations,
+  portfolio decisions, and epics are dynamically discovered. Do not create
+  example files.
 - A flow or concept stays a flat file until real deeper material is written in
   the same operation; see `document-composition.md`.
 

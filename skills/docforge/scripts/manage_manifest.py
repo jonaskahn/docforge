@@ -13,9 +13,9 @@ from pathlib import Path, PurePosixPath
 from _util import dump_json, fail, load_manifest
 from detect_profiles import detect as detect_profiles
 from provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
+import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-CATALOG_PATH = SKILL_ROOT / ".metadata" / "catalog.json"
 MANIFEST_REL = Path(".docforge/manifest.json")
 FLOW_INDEX_REL = Path(".docforge/flow-index.json")
 STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]
@@ -41,7 +41,7 @@ MANIFEST_HINT = (
 
 
 def load_catalog() -> dict:
-    return json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    return query_catalog.as_legacy_catalog()
 
 
 def manifest_path(repo: Path) -> Path:
@@ -111,14 +111,28 @@ def condition_evidence(repo: Path, condition: str | None) -> list[str]:
             "CONVENTIONS.md", "docs/CONVENTIONS.md", "docs/conventions.md",
             ".editorconfig", "STYLEGUIDE.md",
         ]
-    elif condition == "ticket_evidence":
+        return [candidate for candidate in candidates if (repo / candidate).exists()]
+    if condition == "ticket_evidence":
         candidates = [
             ".docforge/tickets.json", "tickets.json", "backlog.json",
             "BACKLOG.md", "docs/backlog.md", ".github/ISSUE_TEMPLATE",
         ]
-    else:
-        return []
-    return [candidate for candidate in candidates if (repo / candidate).exists()]
+        return [candidate for candidate in candidates if (repo / candidate).exists()]
+    if condition == "multi_flow_repo":
+        # Threshold: more than one main-priority row in the flow index.
+        path = repo / FLOW_INDEX_REL
+        if not path.is_file():
+            return []
+        try:
+            index = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return []
+        main_count = sum(
+            1 for row in index.get("flows", []) if flow_is_main_priority(row)
+        )
+        return [str(FLOW_INDEX_REL)] if main_count > 1 else []
+    # discovered_* and other agent-asserted conditions: no filesystem evidence.
+    return []
 
 
 def validate_relative_path(value: str) -> None:

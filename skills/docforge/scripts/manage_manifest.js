@@ -7,9 +7,9 @@ const path = require("path");
 const { dumpJson, fail, loadManifest } = require("./_util.js");
 const { detect: detectProfiles } = require("./detect_profiles.js");
 const pf = require("./provenance_frontmatter.js");
+const queryCatalog = require("./query_catalog.js");
 
 const SKILL_ROOT = path.resolve(__dirname, "..");
-const CATALOG_PATH = path.join(SKILL_ROOT, ".metadata", "catalog.json");
 const FLOW_INDEX_REL = path.join(".docforge", "flow-index.json");
 const STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"];
 const TRANSITIONS = {
@@ -30,7 +30,7 @@ const MANIFEST_HINT =
   "run migrate_metadata.js for 3.0, or replace unsupported older manifests";
 
 function loadCatalog() {
-  return JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
+  return queryCatalog.asLegacyCatalog();
 }
 function manifestPath(repo) {
   return path.join(repo, ".docforge", "manifest.json");
@@ -79,13 +79,27 @@ function exists(repo, rel) {
   return fs.existsSync(path.join(repo, ...rel.split("/")));
 }
 function conditionEvidence(repo, condition) {
-  let candidates = [];
   if (condition === "conventions_source") {
-    candidates = ["CONVENTIONS.md", "docs/CONVENTIONS.md", "docs/conventions.md", ".editorconfig", "STYLEGUIDE.md"];
-  } else if (condition === "ticket_evidence") {
-    candidates = [".docforge/tickets.json", "tickets.json", "backlog.json", "BACKLOG.md", "docs/backlog.md", ".github/ISSUE_TEMPLATE"];
+    return ["CONVENTIONS.md", "docs/CONVENTIONS.md", "docs/conventions.md", ".editorconfig", "STYLEGUIDE.md"]
+      .filter((candidate) => exists(repo, candidate));
   }
-  return candidates.filter((candidate) => exists(repo, candidate));
+  if (condition === "ticket_evidence") {
+    return [".docforge/tickets.json", "tickets.json", "backlog.json", "BACKLOG.md", "docs/backlog.md", ".github/ISSUE_TEMPLATE"]
+      .filter((candidate) => exists(repo, candidate));
+  }
+  if (condition === "multi_flow_repo") {
+    const target = path.join(repo, FLOW_INDEX_REL);
+    if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return [];
+    let index;
+    try {
+      index = JSON.parse(fs.readFileSync(target, "utf8"));
+    } catch {
+      return [];
+    }
+    const mainCount = (index.flows || []).filter((row) => flowIsMainPriority(row)).length;
+    return mainCount > 1 ? [FLOW_INDEX_REL] : [];
+  }
+  return [];
 }
 function validateRelativePath(value) {
   if (!value || path.posix.isAbsolute(value) || value.split("/").includes("..") || value === ".") {

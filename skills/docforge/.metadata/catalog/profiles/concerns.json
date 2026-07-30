@@ -1,0 +1,525 @@
+[
+  {
+    "id": "accessibility",
+    "order": 10,
+    "aliases": [
+      "a11y"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "accessibility",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "supported assistive technologies, semantics, keyboard/input, testing, and limitations"
+    ]
+  },
+  {
+    "id": "localization",
+    "order": 20,
+    "aliases": [
+      "i18n",
+      "l10n"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/*.xcstrings"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/locales/**",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/i18n/**",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "locales, resources, fallback, formatting, testing, and release"
+    ]
+  },
+  {
+    "id": "authentication",
+    "order": 30,
+    "aliases": [
+      "authn"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "authentication",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "identities, credentials, sessions, recovery, and failure"
+    ]
+  },
+  {
+    "id": "authorization",
+    "order": 40,
+    "aliases": [
+      "authz"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "authorization",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "roles, permissions, policy enforcement, denial, and audit"
+    ]
+  },
+  {
+    "id": "payments",
+    "order": 50,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "Stripe",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "StoreKit",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "purchase flow, provider boundary, validation, refunds, and failure"
+    ]
+  },
+  {
+    "id": "subscriptions",
+    "order": 60,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "subscription",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "entitlements, lifecycle, renewal, cancellation, restore, and failure"
+    ]
+  },
+  {
+    "id": "notifications",
+    "order": 70,
+    "aliases": [
+      "push-notifications"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "notification",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "registration, permission, payloads, routing, delivery, and failure"
+    ]
+  },
+  {
+    "id": "deep-linking",
+    "order": 80,
+    "aliases": [
+      "deeplinks"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "deep link",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "URL contract, routing, validation, fallback, and testing"
+    ]
+  },
+  {
+    "id": "offline-sync",
+    "order": 90,
+    "aliases": [
+      "offline"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "offline",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "local source of truth, queueing, reconciliation, conflicts, and recovery"
+    ]
+  },
+  {
+    "id": "background-processing",
+    "order": 100,
+    "aliases": [
+      "background-jobs"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "background",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "scheduling, limits, cancellation, retry, and observability"
+    ]
+  },
+  {
+    "id": "secure-storage",
+    "order": 110,
+    "aliases": [
+      "keychain",
+      "keystore"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "Keychain",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "KeyStore",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "stored values, protection class, access, rotation, deletion, and failure"
+    ]
+  },
+  {
+    "id": "privacy",
+    "order": 120,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/PrivacyInfo.xcprivacy"
+      },
+      {
+        "kind": "path",
+        "pattern": "PRIVACY.md"
+      }
+    ],
+    "query_hints": [
+      "data classes, collection, processing, disclosure, retention, deletion, and controls"
+    ]
+  },
+  {
+    "id": "analytics",
+    "order": 130,
+    "aliases": [
+      "telemetry"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "analytics",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "events, properties, consent, destinations, retention, and blind spots"
+    ]
+  },
+  {
+    "id": "observability",
+    "order": 140,
+    "aliases": [
+      "monitoring"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "OpenTelemetry",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "logs, metrics, traces, correlation, alerts, ownership, and blind spots"
+    ]
+  },
+  {
+    "id": "feature-flags",
+    "order": 150,
+    "aliases": [
+      "flags"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "feature flag",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "flag ownership, targeting, defaults, rollout, cleanup, and failure"
+    ]
+  },
+  {
+    "id": "realtime",
+    "order": 160,
+    "aliases": [
+      "real-time"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "WebSocket",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "connections, protocol, ordering, reconnect, backpressure, and failure"
+    ]
+  },
+  {
+    "id": "search",
+    "order": 170,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "search index",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "indexing, query, ranking, consistency, permissions, and recovery"
+    ]
+  },
+  {
+    "id": "media",
+    "order": 180,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "AVFoundation",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "capture/playback, formats, storage, permissions, performance, and failure"
+    ]
+  },
+  {
+    "id": "persistence",
+    "order": 185,
+    "aliases": [
+      "orm",
+      "database",
+      "data-access"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "prisma"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "@prisma/client"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "typeorm"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "sequelize"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "sqlalchemy"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "django"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "gem",
+        "name": "activerecord"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/migrations/**",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "prisma/schema.prisma"
+      }
+    ],
+    "query_hints": [
+      "entities, storage mapping, migrations, transactions, consistency, and failure recovery"
+    ]
+  },
+  {
+    "id": "ai-ml",
+    "order": 190,
+    "aliases": [
+      "ai",
+      "genai",
+      "llm"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "openai"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "openai"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "anthropic"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "@anthropic-ai/sdk"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "langchain"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "langchain"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "OpenAI",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "CoreML",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "model/provider boundary, prompts/inputs, outputs, evaluation, safety, privacy, and failure"
+    ]
+  },
+  {
+    "id": "hardware-integration",
+    "order": 200,
+    "aliases": [
+      "hardware"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "Bluetooth",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "serial port",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "devices, protocols, permissions, lifecycle, errors, and recovery"
+    ]
+  },
+  {
+    "id": "auto-update",
+    "order": 210,
+    "aliases": [
+      "updates"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "Sparkle",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "autoUpdater",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "channels, checks, signatures, rollout, rollback, and failure"
+    ]
+  },
+  {
+    "id": "login-helper",
+    "order": 220,
+    "aliases": [
+      "login-item"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.*",
+        "contains": "SMAppService",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/*LoginHelper*",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "registration, launch lifecycle, communication, update, removal, and failure"
+    ]
+  }
+]

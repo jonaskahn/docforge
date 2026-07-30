@@ -1,0 +1,25 @@
+{
+  "id": "api_authentication",
+  "type": "authentication",
+  "path": "docs/security/authentication.md",
+  "group": "security",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "api-service"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "api-authentication.md",
+  "instruction_file": "api-authentication.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 79,
+  "provenance_mode": "sections",
+  "audit_profile": "risk"
+}

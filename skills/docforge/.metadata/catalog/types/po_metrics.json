@@ -1,0 +1,26 @@
+{
+  "id": "po_metrics",
+  "type": "success-metrics",
+  "path": "docs/product/product-owner/success-metrics.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "success-metrics.md",
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 49,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

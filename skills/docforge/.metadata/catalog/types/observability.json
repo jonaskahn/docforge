@@ -1,0 +1,22 @@
+{
+  "id": "observability",
+  "type": "observability",
+  "path": "docs/operations/observability.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "observability.md",
+  "instruction_file": "observability.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 72,
+  "provenance_mode": "sections",
+  "audit_profile": "operations"
+}

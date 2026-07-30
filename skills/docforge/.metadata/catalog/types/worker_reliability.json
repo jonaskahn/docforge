@@ -1,0 +1,26 @@
+{
+  "id": "worker_reliability",
+  "type": "job-reliability",
+  "path": "docs/operations/job-reliability.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "worker-serverless"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "job-reliability.md",
+  "instruction_file": "job-reliability.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 72,
+  "provenance_mode": "sections",
+  "audit_profile": "operations"
+}

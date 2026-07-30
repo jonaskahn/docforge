@@ -1,0 +1,26 @@
+{
+  "id": "infra_network",
+  "type": "network",
+  "path": "docs/architecture/network.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "infrastructure-platform"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "network.md",
+  "instruction_file": "network.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 19,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture"
+}

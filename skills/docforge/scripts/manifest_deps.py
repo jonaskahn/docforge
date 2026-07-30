@@ -398,3 +398,78 @@ def extract_dependencies(files: list[tuple[str, Path]]) -> dict:
         for key in index[ecosystem]:
             index[ecosystem][key] = sorted(set(index[ecosystem][key]))
     return index
+
+
+def _own_identity(relative: str, text: str) -> list[tuple[str, str]]:
+    """Return [(ecosystem, normalized_name)] for this manifest's own package id."""
+    name = Path(relative).name
+    lower = name.lower()
+    found: list[tuple[str, str]] = []
+    try:
+        if name == "package.json":
+            data = json.loads(text)
+            if isinstance(data, dict) and data.get("name"):
+                found.append(("npm", normalize("npm", str(data["name"]))))
+        elif name == "composer.json":
+            data = json.loads(text)
+            if isinstance(data, dict) and data.get("name"):
+                found.append(("composer", normalize("composer", str(data["name"]))))
+        elif name == "pyproject.toml":
+            for line in text.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("name") and "=" in stripped:
+                    raw = stripped.split("=", 1)[1].strip().strip("\"'")
+                    if raw:
+                        found.append(("pip", normalize("pip", raw)))
+                        break
+        elif name == "Cargo.toml":
+            in_package = False
+            for line in text.splitlines():
+                header = _section_header(line)
+                if header is not None:
+                    in_package = header == "package"
+                    continue
+                if in_package and line.strip().startswith("name"):
+                    raw = line.split("=", 1)[1].strip().strip("\"'")
+                    if raw:
+                        found.append(("cargo", normalize("cargo", raw)))
+                    break
+        elif name == "go.mod":
+            for line in text.splitlines():
+                if line.startswith("module "):
+                    mod = line.split(None, 1)[1].strip()
+                    if mod:
+                        found.append(("go", normalize("go", mod)))
+                    break
+        elif name == "pubspec.yaml" or name == "pubspec.yml":
+            for line in text.splitlines():
+                if line.startswith("name:"):
+                    raw = line.split(":", 1)[1].strip().strip("\"'")
+                    if raw:
+                        found.append(("pub", normalize("pub", raw)))
+                    break
+        elif lower.endswith(".csproj"):
+            stem = Path(relative).stem
+            if stem:
+                found.append(("nuget", normalize("nuget", stem)))
+    except (ValueError, TypeError, IndexError):
+        return []
+    return [(eco, key) for eco, key in found if key]
+
+
+def extract_package_identities(files: list[tuple[str, Path]]) -> dict:
+    """Return {ecosystem: {normalized_name: [manifest_paths]}} for each package's own id."""
+    index: dict = {}
+    for relative, path in files:
+        text = _read(path)
+        if text is None:
+            continue
+        for ecosystem, key in _own_identity(relative, text):
+            bucket = index.setdefault(ecosystem, {})
+            paths = bucket.setdefault(key, [])
+            if relative not in paths:
+                paths.append(relative)
+    for ecosystem in index:
+        for key in index[ecosystem]:
+            index[ecosystem][key] = sorted(set(index[ecosystem][key]))
+    return index

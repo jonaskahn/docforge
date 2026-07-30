@@ -1,0 +1,25 @@
+{
+  "id": "library_compatibility",
+  "type": "compatibility",
+  "path": "docs/reference/compatibility.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "library-sdk"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "compatibility.md",
+  "instruction_file": "compatibility.md",
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 66,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

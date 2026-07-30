@@ -1,0 +1,22 @@
+{
+  "id": "root_readme",
+  "type": "root-readme",
+  "path": "README.md",
+  "group": "root",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "root-readme.md",
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "orientation",
+  "write_order": 40,
+  "provenance_mode": "sections",
+  "audit_profile": "router"
+}

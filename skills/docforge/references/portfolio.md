@@ -33,13 +33,19 @@ that it was found and how it was resolved.
 ## Cross-repository artifacts
 
 Actual cross-repository decisions are dynamic documents under
-`docs-portfolio/decisions/`.
+`docs-portfolio/decisions/`. Cross-repository epics are dynamic documents under
+`docs-portfolio/epics/`, added manually the same way (`manage_manifest add
+--type epic`) when a reviewer names an initiative and the repos it spans —
+automatic inference across siblings is deferred.
 
 - `README.md` is the platform one-pager and routes to every portfolio artifact.
 - `repo-inventory.md` records every mechanically discovered member, membership
   evidence, baseline status, and review disposition.
 - `system-context.md` shows the platform boundary, deployable members, shared
-  dependencies, protocols, and important cross-repository flows.
+  dependencies (with coupling type and mapping/heuristic resolution),
+  protocols, and important cross-repository flows. Optional identity mapping
+  lives at `.metadata/portfolio/repo-identity.json` (see schema in the skill
+  metadata); without it, edges resolve heuristically or are omitted.
 - `security-posture.md` summarizes cross-cutting identity, secrets, encryption,
   network, dependency, logging, incident, and disclosure controls, linking to
   member evidence.

@@ -1,0 +1,25 @@
+{
+  "id": "po_index",
+  "type": "po-index",
+  "path": "docs/product/product-owner/README.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "po-readme.md",
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 47,
+  "provenance_mode": "sections",
+  "audit_profile": "router"
+}

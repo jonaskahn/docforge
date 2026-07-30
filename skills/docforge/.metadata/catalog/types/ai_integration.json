@@ -1,0 +1,26 @@
+{
+  "id": "ai_integration",
+  "type": "ai-integration",
+  "path": "docs/architecture/ai-integration.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "concerns": [
+        "ai-ml"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "ai-integration.md",
+  "instruction_file": "ai-integration.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture"
+}

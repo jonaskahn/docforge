@@ -1,0 +1,21 @@
+{
+  "id": "concept",
+  "type": "concept",
+  "path": "docs/architecture/concepts/{slug}.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": "discovered_concept"
+  },
+  "scaffold_template": "topic-readme.md",
+  "instruction_file": "architecture-low-level.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 16,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture"
+}

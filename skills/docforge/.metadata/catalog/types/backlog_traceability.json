@@ -1,0 +1,25 @@
+{
+  "id": "backlog_traceability",
+  "type": "backlog-traceability",
+  "path": "docs/product/product-owner/backlog-traceability.md",
+  "group": "product",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": "ticket_evidence"
+  },
+  "scaffold_template": "backlog-traceability.md",
+  "instruction_file": null,
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 51,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

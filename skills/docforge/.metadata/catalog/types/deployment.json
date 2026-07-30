@@ -1,0 +1,22 @@
+{
+  "id": "deployment",
+  "type": "deployment",
+  "path": "docs/operations/deployment.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "deployment.md",
+  "instruction_file": "deployment.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 71,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure"
+}

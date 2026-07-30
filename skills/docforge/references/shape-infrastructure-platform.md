@@ -1,6 +1,6 @@
 # Shape — infrastructure platform
 
-**Applies when:** the repo contains infrastructure definitions — declarative cloud resources, cluster manifests, configuration management, or deployment orchestration.
+**Applies when:** the repo contains infrastructure definitions — declarative cloud resources, cluster manifests, configuration management, or deployment orchestration — including repos that only deploy or provision other repositories' code (Ansible, Kustomize/raw Kubernetes, Helm, Pulumi, Terraform, CloudFormation, Argo CD, Flux). CLI aliases `deployment-config` and `iac` normalize to this shape.
 
 Infrastructure repos invert the usual risk profile: the code is often short and readable, but the consequences of a wrong change are immediate, shared, and sometimes irreversible. Documentation should concentrate on the two things the code cannot express — what state exists outside the repo, and what a change will actually do when applied.
 

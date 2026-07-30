@@ -1,0 +1,19 @@
+{
+  "id": "security_index",
+  "type": "folder-index",
+  "path": "docs/security/README.md",
+  "group": "security",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "generic.md",
+  "instruction_file": null,
+  "requires": [],
+  "target_depth": "orientation",
+  "write_order": 76,
+  "provenance_mode": "sections",
+  "audit_profile": "router"
+}

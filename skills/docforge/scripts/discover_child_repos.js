@@ -1,27 +1,20 @@
 #!/usr/bin/env node
 "use strict";
-/* discover_child_repos.js — assemble the full repo collection for a docforge
- * diligence job: the parent, every declared git submodule, and every nested
- * repo detected on disk that ISN'T declared in .gitmodules (vendored copies,
- * git-subtree merges, manually cloned submodules).
- *
- * For each repo found, reports whether it already has a docforge baseline
- * (docs/architecture/high-level.md) and/or a docforge provenance manifest
- * (.docforge/manifest.json), so the caller knows which repos need
- * generation before a diligence portfolio layer is built on top of them.
- *
- * Usage:
- *   node discover_child_repos.js --root <parent-repo-path>
- *   node discover_child_repos.js --root <parent-repo-path> --json
- *   node discover_child_repos.js --root <parent-repo-path> --exclude node_modules --exclude vendor/cache
- *
- * Node.js built-ins only.
- */
+/** Discover child repos and resolve cross-member dependency edges. */
 
 const fs = require("fs");
 const path = require("path");
+const manifestDeps = require("./manifest_deps.js");
 
 const DEFAULT_EXCLUDES = new Set([".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build"]);
+const IGNORED_WALK = new Set([
+  ...DEFAULT_EXCLUDES,
+  ".codegraph",
+  ".gitnexus",
+  ".docforge",
+  ".build",
+  "DerivedData",
+]);
 
 function isDir(p) {
   try {
@@ -35,8 +28,6 @@ function exists(p) {
   return fs.existsSync(p);
 }
 
-// Minimal INI parser for .gitmodules — enough for [submodule "name"] sections
-// with path/url keys, the only shape git itself writes.
 function parseGitmodules(root) {
   const gmPath = path.join(root, ".gitmodules");
   if (!exists(gmPath)) return {};
@@ -74,8 +65,6 @@ function parseGitmodules(root) {
   return declared;
 }
 
-// True if `path` is itself a git repo (a .git dir, or a .git file pointing
-// elsewhere — the shape submodule worktrees and some worktree checkouts use).
 function hasOwnGit(p) {
   const marker = path.join(p, ".git");
   try {
@@ -86,8 +75,6 @@ function hasOwnGit(p) {
   }
 }
 
-// Walk the tree under root (excluding root itself) for any directory that is
-// its own git repo.
 function findNestedRepos(root, excludes) {
   const found = [];
   function walk(dir) {
@@ -118,6 +105,105 @@ function docforgeStatus(repoPath) {
   return "none — needs generation";
 }
 
+function inventoryManifests(repo) {
+  const found = [];
+  function walk(dir) {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      if (IGNORED_WALK.has(entry.name)) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile()) {
+        found.push([path.relative(repo, full).split(path.sep).join("/"), full]);
+      }
+    }
+  }
+  if (isDir(repo)) walk(repo);
+  return found;
+}
+
+function loadRepoIdentity(root) {
+  const target = path.join(root, ".metadata", "portfolio", "repo-identity.json");
+  if (!exists(target)) return new Map();
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(target, "utf8"));
+  } catch {
+    return new Map();
+  }
+  const mapping = new Map();
+  for (const row of data.packages || []) {
+    if (!row.ecosystem || !row.name) continue;
+    const key = `${row.ecosystem}:${manifestDeps.normalize(row.ecosystem, row.name)}`;
+    mapping.set(key, row);
+  }
+  return mapping;
+}
+
+function resolveDependencyEdges(root, members) {
+  const identityMap = loadRepoIdentity(root);
+  const memberDirs = members
+    .filter((item) => item.membership !== "parent" && isDir(item.path))
+    .map((item) => [item, item.path]);
+
+  const perMember = [];
+  const identityOwners = new Map();
+  for (const [, memberPath] of memberDirs) {
+    const files = inventoryManifests(memberPath);
+    const identities = manifestDeps.extractPackageIdentities(files);
+    const dependencies = manifestDeps.extractDependencies(files);
+    const repoId = path.basename(memberPath);
+    for (const [ecosystem, names] of Object.entries(identities)) {
+      for (const name of Object.keys(names)) {
+        const key = `${ecosystem}:${name}`;
+        if (!identityOwners.has(key)) identityOwners.set(key, repoId);
+      }
+    }
+    perMember.push({ repoId, path: memberPath, identities, dependencies });
+  }
+  for (const [key, row] of identityMap.entries()) {
+    identityOwners.set(key, row.repo_id);
+  }
+
+  const edges = [];
+  const seen = new Set();
+  for (const member of perMember) {
+    for (const [ecosystem, deps] of Object.entries(member.dependencies)) {
+      for (const depName of Object.keys(deps)) {
+        const key = `${ecosystem}:${depName}`;
+        const target = identityOwners.get(key);
+        if (!target || target === member.repoId) continue;
+        const resolution = identityMap.has(key) ? "mapping" : "heuristic";
+        let coupling = "shared library";
+        if (identityMap.has(key) && identityMap.get(key).coupling_default) {
+          coupling = identityMap.get(key).coupling_default;
+        }
+        const edgeKey = `${member.repoId}|${target}|${coupling}`;
+        if (seen.has(edgeKey)) continue;
+        seen.add(edgeKey);
+        edges.push({
+          repo: member.repoId,
+          depends_on: target,
+          coupling_type: coupling,
+          resolution,
+          ecosystem,
+          package: depName,
+        });
+      }
+    }
+  }
+  edges.sort((a, b) =>
+    `${a.repo}:${a.depends_on}:${a.package}`.localeCompare(`${b.repo}:${b.depends_on}:${b.package}`),
+  );
+  return edges;
+}
+
 function parseArgs(argv) {
   const args = { exclude: [], json: false };
   for (let i = 0; i < argv.length; i++) {
@@ -141,17 +227,12 @@ function main() {
     return 2;
   }
   const excludes = new Set([...DEFAULT_EXCLUDES, ...args.exclude]);
-
   const declared = parseGitmodules(root);
   const nested = findNestedRepos(root, excludes);
-
   const declaredPaths = new Set(Object.keys(declared).map((p) => path.join(root, p)));
   const detected = nested.filter((p) => !declaredPaths.has(p));
 
-  const collection = [
-    { path: root, membership: "parent", status: docforgeStatus(root) },
-  ];
-
+  const collection = [{ path: root, membership: "parent", status: docforgeStatus(root) }];
   for (const [relPath, meta] of Object.entries(declared)) {
     const full = path.join(root, relPath);
     collection.push({
@@ -162,7 +243,6 @@ function main() {
       status: exists(full) ? docforgeStatus(full) : "not checked out locally",
     });
   }
-
   for (const full of detected) {
     collection.push({
       path: full,
@@ -172,6 +252,7 @@ function main() {
   }
 
   const needsGeneration = collection.filter((c) => c.status.startsWith("none"));
+  const dependencyEdges = resolveDependencyEdges(root, collection);
 
   if (args.json) {
     console.log(
@@ -180,10 +261,11 @@ function main() {
           root,
           collection,
           needs_generation: needsGeneration.map((c) => c.path),
+          dependency_edges: dependencyEdges,
         },
         null,
-        2
-      )
+        2,
+      ),
     );
     return 0;
   }
@@ -193,16 +275,20 @@ function main() {
     const flag = c.status.startsWith("none") ? "  <-- needs docforge generation before diligence" : "";
     console.log(`[${c.membership}] ${c.path}\n    status: ${c.status}${flag}\n`);
   }
-
   if (collection.some((c) => c.membership.startsWith("detected"))) {
     console.log("NOTE: one or more detected child repos are not declared in .gitmodules.");
     console.log("      Confirm with the repo owner whether each is in scope before proceeding.\n");
   }
-
   if (needsGeneration.length) {
     console.log(`${needsGeneration.length} repo(s) need a docforge baseline before the portfolio layer is built:`);
-    for (const c of needsGeneration) {
-      console.log(`  - ${c.path}`);
+    for (const c of needsGeneration) console.log(`  - ${c.path}`);
+  }
+  if (dependencyEdges.length) {
+    console.log(`\n${dependencyEdges.length} dependency edge(s):`);
+    for (const edge of dependencyEdges) {
+      console.log(
+        `  - ${edge.repo} → ${edge.depends_on} (${edge.coupling_type}, ${edge.resolution})`,
+      );
     }
   }
   return 0;

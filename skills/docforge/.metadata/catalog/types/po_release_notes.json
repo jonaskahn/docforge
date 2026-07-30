@@ -1,0 +1,25 @@
+{
+  "id": "po_release_notes",
+  "type": "release-notes",
+  "path": "docs/product/product-owner/release-notes.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "release-notes.md",
+  "instruction_file": null,
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 50,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

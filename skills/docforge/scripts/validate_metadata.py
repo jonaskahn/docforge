@@ -11,6 +11,7 @@ from pathlib import Path
 
 from _util import read_json
 from provenance_frontmatter import PROVENANCE_FIELDS, SCHEMA_VERSION, parse_frontmatter
+import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent
@@ -27,13 +28,20 @@ PUBLIC_CONTRACTS = {
     "check_staleness": ["--manifest", "--section", "--json", "--sync-provenance"],
     "flow_index": ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
     "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
+    "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate"],
 }
 
 
 def validate() -> list[str]:
     errors: list[str] = []
     metadata = SKILL_ROOT / ".metadata"
-    catalog = read_json(metadata / "catalog.json")
+    # Catalog shape checks live in query_catalog --validate (single source of truth).
+    errors.extend(query_catalog.validate())
+    try:
+        catalog = query_catalog.as_legacy_catalog()
+    except ValueError as exc:
+        errors.append(str(exc))
+        catalog = {"version": None, "documents": [], "profiles": {}, "tiers": []}
     catalog_schema = read_json(metadata / "catalog-schema.json")
     manifest_schema = read_json(metadata / "manifest-schema.json")
     flow_index_schema = read_json(metadata / "flow-index-schema.json")
@@ -44,10 +52,14 @@ def validate() -> list[str]:
         provenance_schema = read_json(provenance_schema_path)
         if provenance_schema.get("properties", {}).get("schema", {}).get("const") != SCHEMA_VERSION:
             errors.append("provenance schema must require schema 2.0")
-    if catalog.get("version") != "2.3.0":
-        errors.append("catalog version must be 2.3.0")
-    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.3.0":
+    if catalog.get("version") != "2.4.0":
+        errors.append("catalog version must be 2.4.0")
+    if catalog_schema.get("properties", {}).get("version", {}).get("const") != "2.4.0":
         errors.append("catalog schema version disagrees with catalog")
+    if not (metadata / "catalog" / "index.json").is_file():
+        errors.append("split catalog index.json is missing")
+    if (metadata / "catalog.json").is_file():
+        errors.append("obsolete monolith catalog.json remains; use .metadata/catalog/")
     if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.1":
         errors.append("manifest schema must require version 3.1")
     if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.1":
@@ -63,7 +75,6 @@ def validate() -> list[str]:
             errors.append(f"flow index schema must define flow.{field}")
     if flow_item.get("doc_role", {}).get("enum") != ["standalone", "member", "index_only"]:
         errors.append("flow index schema doc_role must be standalone|member|index_only")
-    tiers = {item["id"] for item in catalog.get("tiers", [])}
     dimensions = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
     profiles = catalog.get("profiles", {})
     schema_profile_required = set(
@@ -78,31 +89,15 @@ def validate() -> list[str]:
         errors.append("catalog schema profile dimensions disagree with catalog")
     if manifest_profile_required != set(dimensions):
         errors.append("manifest schema profile dimensions disagree with catalog")
-    profile_ids: dict[str, set[str]] = {}
     for dimension in dimensions:
         definitions = profiles.get(dimension, [])
         if not definitions:
             errors.append(f"{dimension}: profile registry must not be empty")
-        ids = {item.get("id") for item in definitions}
-        if len(ids) != len(definitions):
-            errors.append(f"{dimension}: duplicate profile id")
         orders = [item.get("order") for item in definitions]
         if len(set(orders)) != len(orders) or not all(isinstance(item, int) for item in orders):
             errors.append(f"{dimension}: profile order values must be unique integers")
-        profile_ids[dimension] = ids
-        names: dict[str, str] = {}
         for item in definitions:
             identifier = item.get("id")
-            for name in [identifier, *item.get("aliases", [])]:
-                if not isinstance(name, str) or re.fullmatch(r"[a-z0-9][a-z0-9-]*", name) is None:
-                    errors.append(f"{dimension}: invalid profile name {name}")
-                    continue
-                if name in names:
-                    errors.append(
-                        f"{dimension}: profile name collision {name} "
-                        f"between {names[name]} and {identifier}"
-                    )
-                names[name] = identifier
             for signal in item.get("signals", []):
                 kind = signal.get("kind")
                 if kind not in {"path", "content", "dependency"}:
@@ -146,64 +141,12 @@ def validate() -> list[str]:
             errors.append("discovery-gate-schema.json must define judgment")
         if "pack" not in gate_schema.get("definitions", {}):
             errors.append("discovery-gate-schema.json must define pack")
-    groups = set(catalog.get("groups", []))
-    capabilities = set(catalog.get("capabilities", []))
-    static_ids: set[str] = set()
-    static_paths: set[str] = set()
-    dynamic_types: set[str] = set()
-    catalog_contract = (
-        SKILL_ROOT / "references" / "document-catalog.md"
-    ).read_text(encoding="utf-8")
     for index, doc in enumerate(catalog.get("documents", [])):
         label = doc.get("id", f"document[{index}]")
-        missing = sorted(REQUIRED_DOC_FIELDS - set(doc))
-        if missing:
-            errors.append(f"{label}: missing fields: {', '.join(missing)}")
-            continue
         selection = doc.get("selection", {})
         obsolete = {"overlays", "include_if_overlay"} & set(selection)
         if obsolete:
             errors.append(f"{label}: obsolete selection fields: {', '.join(sorted(obsolete))}")
-        if doc["group"] not in groups:
-            errors.append(f"{label}: unknown group {doc['group']}")
-        if selection.get("min_tier") not in tiers:
-            errors.append(f"{label}: unknown tier {selection.get('min_tier')}")
-        selectors = selection.get("selectors", {})
-        if "frameworks" in selectors and selectors["frameworks"]:
-            errors.append(f"{label}: frameworks may tailor evidence but must not select documents")
-        for dimension, values in selectors.items():
-            if dimension not in profile_ids:
-                errors.append(f"{label}: unknown selector dimension {dimension}")
-                continue
-            for value in values:
-                if value not in profile_ids[dimension]:
-                    errors.append(f"{label}: unknown {dimension} selector {value}")
-        for requirement in doc.get("requires", []):
-            if requirement not in capabilities:
-                errors.append(f"{label}: unknown requirement {requirement}")
-        if not isinstance(doc.get("write_order"), int):
-            errors.append(f"{label}: write_order must be an integer")
-        if doc["type"] not in catalog_contract:
-            errors.append(f"{label}: document type is missing from document-catalog.md")
-        template = SKILL_ROOT / "assets" / "templates" / doc["scaffold_template"]
-        if not template.is_file():
-            errors.append(f"{label}: missing template {doc['scaffold_template']}")
-        instruction = doc.get("instruction_file")
-        if instruction and not (SKILL_ROOT / "instructions" / instruction).is_file():
-            errors.append(f"{label}: missing instruction {instruction}")
-        if selection.get("mode") == "static":
-            if doc["id"] in static_ids:
-                errors.append(f"duplicate static id: {doc['id']}")
-            if doc["path"] in static_paths:
-                errors.append(f"duplicate static path: {doc['path']}")
-            static_ids.add(doc["id"])
-            static_paths.add(doc["path"])
-        elif selection.get("mode") == "dynamic":
-            if doc["type"] in dynamic_types:
-                errors.append(f"duplicate dynamic type: {doc['type']}")
-            dynamic_types.add(doc["type"])
-        else:
-            errors.append(f"{label}: selection.mode must be static or dynamic")
     for template in sorted((SKILL_ROOT / "assets" / "templates").glob("*.md")):
         if template.name in MARKDOWN_EXCEPTIONS:
             continue
@@ -228,8 +171,10 @@ def validate() -> list[str]:
         if provenance.get("schema") != SCHEMA_VERSION or "graph_snapshot" in provenance:
             errors.append(f"{template.name}: provenance frontmatter must use schema 2.0")
     scripts = SKILL_ROOT / "scripts"
-    py_names = {path.stem for path in scripts.glob("*.py")}
-    js_names = {path.stem for path in scripts.glob("*.js")}
+    # One-shot migration helpers; not part of the dual-runtime public surface.
+    peerless = {"split_catalog", "split_document_catalog"}
+    py_names = {path.stem for path in scripts.glob("*.py")} - peerless
+    js_names = {path.stem for path in scripts.glob("*.js")} - peerless
     for name in sorted(py_names - js_names):
         errors.append(f"missing Node peer for {name}.py")
     for name in sorted(js_names - py_names):
@@ -244,7 +189,7 @@ def validate() -> list[str]:
     plugin = read_json(REPO_ROOT / ".claude-plugin" / "plugin.json")
     market = read_json(REPO_ROOT / ".claude-plugin" / "marketplace.json")["plugins"][0]
     versions = {meta.get("version"), plugin.get("version"), market.get("version"), catalog.get("version")}
-    if versions != {"2.3.0"}:
+    if versions != {"2.4.0"}:
         errors.append(f"release versions disagree: {sorted(str(item) for item in versions)}")
     skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     skill_match = re.search(r"^description: (.+)$", skill_text, re.MULTILINE)

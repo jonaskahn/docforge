@@ -54,6 +54,8 @@ limitations, or glossary definitions.
 | Roadmap timing | `product/roadmap.md` | PO README links; does not duplicate |
 | Warning / critical constraint | topic `README.md` | subfile may expand it |
 | Agent-specific non-obvious convention | `AGENTS.md` or `docs/agents/patterns.md` | nowhere else |
+| What the repository is built with | `reference/tech-stack.md` | architecture and setup link; do not restate |
+| What it depends on operationally and what breaks | `architecture/dependencies.md` (`dependencies-inventory`) | tech-stack omits failure framing |
 
 ## Atomic promotion
 

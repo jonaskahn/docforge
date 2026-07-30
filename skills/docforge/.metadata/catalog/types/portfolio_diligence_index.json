@@ -1,0 +1,22 @@
+{
+  "id": "portfolio_diligence_index",
+  "type": "diligence-index",
+  "path": "docs-portfolio/diligence-index.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "static",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "diligence-index.md",
+  "instruction_file": "diligence-index.md",
+  "requires": [
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 106,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio"
+}

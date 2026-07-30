@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Docforge Catalog Index",
+  "type": "object",
+  "required": ["version", "tiers", "groups", "capabilities", "document_types"],
+  "properties": {
+    "version": {"const": "2.4.0"},
+    "tiers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["order"],
+        "properties": {"order": {"type": "integer"}},
+        "additionalProperties": false
+      }
+    },
+    "groups": {"type": "array", "items": {"type": "string"}},
+    "capabilities": {
+      "type": "array",
+      "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}
+    },
+    "cue_hints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["cue", "note"],
+        "properties": {
+          "cue": {"type": "string"},
+          "examples": {"type": "array", "items": {"type": "string"}},
+          "note": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "document_types": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "tier", "path"],
+        "properties": {
+          "id": {"type": "string"},
+          "tier": {"enum": ["spine", "diligence", "portfolio"]},
+          "path": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

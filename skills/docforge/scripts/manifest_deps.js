@@ -395,4 +395,100 @@ function extractDependencies(files) {
   return index;
 }
 
-module.exports = { extractDependencies, normalize, ECOSYSTEMS };
+function sectionHeader(line) {
+  const stripped = line.trim();
+  if (stripped.startsWith("[") && stripped.endsWith("]") && stripped.length > 2) {
+    return stripped.slice(1, -1).trim().replace(/^["']|["']$/g, "");
+  }
+  return null;
+}
+
+function ownIdentity(relative, text) {
+  const name = path.posix.basename(relative.split(path.sep).join("/"));
+  const lower = name.toLowerCase();
+  const found = [];
+  try {
+    if (name === "package.json") {
+      const data = JSON.parse(text);
+      if (data && typeof data === "object" && data.name) {
+        found.push(["npm", normalize("npm", String(data.name))]);
+      }
+    } else if (name === "composer.json") {
+      const data = JSON.parse(text);
+      if (data && typeof data === "object" && data.name) {
+        found.push(["composer", normalize("composer", String(data.name))]);
+      }
+    } else if (name === "pyproject.toml") {
+      for (const line of text.split(/\r?\n/)) {
+        const stripped = line.trim();
+        if (stripped.startsWith("name") && stripped.includes("=")) {
+          const raw = stripped.split("=")[1].trim().replace(/^["']|["']$/g, "");
+          if (raw) found.push(["pip", normalize("pip", raw)]);
+          break;
+        }
+      }
+    } else if (name === "Cargo.toml") {
+      let inPackage = false;
+      for (const line of text.split(/\r?\n/)) {
+        const header = sectionHeader(line);
+        if (header !== null) {
+          inPackage = header === "package";
+          continue;
+        }
+        if (inPackage && line.trim().startsWith("name")) {
+          const raw = line.split("=")[1].trim().replace(/^["']|["']$/g, "");
+          if (raw) found.push(["cargo", normalize("cargo", raw)]);
+          break;
+        }
+      }
+    } else if (name === "go.mod") {
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith("module ")) {
+          const mod = line.slice(7).trim();
+          if (mod) found.push(["go", normalize("go", mod)]);
+          break;
+        }
+      }
+    } else if (name === "pubspec.yaml" || name === "pubspec.yml") {
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith("name:")) {
+          const raw = line.split(":")[1].trim().replace(/^["']|["']$/g, "");
+          if (raw) found.push(["pub", normalize("pub", raw)]);
+          break;
+        }
+      }
+    } else if (lower.endsWith(".csproj")) {
+      const stem = path.posix.basename(relative, path.posix.extname(relative));
+      if (stem) found.push(["nuget", normalize("nuget", stem)]);
+    }
+  } catch {
+    return [];
+  }
+  return found.filter(([, key]) => key);
+}
+
+function extractPackageIdentities(files) {
+  const index = {};
+  for (const [relative, target] of files) {
+    const text = read(target);
+    if (text === null) continue;
+    for (const [ecosystem, key] of ownIdentity(relative, text)) {
+      if (!index[ecosystem]) index[ecosystem] = {};
+      if (!index[ecosystem][key]) index[ecosystem][key] = [];
+      if (!index[ecosystem][key].includes(relative)) index[ecosystem][key].push(relative);
+    }
+  }
+  for (const ecosystem of Object.keys(index)) {
+    for (const key of Object.keys(index[ecosystem])) {
+      index[ecosystem][key] = [...new Set(index[ecosystem][key])].sort(compareText);
+    }
+  }
+  return index;
+}
+
+module.exports = {
+  extractDependencies,
+  extractPackageIdentities,
+  normalize,
+  ECOSYSTEMS,
+};

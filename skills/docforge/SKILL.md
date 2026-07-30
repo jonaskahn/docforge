@@ -6,8 +6,10 @@ description: Catalog-driven repository documentation with bounded graph-grounded
 # Docforge
 
 Docforge builds a durable documentation system from repository evidence. The
-canonical machine contract is `.metadata/catalog.json`; prose explains that
-contract but never replaces it.
+canonical machine contract is `.metadata/catalog/index.json` plus per-type
+detail files under `.metadata/catalog/types/`, accessed only through
+`scripts/query_catalog.{py,js}`; prose explains that contract but never
+replaces it.
 
 ## Bare `/docforge` invocation
 
@@ -259,8 +261,8 @@ Choose exactly one catalog tier:
   `docs-portfolio/` layer.
 
 Select shape, platform, framework, concern, and audience identifiers only from
-`.metadata/catalog.json`. Aliases are accepted only at CLI input and normalize
-to canonical IDs. Shapes own durable document packs; platforms add platform
+`.metadata/catalog/profiles/` (via `query_catalog --profile`). Aliases are
+accepted only at CLI input and normalize to canonical IDs. Shapes own durable document packs; platforms add platform
 constraints; frameworks tailor detection, terminology, evidence queries, and
 commands; concerns add conditional content; audiences add reader views. A
 document shared by selected profiles appears once, with every applicable
@@ -352,7 +354,7 @@ Immediately before materializing each document, show the current structure
 summary (or “tree unchanged since the displayed checkpoint”) and a compact
 execution card: path, reader, owned topics, evidence query, links to owning
 documents, and acceptance checks. This is derived from the manifest and
-[`references/document-catalog.md`](references/document-catalog.md), not a
+[`references/catalog-contracts/README.md`](references/catalog-contracts/README.md), not a
 second plan file.
 
 ### 4. Write one document
@@ -361,9 +363,10 @@ For the next document in `write_order`:
 
 1. Check every capability in its `requires` list.
 2. Read its content contract in
-   [`references/document-catalog.md`](references/document-catalog.md), then its
-   optional `instruction_file` for writing craft. Select and author any visual
-   using [`references/illustration.md`](references/illustration.md).
+   [`references/catalog-contracts/`](references/catalog-contracts/README.md)
+   (one file per type), then its optional `instruction_file` for writing craft.
+   Select and author any visual using
+   [`references/illustration.md`](references/illustration.md).
 3. Materialize that document and selected ancestor indexes:
 
    ```sh
@@ -463,6 +466,9 @@ Every script has standard-library Python and built-in-only Node peers with the
 same flags, messages, JSON shapes, filesystem effects, and exit codes. Unknown
 flags exit `2`.
 
+- `query_catalog.{py,js}`: read the split catalog (`--tier`, `--id`, `--ids`,
+  `--profile`, `--applicable`, `--validate`). Every workflow step uses this
+  instead of opening catalog files directly.
 - `manage_manifest.{py,js}`: `init`, `add`, `set`, `status`, and `audit`.
 - `detect_profiles.{py,js}`: read-only shape/platform/framework/concern
   recommendations with strong/weak match strength, cue bags, and
@@ -490,8 +496,8 @@ Use Node by replacing `python scripts/name.py` with
 
 - [`references/docs-tree.md`](references/docs-tree.md): paths, naming, tiers,
   and placement.
-- [`references/document-catalog.md`](references/document-catalog.md):
-  must-present content, keep-out boundaries, mode, and depth.
+- [`references/catalog-contracts/`](references/catalog-contracts/README.md):
+  must-present content, keep-out boundaries, mode, and depth (one file per type).
 - [`references/graph-sources.md`](references/graph-sources.md): capability
   dispatch and provider selection.
 - [`references/document-composition.md`](references/document-composition.md):

@@ -1,0 +1,21 @@
+{
+  "id": "portfolio_system_context",
+  "type": "system-context",
+  "path": "docs-portfolio/system-context.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "static",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "system-context.md",
+  "instruction_file": "system-context.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 102,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio"
+}

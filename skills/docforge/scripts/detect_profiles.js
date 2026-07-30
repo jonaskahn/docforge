@@ -6,9 +6,9 @@ const fs = require("fs");
 const path = require("path");
 const manifestDeps = require("./manifest_deps.js");
 const discoveryGate = require("./discovery_gate.js");
+const queryCatalog = require("./query_catalog.js");
 
 const SKILL_ROOT = path.resolve(__dirname, "..");
-const CATALOG_PATH = path.join(SKILL_ROOT, ".metadata", "catalog.json");
 const DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns"];
 const IGNORED = new Set([
   ".git", ".codegraph", ".gitnexus", ".docforge", "node_modules",
@@ -120,15 +120,34 @@ function attachAmbiguousWith(results) {
     item.ambiguous_with = peers;
   }
 }
+function persistManifestDeps(repo, dependencies) {
+  const scratch = path.join(repo, ".docforge", "scratch");
+  fs.mkdirSync(scratch, { recursive: true });
+  const target = path.join(scratch, "manifest-deps.json");
+  fs.writeFileSync(
+    target,
+    `${JSON.stringify(
+      {
+        generated_at: new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00"),
+        dependencies,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  return target;
+}
+
 function detect(repo) {
-  const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
+  const profiles = queryCatalog.loadProfiles();
   const files = inventory(repo);
   const dependencies = manifestDeps.extractDependencies(files);
+  persistManifestDeps(repo, dependencies);
   const cache = new Map();
   let cachedBytes = 0;
   const results = [];
   for (const dimension of DIMENSIONS) {
-    for (const profile of catalog.profiles[dimension]) {
+    for (const profile of profiles[dimension]) {
       const evidence = new Set();
       const matchedStrengths = new Set();
       const cues = new Set();
@@ -204,7 +223,7 @@ function excerpts(repo, evidencePaths, files) {
   return out;
 }
 function emitGatePack(repo) {
-  const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
+  const profiles = queryCatalog.loadProfiles();
   const files = inventory(repo);
   const dependencies = manifestDeps.extractDependencies(files);
   const detections = detect(repo);
@@ -258,11 +277,11 @@ function emitGatePack(repo) {
   }
   const catalogIds = {};
   for (const dimension of [...DIMENSIONS, "audiences"]) {
-    catalogIds[dimension] = catalog.profiles[dimension].map((profile) => profile.id).sort(compareText);
+    catalogIds[dimension] = profiles[dimension].map((profile) => profile.id).sort(compareText);
   }
   const queryHints = {};
   for (const dimension of DIMENSIONS) {
-    for (const profile of catalog.profiles[dimension]) {
+    for (const profile of profiles[dimension]) {
       if (profile.query_hints && profile.query_hints.length) queryHints[profile.id] = [...profile.query_hints];
     }
   }
@@ -276,7 +295,7 @@ function emitGatePack(repo) {
     dependencies: dependencySummary(dependencies),
     catalog_ids: catalogIds,
     query_hints: queryHints,
-    cue_hints: catalog.cue_hints || [],
+    cue_hints: queryCatalog.loadIndex().cue_hints || [],
     needs_gate: discoveryGate.needsGate(detections, cues),
   };
 }

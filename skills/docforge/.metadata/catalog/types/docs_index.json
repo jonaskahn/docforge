@@ -1,0 +1,21 @@
+{
+  "id": "docs_index",
+  "type": "docs-index",
+  "path": "docs/README.md",
+  "group": "root",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "docs-index.md",
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 30,
+  "provenance_mode": "sections",
+  "audit_profile": "router"
+}

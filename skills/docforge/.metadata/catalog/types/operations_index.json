@@ -1,0 +1,19 @@
+{
+  "id": "operations_index",
+  "type": "folder-index",
+  "path": "docs/operations/README.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "generic.md",
+  "instruction_file": null,
+  "requires": [],
+  "target_depth": "orientation",
+  "write_order": 70,
+  "provenance_mode": "sections",
+  "audit_profile": "router"
+}

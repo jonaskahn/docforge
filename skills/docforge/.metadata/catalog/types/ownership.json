@@ -1,0 +1,21 @@
+{
+  "id": "ownership",
+  "type": "ownership",
+  "path": "docs/contributing/ownership.md",
+  "group": "contributing",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "ownership.md",
+  "instruction_file": "ownership.md",
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 86,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

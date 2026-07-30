@@ -1,0 +1,27 @@
+{
+  "id": "quickstart",
+  "type": "quickstart",
+  "path": "docs/product/quickstart.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "api-service",
+        "library-sdk"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "quickstart.md",
+  "instruction_file": "quickstart.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 41,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure"
+}

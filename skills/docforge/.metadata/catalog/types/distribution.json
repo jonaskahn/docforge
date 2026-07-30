@@ -1,0 +1,30 @@
+{
+  "id": "distribution",
+  "type": "application-distribution",
+  "path": "docs/operations/distribution.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app",
+        "cli-tui",
+        "plugin-extension",
+        "game"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "application-distribution.md",
+  "instruction_file": "application-distribution.md",
+  "requires": [
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 71,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure"
+}

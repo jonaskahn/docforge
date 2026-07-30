@@ -1,0 +1,26 @@
+{
+  "id": "migration",
+  "type": "migration",
+  "path": "docs/product/migrations/{slug}.md",
+  "group": "product",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "library-sdk"
+      ]
+    },
+    "condition": "discovered_migration"
+  },
+  "scaffold_template": "migration.md",
+  "instruction_file": "migration.md",
+  "requires": [
+    "code_graph",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 43,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure"
+}

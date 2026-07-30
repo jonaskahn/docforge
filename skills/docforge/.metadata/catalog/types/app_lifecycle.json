@@ -1,0 +1,27 @@
+{
+  "id": "app_lifecycle",
+  "type": "application-lifecycle",
+  "path": "docs/architecture/application-lifecycle.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "application-lifecycle.md",
+  "instruction_file": "application-lifecycle.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 16,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture"
+}

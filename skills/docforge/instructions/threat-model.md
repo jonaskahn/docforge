@@ -5,7 +5,7 @@
 Mermaid diagram naming trust boundaries, prose for each threat and its
 response.
 
-Analyze proportionately, per `document-catalog.md`'s risk-register routing:
+Analyze proportionately, per `catalog-contracts/README.md`'s risk-register routing:
 a trust-boundary data-flow diagram, STRIDE (Spoofing, Tampering,
 Repudiation, Information disclosure, Denial of service, Elevation of
 privilege) applied per element that crosses a boundary — not every element

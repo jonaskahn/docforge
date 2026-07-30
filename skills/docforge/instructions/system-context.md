@@ -17,3 +17,16 @@ State cross-repo flows as trigger → repos involved → outcome, one line
 each, linking to each repo's owning flow document rather than re-deriving
 the flow. This document orients a reader new to the whole portfolio, not a
 reader already working inside one member.
+
+Before drawing the flowchart, resolve directed dependency edges between
+members using this order: (1) `.metadata/portfolio/repo-identity.json`
+mapping when present (`resolution: mapping`); (2) convention match of a
+declared dependency identifier against a sibling's own package identity
+(`resolution: heuristic`); (3) omit anything that resolves to neither —
+never invent edges. Keep heuristic rows visually distinct via the
+Resolution column. Coupling types include shared library, API contract,
+event schema, and — when an `infrastructure-platform` member is present —
+`provisions-for` / `deploys-into`. If edges and both tables outgrow one
+reviewable file, promote to `system-context/README.md` +
+`system-context/dependency-map.md` in the same pass that writes the
+deep-dive (see `document-composition.md`); do not pre-split.

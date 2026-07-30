@@ -1,0 +1,22 @@
+{
+  "id": "arch_high_level",
+  "type": "architecture-high-level",
+  "path": "docs/architecture/high-level.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "architecture-high-level.md",
+  "instruction_file": "architecture-high-level.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 10,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "flowchart"
+}

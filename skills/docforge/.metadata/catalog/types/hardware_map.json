@@ -1,0 +1,26 @@
+{
+  "id": "hardware_map",
+  "type": "hardware-map",
+  "path": "docs/architecture/hardware-map.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "embedded-iot"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "hardware-map.md",
+  "instruction_file": "hardware-map.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture"
+}

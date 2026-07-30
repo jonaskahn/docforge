@@ -1,0 +1,21 @@
+{
+  "id": "testing_guide",
+  "type": "testing-guide",
+  "path": "docs/engineering/testing.md",
+  "group": "engineering",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "testing-guide.md",
+  "instruction_file": "testing-guide.md",
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 52,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure"
+}

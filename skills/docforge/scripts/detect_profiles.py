@@ -7,13 +7,14 @@ import argparse
 import fnmatch
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 import discovery_gate
 import manifest_deps
+import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
-CATALOG_PATH = SKILL_ROOT / ".metadata" / "catalog.json"
 DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns"]
 IGNORED = {
     ".git", ".codegraph", ".gitnexus", ".docforge", "node_modules",
@@ -99,14 +100,15 @@ def inventory(repo: Path) -> list[tuple[str, Path]]:
 
 
 def detect(repo: Path) -> list[dict]:
-    catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    profiles = query_catalog.load_profiles()
     files = inventory(repo)
     dependencies = manifest_deps.extract_dependencies(files)
+    persist_manifest_deps(repo, dependencies)
     cache: dict[Path, str] = {}
     cached_bytes = 0
     results: list[dict] = []
     for dimension in DIMENSIONS:
-        for profile in catalog["profiles"][dimension]:
+        for profile in profiles[dimension]:
             evidence: list[str] = []
             matched_strengths: set[str] = set()
             cues: list[str] = []
@@ -219,7 +221,7 @@ def _excerpts(repo: Path, evidence_paths: list[str], files: list[tuple[str, Path
 
 
 def emit_gate_pack(repo: Path) -> dict:
-    catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    profiles = query_catalog.load_profiles()
     files = inventory(repo)
     dependencies = manifest_deps.extract_dependencies(files)
     detections = detect(repo)
@@ -271,14 +273,16 @@ def emit_gate_pack(repo: Path) -> dict:
             if path not in evidence_paths:
                 evidence_paths.append(path)
     catalog_ids = {
-        dimension: sorted(profile["id"] for profile in catalog["profiles"][dimension])
+        dimension: sorted(profile["id"] for profile in profiles[dimension])
         for dimension in [*DIMENSIONS, "audiences"]
     }
     query_hints = {}
     for dimension in DIMENSIONS:
-        for profile in catalog["profiles"][dimension]:
+        for profile in profiles[dimension]:
             if profile.get("query_hints"):
                 query_hints[profile["id"]] = list(profile["query_hints"])
+    # Side effect for WRITE: tech-stack reads this scratch instead of re-deriving.
+    persist_manifest_deps(repo, dependencies)
     return {
         "repo": str(repo.resolve()),
         "detections": detections,
@@ -289,9 +293,31 @@ def emit_gate_pack(repo: Path) -> dict:
         "dependencies": _dependency_summary(dependencies),
         "catalog_ids": catalog_ids,
         "query_hints": query_hints,
-        "cue_hints": catalog.get("cue_hints", []),
+        "cue_hints": query_catalog.load_index().get("cue_hints", []),
         "needs_gate": discovery_gate.needs_gate(detections, cues),
     }
+
+
+def persist_manifest_deps(repo: Path, dependencies: dict) -> Path:
+    """Write manifest dependency rows for the tech-stack WRITE step."""
+    scratch = repo / ".docforge" / "scratch"
+    scratch.mkdir(parents=True, exist_ok=True)
+    path = scratch / "manifest-deps.json"
+    path.write_text(
+        json.dumps(
+            {
+                "generated_at": datetime.now(timezone.utc)
+                .replace(microsecond=0)
+                .isoformat(),
+                "dependencies": dependencies,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
 
 
 def main() -> int:

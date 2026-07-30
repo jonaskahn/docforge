@@ -1,0 +1,21 @@
+{
+  "id": "adr",
+  "type": "adr",
+  "path": "docs/architecture/decisions/{slug}.md",
+  "group": "records",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": "discovered_decision"
+  },
+  "scaffold_template": "adr.md",
+  "instruction_file": "decision-records.md",
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 81,
+  "provenance_mode": "sections",
+  "audit_profile": "decision"
+}

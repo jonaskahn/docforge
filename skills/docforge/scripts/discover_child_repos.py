@@ -22,7 +22,12 @@ import json
 import subprocess
 from pathlib import Path
 
+import manifest_deps
+
 DEFAULT_EXCLUDES = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build"}
+IGNORED_WALK = DEFAULT_EXCLUDES | {
+    ".codegraph", ".gitnexus", ".docforge", ".build", "DerivedData",
+}
 
 
 def parse_gitmodules(root: Path) -> dict:
@@ -94,6 +99,106 @@ def git_submodule_status(root: Path) -> str:
         return ""
 
 
+def inventory_manifests(repo: Path) -> list[tuple[str, Path]]:
+    found: list[tuple[str, Path]] = []
+
+    def walk(directory: Path) -> None:
+        for path in sorted(directory.iterdir(), key=lambda item: item.name):
+            if path.name in IGNORED_WALK or path.is_symlink():
+                continue
+            if path.is_dir():
+                walk(path)
+            elif path.is_file():
+                found.append((path.relative_to(repo).as_posix(), path))
+
+    if repo.is_dir():
+        walk(repo)
+    return found
+
+
+def load_repo_identity(root: Path) -> dict[tuple[str, str], dict]:
+    """Map (ecosystem, name) → identity row from optional repo-identity.json."""
+    path = root / ".metadata" / "portfolio" / "repo-identity.json"
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    mapping: dict[tuple[str, str], dict] = {}
+    for row in data.get("packages", []):
+        ecosystem = row.get("ecosystem")
+        name = row.get("name")
+        if not ecosystem or not name:
+            continue
+        key = (ecosystem, manifest_deps.normalize(ecosystem, name))
+        mapping[key] = row
+    return mapping
+
+
+def resolve_dependency_edges(root: Path, members: list[dict]) -> list[dict]:
+    """Resolve directed edges between members via mapping file, then heuristic."""
+    identity_map = load_repo_identity(root)
+    member_dirs = []
+    for item in members:
+        path = Path(item["path"])
+        if path.is_dir() and item.get("membership") != "parent":
+            member_dirs.append((item, path))
+    if len(member_dirs) < 2 and not identity_map:
+        # Still allow parent↔member when identities exist; otherwise need 2+ members.
+        pass
+
+    # Per-member: own package ids and declared dependencies.
+    per_member: list[dict] = []
+    identity_owners: dict[tuple[str, str], str] = {}
+    for item, path in member_dirs:
+        files = inventory_manifests(path)
+        identities = manifest_deps.extract_package_identities(files)
+        dependencies = manifest_deps.extract_dependencies(files)
+        repo_id = path.name
+        for ecosystem, names in identities.items():
+            for name in names:
+                identity_owners.setdefault((ecosystem, name), repo_id)
+        per_member.append({
+            "repo_id": repo_id,
+            "path": str(path),
+            "identities": identities,
+            "dependencies": dependencies,
+        })
+
+    # Mapping file overrides / supplements identity → repo_id.
+    for (ecosystem, name), row in identity_map.items():
+        identity_owners[(ecosystem, name)] = row["repo_id"]
+
+    edges: list[dict] = []
+    seen: set[tuple[str, str, str]] = set()
+    for member in per_member:
+        for ecosystem, deps in member["dependencies"].items():
+            for dep_name in deps:
+                key = (ecosystem, dep_name)
+                target = identity_owners.get(key)
+                if target is None or target == member["repo_id"]:
+                    continue
+                resolution = "mapping" if key in identity_map else "heuristic"
+                coupling = "shared library"
+                if key in identity_map and identity_map[key].get("coupling_default"):
+                    coupling = identity_map[key]["coupling_default"]
+                edge_key = (member["repo_id"], target, coupling)
+                if edge_key in seen:
+                    continue
+                seen.add(edge_key)
+                edges.append({
+                    "repo": member["repo_id"],
+                    "depends_on": target,
+                    "coupling_type": coupling,
+                    "resolution": resolution,
+                    "ecosystem": ecosystem,
+                    "package": dep_name,
+                })
+    edges.sort(key=lambda row: (row["repo"], row["depends_on"], row["package"]))
+    return edges
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, required=True)
@@ -135,12 +240,14 @@ def main():
         })
 
     needs_generation = [c for c in collection if c["status"].startswith("none")]
+    dependency_edges = resolve_dependency_edges(root, collection)
 
     if args.json:
         print(json.dumps({
             "root": str(root),
             "collection": collection,
             "needs_generation": [c["path"] for c in needs_generation],
+            "dependency_edges": dependency_edges,
         }, indent=2))
         return
 
@@ -157,6 +264,14 @@ def main():
         print(f"{len(needs_generation)} repo(s) need a docforge baseline before the portfolio layer is built:")
         for c in needs_generation:
             print(f"  - {c['path']}")
+
+    if dependency_edges:
+        print(f"\n{len(dependency_edges)} dependency edge(s):")
+        for edge in dependency_edges:
+            print(
+                f"  - {edge['repo']} → {edge['depends_on']} "
+                f"({edge['coupling_type']}, {edge['resolution']})"
+            )
 
 
 if __name__ == "__main__":

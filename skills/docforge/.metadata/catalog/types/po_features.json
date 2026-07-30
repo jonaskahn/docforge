@@ -1,0 +1,25 @@
+{
+  "id": "po_features",
+  "type": "feature-catalog",
+  "path": "docs/product/product-owner/feature-catalog.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "feature-catalog.md",
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 48,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

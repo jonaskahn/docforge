@@ -1,0 +1,25 @@
+{
+  "id": "agents_glossary",
+  "type": "agents-glossary",
+  "path": "docs/agents/glossary.md",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "agents-glossary.md",
+  "instruction_file": "agents-kernel.md",
+  "requires": [
+    "flow_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 209,
+  "provenance_mode": "sections",
+  "audit_profile": "agent-view"
+}

@@ -1,0 +1,27 @@
+{
+  "id": "network_deployment",
+  "type": "network-deployment",
+  "path": "docs/operations/network-deployment.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "smart-contract"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "network-deployment.md",
+  "instruction_file": "network-deployment.md",
+  "requires": [
+    "code_graph",
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 72,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure"
+}

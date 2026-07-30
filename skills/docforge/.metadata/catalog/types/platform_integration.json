@@ -1,0 +1,27 @@
+{
+  "id": "platform_integration",
+  "type": "platform-integration",
+  "path": "docs/architecture/platform-integration.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "platform-integration.md",
+  "instruction_file": "platform-integration.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture"
+}

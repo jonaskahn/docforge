@@ -1,0 +1,86 @@
+[
+  {
+    "id": "engineers",
+    "order": 10,
+    "aliases": [
+      "developers"
+    ],
+    "signals": [],
+    "query_hints": [
+      "implementation, operation, and maintenance questions"
+    ]
+  },
+  {
+    "id": "beginners",
+    "order": 20,
+    "aliases": [
+      "newcomers"
+    ],
+    "signals": [],
+    "query_hints": [
+      "orientation, prerequisites, verified first success, and terminology"
+    ]
+  },
+  {
+    "id": "business-analysts",
+    "order": 30,
+    "aliases": [
+      "ba",
+      "business-analyst"
+    ],
+    "signals": [],
+    "query_hints": [
+      "business processes, rules, requirements, and traceability"
+    ]
+  },
+  {
+    "id": "product-owners",
+    "order": 40,
+    "aliases": [
+      "po",
+      "product-owner"
+    ],
+    "signals": [],
+    "query_hints": [
+      "features, value, measures, releases, and backlog traceability"
+    ]
+  },
+  {
+    "id": "coding-agents",
+    "order": 50,
+    "aliases": [
+      "agent",
+      "agents",
+      "coding-agent",
+      "agent-context"
+    ],
+    "signals": [],
+    "query_hints": [
+      "token-budgeted architecture, patterns, tests, conventions, flow, and glossary"
+    ]
+  },
+  {
+    "id": "operators",
+    "order": 60,
+    "aliases": [
+      "sre",
+      "operations"
+    ],
+    "signals": [],
+    "query_hints": [
+      "deployment, observability, runbooks, recovery, and ownership"
+    ]
+  },
+  {
+    "id": "security-reviewers",
+    "order": 70,
+    "aliases": [
+      "security",
+      "reviewers"
+    ],
+    "signals": [],
+    "query_hints": [
+      "assets, trust boundaries, controls, residual risk, and evidence"
+    ]
+  }
+]

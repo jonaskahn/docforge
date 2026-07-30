@@ -1,0 +1,23 @@
+{
+  "id": "agents_tech_debt",
+  "type": "agents-tech-debt",
+  "path": "docs/agents/tech-debt.md",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "agents-tech-debt.md",
+  "instruction_file": "agents-kernel.md",
+  "requires": [],
+  "target_depth": "orientation",
+  "write_order": 207,
+  "provenance_mode": "sections",
+  "audit_profile": "agent-view"
+}

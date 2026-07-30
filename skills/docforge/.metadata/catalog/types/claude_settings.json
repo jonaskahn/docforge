@@ -1,0 +1,25 @@
+{
+  "id": "claude_settings",
+  "type": "machine-config",
+  "path": ".claude/settings.json",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "claude-settings.json",
+  "instruction_file": "agents-kernel.md",
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "configuration",
+  "write_order": 203,
+  "provenance_mode": "manifest",
+  "audit_profile": "machine"
+}

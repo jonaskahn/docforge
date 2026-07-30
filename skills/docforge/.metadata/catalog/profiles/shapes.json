@@ -1,0 +1,452 @@
+[
+  {
+    "id": "website",
+    "order": 10,
+    "aliases": [
+      "site"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "astro.config.*"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/content/**",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "content model, publishing path, routes, and build output"
+    ]
+  },
+  {
+    "id": "web-app",
+    "order": 20,
+    "aliases": [
+      "web",
+      "spa"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "next.config.*"
+      },
+      {
+        "kind": "path",
+        "pattern": "vite.config.*"
+      },
+      {
+        "kind": "path",
+        "pattern": "src/routes/**",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "rendering boundaries, routes, client state, and browser behavior"
+    ]
+  },
+  {
+    "id": "api-service",
+    "order": 30,
+    "aliases": [
+      "api",
+      "service",
+      "backend"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "openapi.*"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/openapi.*"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "express"
+      }
+    ],
+    "query_hints": [
+      "public endpoints, authentication, errors, versioning, and limits"
+    ]
+  },
+  {
+    "id": "worker-serverless",
+    "order": 40,
+    "aliases": [
+      "worker",
+      "serverless"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "serverless.*"
+      },
+      {
+        "kind": "path",
+        "pattern": "wrangler.toml"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/functions/**",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "triggers, queues, schedules, retries, idempotency, and dead letters"
+    ]
+  },
+  {
+    "id": "mobile-app",
+    "order": 50,
+    "aliases": [
+      "mobile"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "android/app/**"
+      },
+      {
+        "kind": "path",
+        "pattern": "ios/*.xcodeproj/**"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/AndroidManifest.xml"
+      }
+    ],
+    "query_hints": [
+      "application lifecycle, navigation, state, permissions, compatibility, and store distribution"
+    ]
+  },
+  {
+    "id": "desktop-app",
+    "order": 60,
+    "aliases": [
+      "desktop"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.pbxproj",
+        "contains": "SDKROOT = macosx",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.csproj",
+        "contains": "-windows",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "src-tauri/tauri.conf.json"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "electron"
+      }
+    ],
+    "query_hints": [
+      "application lifecycle, windows, system integration, packaging, updates, and distribution"
+    ]
+  },
+  {
+    "id": "cli-tui",
+    "order": 70,
+    "aliases": [
+      "cli",
+      "tui"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/cli.*",
+        "strength": "weak"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "cargo",
+        "name": "clap"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "go",
+        "name": "github.com/spf13/cobra"
+      }
+    ],
+    "query_hints": [
+      "commands, configuration precedence, streams, output formats, exit codes, and shell integration"
+    ]
+  },
+  {
+    "id": "library-sdk",
+    "order": 80,
+    "aliases": [
+      "library",
+      "sdk",
+      "package"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "Package.swift",
+        "contains": ".library(",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "pyproject.toml",
+        "contains": "[project]",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/*.podspec"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.pbxproj",
+        "contains": "com.apple.product-type.framework",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "public surface, compatibility, publishing, and migrations"
+    ]
+  },
+  {
+    "id": "plugin-extension",
+    "order": 90,
+    "aliases": [
+      "plugin",
+      "extension"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "package.json",
+        "contains": "contributes",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "manifest.json"
+      }
+    ],
+    "query_hints": [
+      "host contract, extension points, permissions, sandbox, compatibility, and marketplace publication"
+    ]
+  },
+  {
+    "id": "data-pipeline",
+    "order": 100,
+    "aliases": [
+      "pipeline",
+      "data"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "dbt_project.yml"
+      },
+      {
+        "kind": "path",
+        "pattern": "dags/**",
+        "strength": "weak"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "apache-airflow"
+      }
+    ],
+    "query_hints": [
+      "data flow, contracts, lineage, validation, and recovery"
+    ]
+  },
+  {
+    "id": "ml-system",
+    "order": 110,
+    "aliases": [
+      "ml",
+      "machine-learning"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "torch"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "tensorflow"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/models/**",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "datasets, training, evaluation, model artifacts, inference, and drift"
+    ]
+  },
+  {
+    "id": "infrastructure-platform",
+    "order": 120,
+    "aliases": [
+      "infrastructure",
+      "infra",
+      "platform",
+      "deployment-config",
+      "iac"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/*.tf"
+      },
+      {
+        "kind": "path",
+        "pattern": "Chart.yaml"
+      },
+      {
+        "kind": "path",
+        "pattern": "Pulumi.yaml"
+      },
+      {
+        "kind": "path",
+        "pattern": "ansible.cfg"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/playbook*.yml",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/roles/**",
+        "strength": "weak"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/kustomization.yaml"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.{yaml,yml}",
+        "contains": "apiVersion:",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.{yaml,yml}",
+        "contains": "kind: Application",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.{yaml,yml}",
+        "contains": "kind: Kustomization",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.{yaml,yml}",
+        "contains": "kind: HelmRelease",
+        "strength": "weak"
+      },
+      {
+        "kind": "content",
+        "pattern": "**/*.{yaml,yml}",
+        "contains": "AWSTemplateFormatVersion",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "environments, resources, network, state, access, apply, and recovery"
+    ]
+  },
+  {
+    "id": "game",
+    "order": 130,
+    "aliases": [
+      "game-app"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "ProjectSettings/ProjectVersion.txt"
+      },
+      {
+        "kind": "path",
+        "pattern": "*.uproject"
+      },
+      {
+        "kind": "path",
+        "pattern": "project.godot"
+      }
+    ],
+    "query_hints": [
+      "gameplay systems, scenes, assets, save state, performance, and platform builds"
+    ]
+  },
+  {
+    "id": "embedded-iot",
+    "order": 140,
+    "aliases": [
+      "embedded",
+      "iot",
+      "firmware"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "west.yml"
+      },
+      {
+        "kind": "path",
+        "pattern": "platformio.ini"
+      },
+      {
+        "kind": "path",
+        "pattern": "sdkconfig"
+      }
+    ],
+    "query_hints": [
+      "hardware, firmware lifecycle, protocols, memory, power, flashing, recovery, and safety"
+    ]
+  },
+  {
+    "id": "smart-contract",
+    "order": 150,
+    "aliases": [
+      "blockchain",
+      "dapp"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "hardhat.config.*"
+      },
+      {
+        "kind": "path",
+        "pattern": "foundry.toml"
+      },
+      {
+        "kind": "path",
+        "pattern": "Anchor.toml"
+      }
+    ],
+    "query_hints": [
+      "contract surface, networks, deployment, upgrades, invariants, keys, and security"
+    ]
+  }
+]

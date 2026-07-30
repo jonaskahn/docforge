@@ -1,0 +1,1063 @@
+[
+  {
+    "id": "react",
+    "order": 10,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "react"
+      }
+    ],
+    "query_hints": [
+      "component tree, hooks, state, routing, and rendering"
+    ]
+  },
+  {
+    "id": "nextjs",
+    "order": 20,
+    "aliases": [
+      "next"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "next.config.*"
+      }
+    ],
+    "query_hints": [
+      "app/pages routes, server/client boundaries, rendering, caching, and deployment"
+    ]
+  },
+  {
+    "id": "vue",
+    "order": 30,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "vue"
+      }
+    ],
+    "query_hints": [
+      "components, composables, stores, routes, and rendering"
+    ]
+  },
+  {
+    "id": "nuxt",
+    "order": 40,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "nuxt.config.*"
+      }
+    ],
+    "query_hints": [
+      "routes, server/client boundaries, rendering, modules, and deployment"
+    ]
+  },
+  {
+    "id": "angular",
+    "order": 50,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "angular.json"
+      }
+    ],
+    "query_hints": [
+      "modules, components, services, routes, state, and builds"
+    ]
+  },
+  {
+    "id": "svelte",
+    "order": 60,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "svelte"
+      }
+    ],
+    "query_hints": [
+      "components, stores, reactivity, routes, and rendering"
+    ]
+  },
+  {
+    "id": "sveltekit",
+    "order": 70,
+    "aliases": [
+      "svelte-kit"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "svelte.config.*"
+      }
+    ],
+    "query_hints": [
+      "routes, load functions, server/client boundaries, adapters, and deployment"
+    ]
+  },
+  {
+    "id": "astro",
+    "order": 80,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "astro.config.*"
+      }
+    ],
+    "query_hints": [
+      "content collections, islands, routes, integrations, and publishing"
+    ]
+  },
+  {
+    "id": "remix",
+    "order": 90,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "@remix-run/react"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "@remix-run/node"
+      }
+    ],
+    "query_hints": [
+      "routes, loaders/actions, server/client boundaries, and deployment"
+    ]
+  },
+  {
+    "id": "flutter",
+    "order": 100,
+    "aliases": [
+      "dart-flutter"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pub",
+        "name": "flutter"
+      }
+    ],
+    "query_hints": [
+      "widgets, navigation, state, platform channels, targets, builds, and stores"
+    ]
+  },
+  {
+    "id": "react-native",
+    "order": 110,
+    "aliases": [
+      "rn"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "react-native"
+      }
+    ],
+    "query_hints": [
+      "navigation, state, native modules, platform code, builds, and stores"
+    ]
+  },
+  {
+    "id": "expo",
+    "order": 120,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "expo"
+      }
+    ],
+    "query_hints": [
+      "routes, config plugins, native capabilities, EAS builds, and updates"
+    ]
+  },
+  {
+    "id": "kotlin-multiplatform",
+    "order": 130,
+    "aliases": [
+      "kmp"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.gradle.kts",
+        "contains": "kotlin(\"multiplatform\")",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "targets, source sets, shared/native boundaries, interop, and builds"
+    ]
+  },
+  {
+    "id": "compose-multiplatform",
+    "order": 140,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.gradle.kts",
+        "contains": "org.jetbrains.compose",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "shared UI, targets, navigation, state, interop, and packaging"
+    ]
+  },
+  {
+    "id": "dotnet-maui",
+    "order": 150,
+    "aliases": [
+      "maui"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.csproj",
+        "contains": "UseMaui",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "lifecycle, Shell/navigation, XAML/MVVM, platform code, builds, and stores"
+    ]
+  },
+  {
+    "id": "ionic-capacitor",
+    "order": 160,
+    "aliases": [
+      "ionic",
+      "capacitor"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "capacitor.config.*"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "@capacitor/core"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "@ionic/core"
+      }
+    ],
+    "query_hints": [
+      "web/native boundary, plugins, targets, builds, and stores"
+    ]
+  },
+  {
+    "id": "electron",
+    "order": 170,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "electron"
+      }
+    ],
+    "query_hints": [
+      "main/renderer/preload boundaries, IPC, permissions, packaging, and updates"
+    ]
+  },
+  {
+    "id": "tauri",
+    "order": 180,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "src-tauri/tauri.conf.json"
+      }
+    ],
+    "query_hints": [
+      "webview/Rust boundary, commands, capabilities, targets, packaging, and updates"
+    ]
+  },
+  {
+    "id": "swiftui",
+    "order": 190,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.swift",
+        "contains": "import SwiftUI",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "app lifecycle, scenes, views, state, environment, navigation, and platform integration"
+    ]
+  },
+  {
+    "id": "appkit",
+    "order": 200,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.swift",
+        "contains": "import AppKit",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "application/window lifecycle, menus, responders, services, and system integration"
+    ]
+  },
+  {
+    "id": "uikit",
+    "order": 210,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.swift",
+        "contains": "import UIKit",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "application/scene lifecycle, view controllers, navigation, state, and system integration"
+    ]
+  },
+  {
+    "id": "jetpack-compose",
+    "order": 220,
+    "aliases": [
+      "compose-android"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.gradle*",
+        "contains": "compose = true",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "activities, composables, navigation, state, lifecycle, and platform services"
+    ]
+  },
+  {
+    "id": "winui",
+    "order": 230,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "nuget",
+        "name": "Microsoft.WindowsAppSDK"
+      }
+    ],
+    "query_hints": [
+      "application/window lifecycle, XAML, navigation, capabilities, packaging, and Store"
+    ]
+  },
+  {
+    "id": "wpf",
+    "order": 240,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.csproj",
+        "contains": "UseWPF",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "application/window lifecycle, XAML, commands, state, packaging, and updates"
+    ]
+  },
+  {
+    "id": "qt",
+    "order": 250,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "CMakeLists.txt",
+        "contains": "find_package(Qt",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "application lifecycle, widgets/QML, signals, platform plugins, packaging, and deployment"
+    ]
+  },
+  {
+    "id": "gtk",
+    "order": 260,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "meson.build",
+        "contains": "gtk",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "application lifecycle, widgets, actions, resources, packaging, and desktop integration"
+    ]
+  },
+  {
+    "id": "spring-boot",
+    "order": 270,
+    "aliases": [
+      "spring"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "maven",
+        "name": "org.springframework.boot"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "gradle",
+        "name": "org.springframework.boot"
+      }
+    ],
+    "query_hints": [
+      "controllers, services, persistence, configuration, security, and deployment"
+    ]
+  },
+  {
+    "id": "aspnet-core",
+    "order": 280,
+    "aliases": [
+      "aspnet"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "nuget",
+        "name": "Microsoft.NET.Sdk.Web"
+      }
+    ],
+    "query_hints": [
+      "endpoints, middleware, services, configuration, persistence, and deployment"
+    ]
+  },
+  {
+    "id": "django",
+    "order": 290,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "django"
+      },
+      {
+        "kind": "path",
+        "pattern": "manage.py"
+      }
+    ],
+    "query_hints": [
+      "apps, URLs, views, models, settings, middleware, and deployment"
+    ]
+  },
+  {
+    "id": "fastapi",
+    "order": 300,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "fastapi"
+      }
+    ],
+    "query_hints": [
+      "routes, dependencies, schemas, middleware, persistence, and deployment"
+    ]
+  },
+  {
+    "id": "flask",
+    "order": 310,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "flask"
+      }
+    ],
+    "query_hints": [
+      "blueprints, routes, extensions, configuration, persistence, and deployment"
+    ]
+  },
+  {
+    "id": "rails",
+    "order": 320,
+    "aliases": [
+      "ruby-on-rails"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "gem",
+        "name": "rails"
+      }
+    ],
+    "query_hints": [
+      "routes, controllers, models, jobs, configuration, and deployment"
+    ]
+  },
+  {
+    "id": "laravel",
+    "order": 330,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "composer",
+        "name": "laravel/framework"
+      }
+    ],
+    "query_hints": [
+      "routes, controllers, models, queues, configuration, and deployment"
+    ]
+  },
+  {
+    "id": "express",
+    "order": 340,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "express"
+      }
+    ],
+    "query_hints": [
+      "routers, middleware, handlers, configuration, persistence, and deployment"
+    ]
+  },
+  {
+    "id": "nestjs",
+    "order": 350,
+    "aliases": [
+      "nest"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "@nestjs/core"
+      }
+    ],
+    "query_hints": [
+      "modules, controllers, providers, guards, persistence, and deployment"
+    ]
+  },
+  {
+    "id": "gin",
+    "order": 360,
+    "aliases": [
+      "gin-gonic"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "go",
+        "name": "github.com/gin-gonic/gin"
+      }
+    ],
+    "query_hints": [
+      "routers, middleware, handlers, configuration, persistence, and deployment"
+    ]
+  },
+  {
+    "id": "axum",
+    "order": 370,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "cargo",
+        "name": "axum"
+      }
+    ],
+    "query_hints": [
+      "routers, extractors, middleware, state, persistence, and deployment"
+    ]
+  },
+  {
+    "id": "actix",
+    "order": 380,
+    "aliases": [
+      "actix-web"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "cargo",
+        "name": "actix-web"
+      }
+    ],
+    "query_hints": [
+      "application, routes, extractors, middleware, state, and deployment"
+    ]
+  },
+  {
+    "id": "airflow",
+    "order": 390,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "apache-airflow"
+      }
+    ],
+    "query_hints": [
+      "DAGs, tasks, schedules, connections, retries, and operations"
+    ]
+  },
+  {
+    "id": "dagster",
+    "order": 400,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "dagster"
+      }
+    ],
+    "query_hints": [
+      "assets, jobs, schedules, resources, checks, and operations"
+    ]
+  },
+  {
+    "id": "prefect",
+    "order": 410,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "prefect"
+      }
+    ],
+    "query_hints": [
+      "flows, tasks, deployments, work pools, retries, and operations"
+    ]
+  },
+  {
+    "id": "dbt",
+    "order": 420,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "dbt_project.yml"
+      }
+    ],
+    "query_hints": [
+      "models, sources, tests, macros, lineage, and deployment"
+    ]
+  },
+  {
+    "id": "spark",
+    "order": 430,
+    "aliases": [
+      "apache-spark"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "pyspark"
+      }
+    ],
+    "query_hints": [
+      "jobs, transformations, partitions, schemas, checkpoints, and operations"
+    ]
+  },
+  {
+    "id": "kafka",
+    "order": 440,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "npm",
+        "name": "kafkajs"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "confluent-kafka"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "kafka-python"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "maven",
+        "name": "org.apache.kafka"
+      },
+      {
+        "kind": "dependency",
+        "ecosystem": "go",
+        "name": "github.com/segmentio/kafka-go"
+      }
+    ],
+    "query_hints": [
+      "topics, producers, consumers, schemas, delivery guarantees, and operations"
+    ]
+  },
+  {
+    "id": "pytorch",
+    "order": 450,
+    "aliases": [
+      "torch"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "torch"
+      }
+    ],
+    "query_hints": [
+      "datasets, models, training, evaluation, artifacts, and inference"
+    ]
+  },
+  {
+    "id": "tensorflow",
+    "order": 460,
+    "aliases": [
+      "tf"
+    ],
+    "signals": [
+      {
+        "kind": "dependency",
+        "ecosystem": "pip",
+        "name": "tensorflow"
+      }
+    ],
+    "query_hints": [
+      "datasets, models, training, evaluation, artifacts, and serving"
+    ]
+  },
+  {
+    "id": "terraform-opentofu",
+    "order": 470,
+    "aliases": [
+      "terraform",
+      "opentofu",
+      "tofu"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/*.tf"
+      }
+    ],
+    "query_hints": [
+      "modules, providers, resources, variables, state, plans, and apply"
+    ]
+  },
+  {
+    "id": "pulumi",
+    "order": 480,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "Pulumi.yaml"
+      }
+    ],
+    "query_hints": [
+      "stacks, resources, configuration, state, previews, and updates"
+    ]
+  },
+  {
+    "id": "kubernetes-helm",
+    "order": 490,
+    "aliases": [
+      "kubernetes",
+      "k8s",
+      "helm"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "Chart.yaml"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/kustomization.yaml"
+      }
+    ],
+    "query_hints": [
+      "workloads, services, configuration, secrets, rollout, and recovery"
+    ]
+  },
+  {
+    "id": "ansible",
+    "order": 500,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "ansible.cfg"
+      },
+      {
+        "kind": "path",
+        "pattern": "**/playbook*.yml",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "inventories, roles, playbooks, variables, idempotency, and operations"
+    ]
+  },
+  {
+    "id": "cloudformation",
+    "order": 510,
+    "aliases": [
+      "cfn"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "**/*.yml",
+        "contains": "AWS::",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "stacks, resources, parameters, changesets, deployment, and recovery"
+    ]
+  },
+  {
+    "id": "unity",
+    "order": 520,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "ProjectSettings/ProjectVersion.txt"
+      }
+    ],
+    "query_hints": [
+      "scenes, prefabs, assets, scripts, player settings, and builds"
+    ]
+  },
+  {
+    "id": "unreal",
+    "order": 530,
+    "aliases": [
+      "unreal-engine"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "*.uproject"
+      }
+    ],
+    "query_hints": [
+      "modules, maps, assets, gameplay systems, packaging, and builds"
+    ]
+  },
+  {
+    "id": "godot",
+    "order": 540,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "project.godot"
+      }
+    ],
+    "query_hints": [
+      "scenes, nodes, resources, scripts, exports, and builds"
+    ]
+  },
+  {
+    "id": "webextension",
+    "order": 550,
+    "aliases": [
+      "browser-extension"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "manifest.json",
+        "contains": "manifest_version",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "manifest, permissions, service worker, content scripts, messaging, and publishing"
+    ]
+  },
+  {
+    "id": "vscode-extension",
+    "order": 560,
+    "aliases": [
+      "vscode"
+    ],
+    "signals": [
+      {
+        "kind": "content",
+        "pattern": "package.json",
+        "contains": "\"contributes\"",
+        "strength": "weak"
+      }
+    ],
+    "query_hints": [
+      "activation, contribution points, commands, extension host, tests, and marketplace"
+    ]
+  },
+  {
+    "id": "jetbrains-plugin",
+    "order": 570,
+    "aliases": [
+      "intellij-plugin"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/plugin.xml"
+      }
+    ],
+    "query_hints": [
+      "extension points, services, actions, compatibility, sandbox, and marketplace"
+    ]
+  },
+  {
+    "id": "zephyr",
+    "order": 580,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "west.yml"
+      }
+    ],
+    "query_hints": [
+      "boards, devicetree, Kconfig, threads, drivers, flashing, and recovery"
+    ]
+  },
+  {
+    "id": "freertos",
+    "order": 590,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "FreeRTOSConfig.h"
+      }
+    ],
+    "query_hints": [
+      "tasks, queues, interrupts, memory, timing, flashing, and recovery"
+    ]
+  },
+  {
+    "id": "arduino",
+    "order": 600,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/*.ino"
+      }
+    ],
+    "query_hints": [
+      "boards, setup/loop, libraries, pins, flashing, and diagnostics"
+    ]
+  },
+  {
+    "id": "esp-idf",
+    "order": 610,
+    "aliases": [
+      "espidf"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "sdkconfig"
+      }
+    ],
+    "query_hints": [
+      "components, tasks, peripherals, partitions, flashing, and recovery"
+    ]
+  },
+  {
+    "id": "solidity-evm",
+    "order": 620,
+    "aliases": [
+      "solidity",
+      "evm"
+    ],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "**/*.sol"
+      }
+    ],
+    "query_hints": [
+      "contracts, interfaces, storage, access, networks, deployment, and upgrades"
+    ]
+  },
+  {
+    "id": "solana",
+    "order": 630,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "Anchor.toml"
+      }
+    ],
+    "query_hints": [
+      "programs, accounts, instructions, authorities, networks, deployment, and upgrades"
+    ]
+  },
+  {
+    "id": "move",
+    "order": 640,
+    "aliases": [],
+    "signals": [
+      {
+        "kind": "path",
+        "pattern": "Move.toml"
+      }
+    ],
+    "query_hints": [
+      "modules, resources, entry functions, capabilities, networks, and deployment"
+    ]
+  }
+]

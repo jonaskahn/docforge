@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Docforge Catalog",
+  "title": "Docforge Catalog (legacy reconstructed / type detail)",
   "type": "object",
   "required": ["version", "tiers", "profiles", "groups", "capabilities", "documents"],
   "properties": {
-    "version": {"const": "2.3.0"},
+    "version": {"const": "2.4.0"},
     "tiers": {"type": "array", "items": {"$ref": "#/definitions/namedOrder"}},
     "profiles": {
       "type": "object",
@@ -115,7 +115,12 @@
         "target_depth": {"type": "string"},
         "write_order": {"type": "integer"},
         "provenance_mode": {"enum": ["sections", "manifest"]},
-        "audit_profile": {"type": "string"}
+        "audit_profile": {"type": "string"},
+        "dominant_form": {
+          "type": ["string", "null"],
+          "enum": ["table", "flowchart", "sequenceDiagram", "erDiagram", null]
+        },
+        "schema_min": {"type": "string"}
       }
     }
   }

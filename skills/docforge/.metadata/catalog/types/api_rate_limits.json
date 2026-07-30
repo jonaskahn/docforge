@@ -1,0 +1,25 @@
+{
+  "id": "api_rate_limits",
+  "type": "rate-limits",
+  "path": "docs/reference/rate-limits.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "api-service"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "api-rate-limits.md",
+  "instruction_file": "api-rate-limits.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "reference",
+  "write_order": 67,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

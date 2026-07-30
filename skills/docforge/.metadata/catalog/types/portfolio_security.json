@@ -1,0 +1,22 @@
+{
+  "id": "portfolio_security",
+  "type": "security-posture",
+  "path": "docs-portfolio/security-posture.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "static",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "security-posture.md",
+  "instruction_file": "security-posture.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 104,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio"
+}

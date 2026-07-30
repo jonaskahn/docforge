@@ -1,0 +1,26 @@
+{
+  "id": "app_ui_state",
+  "type": "ui-navigation-state",
+  "path": "docs/architecture/ui-and-state.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "ui-navigation-state.md",
+  "instruction_file": "ui-navigation-state.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture"
+}

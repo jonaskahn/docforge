@@ -1,0 +1,29 @@
+{
+  "id": "platform_compatibility",
+  "type": "platform-compatibility",
+  "path": "docs/reference/platform-compatibility.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app",
+        "game"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "platform-compatibility.md",
+  "instruction_file": "platform-compatibility.md",
+  "requires": [
+    "code_graph",
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 66,
+  "provenance_mode": "sections",
+  "audit_profile": "standard"
+}

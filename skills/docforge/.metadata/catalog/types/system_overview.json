@@ -1,0 +1,24 @@
+{
+  "id": "system_overview",
+  "type": "system-overview",
+  "path": "docs/architecture/system-overview.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": "multi_flow_repo"
+  },
+  "scaffold_template": "system-overview.md",
+  "instruction_file": "system-overview.md",
+  "requires": [
+    "flow_graph",
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "sequenceDiagram",
+  "schema_min": "2.4.0"
+}

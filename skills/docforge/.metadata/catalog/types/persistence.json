@@ -1,0 +1,27 @@
+{
+  "id": "persistence",
+  "type": "persistence",
+  "path": "docs/architecture/persistence.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "concerns": [
+        "persistence"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "persistence.md",
+  "instruction_file": "persistence.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "erDiagram"
+}

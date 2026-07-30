@@ -10,8 +10,9 @@ audit, or quality gates.
 
 For each document:
 
-1. Read its machine definition in `.metadata/catalog.json`.
-2. Read its contract in `references/document-catalog.md`.
+1. Read its machine definition via `scripts/query_catalog.py --id <id>`
+   (backed by `.metadata/catalog/`).
+2. Read its contract in `references/catalog-contracts/<type>.md`.
 3. Use the optional `instruction_file` only for craft such as narrative order,
    diagram choice, table design, and reader vocabulary.
 

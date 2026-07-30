@@ -1,0 +1,22 @@
+{
+  "id": "data_handling",
+  "type": "data-handling",
+  "path": "docs/security/data-handling.md",
+  "group": "security",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "data-handling.md",
+  "instruction_file": "data-handling.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 78,
+  "provenance_mode": "sections",
+  "audit_profile": "risk"
+}

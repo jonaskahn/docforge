@@ -1,0 +1,22 @@
+{
+  "id": "tech_debt",
+  "type": "tech-debt-register",
+  "path": "docs/architecture/tech-debt.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "tech-debt.md",
+  "instruction_file": "tech-debt-register.md",
+  "requires": [
+    "code_graph",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 14,
+  "provenance_mode": "sections",
+  "audit_profile": "risk"
+}

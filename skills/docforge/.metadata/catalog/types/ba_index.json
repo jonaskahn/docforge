@@ -1,0 +1,25 @@
+{
+  "id": "ba_index",
+  "type": "ba-index",
+  "path": "docs/product/business-analyst/README.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "business-analysts"
+      ]
+    },
+    "condition": null
+  },
+  "scaffold_template": "ba-readme.md",
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 43,
+  "provenance_mode": "sections",
+  "audit_profile": "router"
+}

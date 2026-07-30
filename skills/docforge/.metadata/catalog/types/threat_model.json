@@ -1,0 +1,21 @@
+{
+  "id": "threat_model",
+  "type": "threat-model",
+  "path": "docs/security/threat-model.md",
+  "group": "security",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "scaffold_template": "threat-model.md",
+  "instruction_file": "threat-model.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 77,
+  "provenance_mode": "sections",
+  "audit_profile": "risk"
+}
