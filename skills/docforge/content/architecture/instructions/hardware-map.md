@@ -4,11 +4,6 @@ Covers `hardware_map` and `firmware_lifecycle` — the board/peripheral
 inventory and the firmware states running on it are two views of the same
 system.
 
-**Preferred illustration:** Follow
-[`../../../references/illustration.md`](../../../references/illustration.md); a table
-for the board/peripheral inventory, a Mermaid `stateDiagram-v2` for
-boot/update states.
-
 For the hardware map: one row per board or peripheral — protocol, memory
 and power budget, and failure mode when absent or faulted. For firmware
 lifecycle: state boot and update states in order, and what happens on a
@@ -16,3 +11,22 @@ failed update (does it roll back, brick, or retry) — the update-failure
 behavior is the single fact a reader most needs before trusting an OTA
 process. Avoid generic component-datasheet prose; describe this
 repository's actual configuration.
+
+## Illustration
+
+- **Form:** a table for the board/peripheral inventory; a Mermaid
+  `stateDiagram-v2` for boot/update states.
+- **Renders:** one row per board/peripheral (table), and named boot/update
+  states with their transitions (state diagram).
+- **Trigger:** the state diagram once the boot/update path has more than a
+  linear happy path (any rollback or retry state) — per
+  [`illustration.md`](../../../references/illustration.md)'s deep-dive
+  budget (at most 8 named states).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Boards, peripherals, protocols, boot/update states, memory/power, failure | `architecture-high-level` | this is the deep-dive of the hardware/firmware block named there |
+| A memory or power bound imposed by the hardware itself | `constraints` | an immovable hardware limit is a constraint, not restated lifecycle detail |
+| A deferred firmware or hardware shortcut | `tech-debt-register` | fixable-by-us gaps are tracked there |

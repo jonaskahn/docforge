@@ -1,8 +1,4 @@
-# Flow writing craft
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); choose a
-Mermaid flowchart for branches or a sequence diagram for cross-actor order.
+# Flow (`flow`) writing craft
 
 Name the flow as a reader-recognizable outcome, not a function name. The file
 slug and `display_name` in `.docforge/flow-index.json` must match that outcome
@@ -15,9 +11,31 @@ in one short paragraph. Number the happy path in plain language, one step per ac
 idea per sentence. Put branches immediately after the step that creates them, not gathered
 at the end; a branch orphaned from its trigger step reads as a separate flow. Add a visual
 once the flow passes about four steps or has any branch, within the central complexity
-budget. Split interactions that exceed that budget into linked sub-flows. End with failures and recovery, keeping shared
-business rules linked rather than duplicated — a rule referenced by three flows lives once,
-in the rule's own document.
+budget. Split interactions that exceed that budget into linked sub-flows. End with failures and
+recovery, keeping shared business rules linked rather than duplicated — a rule referenced by
+three flows lives once, in the rule's own document.
+
+## Illustration
+
+- **Form:** Mermaid `flowchart` when the reader's question is "what are the branches and
+  where do they go"; Mermaid `sequenceDiagram` when it is "in what order do the actors talk
+  to each other" — pick one, never both for the same flow.
+- **Renders:** for a flowchart, each gateway and its outcomes, labeled with the condition
+  that selects them; for a sequence diagram, the actors as participants and each call as a
+  labeled arrow, in the order they actually occur.
+- **Trigger:** once the happy path passes about four steps, or as soon as any branch exists —
+  per [`illustration.md`](../../references/illustration.md)'s deep-dive budget (at most 3
+  illustrations, at most 12 elements per illustration).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Trigger, actors, ordered steps, branches, failures, outcome | its `flow-index` row in `docs/flows/README.md` | the index tracks discovery status/priority/confidence, never the steps themselves — one owner per fact |
+| — (once promoted) | its own `business-analyst.md` subfile | BA rules and requirement traceability link back to this flow; they never restate its steps |
+| — (once promoted) | its own `engineering.md` subfile | implementation mechanism links back; this document keeps only a one-line gist |
+| A business rule referenced by 3+ flows | the rule's own document | never duplicated per-flow; link, don't restate |
+| A step that crosses a system boundary named in `architecture-high-level` | the relevant architecture block | avoids re-deriving the box diagram inside flow prose |
 
 ## Composition and folders
 

@@ -1,10 +1,5 @@
 # Ai-integration writing craft
 
-**Preferred illustration:** Follow
-[`../../../references/illustration.md`](../../../references/illustration.md); a
-flowchart for the model/provider boundary, prose for safety and privacy
-handling.
-
 Draw the model/provider boundary first: which calls leave the system,
 to which provider, and what crosses that boundary in each direction —
 this is the trust-boundary discipline threat-model.md applies to any
@@ -21,3 +16,20 @@ retained by the provider) as plainly as data-handling.md would for any
 other data flow. Never claim a model-quality property this document
 doesn't evaluate — that belongs in [model-card.md](model-card.md) when the
 model is one this repository trains or fine-tunes.
+
+## Illustration
+
+- **Form:** a Mermaid `flowchart` for the model/provider boundary; prose for
+  safety and privacy handling.
+- **Renders:** what crosses the boundary in each direction (prompt out,
+  completion in) and which provider each call reaches.
+- **Trigger:** once more than one provider or call path is involved — per
+  [`illustration.md`](../../../references/illustration.md)'s deep-dive budget.
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Model/provider boundary, prompts/inputs, outputs, evaluation, safety, privacy, failure | `security/data-handling` | the privacy boundary here is the same discipline data-handling applies to any data flow; link rather than re-derive it |
+| — | `security/threat-model` | the model/provider call is one more external trust boundary the threat model must cover |
+| Model-quality or safety claims for a self-trained model | `model-lifecycle` (`model-card`) | this document owns the integration boundary only; quality/safety evaluation belongs to the model's own lifecycle document |

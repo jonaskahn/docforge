@@ -1,10 +1,5 @@
 # System-context (portfolio) writing craft
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a C4
-Context-level Mermaid flowchart at portfolio scope — this repository's
-`architecture-high-level.md` framing, applied across the member set.
-
 Map repository and system boundaries at the portfolio level: which member
 repos exist, what shared services or external systems the portfolio as a
 whole borders, and which cross-repo flows cross those boundaries. Keep the
@@ -30,3 +25,24 @@ event schema, and — when an `infrastructure-platform` member is present —
 reviewable file, promote to `system-context/README.md` +
 `system-context/dependency-map.md` in the same pass that writes the
 deep-dive (see `document-composition.md`); do not pre-split.
+
+## Illustration
+
+- **Form:** a C4 Context-level Mermaid `flowchart` at portfolio scope — this
+  repository's `architecture-high-level.md` framing, applied across the
+  member set.
+- **Renders:** each member repo as a node, shared services/external systems
+  at the boundary, and cross-repo flows as labeled edges with their
+  resolution method.
+- **Trigger:** always for this document type — portfolio-wide boundaries are
+  the point — within
+  [`../../references/illustration.md`](../../references/illustration.md)'s
+  deep-dive budget.
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Portfolio-level repo/system boundaries, cross-repo flows, dependency edges and their resolution | each member's own `architecture-high-level` | member-internal container detail is owned there; this document only borders it |
+| A cross-repo flow's steps | that flow's owning member document | this document states trigger → repos → outcome only; step detail is never re-derived here |
+| A repo not yet resolved to an identity mapping | `repo-inventory` | inventory evidence is owned there; this document consumes it to draw edges |

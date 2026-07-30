@@ -1,9 +1,5 @@
 # Decision-record writing craft
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); ADRs normally
-use prose, with a table for parallel alternatives and consequences.
-
 Each record follows Nygard's ADR shape — title, status, context, decision, consequences —
 which the scaffold already carries; the craft is in how the title and consequences read.
 State the title as the decided outcome, not the topic ("Use Postgres for session storage,"
@@ -19,3 +15,21 @@ The index has no fixed shape of its own: group entries by topic area (architectu
 process, tooling) rather than one flat chronological list, and within a group order newest
 first with status (`accepted` / `superseded by NNNN` / `deprecated`) shown inline, so a
 reader never opens a superseded record by mistake.
+
+## Illustration
+
+- **Form:** prose, with a table for parallel alternatives and their
+  consequences.
+- **Renders:** each alternative as a row with its tradeoff, when more than
+  one alternative was seriously considered.
+- **Trigger:** the table only when two or more alternatives need comparing
+  side by side — per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Title, status, context, decision, consequences for one decision | the architecture/domain document the decision shaped | the record owns rationale; the shaped document (e.g. `architecture-high-level`) owns the resulting fact, linked not restated |
+| A decision this one supersedes | the superseded record, both directions | preserves history — old and new records must reference each other explicitly |
+| Cross-repository decision evidence | `portfolio-decision`'s member links, when scope is portfolio-wide | keeps a portfolio decision traceable to the member records it draws on |

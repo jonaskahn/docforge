@@ -1,9 +1,5 @@
 # High-level architecture writing craft
 
-**Preferred illustration:** Use the form and depth budget in
-[`../../../references/illustration.md`](../../../references/illustration.md); a small
-Mermaid flowchart suits context and container relationships.
-
 Map onto C4's top two levels: "System in context" is the Context diagram (this system as
 one box among the neighbors and services it borders); "Building blocks" is the Container
 diagram (the deployable pieces inside that box). Keep the zoom consistent within each
@@ -20,3 +16,22 @@ must always be true" should not have to parse prose to find it. This document is
 design: a claim a routine refactor would falsify is written too close to the code and
 belongs in low-level.md. Finish with links to low-level detail, decisions, and operational
 consequences — rationale lives in decisions, not here.
+
+## Illustration
+
+- **Form:** a small Mermaid `flowchart` for context and container relationships.
+- **Renders:** this system as one box among its neighbors (context), then its
+  deployable blocks and their communication (containers) — never both zoom
+  levels in the same diagram.
+- **Trigger:** only when it clarifies relationships among three or more
+  blocks — per
+  [`illustration.md`](../../../references/illustration.md)'s deep-dive budget.
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Context, blocks, boundaries, communication, invariants | `architecture-low-level` | low-level is this document's zoom-in; a block named here must trace to a component write-up there |
+| — | `records/` (decisions) | rationale for why a block is shaped this way lives in decisions, never restated here |
+| — | `tech-debt-register`, `constraints` | known shortcuts and hard bounds are tracked in their own registers, not folded into this stable document |
+| Each deployable block's implementing technology | `reference/tech-stack` | what the repository is built with is owned there; this document only labels each block with it |

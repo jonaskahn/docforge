@@ -15,7 +15,7 @@
     },
     "condition": null
   },
-  "instruction_file": null,
+  "instruction_file": "content/shared/folder-index.instruction.md",
   "requires": [],
   "target_depth": "orientation",
   "write_order": 17,

@@ -1,10 +1,5 @@
 # Network writing craft
 
-**Preferred illustration:** Follow
-[`../../../references/illustration.md`](../../../references/illustration.md); a
-Mermaid flowchart for trust zones and the traffic crossing them — not a
-full firewall-rule dump.
-
 Draw trust zones first — public, internal, restricted — before any single
 rule; a reader needs the zone map before a rule means anything. For each
 boundary crossing, state what traffic crosses it and why, not every open
@@ -17,3 +12,21 @@ document is prose, not the source of truth.
 State what would happen if a boundary were removed — the concentration-risk
 question dependencies-inventory.md asks about packages, asked here about
 network segmentation.
+
+## Illustration
+
+- **Form:** a Mermaid `flowchart` for trust zones and the traffic crossing
+  them — not a full firewall-rule dump.
+- **Renders:** each zone as a node and each crossing as a labeled edge
+  stating its purpose.
+- **Trigger:** always for this document type — zone relationships are the
+  point — within
+  [`illustration.md`](../../../references/illustration.md)'s deep-dive budget.
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Topology zones, boundary crossings, traffic purpose, enforcement, concentration-risk | `security/threat-model` | the threat model analyzes what an attacker gains per boundary; this document only maps the zones and crossings |
+| A dependency whose failure exposes a network boundary | `dependencies-inventory` | asks the same concentration-risk question about packages; link rather than re-derive |
+| Credential material referenced by an enforcement mechanism | never this document | credential material is explicitly kept out; link to a secrets-management reference if one exists |

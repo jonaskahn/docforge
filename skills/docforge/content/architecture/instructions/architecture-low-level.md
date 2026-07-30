@@ -1,10 +1,5 @@
 # Low-level architecture writing craft
 
-**Preferred illustration:** Follow
-[`../../../references/illustration.md`](../../../references/illustration.md); use an ASCII
-layered stack for static decomposition or a Mermaid sequence diagram for
-cross-component order.
-
 This is C4's Component level (Level 3) — the zoom-in on the containers named in
 high-level.md — so component boundaries here should trace back to a block named there, not
 introduce a parallel decomposition. Organize by subsystem responsibility, not directory
@@ -18,3 +13,22 @@ a reader to reconstruct a multi-step interaction. Write invariants as absence-ba
 recover by reading code ("never retries a non-idempotent write") — the same discipline the
 scaffold's own Invariant field asks for. Close each section with the stable file/module
 paths that orient implementation work.
+
+## Illustration
+
+- **Form:** an ASCII layered stack for static decomposition; a Mermaid
+  `sequenceDiagram` for cross-component call order.
+- **Renders:** the component grouping and its boundaries (ASCII), or the
+  one architecturally relevant runtime scenario across components (sequence).
+- **Trigger:** the sequence diagram only when a reader must follow a
+  multi-step interaction across components — per
+  [`illustration.md`](../../../references/illustration.md)'s deep-dive budget
+  (at most 5 participants).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Module/component responsibilities, one representative runtime scenario, data/control paths, failure boundaries | `architecture-high-level` (as parent zoom level) | every component here must trace to a block named there — no parallel decomposition |
+| A specific persisted entity or dataset touched by a component | `persistence` or `dataset` | storage mechanics are owned there; this document only names the dependency |
+| A rule this component enforces on request/response shape | `reference` (API/config) | the observable contract is owned by the reference document; this document explains the mechanism behind it |

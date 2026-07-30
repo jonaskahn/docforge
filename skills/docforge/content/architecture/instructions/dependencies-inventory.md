@@ -1,10 +1,5 @@
 # Dependency-inventory writing craft
 
-**Preferred illustration:** Follow
-[`../../../references/illustration.md`](../../../references/illustration.md); the compact
-risk table is primary, with a flowchart only for an evidenced dependency map
-whose relationships matter.
-
 Lead with a compact risk-oriented table, ordered by criticality — the dependency whose
 failure or removal would hurt most goes first, not the alphabetically first package. Keep an
 "if it disappeared" column (or equivalent prose): it forces concentration-risk assessment
@@ -24,3 +19,22 @@ knows what the generated file can and can't tell them. Prefer SBOMs that carry t
 minimum fields (supplier, name, version, unique id such as PURL/CPE/hash, dependency
 relationship, SBOM author, timestamp). This document carries the judgment a generated file
 cannot; it does not restate the file's contents.
+
+## Illustration
+
+- **Form:** a Markdown table (criticality-ordered) is primary; a Mermaid
+  `flowchart` only for an evidenced dependency map whose relationships
+  matter beyond a flat list.
+- **Renders:** the risk table, or (rarely) which services a critical
+  dependency chains through.
+- **Trigger:** the flowchart only when a dependency's blast radius spans
+  more than one downstream system — per
+  [`illustration.md`](../../../references/illustration.md)'s deep-dive budget.
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Direct dependencies/integrations, purpose, criticality, failure behavior | `reference/tech-stack` | tech-stack states what the repository is built with; this document adds the failure-framing judgment tech-stack omits |
+| A dependency's known weakness or accepted risk | `tech-debt-register` or `security/threat-model`'s accepted-risk section | route by whether it's fixable (debt) or an accepted external risk (threat model), never both |
+| A network boundary a dependency crosses | `network` | the trust-zone crossing is owned there; this document owns the dependency's criticality judgment |

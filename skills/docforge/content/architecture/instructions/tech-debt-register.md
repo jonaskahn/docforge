@@ -1,9 +1,5 @@
 # Technical-debt writing craft
 
-**Preferred illustration:** Follow
-[`../../../references/illustration.md`](../../../references/illustration.md); use a table
-for comparable register fields and prose for each item's judgment.
-
 Name each debt item by the shortcut taken, not a vague quality label — "the retry loop has
 no backoff," not "reliability issues." Use the same sequence for every entry: mechanism,
 consequence, trigger for action, credible remediation direction.
@@ -22,3 +18,19 @@ deliberate user-visible boundary → limitation. Unstarted work with no shortcut
 backlog, not debt. Never cross-file them: a constraint in the debt register is noise a
 reader cannot action, and debt dressed as a limitation hides a remediable cause. Prefer
 evidence-backed specificity over severity adjectives.
+
+## Illustration
+
+- **Form:** a table for comparable register fields (mechanism, consequence,
+  trigger, remediation); prose for each item's judgment.
+- **Renders:** nothing beyond the table — never a diagram.
+- **Trigger:** never — this is a reference-depth register per
+  [`illustration.md`](../../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Shortcut, consequence, evidence, remediation direction | `constraints` | hard, externally imposed bounds are routed there instead — never cross-filed |
+| — | `limitations-register` | deliberate, accepted, user-visible boundaries are routed there instead — never cross-filed |
+| A debt item affecting a named architecture block | `architecture-high-level` or `architecture-low-level` | links back so a reader on that block sees the debt without this register restating the architecture |
