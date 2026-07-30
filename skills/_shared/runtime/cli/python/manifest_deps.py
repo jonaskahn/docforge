@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+"""Launcher: delegates to runtime.common.manifest_deps."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+from runtime.common.manifest_deps import *  # noqa: F401,F403

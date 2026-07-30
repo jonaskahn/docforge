@@ -1,0 +1,74 @@
+# CLI launchers
+
+Public entrypoints for Docforge tools. Each file is a thin re-export of the
+matching implementation under `runtime/<subsystem>/`. Business logic never
+lives here.
+
+Paths below are relative to the cartridge root (`skills/_shared/`).
+
+## Session runtime (agent-owned)
+
+There is no runtime-precheck CLI. At the start of a Docforge session the
+agent probes the host once (`command -v` / equivalent) and **locks one
+engine for every Docforge tool call in that session**:
+
+1. Prefer Python: `python3`, else `python` (3.10+).
+2. Else JS: `node`, else `bun`, else `deno`.
+3. If none are available, stop and tell the user to install one family.
+
+Do not switch engines mid-session. Python and JS peers are equivalent.
+
+### Invocation forms
+
+```sh
+# Python (session locked to python3 or python)
+python3 runtime/cli/python/<name>.py <subcommand-or-flags…>
+
+# JS (session locked to one of node / bun / deno)
+node runtime/cli/js/<name>.js <subcommand-or-flags…>
+bun  runtime/cli/js/<name>.js <subcommand-or-flags…>
+deno run -A runtime/cli/js/<name>.js <subcommand-or-flags…>
+```
+
+Always put the command/subcommand before flags (e.g.
+`manage_manifest init --repo <repo> --tier spine`, never flags before `init`).
+
+## Layout
+
+| Path | Owns |
+|---|---|
+| [`python/`](python/) | Python 3 launchers |
+| [`js/`](js/) | Node/Bun/Deno launchers (`package.json` keeps CommonJS) |
+
+## Public commands
+
+| Command | Purpose |
+|---|---|
+| `precheck_graph` | Require a readable code or flow graph (`--need code\|flow`) |
+| `query_catalog` | Read catalog records, categories, and `--route` packs |
+| `generate_indexes` | Regenerate catalog routers (`--write` / `--check`) |
+| `validate_metadata` | Catalog, schema, peer, and release-metadata validation |
+| `detect_profiles` | Read-only shape/platform/framework/concern recommendations |
+| `discovery_gate` | Validate/apply discovery-gate judgment JSON |
+| `manage_manifest` | `init` / `add` / `set` / `status` / `audit` |
+| `scaffold_docs` | Dry-run tree, one-document materialize, manifest audit |
+| `check_staleness` | Provenance blob drift + optional sync |
+| `migrate_metadata` | Idempotent metadata / provenance upgrade |
+| `flow_index` | Harvest / revise / organize / render flow matrix |
+| `derive_flow_graph` | Provisional flow-graph prepare/write |
+| `diagnose_graphs` | Multi-provider graph readiness report |
+| `read_graph` | Provider-neutral graph probe helpers |
+| `lint_document` | Mechanical document lint |
+| `lint_agents_kernel` | AGENTS.md / agent-kernel lint |
+| `discover_child_repos` | Portfolio child-repository discovery |
+| `graph_source_*` | Per-provider adapters and offline readers |
+| `graph_source_registry` | Provider registry |
+| `graph_storage` | Graph artifact paths/helpers |
+| `provenance_frontmatter` | Provenance YAML codec (library; not a CLI) |
+| `manifest_deps` | Manifest dependency helpers (library) |
+| `_util` | Shared helpers (library; not a CLI) |
+
+Python-only one-shot migrations (no JS peer): `split_catalog`,
+`split_document_catalog`.
+
+Full flags and exit codes: [`../../workflows/tools.md`](../../workflows/tools.md).

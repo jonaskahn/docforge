@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-2.5.0-10b981?style=flat-square)](meta.json)
+  [![Version](https://img.shields.io/badge/version-2.5.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -43,7 +43,9 @@ npx skills add jonaskahn/docforge
 npx skills add jonaskahn/docforge -g -y
 ```
 
-Package metadata declares support for Claude Code, Codex, OpenCode, and Gemini CLI. The commands above come from [`meta.json`](meta.json); they require external network access and were not executed during this README update.
+These commands come from the [Agent Skills](https://agentskills.io) CLI and
+install whatever `skills/*/SKILL.md` trees the repo ships. They require
+external network access and were not executed during this README update.
 
 ### CLAUDE CODE CARTRIDGE
 
@@ -54,7 +56,9 @@ Docforge also ships a native [Claude Code marketplace manifest](.claude-plugin/m
 /plugin install docforge@docforge
 ```
 
-Both install paths load the same [`SKILL.md`](skills/docforge/SKILL.md). These package-declared plugin commands were not executed during this README update.
+Both install paths load [`skills/docforge`](skills/docforge/SKILL.md) and
+[`skills/docforge-revise`](skills/docforge-revise/SKILL.md). These
+package-declared plugin commands were not executed during this README update.
 
 ## ▓▒░ START GAME ░▒▓
 
@@ -69,7 +73,8 @@ Make this repository ready for AI coding agents.
 Check which generated docs have drifted from source.
 ```
 
-Slash-command support depends on the host. Where registered, use `/docforge`; plain-language requests work across compatible agents.
+Slash-command support depends on the host. Where registered, use `/docforge`
+or `/docforge-revise`; plain-language requests work across compatible agents.
 
 ### FIRST MISSION
 
@@ -118,7 +123,7 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 
 Docforge writes behavior and boundaries, not prose tied to private symbols or line numbers. Derivable facts must be completed; only truly external values may remain as typed tokens such as `<SECURITY_CONTACT>`.
 
-Read the full [workflow](skills/docforge/workflows/README.md), [document contracts](skills/docforge/content/README.md), [audit gate](skills/docforge/references/document-audit.md), and [provenance model](skills/docforge/references/provenance-tracking.md).
+Read the full [workflow](skills/_shared/workflows/README.md), [document contracts](skills/_shared/content/README.md), [audit gate](skills/_shared/references/document-audit.md), and [provenance model](skills/_shared/references/provenance-tracking.md).
 
 ## ▓▒░ GRAPH CARTRIDGES ░▒▓
 
@@ -147,7 +152,7 @@ are augmented from its knowledge graph. Only catalog entries declaring
 only a code graph is available, Docforge derives a provisional,
 entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
 
-Provider capabilities and setup live in [graph dispatch](skills/docforge/references/graph/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/references/graph/flow-derivation.md).
+Provider capabilities and setup live in [graph dispatch](skills/_shared/references/graph/graph-sources.md); the reasoning loop lives in [flow derivation](skills/_shared/references/graph/flow-derivation.md).
 
 ## ▓▒░ STAGE SELECT ░▒▓
 
@@ -180,11 +185,28 @@ when ticket evidence exists. Select `coding-agents` (aliases include `agent`
 and `agent-context`) for a compact `AGENTS.md` kernel, Claude shims/settings,
 and token-budgeted `docs/agents/` views.
 
-The tier rules, profile signals, and complete level layout live in the [canonical docs tree](skills/docforge/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
+The tier rules, profile signals, and complete level layout live in the [canonical docs tree](skills/_shared/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
 
 ## ▓▒░ CONTROLLER MAPPING ░▒▓
 
-Use `--revise all` or `--revise <area>` for stale content, `--plan-only` to stop after manifest initialization and preview, `--resume` to continue a saved run, and `--status` for a read-only progress report.
+Invocation order is always **command → scope args → flags** (never flags
+before the command or before a required scope argument):
+
+| Command | Use |
+|---|---|
+| `/docforge` | New plan, intake, or write |
+| `/docforge --plan-only` | Plan / dry-run tree only |
+| `/docforge-revise all` | Full-tree structural refresh |
+| `/docforge-revise <area>` | Scoped revise (e.g. architecture) |
+| `/docforge-revise flow` | Full flow harvest → organize → derive → write |
+| `/docforge-revise flow --plan-only` | Revise analysis only (no body writes) |
+
+Shared flags on both commands: `--plan-only` (analyze / dry-run tree only),
+`--auto-accept` (skip routine pauses after scope confirm).
+
+There is no `--resume` or `--status` skill flag. Continue an incomplete run via
+intake or plain language; for a progress report, ask in plain language or run
+`manage_manifest status`.
 
 `--auto-accept` skips routine conversational pauses after the scope has been
 explicitly confirmed. It does not silently choose unresolved profiles or
@@ -192,34 +214,48 @@ authorize installation, global configuration, graph construction or refresh,
 archive/delete actions, or other separately approved side effects; it also
 does not skip grounding, plan display, audits, or final checks.
 
-The exact flag semantics and composition rules live in the [workflow](skills/docforge/workflows/README.md).
+The exact flag semantics and composition rules live in the [workflow](skills/_shared/workflows/README.md) and [shared flags](skills/_shared/flags.md).
 
 ## ▓▒░ INVENTORY ░▒▓
 
-[`SKILL.md`](skills/docforge/SKILL.md) is the entry cartridge. [`.metadata/catalog/`](skills/docforge/.metadata/catalog/) is the canonical registry; [`workflows/`](skills/docforge/workflows/) holds the step-by-step procedure; [`references/`](skills/docforge/references/) holds owned policy prose, and [`content/`](skills/docforge/content/) holds each document group's contracts, writing-craft instructions, and output-scaffold templates.
+[`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) and
+[`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md) are thin
+command entrypoints. The shared cartridge lives under
+[`skills/_shared/`](skills/_shared/README.md):
+[`.metadata/catalog/`](skills/_shared/.metadata/catalog/) is the canonical
+registry; [`workflows/`](skills/_shared/workflows/) holds the step-by-step
+procedure; [`references/`](skills/_shared/references/) holds owned policy
+prose; and [`content/`](skills/_shared/content/) holds each document group's
+contracts, writing-craft instructions, and output-scaffold templates.
 
-[`scripts/`](skills/docforge/scripts/) contains the stable public launchers
-(profile detection, graph adapters, flow derivation, scaffolding, linting,
-manifest state, staleness checks, and child-repository discovery), each a
-thin re-export of its paired Python/Node implementation under
-[`runtime/`](skills/docforge/runtime/).
-[`.claude-plugin/`](.claude-plugin/) and [`meta.json`](meta.json) package the
-same skill for its two distribution paths.
+[`runtime/cli/`](skills/_shared/runtime/cli/) holds the stable public
+launchers split by language (`python/`, `js/`). Each launcher is a thin
+re-export of its paired implementation under the subsystem folders in
+[`runtime/`](skills/_shared/runtime/). The agent detects `python3` /
+`python` / `node` / `bun` / `deno` once and locks one engine for the
+session — there is no separate runtime-precheck CLI.
+[`.claude-plugin/`](.claude-plugin/) packages the Claude Code marketplace
+path; Agent Skills install discovers [`skills/docforge/SKILL.md`](skills/docforge/SKILL.md)
+and [`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md)
+directly (no root `meta.json`).
 
 ## ▓▒░ SYSTEM REQUIREMENTS ░▒▓
 
 - a compatible AI coding agent
 - `git`
 - one supported code-graph producer
-- Python 3.10+ **or** Node.js 18+ for the bundled tools
+- **one** tool runtime: Python 3.10+ **or** a JS engine (Node.js 18+, Bun, or Deno)
 
-Core tools use only the selected runtime's standard library or built-ins. The optional offline GitNexus reader is the exception: it needs `@ladybugdb/core` or a compatible LadybugDB Python binding. GitNexus MCP tools are preferred.
+The agent picks the session engine from what is installed. Core tools use
+only the selected runtime's standard library or built-ins. The optional
+offline GitNexus reader is the exception: it needs `@ladybugdb/core` or a
+compatible LadybugDB Python binding. GitNexus MCP tools are preferred.
 
 ## ▓▒░ MULTIPLAYER ░▒▓
 
 Found a bug or missing rule? [Open an issue](https://github.com/jonaskahn/docforge/issues) with the request, actual output, and expected output.
 
-To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together, then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/docforge/references/graph/adding-a-graph-source.md).
+To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together, then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/_shared/references/graph/adding-a-graph-source.md).
 
 ## ▓▒░ CREDITS ░▒▓
 

@@ -1,0 +1,16 @@
+# Shared skill flags
+
+`/docforge` and `/docforge-revise` share these flags (combinable with a
+scope argument on revise where noted):
+
+| Flag | Effect |
+|---|---|
+| `--plan-only` | Analyze and show the plan / dry-run tree; do not write or re-ground document bodies. On `/docforge`, precheck, analyze, init/update manifest, show dry-run tree. On `/docforge-revise`, run revise analysis (migrate, staleness, detect/catalog, audience prompt, dry-run tree / structure update). |
+| `--auto-accept` | Display plans/trees/results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, archive/delete, or other side effects |
+
+There is no `--resume` or `--status` skill flag.
+
+- Continue an incomplete run via interactive intake (Resume goal) or
+  plain language → [`workflows/writing.md`](workflows/writing.md).
+- Read-only progress: plain language or
+  `manage_manifest status --repo <repo>`.
