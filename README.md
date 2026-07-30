@@ -49,7 +49,9 @@ external network access and were not executed during this README update.
 
 ### CLAUDE CODE CARTRIDGE
 
-Docforge also ships a native [Claude Code marketplace manifest](.claude-plugin/marketplace.json):
+Docforge also ships a native [Claude Code marketplace manifest](.claude-plugin/marketplace.json).
+The whole repository is the plugin (`"source": "./"`), so `skills/` and
+`agents/` are shared with the Agent Skills path — no mirrored package:
 
 ```text
 /plugin marketplace add jonaskahn/docforge
@@ -235,8 +237,9 @@ re-export of its paired implementation under the subsystem folders in
 `python` / `node` / `bun` / `deno` once and locks one engine for the
 session — there is no separate runtime-precheck CLI.
 [`.claude-plugin/`](.claude-plugin/) packages the Claude Code marketplace
-path; Agent Skills install discovers [`skills/docforge/SKILL.md`](skills/docforge/SKILL.md)
-and [`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md)
+path with the repo root as the plugin; Agent Skills install discovers
+[`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) and
+[`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md)
 directly (no root `meta.json`).
 
 ## ▓▒░ SYSTEM REQUIREMENTS ░▒▓
@@ -255,7 +258,7 @@ compatible LadybugDB Python binding. GitNexus MCP tools are preferred.
 
 Found a bug or missing rule? [Open an issue](https://github.com/jonaskahn/docforge/issues) with the request, actual output, and expected output.
 
-To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together, then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/_shared/references/graph/adding-a-graph-source.md).
+To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together under `skills/` (and agent wrappers under `agents/`), then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/_shared/references/graph/adding-a-graph-source.md).
 
 ## ▓▒░ CREDITS ░▒▓
 

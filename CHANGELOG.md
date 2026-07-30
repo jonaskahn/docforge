@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Whole-repo Claude plugin (no mirror)
+
+- Keep a single tree for Agent Skills and Claude Code: marketplace
+  `"source": "./"` with root [`skills/`](skills/) and [`agents/`](agents/).
+- Dropped the experimental `docforge-plugin/` sync mirror to avoid duplicating
+  the cartridge in git.
+
 ## 2.6.0 — Claude-native Docforge agents
 
 - Added six read-only, Claude-plugin-native `docforge-*` agents: audit,
