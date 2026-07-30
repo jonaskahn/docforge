@@ -309,6 +309,119 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("UNTRACKED", result.stdout)
 
+    def test_document_filter_limits_staleness_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            fresh_source = repo / "fresh.txt"
+            stale_source = repo / "stale.txt"
+            fresh_source.write_text("fresh\n", encoding="utf-8")
+            stale_source.write_text("before\n", encoding="utf-8")
+            fresh_blob = blob_hash(fresh_source.read_bytes())
+            stale_blob = blob_hash(stale_source.read_bytes())
+            fresh_doc = repo / "docs" / "fresh.md"
+            stale_doc = repo / "docs" / "stale.md"
+            fresh_doc.parent.mkdir()
+            fresh_doc.write_text(
+                markdown_with_provenance(
+                    provenance(
+                        doc_id="fresh_doc", path="docs/fresh.md", tier="spine",
+                        target_depth="overview", section_id="body",
+                        source_path="fresh.txt", source_blob=fresh_blob,
+                    ),
+                    "# Fresh\n",
+                ),
+                encoding="utf-8",
+            )
+            stale_doc.write_text(
+                markdown_with_provenance(
+                    provenance(
+                        doc_id="stale_doc", path="docs/stale.md", tier="spine",
+                        target_depth="overview", section_id="body",
+                        source_path="stale.txt", source_blob=stale_blob,
+                    ),
+                    "# Stale\n",
+                ),
+                encoding="utf-8",
+            )
+            stale_source.write_text("after\n", encoding="utf-8")
+            manifest = {
+                "version": "3.1",
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                    "shapes": [], "platforms": [], "frameworks": [],
+                    "concerns": [], "audiences": [],
+                }},
+                "discovery": [],
+                "documents": [
+                    {
+                        "id": "fresh_doc", "type": "generic", "path": "docs/fresh.md",
+                        "status": "complete",
+                        "provenance": provenance(
+                            doc_id="fresh_doc", path="docs/fresh.md", tier="spine",
+                            target_depth="overview", section_id="body",
+                            source_path="fresh.txt", source_blob=fresh_blob,
+                        ),
+                        "selection": {"origins": [], "evidence": []},
+                        "audit": {"verdict": "PASS"},
+                    },
+                    {
+                        "id": "stale_doc", "type": "generic", "path": "docs/stale.md",
+                        "status": "complete",
+                        "provenance": provenance(
+                            doc_id="stale_doc", path="docs/stale.md", tier="spine",
+                            target_depth="overview", section_id="body",
+                            source_path="stale.txt", source_blob=stale_blob,
+                        ),
+                        "selection": {"origins": [], "evidence": []},
+                        "audit": {"verdict": "PASS"},
+                    },
+                ],
+                "metadata": {},
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                by_id = run(
+                    runtime, "check_staleness",
+                    "--manifest", str(manifest_path), "--document", "fresh_doc",
+                )
+                self.assertEqual(by_id.returncode, 0, by_id.stderr)
+                self.assertIn("FRESH", by_id.stdout)
+                self.assertNotIn("docs/stale.md", by_id.stdout)
+
+                by_path = run(
+                    runtime, "check_staleness",
+                    "--manifest", str(manifest_path), "--document", "docs/stale.md",
+                )
+                self.assertEqual(by_path.returncode, 1, by_path.stderr)
+                self.assertIn("PARTIAL", by_path.stdout)
+                self.assertIn("STALE", by_path.stdout)
+                self.assertNotIn("docs/fresh.md", by_path.stdout)
+
+                missing = run(
+                    runtime, "check_staleness",
+                    "--manifest", str(manifest_path), "--document", "missing_doc",
+                )
+                self.assertEqual(missing.returncode, 0, missing.stderr)
+                self.assertIn("no documents matched", missing.stdout)
+
+                untracked = json.loads(manifest_path.read_text(encoding="utf-8"))
+                untracked["documents"][0]["provenance"]["sections"] = []
+                manifest_path.write_text(json.dumps(untracked, indent=2) + "\n", encoding="utf-8")
+                empty = run(
+                    runtime, "check_staleness",
+                    "--manifest", str(manifest_path), "--document", "fresh_doc",
+                )
+                self.assertEqual(empty.returncode, 1, empty.stderr)
+                self.assertIn("UNTRACKED", empty.stdout)
+                # Restore filled provenance for the next runtime.
+                untracked["documents"][0]["provenance"] = provenance(
+                    doc_id="fresh_doc", path="docs/fresh.md", tier="spine",
+                    target_depth="overview", section_id="body",
+                    source_path="fresh.txt", source_blob=fresh_blob,
+                )
+                manifest_path.write_text(json.dumps(untracked, indent=2) + "\n", encoding="utf-8")
+
     def test_scaffold_audit_exit_codes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

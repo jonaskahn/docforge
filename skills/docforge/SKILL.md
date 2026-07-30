@@ -50,8 +50,10 @@ as a choice; no ready provider gets an explained setup path. Detail:
 - A task with tier/profile/flags already given →
   [`workflows/planning.md`](workflows/planning.md), then
   [`workflows/writing.md`](workflows/writing.md) for each document.
-- `--resume`, `--status`, `--revise all|<area>|flow` →
-  [`workflows/revision.md`](workflows/revision.md).
+- `--resume`, `--status`, `--revise all|<area>|flow`, or natural-language
+  update / refresh of a named document →
+  [`workflows/revision.md`](workflows/revision.md) (staleness-first via
+  `check_staleness --document`).
 - Staleness, migration, or a whole-tree/cross-document check →
   [`workflows/validation.md`](workflows/validation.md).
 
@@ -62,7 +64,7 @@ as a choice; no ready provider gets an explained setup path. Detail:
 | `workflows/intake.md` | Bare invocation, discovery gate, scope questions, confirmation, graph-provider choice |
 | `workflows/planning.md` | Repository inspection, tier/profile selection, dynamic-document discovery, manifest init, dry-run tree, plan checkpoint |
 | `workflows/writing.md` | Per-document execution card, evidence, scaffolding, provenance, status transitions, independent audit |
-| `workflows/revision.md` | Resume, status, revise all/area/flow, flow-index organization |
+| `workflows/revision.md` | Resume, status, revise all/area/flow, single-document update/refresh, flow-index organization |
 | `workflows/validation.md` | Staleness, migration, whole-tree audit, cross-document quality gate |
 | `workflows/tools.md` | Every public script: Python/Node invocation, inputs, outputs, exit codes |
 

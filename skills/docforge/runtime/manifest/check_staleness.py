@@ -30,11 +30,23 @@ def git_blob(path: Path) -> str | None:
     return hashlib.sha1(header + content).hexdigest()
 
 
-def sync_provenance(manifest: dict, repo: Path) -> tuple[int, list[dict], set[str]]:
+def matches_document(doc: dict, document_filter: str | None) -> bool:
+    if document_filter is None:
+        return True
+    return doc.get("id") == document_filter or doc.get("path") == document_filter
+
+
+def sync_provenance(
+    manifest: dict,
+    repo: Path,
+    document_filter: str | None = None,
+) -> tuple[int, list[dict], set[str]]:
     updated = 0
     results: list[dict] = []
     failed: set[str] = set()
     for doc in manifest["documents"]:
+        if not matches_document(doc, document_filter):
+            continue
         if doc.get("provenance_mode") == "manifest":
             continue
         doc_path = repo / doc["path"]
@@ -72,10 +84,13 @@ def check(
     repo: Path,
     section_filter: str | None,
     skipped: set[str] | None = None,
+    document_filter: str | None = None,
 ) -> tuple[list[dict], bool]:
     results: list[dict] = []
     clean = True
     for doc in manifest["documents"]:
+        if not matches_document(doc, document_filter):
+            continue
         if doc.get("status") not in WRITTEN:
             continue
         if skipped and doc["path"] in skipped:
@@ -138,6 +153,7 @@ def check(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", required=True, type=Path)
+    parser.add_argument("--document", help="Filter by manifest document id or path")
     parser.add_argument("--section")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--sync-provenance", action="store_true")
@@ -159,9 +175,11 @@ def main() -> int:
     sync_results: list[dict] = []
     sync_failed: set[str] = set()
     if args.sync_provenance:
-        synchronized, sync_results, sync_failed = sync_provenance(manifest, repo)
+        synchronized, sync_results, sync_failed = sync_provenance(
+            manifest, repo, args.document,
+        )
         manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    results, clean = check(manifest, repo, args.section, sync_failed)
+    results, clean = check(manifest, repo, args.section, sync_failed, args.document)
     if sync_results:
         results = sync_results + results
         clean = False

@@ -24,7 +24,8 @@ flags exit `2`. Use Node by replacing `python scripts/name.py` with
 - `scaffold_docs.{py,js}`: exact dry-run, one-document materialization, and
   manifest-backed audit.
 - `precheck_graph.{py,js}`: `--need code|flow`.
-- `check_staleness.{py,js}`: `--section`, JSON output, and provenance sync.
+- `check_staleness.{py,js}`: `--document <id|path>`, `--section`, JSON output,
+  and provenance sync.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade;
   incomplete or unconvertible written documents are reported as `FAILED` and
   demoted to `in_progress` for agent regeneration.

@@ -27,8 +27,21 @@ For the next document in `write_order`:
    ```
 
 4. Set it `in_progress`, re-ground every required claim, replace all scaffold
-   markers and provenance tokens, and stamp the complete provenance-2.0 shape
-   with heading-matched sections and concrete source blobs.
+   markers and provenance tokens, and stamp complete provenance 2.0:
+
+   - One provenance `sections[]` entry per Markdown heading that makes claims;
+     `id` is that heading's anchor.
+   - Each claim cites at least one repository-relative `path` with `role`
+     (`code`, `config`, `manifest`, `doc`, `test`, or `history`) and
+     `git_blob` = the SHA-1 of `blob <len>\0` + file bytes (same value as
+     `git hash-object <path>` and `check_staleness`'s blob helper).
+   - Empty `sections: []` is valid only while the document is `planned` or a
+     fresh scaffold; lint rejects empty sections for written documents.
+   - Filled example and field rules:
+     [`../references/provenance-tracking.md`](../references/provenance-tracking.md).
+
+   After an update that touched only some sections, restamp those sections'
+   sources and leave FRESH sections' provenance rows unchanged.
 5. Set it `generated`.
 6. Run the document linter and any audit-profile-specific mechanical checks.
 7. Independently audit it (below).

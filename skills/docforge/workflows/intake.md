@@ -50,9 +50,11 @@ Ask only what remains unresolved, in this order:
 
 1. **Goal or action.** For a repository without a manifest, offer creating a
    new documentation plan or planning without writing. When a manifest exists,
-   also offer resuming it, checking status or staleness, revising a named area,
-   revising flows, or replacing the plan. Briefly distinguish inspection,
-   planning, writing, and read-only reporting.
+   also offer resuming it, checking status or staleness, updating or refreshing
+   a named document, revising a named area, revising flows, or replacing the
+   plan. Briefly distinguish inspection, planning, writing, and read-only
+   reporting. Natural-language **update** / **refresh** of a named document
+   routes to [`revision.md`](revision.md) (staleness-first), not a full rewrite.
 2. **Documentation tier.** For a new or plan-only scope, offer Spine
    (essential repository documentation), Diligence (Spine plus flows, risks,
    security, operations, dependencies, and ADRs), Portfolio (Diligence plus
@@ -145,8 +147,14 @@ intake confirmation and all side-effect approvals remain mandatory under
   configuration, graph construction or refresh, archive/delete actions, or any
   other separately approved side effect.
 
-An explicit single-document request still requires graph precheck, re-grounding,
-mechanical lint, independent audit, and manifest state updates.
+An explicit single-document **update** or **refresh** follows the Update one
+document path in [`revision.md`](revision.md): blob-first, no rediscovery.
+**Revise** (all / area / flow) is broader: obsolete docs via `git_blob`, new
+docs from detect/catalog, missing files from new instructions, big-picture
+and connection updates, and — for revise flow — the full harvest → organize
+→ derive → write pipeline. `FRESH` blobs do not skip work when new flows or
+connections change a document's role. A brand-new single-document write still
+requires graph precheck and the full [`writing.md`](writing.md) path.
 
 Next: once scope is confirmed, proceed to
 [`planning.md`](planning.md).

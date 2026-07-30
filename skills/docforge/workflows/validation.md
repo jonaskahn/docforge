@@ -39,15 +39,23 @@ python scripts/check_staleness.py \
 
 python scripts/check_staleness.py \
   --manifest <repo>/.docforge/manifest.json \
+  --document docs/architecture/constraints.md --sync-provenance --json
+
+python scripts/check_staleness.py \
+  --manifest <repo>/.docforge/manifest.json \
   --section configuration --sync-provenance
 ```
+
+`--document` accepts a manifest document `id` or `path` and limits both sync
+and the staleness report to that entry (used by single-document update in
+[`revision.md`](revision.md)).
 
 `FRESH` means recorded sources still match; `PARTIAL` identifies `STALE`,
 `MISSING`, or `NO_BLOB` sources for one section; `UNPARSEABLE` identifies
 malformed document frontmatter; and `UNTRACKED` means provenance is absent,
 empty, or legacy.
-Synchronization reads every manifest path, including root documents, and
-changes only each document's provenance section.
+Synchronization reads every matching manifest path, including root documents,
+and changes only each document's provenance section.
 
 ## Completion criteria
 

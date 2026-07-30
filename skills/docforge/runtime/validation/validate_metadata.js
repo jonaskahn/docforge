@@ -18,7 +18,7 @@ const PUBLIC_CONTRACTS = {
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
-  check_staleness: ["--manifest", "--section", "--json", "--sync-provenance"],
+  check_staleness: ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
   flow_index: ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
   query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route"],

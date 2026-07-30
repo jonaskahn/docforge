@@ -143,5 +143,10 @@ tokenized, or inconsistent with the manifest.
 - `UNPARSEABLE`: document frontmatter cannot be parsed during synchronization.
 - `UNTRACKED`: provenance is missing, empty, or legacy.
 
-Use `--section <id>` to filter. A missing source remains a review signal because
-the behavior may have moved; do not delete the documented claim automatically.
+Use `--document <id|path>` to limit sync and the report to one manifest entry,
+and `--section <id>` to filter sections. Single-document update / refresh
+follows the staleness-first path in
+[`../workflows/revision.md`](../workflows/revision.md): preserve `FRESH`
+sections, re-ground only `PARTIAL` ones, and fully rewrite only when the
+document is `UNTRACKED`. A missing source remains a review signal because the
+behavior may have moved; do not delete the documented claim automatically.

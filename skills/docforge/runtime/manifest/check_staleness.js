@@ -17,11 +17,18 @@ function gitBlob(target) {
   const header = Buffer.from(`blob ${content.length}\0`, "ascii");
   return crypto.createHash("sha1").update(header).update(content).digest("hex");
 }
-function syncProvenance(manifest, repo) {
+
+function matchesDocument(doc, documentFilter) {
+  if (documentFilter === undefined || documentFilter === null) return true;
+  return doc.id === documentFilter || doc.path === documentFilter;
+}
+
+function syncProvenance(manifest, repo, documentFilter) {
   let updated = 0;
   const results = [];
   const failed = new Set();
   for (const doc of manifest.documents) {
+    if (!matchesDocument(doc, documentFilter)) continue;
     if (doc.provenance_mode === "manifest") continue;
     const filePath = path.join(repo, ...doc.path.split("/"));
     let parsed;
@@ -60,10 +67,12 @@ function syncProvenance(manifest, repo) {
   }
   return { updated, results, failed };
 }
-function check(manifest, repo, sectionFilter, skipped = new Set()) {
+
+function check(manifest, repo, sectionFilter, skipped = new Set(), documentFilter) {
   const results = [];
   let clean = true;
   for (const doc of manifest.documents) {
+    if (!matchesDocument(doc, documentFilter)) continue;
     if (!WRITTEN.has(doc.status)) continue;
     if (skipped.has(doc.path)) {
       clean = false;
@@ -118,9 +127,10 @@ function check(manifest, repo, sectionFilter, skipped = new Set()) {
   }
   return { results, clean };
 }
+
 function parseArgs(argv) {
   const result = {};
-  const allowed = new Set(["manifest", "section", "json", "sync-provenance"]);
+  const allowed = new Set(["manifest", "document", "section", "json", "sync-provenance"]);
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
     if (token === "-h" || token === "--help") return { help: true };
@@ -136,9 +146,11 @@ function parseArgs(argv) {
   }
   return result;
 }
+
 function usage() {
-  console.log("usage: check_staleness.js --manifest <path> [--section <id>] [--json] [--sync-provenance]");
+  console.log("usage: check_staleness.js --manifest <path> [--document <id|path>] [--section <id>] [--json] [--sync-provenance]");
 }
+
 function main() {
   try {
     const args = parseArgs(process.argv.slice(2));
@@ -157,13 +169,13 @@ function main() {
     let syncResults = [];
     let syncFailed = new Set();
     if (args.sync_provenance) {
-      const sync = syncProvenance(manifest, repo);
+      const sync = syncProvenance(manifest, repo, args.document);
       synchronized = sync.updated;
       syncResults = sync.results;
       syncFailed = sync.failed;
       fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
     }
-    const outcome = check(manifest, repo, args.section, syncFailed);
+    const outcome = check(manifest, repo, args.section, syncFailed, args.document);
     if (syncResults.length) {
       outcome.results.unshift(...syncResults);
       outcome.clean = false;
