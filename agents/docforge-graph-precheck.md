@@ -9,8 +9,8 @@ model: haiku
 
 Run `precheck_graph --need code`, `detect_profiles --emit-gate-pack`, and, when
 a graph exists, the bounded `read_graph` seed inventory. Follow the canonical
-[`intake`](../skills/_shared/workflows/intake.md) and
-[`graph sources`](../skills/_shared/references/graph/graph-sources.md)
+[`intake`](../skills/docforge/_shared/workflows/intake.md) and
+[`graph sources`](../skills/docforge/_shared/references/graph/graph-sources.md)
 requirements.
 
 Return ready providers, profile recommendations with strength and confidence,

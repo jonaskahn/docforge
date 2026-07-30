@@ -144,7 +144,7 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 
 Docforge writes behavior and boundaries, not prose tied to private symbols or line numbers. Derivable facts must be completed; only truly external values may remain as typed tokens such as `<SECURITY_CONTACT>`.
 
-Read the full [workflow](skills/_shared/workflows/README.md), [document contracts](skills/_shared/content/README.md), [audit gate](skills/_shared/references/document-audit.md), and [provenance model](skills/_shared/references/provenance-tracking.md).
+Read the full [workflow](skills/docforge/_shared/workflows/README.md), [document contracts](skills/docforge/_shared/content/README.md), [audit gate](skills/docforge/_shared/references/document-audit.md), and [provenance model](skills/docforge/_shared/references/provenance-tracking.md).
 
 ## ▓▒░ GRAPH CARTRIDGES ░▒▓
 
@@ -173,7 +173,7 @@ are augmented from its knowledge graph. Only catalog entries declaring
 only a code graph is available, Docforge derives a provisional,
 entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
 
-Provider capabilities and setup live in [graph dispatch](skills/_shared/references/graph/graph-sources.md); the reasoning loop lives in [flow derivation](skills/_shared/references/graph/flow-derivation.md).
+Provider capabilities and setup live in [graph dispatch](skills/docforge/_shared/references/graph/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/_shared/references/graph/flow-derivation.md).
 
 ## ▓▒░ STAGE SELECT ░▒▓
 
@@ -206,7 +206,7 @@ when ticket evidence exists. Select `coding-agents` (aliases include `agent`
 and `agent-context`) for a compact `AGENTS.md` kernel, Claude shims/settings,
 and token-budgeted `docs/agents/` views.
 
-The tier rules, profile signals, and complete level layout live in the [canonical docs tree](skills/_shared/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
+The tier rules, profile signals, and complete level layout live in the [canonical docs tree](skills/docforge/_shared/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
 
 ## ▓▒░ CONTROLLER MAPPING ░▒▓
 
@@ -235,24 +235,24 @@ authorize installation, global configuration, graph construction or refresh,
 archive/delete actions, or other separately approved side effects; it also
 does not skip grounding, plan display, audits, or final checks.
 
-The exact flag semantics and composition rules live in the [workflow](skills/_shared/workflows/README.md) and [shared flags](skills/_shared/flags.md).
+The exact flag semantics and composition rules live in the [workflow](skills/docforge/_shared/workflows/README.md) and [shared flags](skills/docforge/_shared/flags.md).
 
 ## ▓▒░ INVENTORY ░▒▓
 
 [`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) and
 [`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md) are thin
 command entrypoints. The shared cartridge lives under
-[`skills/_shared/`](skills/_shared/README.md):
-[`.metadata/catalog/`](skills/_shared/.metadata/catalog/) is the canonical
-registry; [`workflows/`](skills/_shared/workflows/) holds the step-by-step
-procedure; [`references/`](skills/_shared/references/) holds owned policy
-prose; and [`content/`](skills/_shared/content/) holds each document group's
+[`skills/docforge/_shared/`](skills/docforge/_shared/README.md):
+[`.metadata/catalog/`](skills/docforge/_shared/.metadata/catalog/) is the canonical
+registry; [`workflows/`](skills/docforge/_shared/workflows/) holds the step-by-step
+procedure; [`references/`](skills/docforge/_shared/references/) holds owned policy
+prose; and [`content/`](skills/docforge/_shared/content/) holds each document group's
 contracts, writing-craft instructions, and output-scaffold templates.
 
-[`runtime/cli/`](skills/_shared/runtime/cli/) holds the stable public
+[`runtime/cli/`](skills/docforge/_shared/runtime/cli/) holds the stable public
 launchers split by language (`python/`, `js/`). Each launcher is a thin
 re-export of its paired implementation under the subsystem folders in
-[`runtime/`](skills/_shared/runtime/). The agent detects `python3` /
+[`runtime/`](skills/docforge/_shared/runtime/). The agent detects `python3` /
 `python` / `node` / `bun` / `deno` once and locks one engine for the
 session — there is no separate runtime-precheck CLI.
 [`.claude-plugin/`](.claude-plugin/) packages the Claude Code marketplace
@@ -278,7 +278,7 @@ compatible LadybugDB Python binding. GitNexus MCP tools are preferred.
 
 Found a bug or missing rule? [Open an issue](https://github.com/jonaskahn/docforge/issues) with the request, actual output, and expected output.
 
-To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together under `skills/` (and agent wrappers under `agents/`), then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/_shared/references/graph/adding-a-graph-source.md).
+To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together under `skills/` (and agent wrappers under `agents/`), then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/docforge/_shared/references/graph/adding-a-graph-source.md).
 
 ## ▓▒░ CREDITS ░▒▓
 

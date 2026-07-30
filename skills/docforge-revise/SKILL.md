@@ -6,24 +6,24 @@ description: Structural refresh of Docforge documentation — revise all, a docs
 # Docforge Revise
 
 Slash command: `/docforge-revise`. Companion to `/docforge`. Shared cartridge:
-[`../_shared/`](../_shared/README.md).
+[`../docforge/_shared/`](../docforge/_shared/README.md).
 
 ## Load order
 
-1. [`../_shared/rules.md`](../_shared/rules.md) — safety, graph precondition,
+1. [`../docforge/_shared/rules.md`](../docforge/_shared/rules.md) — safety, graph precondition,
    provider sufficiency, completion.
-2. [`../_shared/flags.md`](../_shared/flags.md) — `--plan-only`,
+2. [`../docforge/_shared/flags.md`](../docforge/_shared/flags.md) — `--plan-only`,
    `--auto-accept`.
-3. [`../_shared/retrieval.md`](../_shared/retrieval.md) — catalog retrieval
+3. [`../docforge/_shared/retrieval.md`](../docforge/_shared/retrieval.md) — catalog retrieval
    protocol.
-4. Follow [`../_shared/workflows/revision.md`](../_shared/workflows/revision.md)
+4. Follow [`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md)
    for the full revise meaning and procedures.
 5. For audience confirm/add-more when rediscovering docs, use the Output
    audience rules in
-   [`../_shared/workflows/intake.md`](../_shared/workflows/intake.md).
+   [`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md).
 
-Run tools from the cartridge root (`../_shared/`). Lock one session engine
-first (see [`../_shared/rules.md`](../_shared/rules.md)); always put
+Run tools from the cartridge root (`../docforge/_shared/`). Lock one session engine
+first (see [`../docforge/_shared/rules.md`](../docforge/_shared/rules.md)); always put
 subcommands before flags:
 
 ```sh
@@ -46,7 +46,7 @@ node runtime/cli/js/query_catalog.js --route <document-id>
 ## Flags
 
 Same flags as `/docforge` (combinable with a scope argument). Detail:
-[`../_shared/flags.md`](../_shared/flags.md).
+[`../docforge/_shared/flags.md`](../docforge/_shared/flags.md).
 
 Example: `/docforge-revise flow --plan-only`.
 
@@ -56,7 +56,7 @@ Example: `/docforge-revise flow --plan-only`.
   ([`../docforge/SKILL.md`](../docforge/SKILL.md)).
 - Single named-document update/refresh → natural language under `/docforge`,
   staleness-first path in
-  [`../_shared/workflows/revision.md`](../_shared/workflows/revision.md)
+  [`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md)
   (not a full revise).
 - Read-only progress → plain language or `manage_manifest status` (no
   `--status` skill flag).

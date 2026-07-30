@@ -3,7 +3,7 @@
 Owns: every public CLI, its Python and JS invocation forms, inputs, outputs,
 side effects, and exit-code expectations.
 
-Paths are relative to the cartridge root (`skills/_shared/`). Launchers live
+Paths are relative to the cartridge root (`skills/docforge/_shared/`). Launchers live
 under [`../runtime/cli/`](../runtime/cli/README.md); implementations under
 `../runtime/<subsystem>/`.
 

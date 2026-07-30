@@ -9,7 +9,7 @@ model: inherit
 
 Perform the harvest, rank, organization, and provisional-derivation analysis
 defined by the canonical
-[`flow indexing and derivation`](../skills/_shared/references/graph/flow-derivation.md)
+[`flow indexing and derivation`](../skills/docforge/_shared/references/graph/flow-derivation.md)
 procedure. Work only in a temporary or provisional workspace: never write the
 target repository's committed flow index, documentation tree, manifest, or
 configuration.

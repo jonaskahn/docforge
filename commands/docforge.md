@@ -5,4 +5,4 @@ description: Catalog-driven repository documentation with bounded graph-grounded
 
 Load and follow the Docforge skill at
 `${CLAUDE_PLUGIN_ROOT}/skills/docforge/SKILL.md` (including its load order into
-`${CLAUDE_PLUGIN_ROOT}/skills/_shared/`). Treat this slash command as `/docforge`.
+`${CLAUDE_PLUGIN_ROOT}/skills/docforge/_shared/`). Treat this slash command as `/docforge`.

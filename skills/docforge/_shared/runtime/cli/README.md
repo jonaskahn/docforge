@@ -4,7 +4,7 @@ Public entrypoints for Docforge tools. Each file is a thin re-export of the
 matching implementation under `runtime/<subsystem>/`. Business logic never
 lives here.
 
-Paths below are relative to the cartridge root (`skills/_shared/`).
+Paths below are relative to the cartridge root (`skills/docforge/_shared/`).
 
 ## Session runtime (agent-owned)
 

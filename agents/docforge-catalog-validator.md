@@ -9,7 +9,7 @@ model: haiku
 
 When editing Docforge's `_shared/.metadata` catalog, run `validate_metadata`
 and `generate_indexes --check` using the canonical
-[`tools workflow`](../skills/_shared/workflows/tools.md).
+[`tools workflow`](../skills/docforge/_shared/workflows/tools.md).
 
 Return `PASS` or `FAIL` with schema, path, version, peer, and generated-router
 drift findings. Do not write catalog files.
