@@ -47,7 +47,9 @@ only the orchestrator mutates the manifest.
 Inspect repository manifests, code, existing documentation, CI/deployment
 configuration, git history, and child repositories. Existing documents are
 evidence: propose keep, migrate, merge, archive, or delete decisions and obtain
-explicit approval before moving or removing them.
+explicit approval before moving or removing them. When a non-trivial
+repo-root `README.md` already exists, do not announce overwrite — require an
+explicit migrate / skip / rewrite choice (see Existing-doc actions below).
 
 ## 2. Select scope
 
@@ -138,9 +140,13 @@ revision.
 
 Present a human-readable plan before writing. It must contain:
 
-1. **Evidence readiness** — selected graph provider and persisted artifact,
-   current/stale state, native or provisional flow status, and manifest/history
-   evidence available.
+1. **Evidence readiness** — selected primary graph provider and its persisted
+   artifact from `precheck_graph`, current/stale state, native or provisional
+   flow status, and manifest/history evidence available. Name **only** providers
+   that `precheck_graph` reported READY. Understand Anything, GitNexus, and
+   CodeGraph are equally trusted for `code_graph` when ready; never imply that
+   only UA/GitNexus count. Do not list absent competitors. Never echo the
+   UA → GitNexus → derive priority list as if multiple sources were present.
 2. **Scope decision** — chosen tier, each profile, depth, and one evidence-based
    sentence explaining why it applies.
 3. **Exact tree** — every static and discovered dynamic path from the manifest;
@@ -151,9 +157,29 @@ Present a human-readable plan before writing. It must contain:
    Agent headings.
 5. **Capability schedule** — which documents can proceed from the code graph
    now, which wait for `flow_graph`, and whether flow evidence will be native or
-   Docforge-derived.
-6. **Existing-doc actions** — keep/migrate/merge/archive/delete proposals,
-   with destructive or moving actions still awaiting separate approval.
+   Docforge-derived. Call flow evidence **native** only when Understand
+   Anything’s domain graph or GitNexus Process nodes are READY; name that one
+   provider (or ask which is primary if both native-flow sources are ready).
+   If the selected code graph is CodeGraph-only (or any ready code graph with
+   no native flow capability), say **Docforge-derived (provisional)** — never
+   “Native flow source: CodeGraph” and never “Understand Anything + GitNexus”
+   unless both were actually READY and the user chose both for corroboration.
+6. **Existing-doc actions** — keep/migrate/merge/archive/delete proposals for
+   ordinary paths, with destructive or moving actions still awaiting separate
+   approval. For an existing repo-root `README.md` that is non-trivial /
+   valuable (substantial user-facing content, not an empty stub), present
+   exactly **migrate** / **skip** / **rewrite** and wait for confirmation
+   before any write to that path:
+   - **migrate** — reshape into the `root_readme` contract/template; preserve
+     purpose, audience, install/quickstart, and other key facts from the file;
+   - **skip** — leave `README.md` untouched; do not write `root_readme` over it
+     this run (mark that catalog path skipped);
+   - **rewrite** — replace with the Docforge `root_readme` template from fresh
+     graph/repo evidence.
+   Never announce “Docforge will overwrite” as a fait accompli. Stub or
+   placeholder READMEs may default to rewrite after stating that assessment.
+   `--auto-accept` never silently overwrites a valuable root README — this
+   three-way choice remains mandatory.
 
 This presentation is the plan gate; a bare list of filenames is insufficient.
 Confirm it unless `--auto-accept` is present. Under `--auto-accept`, display the

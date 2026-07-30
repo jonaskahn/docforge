@@ -1,6 +1,6 @@
 {
   "$schema": "../category-index-schema.json",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "category": "architecture",
   "purpose": "System architecture: structure, boundaries, and integration surfaces.",
   "source": "../index.json",

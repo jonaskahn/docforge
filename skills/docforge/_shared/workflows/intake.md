@@ -188,8 +188,11 @@ path is not that approval.
 ## Provider sufficiency rule, in detail
 
 Docforge needs one readable `code_graph`, not one index from every supported
-provider. Missing competitors are normal and must not appear in the standard
-intake, plan summary, or readiness table.
+provider. Understand Anything, GitNexus, and CodeGraph are equally trusted
+when READY. Missing competitors are normal and must not appear in the standard
+intake, plan summary, or readiness table. Never invent a combined
+“Understand Anything + GitNexus” (or similar) readiness line unless both were
+actually READY and the user selected a primary.
 
 - One ready provider: state it once and proceed with it as the proposed
   default.
@@ -198,13 +201,17 @@ intake, plan summary, or readiness table.
 - No ready provider: explain the available setup paths and ask the user to
   choose one.
 - Selected flow-dependent documents: first use the chosen provider's native
-  flow capability; derive provisionally only when it has none.
+  flow capability; derive provisionally only when it has none. CodeGraph has
+  no native `flow_graph` — when it is the only ready code graph, schedule
+  Docforge-derived flows and say so explicitly.
 
 For example, `.gitnexus/lbug` with indexed Process nodes satisfies both
 `code_graph` and native `flow_graph`. Do not mention absent Understand Anything
 or CodeGraph indexes in that case unless the user asks to compare or switch.
-The all-provider output of `diagnose_graphs` is troubleshooting detail and is
-never the default `/docforge` intake.
+Likewise, a READY CodeGraph index alone is sufficient for `code_graph`; do not
+mention absent Understand Anything or GitNexus. The all-provider output of
+`diagnose_graphs` is troubleshooting detail and is never the default
+`/docforge` intake.
 
 Explicit requests such as "create diligence API documentation" skip answered
 questions; present any materially missing scope questions together. The final

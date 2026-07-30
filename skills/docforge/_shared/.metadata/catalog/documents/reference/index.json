@@ -1,6 +1,6 @@
 {
   "$schema": "../category-index-schema.json",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "category": "reference",
   "purpose": "Reference lookups: APIs, configuration, and glossary.",
   "source": "../index.json",

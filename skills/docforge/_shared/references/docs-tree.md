@@ -204,3 +204,19 @@ Before moving existing documents, inventory and propose one action per file:
 keep, migrate, merge, archive, or delete. Moving, merging, archiving, and
 deleting require explicit user approval. Archive approved obsolete material
 under `docs/_archive/<year>/`; audits exclude that directory.
+
+**Root `README.md` special case.** Catalog `root_readme` targets the
+repo-root `README.md`. When that file already exists and is non-trivial /
+valuable (substantial user-facing content, not an empty stub), do not silently
+overwrite it with the Docforge template. Present exactly **migrate** / **skip**
+/ **rewrite** and wait for confirmation before any write:
+
+- **migrate** — reshape into the `root_readme` contract/template; preserve
+  purpose, audience, install/quickstart, and other key facts;
+- **skip** — leave the file untouched; mark `root_readme` skipped for this run;
+- **rewrite** — replace with the Docforge `root_readme` template from fresh
+  evidence.
+
+`--auto-accept` does not waive this choice. Stub or placeholder READMEs may
+default to rewrite after stating that assessment. Detail:
+[`../workflows/planning.md`](../workflows/planning.md).

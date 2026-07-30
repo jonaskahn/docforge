@@ -82,7 +82,12 @@ schemas into a synthetic “master graph.”
 
 GitNexus with a readable `.gitnexus/lbug` and indexed Process nodes supplies
 both `code_graph` and native `flow_graph`; neither Understand Anything nor
-CodeGraph needs to exist for Docforge to plan and write documents.
+CodeGraph needs to exist for Docforge to plan and write documents. CodeGraph
+with a readable `.codegraph/codegraph.db` (and a session-wired
+`codegraph_explore`) is equally sufficient for `code_graph`; absent Understand
+Anything or GitNexus indexes must not appear in that plan. Do not invent a
+combined “Understand Anything + GitNexus” readiness claim unless both were
+actually READY and the user selected a primary.
 
 ## Preparation and authority
 
@@ -128,12 +133,21 @@ Examples:
 
 ## Flow resolution
 
-Resolve flow data native-first:
+Resolve flow data native-first. The numbered list below is a **fallback
+order**, not a readiness claim for the plan summary — report only providers
+that `precheck_graph` marked READY, and never echo “Understand Anything +
+GitNexus” when one or both are absent:
 
 1. use Understand Anything’s native flow graph when ready;
 2. use GitNexus indexed processes when ready;
 3. otherwise derive `.docforge/tmp/flow-graph.json` from the selected code graph
    through [`flow-derivation.md`](flow-derivation.md).
+
+CodeGraph is first-class for `code_graph` and an excellent derivation input,
+but it has no native `flow_graph`. When CodeGraph is the only ready code graph
+(or the selected primary has no native flow capability), the Capability
+Schedule must say **Docforge-derived (provisional)**, never “Native flow
+source: CodeGraph”.
 
 Before choosing flow documents, harvest the complete
 `.docforge/flow-index.json` through `flow_index.py|js`. GitNexus Process nodes

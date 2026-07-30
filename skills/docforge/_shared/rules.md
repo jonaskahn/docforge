@@ -26,10 +26,13 @@ before writing the first such document. Detail:
 
 ## Provider sufficiency rule
 
-One readable `code_graph` is enough. Missing competing providers are normal
-and must never appear in an intake, plan summary, or readiness table. One
-ready provider is the proposed default; several ready providers are offered
-as a choice; no ready provider gets an explained setup path. Detail:
+One readable `code_graph` is enough. Understand Anything, GitNexus, and
+CodeGraph are equally trusted when READY; missing competing providers are
+normal and must never appear in an intake, plan summary, or readiness table.
+One ready provider is the proposed default; several ready providers are
+offered as a choice; no ready provider gets an explained setup path. Do not
+invent dual native-flow claims (for example “Understand Anything + GitNexus”)
+unless both were READY and the user chose a primary. Detail:
 [`workflows/intake.md`](workflows/intake.md),
 [`references/graph/graph-sources.md`](references/graph/graph-sources.md).
 

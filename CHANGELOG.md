@@ -1,7 +1,13 @@
 # Changelog
 
-## Unreleased — Whole-repo Claude plugin (no mirror)
+## 2.6.1 — Trusted sources and root README policy
 
+- Plan reporting names only READY graph providers; Understand Anything,
+  GitNexus, and CodeGraph are equally trusted for `code_graph`. Native
+  `flow_graph` remains UA/GitNexus only; CodeGraph-only runs schedule
+  Docforge-derived flows.
+- Existing root `README.md` requires explicit migrate / skip / rewrite —
+  no silent overwrite with the `root_readme` template.
 - Keep a single tree for Agent Skills and Claude Code: root [`skills/`](skills/)
   and [`agents/`](agents/). Marketplace entry uses an HTTPS git URL plugin
   source (`https://github.com/jonaskahn/docforge.git`) so installs do not
