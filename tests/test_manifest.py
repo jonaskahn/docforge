@@ -389,7 +389,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.1.0"
+    version: "2.5.0"
   tier: "spine"
   target_depth: "orientation"
   graph:
@@ -521,7 +521,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.1.0"
+    version: "2.5.0"
   tier: "spine"
   target_depth: "orientation"
   graph:
@@ -552,7 +552,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.1.0"
+    version: "2.5.0"
   tier: "spine"
   target_depth: "orientation"
   graph:

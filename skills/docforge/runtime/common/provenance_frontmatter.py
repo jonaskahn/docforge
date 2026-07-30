@@ -17,7 +17,7 @@ from typing import Any
 SCHEMA_VERSION = "2.0"
 LEGACY_SCHEMA = "1.0"
 GENERATOR_NAME = "docforge"
-GENERATOR_VERSION = "2.1.0"
+GENERATOR_VERSION = "2.5.0"
 PROVENANCE_FIELDS = {
     "schema", "doc_id", "path", "generated_at", "generator", "tier",
     "target_depth", "graph", "sections",
