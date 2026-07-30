@@ -18,7 +18,7 @@ the rules that must always be loaded; every procedural detail lives here.
 
 ## Contents
 
-- [intake.md](intake.md) — bare invocation, discovery gate, scope questions, confirmation gate, graph-provider choice.
+- [intake.md](intake.md) — bare invocation, discovery gate, discovery brief, scope questions, confirmation gate, graph-provider choice.
 - [planning.md](planning.md) — inspection, tier/profile selection, dynamic discovery, manifest init, dry-run tree, plan checkpoint.
 - [writing.md](writing.md) — per-document execution card, evidence, scaffolding, provenance, status transitions, independent audit.
 - [revision.md](revision.md) — resume, status, revise all/area/flow, single-document update/refresh, flow-index organization.

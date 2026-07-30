@@ -1,8 +1,8 @@
 # Intake
 
 Owns: bare `/docforge` invocation, safe discovery, profile detection, the
-discovery gate, scope questions, the confirmation gate, and graph-provider
-choice.
+discovery gate, the discovery brief, scope questions, the confirmation gate,
+and graph-provider choice.
 
 ## Bare `/docforge` invocation
 
@@ -24,17 +24,38 @@ they never alone confirm a profile. The same noun or team term can mean
 different aspects across projects, stacks, and domain language.
 
 When the pack from `detect_profiles --emit-gate-pack` sets `needs_gate`, run the
-**discovery gate** before presenting profile choices: follow
+**discovery gate** before the discovery brief: follow
 [`../references/discovery-gate.md`](../references/discovery-gate.md), ground
 decisions only in the bounded pack, and emit judgment JSON (`promote` / `keep`
 / `demote` / `drop` / `propose`). Apply it with `discovery_gate` helpers; on
-invalid judgment, fail open to deterministic ranks. Present **recommended**
-vs **also possible** with evidence and gate reasons. Detection and the gate
+invalid judgment, fail open to deterministic ranks. Detection and the gate
 propose profiles; they never confirm them on the user's behalf. When exactly
 one readable code-graph provider is ready, use it as the proposed default and
 do not ask the user to choose among absent providers. This read-only provider
 selection is not permission to build, refresh, install, or configure
 anything.
+
+## Discovery brief
+
+After safe discovery (and the discovery gate when `needs_gate`), and **before**
+asking any scope questions, present a short discovery brief:
+
+- Repository root and whether a manifest exists (when a manifest exists,
+  include its tier, typed profiles, and incomplete count).
+- Code-graph readiness: name each ready provider, or state that none are ready
+  and that setup will be offered only if graph source is unresolved — never a
+  choice among absent providers.
+- **Recommended** vs **also possible** profile rows for shapes, platforms,
+  frameworks, and concerns, each with a one-line evidence or gate reason.
+- Existing documentation note when `docs/` (or equivalent) is already present,
+  with a brief evidence note such as an API schema, web framework manifest,
+  library package manifest, pipeline configuration, or infrastructure files.
+
+Do not initialize a manifest, scaffold files, or ask for side-effect approval
+in the brief. Open the scope question pack in the same turn when the host
+allows (brief + questions together), or brief first then questions if the host
+needs a separate message — but never present scope questions without this
+brief. Never silent-confirm detections or gate judgments.
 
 ## Scope intake
 
@@ -60,56 +81,70 @@ Ask only what remains unresolved, in this order:
    security, operations, dependencies, and ADRs), Portfolio (Diligence plus
    `docs-portfolio/` diligence views), or a grounded recommendation that
    Docforge will explain after inspection.
-3. **Repository profiles.** After detect (and the discovery gate when
-   `needs_gate`), show ranked multi-aspect recommendations with evidence, then
-   let the user confirm or edit each applicable dimension:
-   - shapes describe what the repository delivers;
-   - platforms describe where it runs;
-   - frameworks describe how it is built and tailor evidence queries without
-     adding framework-specific trees;
-   - concerns describe evidenced cross-cutting behavior;
-   - audiences describe whom the documentation serves.
-   Permit multiple values in every dimension — one overloaded cue may map to
-   several aspects when evidence supports it. Offer Engineers + beginners as
-   the default audience starting point (and the manifest CLI default when no
-   audience flag is supplied); BA + PO, coding agents, operators, and security
-   reviewers add their catalog-owned views.
-4. **Graph source, only when unresolved.** With several ready providers, offer
+3. **Repository profiles.** Require one multi-select per applicable dimension
+   (shapes, platforms, frameworks, concerns): a native multi-select or lettered
+   multi-select with **recommended** options pre-checked and **also possible**
+   options unchecked, each with its evidence or gate reason from the discovery
+   brief. Omit a dimension only when detection produced no candidates and no
+   weak cues for it. Permit multiple values in every dimension — one overloaded
+   cue may map to several aspects when evidence supports it. Shapes describe
+   what the repository delivers; platforms describe where it runs; frameworks
+   describe how it is built and tailor evidence queries without adding
+   framework-specific trees; concerns describe evidenced cross-cutting
+   behavior. Detection and the gate never finalize profiles; do not
+   silent-confirm them on the user's behalf.
+4. **Output audience.** Required for new or plan-only scope whenever audience
+   is unresolved. Present a native multi-select of every catalog audience:
+   Engineers, Beginners, Business analysts, Product owners, Coding agents,
+   Operators, and Security reviewers. Pre-select Engineers + beginners as the
+   suggested starting point (matching the manifest CLI default when no audience
+   flag is supplied), but never apply that default silently — the user must
+   confirm or edit. BA + PO, coding agents, operators, and security reviewers
+   add their catalog-owned views. If the reply omits audience, ask one
+   audience-only follow-up.
+5. **Graph source, only when unresolved.** With several ready providers, offer
    only those providers. With no ready provider, explain setup paths and their
    approval requirements. With exactly one ready provider, record it as the
    proposed source and skip this question; include it in the final confirmation
    so the user can still ask to compare or change it.
-5. **Execution mode.** Offer Review (pause after every new or changed tree),
-   Auto-accept (always display trees and updates, then continue without routine
-   conversational pauses), or Plan only (stop after the completed tree and
-   document cards). Explain that Auto-accept never approves installation,
-   configuration, indexing, refreshes, or destructive work.
+6. **Execution mode.** Required whenever the action will plan or write (new
+   plan, plan-only, or resume writing). Only Status, staleness-only, or
+   revise-flow inventory paths may omit it when no further tree pauses will
+   occur. Present a native single-select with these exact labels:
+   - **Review** — pause after every new or changed tree for confirmation
+   - **Auto-accept (permissionless)** — always display trees and updates, then
+     continue without routine conversational pauses; maps to `--auto-accept`
+   - **Plan only** — stop after the completed tree and document cards; maps to
+     `--plan-only`
+   Explain that Auto-accept never approves installation, configuration,
+   indexing, refreshes, archive/delete, or other separately approved side
+   effects. Do not treat Goal's “planning without writing” as a substitute for
+   Execution mode, and do not default mode silently. If the reply omits mode,
+   ask one mode-only follow-up.
 
 Collect the applicable answers as one response. If the user supplied one or
 more choices in the original request, retain them and include only unresolved
 questions in the intake. For Resume, Status, Revise, or Revise flow, omit tier,
 audience, and shape questions that the existing manifest already resolves. If
-the reply leaves a material choice missing or ambiguous, ask one concise
-follow-up containing only those unresolved choices.
+the reply leaves a material choice missing or ambiguous — including Output
+audience or Execution mode when required — ask one concise follow-up containing
+only those unresolved choices.
 
 After resolving the answers, display one confirmation summary containing the
-action, tier, every selected profile dimension, selected graph provider and its
-code/flow capabilities, and execution mode. Ask whether to continue, edit a
-choice, or cancel. Always wait for explicit confirmation of this intake
-summary, including when Auto-accept was selected. Only after confirmation may
-Docforge initialize or replace a manifest or begin deeper planning. Later
-plan-tree pauses follow the selected execution mode.
+action, tier, every selected profile dimension, every selected audience,
+selected graph provider and its code/flow capabilities, and execution mode
+(include “permissionless” in the label when Auto-accept was selected). Ask
+whether to continue, edit a choice, or cancel. Always wait for explicit confirmation
+of this intake summary, including when Auto-accept was selected. Only after
+confirmation may Docforge initialize or replace a manifest or begin deeper
+planning. Later plan-tree pauses follow the selected execution mode.
 
 Show only currently valid choices. Do not offer Resume, Status, Revise, or
 Revise flow when no manifest exists, and do not present a provider that needs
 setup as ready. If no code graph is ready, explain that global
 installation/MCP wiring is user-run and that an agent-run repository index
 build or refresh needs separate explicit approval; selecting a setup path is
-not that approval. If a manifest exists, include its tier, typed profiles, and
-incomplete count in the first explanation.
-Report existing documentation and candidate repository shapes with a brief
-evidence note, such as an API schema, web framework manifest, library package
-manifest, pipeline configuration, or infrastructure files.
+not that approval.
 
 ## Provider sufficiency rule, in detail
 

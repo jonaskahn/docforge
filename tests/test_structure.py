@@ -31,16 +31,29 @@ class SkillContentTests(unittest.TestCase):
         intake = (SKILL_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
         self.assertIn("## Bare `/docforge` invocation", intake)
         self.assertIn("interactive intake", intake)
+        self.assertIn("## Discovery brief", intake)
+        self.assertIn("before**\nasking any scope questions", intake)
+        self.assertIn("never present scope questions without this\nbrief", intake)
+        self.assertIn("**Recommended** vs **also possible**", intake)
         self.assertIn("Present all applicable unresolved questions together", intake)
         self.assertIn("Collect the applicable answers as one response", intake)
         for question in (
             "Goal or action",
             "Documentation tier",
             "Repository profiles",
+            "Output audience",
             "Graph source, only when unresolved",
             "Execution mode",
         ):
             self.assertIn(question, intake)
+        self.assertIn("one multi-select per applicable dimension", intake)
+        self.assertIn("silent-confirm them on the user's behalf", intake)
+        self.assertIn("Never silent-confirm detections or gate judgments", intake)
+        self.assertIn("never apply that default silently", intake)
+        self.assertIn("audience-only follow-up", intake)
+        self.assertIn("Auto-accept (permissionless)", intake)
+        self.assertIn("mode-only follow-up", intake)
+        self.assertIn("every selected audience", intake)
         self.assertIn("Always wait for explicit confirmation", intake)
         self.assertIn("including when Auto-accept was selected", intake)
         self.assertNotIn("Ask exactly one applicable question at a time", intake)
