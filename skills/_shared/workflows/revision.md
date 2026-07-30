@@ -117,27 +117,35 @@ flow docs and big-picture surfaces even when their cited `git_blob` values are
 still `FRESH`.
 
 1. Run `migrate_metadata` when needed, then precheck `--need flow`.
-2. Run `flow_index revise` to re-harvest candidates (with community-label and
+2. When available, dispatch `docforge-flow` for its read-only harvest, rank,
+   organization, and provisional-derivation proposal. It must use only a
+   temporary/provisional workspace and return an advisory result; otherwise run
+   the same stages inline. Use that result to show the structure update and
+   honor the execution-mode tree checkpoint before changing the repository.
+3. After that checkpoint, run `flow_index revise` to re-harvest candidates (with community-label and
    near-candidate dedup), upsert every row into `.docforge/flow-index.json`
    (schema 1.1), set non-documented/non-skipped rows to `placeholder`, create
    stub markdown **only for main-priority standalone** placeholders, prune
    orphan deferred / member / index-only scaffolds, and emit compact
    `.docforge/tmp/communities.md` when a GitNexus export is present. When this
-   harvest (or later step 7) introduces missing / new flow-related docs, run
+   harvest (or later step 8) introduces missing / new flow-related docs, run
    the suitable-missing-audiences prompt (step 3a) before writing — e.g.
    Coding agents when `agents_flow` or other agent-context flow docs are
    newly selected.
-3. Run `flow_index organize emit`, have the agent write
+4. Run `flow_index organize emit`, have the agent write
    `.docforge/tmp/flow-organization.json` (descriptive names, families,
    composition), and `flow_index organize apply` before deep-dive analysis.
-4. Build an analysis pack from main-priority **standalone** flow-index rows,
+5. Build an analysis pack from main-priority **standalone** flow-index rows,
    the compact communities summary, and (when no native flow graph)
    `derive_flow_graph prepare` context; the agent/LLM analyzes those
    standalone mains only into `.docforge/tmp/flow-analysis.json`, then runs
-   `derive_flow_graph write` when a provisional graph is required. Full
+   `derive_flow_graph write` when a provisional graph is required. The main
+   agent renders and writes the committed flow index only after the
+   execution-mode tree checkpoint, preserving Review and `--auto-accept`
+   behavior. Full
    derivation reasoning:
    [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md).
-5. For each main-priority standalone flow (NOTICE first; pause in review mode,
+6. For each main-priority standalone flow (NOTICE first; pause in review mode,
    or continue under `--auto-accept`):
    - **New** main standalone → full write via [`writing.md`](writing.md).
    - **Existing** documented flow → re-ground for harvest / organization /
@@ -145,10 +153,10 @@ still `FRESH`.
      rework to `PARTIAL` / `UNTRACKED` sections, but still update connection,
      composition, and cross-link sections when the flow index or neighbors
      changed, even if blobs are `FRESH`.
-6. Refresh the big picture: render `docs/flows/README.md`, and update any
+7. Refresh the big picture: render `docs/flows/README.md`, and update any
    selected overview / index docs whose flow counts or links changed
    (for example `system-overview` when selected).
-7. Add any other missing flow-related dynamic documents required by the
+8. Add any other missing flow-related dynamic documents required by the
    current catalog selection and write them in `write_order`.
 
 Distinct from `/docforge-revise <area>`, which does not re-harvest the flow

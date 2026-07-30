@@ -43,7 +43,11 @@ For the next document in `write_order`:
    ```
 
 4. Set it `in_progress`, re-ground every required claim, replace all scaffold
-   markers and provenance tokens, and stamp complete provenance 2.0:
+   markers and provenance tokens, and stamp complete provenance 2.0. For a
+   large repository, the writer may dispatch `docforge-ground` to gather
+   candidate `path` / `role` / `git_blob` evidence off-thread; it must verify
+   every candidate and stamp provenance itself. The default is inline writer
+   grounding:
 
    - One provenance `sections[]` entry per Markdown heading that makes claims;
      `id` is that heading's anchor.
@@ -88,11 +92,11 @@ passing `subagent` or `cold-pass` audit record.
 
 ## 5. Independent audit
 
-Use a fresh artifact-only subagent when supported. Give it the artifact, its
-catalog contract, target depth, relevant quality checks, and cited sources—no
-writer reasoning. When subagents are unavailable, perform a separate cold,
-artifact-only pass and record `mode: cold-pass`. Mechanical checks alone never
-produce a completion verdict. Full audit procedure:
+When supported, dispatch the `docforge-audit` fresh artifact-only subagent.
+Give it the artifact, its catalog contract, target depth, relevant quality
+checks, and cited sources—no writer reasoning. When subagents are unavailable,
+perform a separate cold, artifact-only pass and record `mode: cold-pass`.
+Mechanical checks alone never produce a completion verdict. Full audit procedure:
 [`../references/document-audit.md`](../references/document-audit.md).
 
 Independent artifact-only audits may run concurrently, but their manifest

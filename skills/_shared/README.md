@@ -15,6 +15,10 @@ here.
 
 ## Cartridge layout
 
+`agents/` at the plugin root contains Claude-plugin-native, thin dispatch
+wrappers. Canonical procedure remains in `_shared`; non-Claude hosts use the
+inline fallback in each workflow.
+
 | Path | Owns |
 |---|---|
 | [`workflows/`](workflows/README.md) | Step-by-step procedure by invocation |

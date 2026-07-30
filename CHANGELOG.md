@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.6.0 — Claude-native Docforge agents
+
+- Added six read-only, Claude-plugin-native `docforge-*` agents: audit,
+  tree-review, graph-precheck, catalog-validator, flow, and ground.
+- Agents are thin advisory wrappers over `_shared`; workflows retain inline
+  fallbacks so non-Claude hosts follow the same canonical procedure.
+
 ## 2.5.0 — Context-bounded repository refactor
 
 Internal reorganization for agent retrieval efficiency. No behavior change

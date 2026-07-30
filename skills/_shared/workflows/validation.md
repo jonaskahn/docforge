@@ -15,8 +15,10 @@ node runtime/cli/js/scaffold_docs.js \
   --repo <repo> --manifest <repo>/.docforge/manifest.json --audit
 ```
 
-The command exits nonzero for any defect. Then apply the cross-document checks
-owned by [`../references/quality-bar.md`](../references/quality-bar.md):
+The command exits nonzero for any defect. When available, dispatch
+`docforge-tree-review` for a cold cross-document pass; otherwise apply the
+cross-document checks inline. The checks owned by
+[`../references/quality-bar.md`](../references/quality-bar.md) cover
 reachability, onboarding, location, reviewer, stranger, duplication, and host
 neutrality. A whole-tree discovery that changes one artifact sends that
 artifact through its independent audit again

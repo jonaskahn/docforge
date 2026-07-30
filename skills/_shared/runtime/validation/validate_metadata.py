@@ -16,7 +16,7 @@ from runtime.catalog import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent
-CATALOG_VERSION = "2.5.0"
+CATALOG_VERSION = "2.6.0"
 MARKDOWN_EXCEPTIONS = {"agents-kernel.md", "claude-md.md", "claude-local-md.md"}
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],

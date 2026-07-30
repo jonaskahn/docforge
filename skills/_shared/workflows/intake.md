@@ -12,9 +12,10 @@ manifest, scaffold a file, build/refresh a graph, install a provider, change
 configuration, or archive/delete anything.
 
 First perform only safe discovery: identify the repository root, check whether
-`.docforge/manifest.json` exists, run the read-only code-graph precheck, and run
-`detect_profiles` to identify candidate shapes, platforms, frameworks, and
-concerns. `detect_profiles` recognizes frameworks and shapes by reading
+`.docforge/manifest.json` exists, and dispatch `docforge-graph-precheck` when
+available. Otherwise, run the read-only code-graph precheck and
+`detect_profiles` inline to identify candidate shapes, platforms, frameworks,
+and concerns. `detect_profiles` recognizes frameworks and shapes by reading
 *declared dependencies* structurally from project-definition manifests
 (`package.json`, `pyproject.toml`/`requirements.txt`, `pom.xml`,
 `build.gradle*`, `go.mod`, `Cargo.toml`, `Gemfile`, `composer.json`,

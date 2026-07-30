@@ -39,7 +39,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.5.0"
+CATALOG_VERSION = "2.6.0"
 
 
 def load_index() -> dict:
