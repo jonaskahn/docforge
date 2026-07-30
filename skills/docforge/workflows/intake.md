@@ -93,15 +93,24 @@ Ask only what remains unresolved, in this order:
    framework-specific trees; concerns describe evidenced cross-cutting
    behavior. Detection and the gate never finalize profiles; do not
    silent-confirm them on the user's behalf.
-4. **Output audience.** Required for new or plan-only scope whenever audience
-   is unresolved. Present a native multi-select of every catalog audience:
-   Engineers, Beginners, Business analysts, Product owners, Coding agents,
-   Operators, and Security reviewers. Pre-select Engineers + beginners as the
-   suggested starting point (matching the manifest CLI default when no audience
-   flag is supplied), but never apply that default silently — the user must
-   confirm or edit. BA + PO, coding agents, operators, and security reviewers
-   add their catalog-owned views. If the reply omits audience, ask one
-   audience-only follow-up.
+4. **Output audience.** Present a native multi-select of every catalog
+   audience: Engineers, Beginners, Business analysts, Product owners, Coding
+   agents, Operators, and Security reviewers. BA + PO, coding agents,
+   operators, and security reviewers add their catalog-owned views.
+   - **New or plan-only** (audience unresolved): required. Pre-select
+     Engineers + beginners as the suggested starting point (matching the
+     manifest CLI default when no audience flag is supplied), but never apply
+     that default silently — the user must confirm or edit. If the reply omits
+     audience, ask one audience-only follow-up.
+   - **`--revise all` / `--revise <area>`**: auto-detect from the existing
+     manifest audiences (and from the discovery brief when a catalog audience
+     is evidenced but missing from the manifest). Pre-check those detected
+     audiences. If the manifest has no audiences, treat audience as unresolved
+     and use the new/plan-only path above. Always ask whether the user wants
+     to **add more** audiences (unchecked catalog options remain available);
+     do not silent-keep the current set without that confirm/add-more prompt.
+   - **Resume, Status, or Revise flow**: omit audience when the manifest
+     already resolves it; otherwise use the new/plan-only path.
 5. **Graph source, only when unresolved.** With several ready providers, offer
    only those providers. With no ready provider, explain setup paths and their
    approval requirements. With exactly one ready provider, record it as the
@@ -124,11 +133,13 @@ Ask only what remains unresolved, in this order:
 
 Collect the applicable answers as one response. If the user supplied one or
 more choices in the original request, retain them and include only unresolved
-questions in the intake. For Resume, Status, Revise, or Revise flow, omit tier,
-audience, and shape questions that the existing manifest already resolves. If
-the reply leaves a material choice missing or ambiguous — including Output
-audience or Execution mode when required — ask one concise follow-up containing
-only those unresolved choices.
+questions in the intake. For Resume, Status, or Revise flow, omit tier,
+audience, and shape questions that the existing manifest already resolves. For
+`--revise all` / `--revise <area>`, omit tier and shape questions the manifest
+already resolves, but still run the Output audience confirm/add-more prompt
+above. If the reply leaves a material choice missing or ambiguous — including
+Output audience or Execution mode when required — ask one concise follow-up
+containing only those unresolved choices.
 
 After resolving the answers, display one confirmation summary containing the
 action, tier, every selected profile dimension, every selected audience,

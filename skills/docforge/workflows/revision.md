@@ -44,7 +44,11 @@ no rediscovery, unless that document is untracked.
   order. Proceed to [`writing.md`](writing.md) for that document.
 - `--status`: print manifest state only.
 - `--revise all` / `--revise <area>`: run `migrate_metadata` when needed, then
-  apply the revise meaning above in scope:
+  apply the revise meaning above in scope. Before writing, auto-detect current
+  audiences from the manifest (and any catalog audiences evidenced but missing)
+  and prompt via [`intake.md`](intake.md) Output audience: confirm the
+  detected set and ask whether to **add more**. If the manifest has no
+  audiences, run the full audience multi-select.
 
   ```sh
   python scripts/check_staleness.py \
