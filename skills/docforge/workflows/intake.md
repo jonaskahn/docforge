@@ -113,16 +113,24 @@ Ask only what remains unresolved, in this order:
      Coding agents, Operators, and Security reviewers unchecked but visible.
      If the reply omits audience, ask one audience-only follow-up that again
      lists all seven options.
-   - **`--revise all` / `--revise <area>`**: auto-detect from the existing
-     manifest audiences (and from the discovery brief when a catalog audience
-     is evidenced but missing from the manifest). Pre-check those detected
-     audiences. Still show **all seven** options so the user can **add more**
-     (BA, PO, Coding agents, Operators, Security reviewers when not already
-     selected). If the manifest has no audiences, treat audience as
-     unresolved and use the new/plan-only path above. Do not silent-keep the
-     current set without that full multi-select confirm/add-more prompt.
-   - **Resume, Status, or Revise flow**: omit audience when the manifest
-     already resolves it; otherwise use the new/plan-only path.
+   - **Any revise that rediscovers docs** (`--revise all`, `--revise <area>`,
+     `--revise flow`, or natural-language revise that detects missing /
+     updated / new documents): after analysis, compute **suitable missing
+     audiences** — catalog `selection.audiences` required by newly selected,
+     missing, or updated documents that are not already in the manifest.
+     Auto-detect = current manifest audiences ∪ suitable missing ∪ any
+     discovery-brief evidenced audiences. Pre-check that union; mark suitable
+     missing as recommended with a one-line reason (which new/missing doc
+     types they unlock, e.g. BA → `ba_*`, PO → `po_*`, Coding agents →
+     `agents_*`). Still show **all seven** options so the user can confirm or
+     **add more**. If the manifest has no audiences, use the new/plan-only
+     path above. Do not silent-keep the current set without that full
+     multi-select confirm/add-more prompt.
+   - **Resume or Status**: omit audience when the manifest already resolves
+     it; otherwise use the new/plan-only path. Single-document update/refresh
+     does not re-prompt audience unless the named document's catalog
+     audiences are missing from the manifest — then offer only those suitable
+     missing audiences plus the current set (still list all seven).
 5. **Graph source, only when unresolved.** With several ready providers, offer
    only those providers. With no ready provider, explain setup paths and their
    approval requirements. With exactly one ready provider, record it as the
@@ -145,13 +153,14 @@ Ask only what remains unresolved, in this order:
 
 Collect the applicable answers as one response. If the user supplied one or
 more choices in the original request, retain them and include only unresolved
-questions in the intake. For Resume, Status, or Revise flow, omit tier,
-audience, and shape questions that the existing manifest already resolves. For
-`--revise all` / `--revise <area>`, omit tier and shape questions the manifest
-already resolves, but still run the Output audience confirm/add-more prompt
-above. If the reply leaves a material choice missing or ambiguous — including
-Output audience or Execution mode when required — ask one concise follow-up
-containing only those unresolved choices.
+questions in the intake. For Resume or Status, omit tier, audience, and shape
+questions that the existing manifest already resolves. For `--revise all`,
+`--revise <area>`, `--revise flow`, or any revise that rediscovers docs, omit
+tier and shape questions the manifest already resolves, but still run the
+Output audience confirm/add-more prompt (with suitable missing audiences
+pre-checked) above. If the reply leaves a material choice missing or ambiguous
+— including Output audience or Execution mode when required — ask one concise
+follow-up containing only those unresolved choices.
 
 After resolving the answers, display one confirmation summary containing the
 action, tier, every selected profile dimension, every selected audience,

@@ -20,6 +20,15 @@ apply in scope:
    or contract that now requires a file and has no manifest entry is planned
    and written (via [`writing.md`](writing.md)). New craft instructions that
    demand additional files are in scope.
+3a. **Suitable missing audiences** — when step 2 or 3 finds missing, new, or
+   updated documents, collect their catalog `selection.audiences` that are not
+   already on the manifest. Before writing, prompt via
+   [`intake.md`](intake.md) Output audience: show all seven catalog audiences,
+   pre-check current ∪ suitable missing (with a one-line reason per suitable
+   missing, e.g. which `ba_*` / `po_*` / `agents_*` docs they unlock), and let
+   the user confirm or **add more**. Apply for `--revise all`, `--revise
+   <area>`, `--revise flow`, and any natural-language revise that rediscovers
+   docs. Do not silent-add audiences.
 4. **Update the big picture** — refresh owning indexes and overview docs
    affected by adds or rewires (for example `docs/README.md`, area READMEs,
    `docs/flows/README.md`, `system-overview` when selected) so the tree and
@@ -44,12 +53,10 @@ no rediscovery, unless that document is untracked.
   order. Proceed to [`writing.md`](writing.md) for that document.
 - `--status`: print manifest state only.
 - `--revise all` / `--revise <area>`: run `migrate_metadata` when needed, then
-  apply the revise meaning above in scope. Before writing, auto-detect current
-  audiences from the manifest (and any catalog audiences evidenced but missing)
-  and prompt via [`intake.md`](intake.md) Output audience: show **all seven**
-  catalog audiences (Engineers, Beginners, BA, PO, Coding agents, Operators,
-  Security reviewers), pre-check the detected set, and let the user **add more**.
-  If the manifest has no audiences, run the full audience multi-select.
+  apply the revise meaning above in scope — including the suitable-missing-
+  audiences prompt (step 3a) after detect/catalog finds missing, new, or
+  updated docs. If the manifest has no audiences, run the full audience
+  multi-select.
 
   ```sh
   python scripts/check_staleness.py \
@@ -103,7 +110,11 @@ still `FRESH`.
    (schema 1.1), set non-documented/non-skipped rows to `placeholder`, create
    stub markdown **only for main-priority standalone** placeholders, prune
    orphan deferred / member / index-only scaffolds, and emit compact
-   `.docforge/tmp/communities.md` when a GitNexus export is present.
+   `.docforge/tmp/communities.md` when a GitNexus export is present. When this
+   harvest (or later step 7) introduces missing / new flow-related docs, run
+   the suitable-missing-audiences prompt (step 3a) before writing — e.g.
+   Coding agents when `agents_flow` or other agent-context flow docs are
+   newly selected.
 3. Run `flow_index organize emit`, have the agent write
    `.docforge/tmp/flow-organization.json` (descriptive names, families,
    composition), and `flow_index organize apply` before deep-dive analysis.
