@@ -46,9 +46,10 @@ no rediscovery, unless that document is untracked.
 - `--revise all` / `--revise <area>`: run `migrate_metadata` when needed, then
   apply the revise meaning above in scope. Before writing, auto-detect current
   audiences from the manifest (and any catalog audiences evidenced but missing)
-  and prompt via [`intake.md`](intake.md) Output audience: confirm the
-  detected set and ask whether to **add more**. If the manifest has no
-  audiences, run the full audience multi-select.
+  and prompt via [`intake.md`](intake.md) Output audience: show **all seven**
+  catalog audiences (Engineers, Beginners, BA, PO, Coding agents, Operators,
+  Security reviewers), pre-check the detected set, and let the user **add more**.
+  If the manifest has no audiences, run the full audience multi-select.
 
   ```sh
   python scripts/check_staleness.py \

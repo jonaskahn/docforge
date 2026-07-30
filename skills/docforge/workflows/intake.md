@@ -93,22 +93,34 @@ Ask only what remains unresolved, in this order:
    framework-specific trees; concerns describe evidenced cross-cutting
    behavior. Detection and the gate never finalize profiles; do not
    silent-confirm them on the user's behalf.
-4. **Output audience.** Present a native multi-select of every catalog
-   audience: Engineers, Beginners, Business analysts, Product owners, Coding
-   agents, Operators, and Security reviewers. BA + PO, coding agents,
-   operators, and security reviewers add their catalog-owned views.
+4. **Output audience.** Always present a native multi-select that lists
+   **every** catalog audience as a visible option — never drop BA/PO/agents
+   from the control:
+   - Engineers
+   - Beginners
+   - Business analysts (BA)
+   - Product owners (PO)
+   - Coding agents
+   - Operators
+   - Security reviewers
+   BA, PO, coding agents, operators, and security reviewers add their
+   catalog-owned views. A yes/no “add more?” with no option list is not
+   enough; the unchecked audiences must appear in the same multi-select.
    - **New or plan-only** (audience unresolved): required. Pre-select
      Engineers + beginners as the suggested starting point (matching the
      manifest CLI default when no audience flag is supplied), but never apply
-     that default silently — the user must confirm or edit. If the reply omits
-     audience, ask one audience-only follow-up.
+     that default silently — the user must confirm or edit. Leave BA, PO,
+     Coding agents, Operators, and Security reviewers unchecked but visible.
+     If the reply omits audience, ask one audience-only follow-up that again
+     lists all seven options.
    - **`--revise all` / `--revise <area>`**: auto-detect from the existing
      manifest audiences (and from the discovery brief when a catalog audience
      is evidenced but missing from the manifest). Pre-check those detected
-     audiences. If the manifest has no audiences, treat audience as unresolved
-     and use the new/plan-only path above. Always ask whether the user wants
-     to **add more** audiences (unchecked catalog options remain available);
-     do not silent-keep the current set without that confirm/add-more prompt.
+     audiences. Still show **all seven** options so the user can **add more**
+     (BA, PO, Coding agents, Operators, Security reviewers when not already
+     selected). If the manifest has no audiences, treat audience as
+     unresolved and use the new/plan-only path above. Do not silent-keep the
+     current set without that full multi-select confirm/add-more prompt.
    - **Resume, Status, or Revise flow**: omit audience when the manifest
      already resolves it; otherwise use the new/plan-only path.
 5. **Graph source, only when unresolved.** With several ready providers, offer
