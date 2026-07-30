@@ -1,0 +1,29 @@
+{
+  "id": "web_styling",
+  "type": "styling",
+  "summary": "Component responsibilities, composition, tokens/themes, browser matrix, degradation",
+  "contract_file": "content/engineering/contracts/styling.md",
+  "path": "docs/engineering/styling.md",
+  "group": "engineering",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "website",
+        "web-app"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/engineering/instructions/styling.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 56,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/engineering/templates/styling.md"
+}

@@ -1,0 +1,27 @@
+{
+  "id": "backlog_traceability",
+  "type": "backlog-traceability",
+  "summary": "Evidenced ticket id, feature, flow/change, release/status link",
+  "contract_file": "content/product/contracts/backlog-traceability.md",
+  "path": "docs/product/product-owner/backlog-traceability.md",
+  "group": "product",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": "ticket_evidence"
+  },
+  "instruction_file": null,
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 51,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/product/templates/backlog-traceability.md"
+}

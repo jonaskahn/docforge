@@ -153,9 +153,9 @@ permissions, lifecycle, compatibility, and distribution details are sections
 inside their owning documents rather than one file per framework.
 
 Detailed composition notes are available for the
-[API-service](shape-api-service.md), [web-app](shape-web-app.md),
-[library/SDK](shape-library-sdk.md), [data-pipeline](shape-data-pipeline.md),
-and [infrastructure-platform](shape-infrastructure-platform.md) shapes.
+[API-service](profiles/shape-api-service.md), [web-app](profiles/shape-web-app.md),
+[library/SDK](profiles/shape-library-sdk.md), [data-pipeline](profiles/shape-data-pipeline.md),
+and [infrastructure-platform](profiles/shape-infrastructure-platform.md) shapes.
 
 Audience-profile roots are intentionally visible in the plan:
 
@@ -194,9 +194,9 @@ manifests, history, ticket evidence, and stakeholder evidence as applicable;
 they do not globally hard-gate on flow data.
 
 Audience-specific composition notes live in
-[Business Analysts](audience-business-analysts.md),
-[Product Owners](audience-product-owners.md), and
-[coding agents](audience-coding-agents.md).
+[Business Analysts](profiles/audience-business-analysts.md),
+[Product Owners](profiles/audience-product-owners.md), and
+[coding agents](profiles/audience-coding-agents.md).
 
 ## Existing documentation
 

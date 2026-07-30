@@ -1,0 +1,28 @@
+{
+  "id": "flashing_recovery",
+  "type": "flashing-recovery",
+  "summary": "Prerequisites, artifact, connection, flashing, verification, rollback/recovery, safety",
+  "contract_file": "content/operations/contracts/flashing-recovery.md",
+  "path": "docs/operations/flashing-and-recovery.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "embedded-iot"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/operations/instructions/flashing-recovery.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 72,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure",
+  "template_file": "content/operations/templates/flashing-recovery.md"
+}

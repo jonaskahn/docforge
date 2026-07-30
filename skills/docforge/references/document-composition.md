@@ -3,9 +3,9 @@
 This file owns topic ownership, promotion, durability, and no-duplication.
 Depth per reader is owned by [`depth-and-audience.md`](depth-and-audience.md);
 audience-specific packs by
-[Business Analysts](audience-business-analysts.md),
-[Product Owners](audience-product-owners.md), and
-[coding agents](audience-coding-agents.md).
+[Business Analysts](profiles/audience-business-analysts.md),
+[Product Owners](profiles/audience-product-owners.md), and
+[coding agents](profiles/audience-coding-agents.md).
 
 ## Three document classes
 
@@ -60,10 +60,10 @@ limitations, or glossary definitions.
 ## Atomic promotion
 
 A flow or concept begins as one flat file, scaffolded from
-[`topic-readme.md`](../assets/templates/topic-readme.md). Promote it to
+[`topic-readme.md`](../content/shared/topic-readme.template.md). Promote it to
 `<topic>/README.md` only in the same operation that writes at least one real
 deep-dive sibling, scaffolded from
-[`audience-deepdive.md`](../assets/templates/audience-deepdive.md) (its
+[`audience-deepdive.md`](../content/shared/audience-deepdive.template.md) (its
 comment block shapes the file per audience — business-analyst.md,
 engineering.md, or product-owner.md). Move the shared content into the
 README, update links, and materialize the deep dive atomically. A folder

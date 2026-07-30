@@ -1,0 +1,28 @@
+{
+  "id": "contract_system",
+  "type": "contract-system",
+  "summary": "Contracts, storage, authorities, networks, upgrade boundary, economic/security invariants",
+  "contract_file": "content/architecture/contracts/contract-system.md",
+  "path": "docs/architecture/contract-system.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "smart-contract"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/shared/contract-system.instruction.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/contract-system.md"
+}

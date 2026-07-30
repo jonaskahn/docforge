@@ -2,9 +2,21 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Docforge Catalog Index",
   "type": "object",
-  "required": ["version", "tiers", "groups", "capabilities", "document_types"],
+  "required": ["version", "tiers", "groups", "capabilities", "profiles", "document_types"],
   "properties": {
-    "version": {"const": "2.4.0"},
+    "version": {"const": "2.5.0"},
+    "profiles": {
+      "type": "object",
+      "required": ["shapes", "platforms", "frameworks", "concerns", "audiences"],
+      "properties": {
+        "shapes": {"type": "string"},
+        "platforms": {"type": "string"},
+        "frameworks": {"type": "string"},
+        "concerns": {"type": "string"},
+        "audiences": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
     "tiers": {
       "type": "object",
       "additionalProperties": {
@@ -36,11 +48,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "tier", "path"],
+        "required": ["id", "tier", "path", "record"],
         "properties": {
           "id": {"type": "string"},
           "tier": {"enum": ["spine", "diligence", "portfolio"]},
-          "path": {"type": "string"}
+          "path": {"type": "string"},
+          "record": {"type": "string"}
         },
         "additionalProperties": false
       }

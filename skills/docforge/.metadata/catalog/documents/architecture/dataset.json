@@ -1,0 +1,29 @@
+{
+  "id": "dataset",
+  "type": "dataset",
+  "summary": "Dataset identity, producers/consumers, schema ownership, freshness/retention, failure/recovery",
+  "contract_file": "content/architecture/contracts/dataset.md",
+  "path": "docs/architecture/contracts/{slug}.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "data-pipeline"
+      ]
+    },
+    "condition": "discovered_dataset"
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "dominant_form": "erDiagram",
+  "template_file": "content/architecture/templates/data-contract.md"
+}

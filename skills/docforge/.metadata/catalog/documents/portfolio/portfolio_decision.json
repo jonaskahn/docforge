@@ -1,0 +1,23 @@
+{
+  "id": "portfolio_decision",
+  "type": "portfolio-decision",
+  "summary": "Cross-repository decision evidence or shared terminology with member links",
+  "contract_file": "content/portfolio/contracts/portfolio-decision.md",
+  "path": "docs-portfolio/decisions/{slug}.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": "discovered_decision"
+  },
+  "instruction_file": "content/shared/decision-records.instruction.md",
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 103,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio",
+  "template_file": "content/shared/adr.template.md"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "changelog",
+  "type": "changelog",
+  "summary": "Released versions, dates, user-visible changes, compatibility notes",
+  "contract_file": "content/root/changelog.contract.md",
+  "path": "CHANGELOG.md",
+  "group": "root",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 90,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/root/changelog.template.md"
+}

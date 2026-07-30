@@ -1,0 +1,28 @@
+{
+  "id": "agents_kernel",
+  "type": "agents-kernel",
+  "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views",
+  "contract_file": "content/agent-context/contracts/agents-kernel.md",
+  "path": "AGENTS.md",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "orientation",
+  "write_order": 200,
+  "provenance_mode": "manifest",
+  "audit_profile": "agents-kernel",
+  "template_file": "content/agent-context/templates/agents-kernel.md"
+}

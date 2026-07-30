@@ -1,0 +1,28 @@
+{
+  "id": "hardware_map",
+  "type": "hardware-map",
+  "summary": "Boards, peripherals, protocols, boot/update states, memory/power, failure",
+  "contract_file": "content/architecture/contracts/hardware-map.md",
+  "path": "docs/architecture/hardware-map.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "embedded-iot"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/hardware-map.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/hardware-map.md"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "data_contracts_index",
+  "type": "folder-index",
+  "summary": "Selected children and one-line purpose",
+  "contract_file": "content/shared/folder-index.contract.md",
+  "path": "docs/architecture/contracts/README.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "data-pipeline"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [],
+  "target_depth": "orientation",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/shared/generic.template.md"
+}

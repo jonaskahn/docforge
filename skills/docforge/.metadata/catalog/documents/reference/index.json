@@ -1,0 +1,104 @@
+{
+  "$schema": "../category-index-schema.json",
+  "version": "2.5.0",
+  "category": "reference",
+  "purpose": "Reference lookups: APIs, configuration, and glossary.",
+  "source": "../index.json",
+  "records": [
+    {
+      "id": "reference_index",
+      "path": "reference_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "configuration",
+      "path": "configuration.json",
+      "summary": "Every read setting, default, scope, sensitivity, validation"
+    },
+    {
+      "id": "limitations",
+      "path": "limitations.json",
+      "summary": "Known bounds, trigger, impact, workaround, source evidence"
+    },
+    {
+      "id": "glossary",
+      "path": "glossary.json",
+      "summary": "Repository terms, precise definitions, owning document links"
+    },
+    {
+      "id": "tech_stack",
+      "path": "tech_stack.json",
+      "summary": "Detected languages/versions; runtimes/SDKs; primary frameworks per layer; datastores and messaging; build/package/dependency-management tooling; test and CI..."
+    },
+    {
+      "id": "api_reference",
+      "path": "api_reference.json",
+      "summary": "Public surface, inputs/outputs, auth contract, limits, errors, compatibility source"
+    },
+    {
+      "id": "cli_commands",
+      "path": "cli_commands.json",
+      "summary": "Commands/subcommands, arguments, configuration, examples, side effects"
+    },
+    {
+      "id": "api_errors",
+      "path": "api_errors.json",
+      "summary": "Stable code/name, trigger, client behavior, retryability, observability"
+    },
+    {
+      "id": "cli_output",
+      "path": "cli_output.json",
+      "summary": "Stdout/stderr ownership, formats, exit codes, stability, scripting behavior"
+    },
+    {
+      "id": "extension_points",
+      "path": "extension_points.json",
+      "summary": "Host contract, activation, contribution points, permissions, compatibility, sandbox, failure"
+    },
+    {
+      "id": "library_compatibility",
+      "path": "library_compatibility.json",
+      "summary": "Supported versions/platforms, tested matrix, deprecation behavior"
+    },
+    {
+      "id": "platform_compatibility",
+      "path": "platform_compatibility.json",
+      "summary": "OS/device/architecture matrix, minimums, tested evidence, degradation, deprecation"
+    },
+    {
+      "id": "api_rate_limits",
+      "path": "api_rate_limits.json",
+      "summary": "Public surface, inputs/outputs, auth contract, limits, errors, compatibility source"
+    },
+    {
+      "id": "data_types",
+      "path": "data_types.json",
+      "summary": "Producers, transformations, contracts, checks, failure/recovery, schema ownership"
+    },
+    {
+      "id": "infra_resources",
+      "path": "infra_resources.json",
+      "summary": "Plan/apply safety, external state, locking, ownership, resource inventory, drift, recovery"
+    },
+    {
+      "id": "model_card",
+      "path": "model_card.json",
+      "summary": "Datasets, training/evaluation, artifact lineage, inference, limitations, drift, ownership"
+    },
+    {
+      "id": "performance_budgets",
+      "path": "performance_budgets.json",
+      "summary": "Evidenced CPU/GPU/memory/storage/timing limits, measurement, degradation"
+    },
+    {
+      "id": "browser_support",
+      "path": "browser_support.json",
+      "summary": "Component responsibilities, composition, tokens/themes, browser matrix, degradation"
+    },
+    {
+      "id": "infra_access",
+      "path": "infra_access.json",
+      "summary": "Principals, scopes, grant path, review cadence for who/what can change infrastructure"
+    }
+  ]
+}

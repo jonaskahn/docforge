@@ -1,0 +1,28 @@
+{
+  "id": "web_state",
+  "type": "state-management",
+  "summary": "Lifecycle, boundaries, transitions, failure and recovery behavior",
+  "contract_file": "content/architecture/contracts/state-management.md",
+  "path": "docs/architecture/state.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "website",
+        "web-app"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/rendering.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 19,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/state-management.md"
+}

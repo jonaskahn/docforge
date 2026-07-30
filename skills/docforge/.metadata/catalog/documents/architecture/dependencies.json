@@ -1,0 +1,25 @@
+{
+  "id": "dependencies",
+  "type": "dependencies-inventory",
+  "summary": "Direct dependencies/integrations, purpose, criticality, failure behavior",
+  "contract_file": "content/architecture/contracts/dependencies-inventory.md",
+  "path": "docs/architecture/dependencies.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/dependencies-inventory.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 13,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "dominant_form": "table",
+  "template_file": "content/architecture/templates/dependencies.md"
+}

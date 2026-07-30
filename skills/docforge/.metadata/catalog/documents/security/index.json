@@ -1,0 +1,44 @@
+{
+  "$schema": "../category-index-schema.json",
+  "version": "2.5.0",
+  "category": "security",
+  "purpose": "Security posture, permissions, and threat model.",
+  "source": "../index.json",
+  "records": [
+    {
+      "id": "security_root",
+      "path": "security_root.json",
+      "summary": "Supported scope, reporting path, response expectations, safe harbor"
+    },
+    {
+      "id": "security_index",
+      "path": "security_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "threat_model",
+      "path": "threat_model.json",
+      "summary": "Assets, trust boundaries, threats, controls, accepted residual risk"
+    },
+    {
+      "id": "data_handling",
+      "path": "data_handling.json",
+      "summary": "Data classes, lifecycle, access, retention, deletion"
+    },
+    {
+      "id": "api_authentication",
+      "path": "api_authentication.json",
+      "summary": "Public surface, inputs/outputs, auth contract, limits, errors, compatibility source"
+    },
+    {
+      "id": "economic_invariants",
+      "path": "economic_invariants.json",
+      "summary": "Contracts, storage, authorities, networks, upgrade boundary, economic/security invariants"
+    },
+    {
+      "id": "platform_permissions",
+      "path": "platform_permissions.json",
+      "summary": "Requested capability, trigger, user value, denial behavior, settings/recovery, manifest evidence"
+    }
+  ]
+}

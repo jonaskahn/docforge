@@ -1,0 +1,24 @@
+{
+  "id": "arch_high_level",
+  "type": "architecture-high-level",
+  "summary": "Context, deployable or provisioned blocks labeled with implementing technology (e.g. 'React SPA', 'PostgreSQL 15', or for `infrastructure-platform`...",
+  "contract_file": "content/architecture/contracts/architecture-high-level.md",
+  "path": "docs/architecture/high-level.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/architecture-high-level.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 10,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "flowchart",
+  "template_file": "content/architecture/templates/architecture-high-level.md"
+}

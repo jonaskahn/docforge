@@ -1,0 +1,23 @@
+{
+  "id": "product_overview",
+  "type": "product-overview",
+  "summary": "Users, problems, capabilities, explicit non-goals",
+  "contract_file": "content/product/contracts/product-overview.md",
+  "path": "docs/product/overview.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/product/instructions/product-overview.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 20,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/shared/generic.template.md"
+}

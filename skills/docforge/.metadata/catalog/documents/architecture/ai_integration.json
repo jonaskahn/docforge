@@ -1,0 +1,28 @@
+{
+  "id": "ai_integration",
+  "type": "ai-integration",
+  "summary": "Model/provider boundary, prompts/inputs, outputs, evaluation, safety, privacy, failure",
+  "contract_file": "content/architecture/contracts/ai-integration.md",
+  "path": "docs/architecture/ai-integration.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "concerns": [
+        "ai-ml"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/ai-integration.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/ai-integration.md"
+}

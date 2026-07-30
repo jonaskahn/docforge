@@ -1,0 +1,28 @@
+{
+  "id": "ba_process_flows",
+  "type": "process-flows",
+  "summary": "Actor, trigger, business-language steps, decision points, exceptions, outcome, owning flow links",
+  "contract_file": "content/product/contracts/process-flows.md",
+  "path": "docs/product/business-analyst/process-flows.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "business-analysts"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "flow_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 44,
+  "provenance_mode": "sections",
+  "audit_profile": "flow",
+  "template_file": "content/product/templates/process-flows.md"
+}

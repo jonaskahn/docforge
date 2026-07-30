@@ -1,0 +1,28 @@
+{
+  "id": "infra_access",
+  "type": "access",
+  "summary": "Principals, scopes, grant path, review cadence for who/what can change infrastructure",
+  "contract_file": "content/reference/contracts/access.md",
+  "path": "docs/reference/access.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "infrastructure-platform"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/reference/instructions/resources.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 69,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "template_file": "content/reference/templates/access.md"
+}

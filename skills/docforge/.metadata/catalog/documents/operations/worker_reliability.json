@@ -1,0 +1,28 @@
+{
+  "id": "worker_reliability",
+  "type": "job-reliability",
+  "summary": "Retry, idempotency, timeout, backpressure, dead-letter, replay, observability",
+  "contract_file": "content/operations/contracts/job-reliability.md",
+  "path": "docs/operations/job-reliability.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "worker-serverless"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/operations/instructions/job-reliability.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 72,
+  "provenance_mode": "sections",
+  "audit_profile": "operations",
+  "template_file": "content/operations/templates/job-reliability.md"
+}

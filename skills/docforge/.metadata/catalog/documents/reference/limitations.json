@@ -1,0 +1,24 @@
+{
+  "id": "limitations",
+  "type": "limitations-register",
+  "summary": "Known bounds, trigger, impact, workaround, source evidence",
+  "contract_file": "content/reference/contracts/limitations-register.md",
+  "path": "docs/reference/limitations.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/reference/instructions/limitations-register.md",
+  "requires": [
+    "code_graph",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 62,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "template_file": "content/reference/templates/limitations.md"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "data_flow",
+  "type": "data-flow",
+  "summary": "Producers, transformations, contracts, checks, failure/recovery, schema ownership",
+  "contract_file": "content/architecture/contracts/data-flow.md",
+  "path": "docs/architecture/data-flow.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "data-pipeline"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/data-flow.md",
+  "requires": [
+    "code_graph",
+    "flow_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 16,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "erDiagram",
+  "template_file": "content/architecture/templates/data-flow.md"
+}

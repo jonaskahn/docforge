@@ -1,0 +1,29 @@
+{
+  "id": "app_lifecycle",
+  "type": "application-lifecycle",
+  "summary": "Launch/activation/background/termination states, ownership, restoration, failure boundaries",
+  "contract_file": "content/architecture/contracts/application-lifecycle.md",
+  "path": "docs/architecture/application-lifecycle.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/application-lifecycle.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 16,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/application-lifecycle.md"
+}

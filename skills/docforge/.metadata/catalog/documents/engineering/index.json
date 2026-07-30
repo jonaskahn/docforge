@@ -1,0 +1,49 @@
+{
+  "$schema": "../category-index-schema.json",
+  "version": "2.5.0",
+  "category": "engineering",
+  "purpose": "Engineering practices: conventions, testing, and tech debt.",
+  "source": "../index.json",
+  "records": [
+    {
+      "id": "engineering_index",
+      "path": "engineering_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "setup_guide",
+      "path": "setup_guide.json",
+      "summary": "Prerequisites, install, configuration, run, verification, recovery"
+    },
+    {
+      "id": "testing_guide",
+      "path": "testing_guide.json",
+      "summary": "Test layers, commands, fixtures, isolation, failure diagnosis"
+    },
+    {
+      "id": "conventions",
+      "path": "conventions.json",
+      "summary": "Evidenced style, structure, error, testing, and review conventions"
+    },
+    {
+      "id": "release_guide",
+      "path": "release_guide.json",
+      "summary": "Prerequisites, versioning, build, verification, publication, rollback"
+    },
+    {
+      "id": "data_quality",
+      "path": "data_quality.json",
+      "summary": "Producers, transformations, contracts, checks, failure/recovery, schema ownership"
+    },
+    {
+      "id": "web_styling",
+      "path": "web_styling.json",
+      "summary": "Component responsibilities, composition, tokens/themes, browser matrix, degradation"
+    },
+    {
+      "id": "library_publishing",
+      "path": "library_publishing.json",
+      "summary": "Artifacts, version source, build/sign, registry/channel, verification, rollback/deprecation"
+    }
+  ]
+}

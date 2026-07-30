@@ -1,0 +1,23 @@
+{
+  "id": "concept",
+  "type": "concept",
+  "summary": "One durable concept, responsibility, relationships, invariants, failure boundaries",
+  "contract_file": "content/architecture/contracts/concept.md",
+  "path": "docs/architecture/concepts/{slug}.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": "discovered_concept"
+  },
+  "instruction_file": "content/architecture/instructions/architecture-low-level.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 16,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/shared/topic-readme.template.md"
+}

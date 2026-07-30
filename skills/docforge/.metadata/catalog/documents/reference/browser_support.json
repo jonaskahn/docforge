@@ -1,0 +1,28 @@
+{
+  "id": "browser_support",
+  "type": "browser-support",
+  "summary": "Component responsibilities, composition, tokens/themes, browser matrix, degradation",
+  "contract_file": "content/reference/contracts/browser-support.md",
+  "path": "docs/reference/browser-support.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "website",
+        "web-app"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/reference/instructions/browser-support.md",
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 69,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/reference/templates/browser-support.md"
+}

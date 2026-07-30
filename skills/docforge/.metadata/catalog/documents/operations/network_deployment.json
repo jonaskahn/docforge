@@ -1,0 +1,29 @@
+{
+  "id": "network_deployment",
+  "type": "network-deployment",
+  "summary": "Network configuration, keys/roles, deployment order, verification, upgrade/rollback",
+  "contract_file": "content/operations/contracts/network-deployment.md",
+  "path": "docs/operations/network-deployment.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "smart-contract"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/operations/instructions/network-deployment.md",
+  "requires": [
+    "code_graph",
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 72,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure",
+  "template_file": "content/operations/templates/network-deployment.md"
+}

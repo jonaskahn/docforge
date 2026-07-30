@@ -1,0 +1,29 @@
+{
+  "id": "model_lifecycle",
+  "type": "model-lifecycle",
+  "summary": "Datasets, training/evaluation, artifact lineage, inference, limitations, drift, ownership",
+  "contract_file": "content/architecture/contracts/model-lifecycle.md",
+  "path": "docs/architecture/model-lifecycle.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "ml-system"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/model-lifecycle.md",
+  "requires": [
+    "code_graph",
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/model-lifecycle.md"
+}

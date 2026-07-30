@@ -1,0 +1,99 @@
+{
+  "$schema": "../category-index-schema.json",
+  "version": "2.5.0",
+  "category": "product",
+  "purpose": "Product surface: overview, quickstart, and audience-specific product views.",
+  "source": "../index.json",
+  "records": [
+    {
+      "id": "product_index",
+      "path": "product_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "product_overview",
+      "path": "product_overview.json",
+      "summary": "Users, problems, capabilities, explicit non-goals"
+    },
+    {
+      "id": "content_model",
+      "path": "content_model.json",
+      "summary": "Content types, lifecycle, validation, ownership, publishing boundary"
+    },
+    {
+      "id": "quickstart",
+      "path": "quickstart.json",
+      "summary": "Shortest verified path to first useful result, prerequisites, expected output, next links"
+    },
+    {
+      "id": "accessibility",
+      "path": "accessibility.json",
+      "summary": "Supported behavior, resources/semantics, fallback, verification, known limits"
+    },
+    {
+      "id": "api_versioning",
+      "path": "api_versioning.json",
+      "summary": "Version scheme, compatibility policy, deprecation window, migration path for public surface changes"
+    },
+    {
+      "id": "library_migrations_index",
+      "path": "library_migrations_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "localization",
+      "path": "localization.json",
+      "summary": "Supported behavior, resources/semantics, fallback, verification, known limits"
+    },
+    {
+      "id": "ba_index",
+      "path": "ba_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "migration",
+      "path": "migration.json",
+      "summary": "Source/target versions, breaking changes, ordered changes, verification, rollback"
+    },
+    {
+      "id": "ba_process_flows",
+      "path": "ba_process_flows.json",
+      "summary": "Actor, trigger, business-language steps, decision points, exceptions, outcome, owning flow links"
+    },
+    {
+      "id": "ba_business_rules",
+      "path": "ba_business_rules.json",
+      "summary": "Stable rule id, plain-language statement, trigger, outcome, exceptions, enforcement evidence"
+    },
+    {
+      "id": "ba_requirements",
+      "path": "ba_requirements.json",
+      "summary": "Requirement evidence, owning rule/flow, implementation, test, status"
+    },
+    {
+      "id": "po_index",
+      "path": "po_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "po_features",
+      "path": "po_features.json",
+      "summary": "User outcome, audience, availability, owning flow"
+    },
+    {
+      "id": "po_metrics",
+      "path": "po_metrics.json",
+      "summary": "Outcome, measure, instrumentation state, interpretation, external target token"
+    },
+    {
+      "id": "po_release_notes",
+      "path": "po_release_notes.json",
+      "summary": "Released user impact, version/date, compatibility impact, feature links"
+    },
+    {
+      "id": "backlog_traceability",
+      "path": "backlog_traceability.json",
+      "summary": "Evidenced ticket id, feature, flow/change, release/status link"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "claude_settings",
+  "type": "machine-config",
+  "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views",
+  "contract_file": "content/agent-context/contracts/machine-config.md",
+  "path": ".claude/settings.json",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "configuration",
+  "write_order": 203,
+  "provenance_mode": "manifest",
+  "audit_profile": "machine",
+  "template_file": "content/agent-context/templates/claude-settings.json"
+}

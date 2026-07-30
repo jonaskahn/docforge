@@ -1,0 +1,23 @@
+{
+  "id": "decisions_index",
+  "type": "decision-index",
+  "summary": "Indexed decisions; for each ADR context, decision, alternatives, consequences, status",
+  "contract_file": "content/records/decision-index.contract.md",
+  "path": "docs/architecture/decisions/README.md",
+  "group": "records",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/shared/decision-records.instruction.md",
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "orientation",
+  "write_order": 80,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/shared/generic.template.md"
+}

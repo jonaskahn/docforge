@@ -1,0 +1,28 @@
+{
+  "id": "infra_environments",
+  "type": "environments",
+  "summary": "Environment differences, promotion boundaries, configuration ownership",
+  "contract_file": "content/architecture/contracts/environments.md",
+  "path": "docs/architecture/environments.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "infrastructure-platform"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/environments.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/environments.md"
+}

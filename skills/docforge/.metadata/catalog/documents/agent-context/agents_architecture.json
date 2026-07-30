@@ -1,0 +1,27 @@
+{
+  "id": "agents_architecture",
+  "type": "agents-architecture",
+  "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links",
+  "contract_file": "content/agent-context/contracts/agents-architecture.md",
+  "path": "docs/agents/architecture.md",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 205,
+  "provenance_mode": "sections",
+  "audit_profile": "agent-view",
+  "template_file": "content/agent-context/templates/agents-architecture.md"
+}

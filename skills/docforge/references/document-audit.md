@@ -22,7 +22,7 @@ unavailable, start a separate cold artifact-only pass and record
 
 The audit report records document id/path, mode, verdict, evidence checked,
 defects, and disposition, shaped by
-[`audit-report.md`](../assets/templates/audit-report.md).
+[`audit-report.md`](../content/shared/audit-report.template.md).
 
 - `PASS`: every must-present element is supported, the keep-out boundary holds,
   depth and mode fit, and mechanical checks pass.

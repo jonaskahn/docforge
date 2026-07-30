@@ -1,0 +1,23 @@
+{
+  "id": "setup_guide",
+  "type": "setup-guide",
+  "summary": "Prerequisites, install, configuration, run, verification, recovery",
+  "contract_file": "content/engineering/contracts/setup-guide.md",
+  "path": "docs/engineering/setup.md",
+  "group": "engineering",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/engineering/instructions/setup-guide.md",
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 51,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure",
+  "template_file": "content/engineering/templates/setup.md"
+}

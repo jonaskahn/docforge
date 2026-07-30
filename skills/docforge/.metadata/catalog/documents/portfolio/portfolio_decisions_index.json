@@ -1,0 +1,23 @@
+{
+  "id": "portfolio_decisions_index",
+  "type": "portfolio-decisions-index",
+  "summary": "Selected children and one-line purpose",
+  "contract_file": "content/portfolio/contracts/portfolio-decisions-index.md",
+  "path": "docs-portfolio/decisions/README.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "static",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "orientation",
+  "write_order": 103,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio",
+  "template_file": "content/shared/generic.template.md"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "ba_requirements",
+  "type": "requirements-traceability",
+  "summary": "Requirement evidence, owning rule/flow, implementation, test, status",
+  "contract_file": "content/product/contracts/requirements-traceability.md",
+  "path": "docs/product/business-analyst/requirements-traceability.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "business-analysts"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "flow_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 46,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/product/templates/requirements-traceability.md"
+}

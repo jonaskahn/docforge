@@ -1,0 +1,24 @@
+{
+  "id": "configuration",
+  "type": "configuration",
+  "summary": "Every read setting, default, scope, sensitivity, validation",
+  "contract_file": "content/reference/contracts/configuration.md",
+  "path": "docs/reference/configuration.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/reference/instructions/configuration.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 61,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/reference/templates/configuration.md"
+}

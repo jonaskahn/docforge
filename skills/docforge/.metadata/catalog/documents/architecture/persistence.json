@@ -1,0 +1,29 @@
+{
+  "id": "persistence",
+  "type": "persistence",
+  "summary": "Entities, storage mapping, migrations, transactions, consistency, failure recovery",
+  "contract_file": "content/architecture/contracts/persistence.md",
+  "path": "docs/architecture/persistence.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "concerns": [
+        "persistence"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/persistence.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "erDiagram",
+  "template_file": "content/architecture/templates/persistence.md"
+}

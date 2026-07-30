@@ -1,0 +1,28 @@
+{
+  "id": "web_components",
+  "type": "ui-components",
+  "summary": "Component responsibilities, composition, tokens/themes, browser matrix, degradation",
+  "contract_file": "content/architecture/contracts/ui-components.md",
+  "path": "docs/architecture/ui-components.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "website",
+        "web-app"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/ui-components.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "reference",
+  "write_order": 20,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/ui-components.md"
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "../category-index-schema.json",
+  "version": "2.5.0",
+  "category": "portfolio",
+  "purpose": "Cross-repository portfolio layer for multi-repo diligence.",
+  "source": "../index.json",
+  "records": [
+    {
+      "id": "portfolio_readme",
+      "path": "portfolio_readme.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "portfolio_repo_inventory",
+      "path": "portfolio_repo_inventory.json",
+      "summary": "Discovered repositories, role, owner token, documentation state, evidence"
+    },
+    {
+      "id": "portfolio_system_context",
+      "path": "portfolio_system_context.json",
+      "summary": "Repository/system boundaries, shared services, cross-repo flows, directed dependency edges between members with coupling type and resolution confidence"
+    },
+    {
+      "id": "portfolio_decision",
+      "path": "portfolio_decision.json",
+      "summary": "Cross-repository decision evidence or shared terminology with member links"
+    },
+    {
+      "id": "portfolio_decisions_index",
+      "path": "portfolio_decisions_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "epic",
+      "path": "epic.json",
+      "summary": "Initiative outcome; member repos spanned; per repo, owning flow/feature and component touched; cross-repo sequence tying them together; open gaps"
+    },
+    {
+      "id": "portfolio_security",
+      "path": "portfolio_security.json",
+      "summary": "Cross-repo controls, gaps, shared dependencies, operational coupling"
+    },
+    {
+      "id": "portfolio_operations",
+      "path": "portfolio_operations.json",
+      "summary": "Cross-repo controls, gaps, shared dependencies, operational coupling"
+    },
+    {
+      "id": "portfolio_diligence_index",
+      "path": "portfolio_diligence_index.json",
+      "summary": "Evidence map, gaps, confidence, follow-up"
+    },
+    {
+      "id": "portfolio_glossary",
+      "path": "portfolio_glossary.json",
+      "summary": "Cross-repository decision evidence or shared terminology with member links"
+    }
+  ]
+}

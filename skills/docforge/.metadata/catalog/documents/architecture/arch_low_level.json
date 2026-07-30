@@ -1,0 +1,24 @@
+{
+  "id": "arch_low_level",
+  "type": "architecture-low-level",
+  "summary": "Module/component responsibilities and their interfaces (or, for `infrastructure-platform`, resource-group / stack responsibilities and apply order); one...",
+  "contract_file": "content/architecture/contracts/architecture-low-level.md",
+  "path": "docs/architecture/low-level.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/architecture-low-level.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 11,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "sequenceDiagram",
+  "template_file": "content/architecture/templates/architecture-low-level.md"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "deployment",
+  "type": "deployment",
+  "summary": "Environments, artifact path, rollout, rollback, verification",
+  "contract_file": "content/operations/contracts/deployment.md",
+  "path": "docs/operations/deployment.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/operations/instructions/deployment.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 71,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure",
+  "template_file": "content/operations/templates/deployment.md"
+}

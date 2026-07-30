@@ -1,0 +1,24 @@
+{
+  "id": "runbook",
+  "type": "runbook",
+  "summary": "Symptom, safety, diagnosis, remediation, verification, escalation",
+  "contract_file": "content/operations/contracts/runbook.md",
+  "path": "docs/operations/runbooks/{slug}.md",
+  "group": "operations",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": "discovered_runbook"
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 74,
+  "provenance_mode": "sections",
+  "audit_profile": "operations",
+  "template_file": "content/operations/templates/runbook.md"
+}

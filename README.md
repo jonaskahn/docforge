@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-2.1.0-10b981?style=flat-square)](meta.json)
+  [![Version](https://img.shields.io/badge/version-2.5.0-10b981?style=flat-square)](meta.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -118,7 +118,7 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 
 Docforge writes behavior and boundaries, not prose tied to private symbols or line numbers. Derivable facts must be completed; only truly external values may remain as typed tokens such as `<SECURITY_CONTACT>`.
 
-Read the full [workflow](skills/docforge/SKILL.md#workflow), [document contracts](skills/docforge/references/document-catalog.md), [audit gate](skills/docforge/references/document-audit.md), and [provenance model](skills/docforge/references/provenance-tracking.md).
+Read the full [workflow](skills/docforge/workflows/README.md), [document contracts](skills/docforge/content/README.md), [audit gate](skills/docforge/references/document-audit.md), and [provenance model](skills/docforge/references/provenance-tracking.md).
 
 ## ▓▒░ GRAPH CARTRIDGES ░▒▓
 
@@ -147,7 +147,7 @@ are augmented from its knowledge graph. Only catalog entries declaring
 only a code graph is available, Docforge derives a provisional,
 entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
 
-Provider capabilities and setup live in [graph dispatch](skills/docforge/references/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/references/flow-derivation.md).
+Provider capabilities and setup live in [graph dispatch](skills/docforge/references/graph/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/references/graph/flow-derivation.md).
 
 ## ▓▒░ STAGE SELECT ░▒▓
 
@@ -192,15 +192,17 @@ authorize installation, global configuration, graph construction or refresh,
 archive/delete actions, or other separately approved side effects; it also
 does not skip grounding, plan display, audits, or final checks.
 
-The exact flag semantics and composition rules live in the [workflow](skills/docforge/SKILL.md#workflow).
+The exact flag semantics and composition rules live in the [workflow](skills/docforge/workflows/README.md).
 
 ## ▓▒░ INVENTORY ░▒▓
 
-[`SKILL.md`](skills/docforge/SKILL.md) is the entry cartridge. [`.metadata/catalog.json`](skills/docforge/.metadata/catalog.json) is the canonical registry; [`references/`](skills/docforge/references/) holds owned prose contracts, [`instructions/`](skills/docforge/instructions/) holds writing craft, and [`assets/templates/`](skills/docforge/assets/templates/) holds output scaffolds.
+[`SKILL.md`](skills/docforge/SKILL.md) is the entry cartridge. [`.metadata/catalog/`](skills/docforge/.metadata/catalog/) is the canonical registry; [`workflows/`](skills/docforge/workflows/) holds the step-by-step procedure; [`references/`](skills/docforge/references/) holds owned policy prose, and [`content/`](skills/docforge/content/) holds each document group's contracts, writing-craft instructions, and output-scaffold templates.
 
-[`scripts/`](skills/docforge/scripts/) contains paired Python and Node tools for
-profile detection, graph adapters, flow derivation, scaffolding, linting,
-manifest state, staleness checks, and child-repository discovery.
+[`scripts/`](skills/docforge/scripts/) contains the stable public launchers
+(profile detection, graph adapters, flow derivation, scaffolding, linting,
+manifest state, staleness checks, and child-repository discovery), each a
+thin re-export of its paired Python/Node implementation under
+[`runtime/`](skills/docforge/runtime/).
 [`.claude-plugin/`](.claude-plugin/) and [`meta.json`](meta.json) package the
 same skill for its two distribution paths.
 
@@ -217,7 +219,7 @@ Core tools use only the selected runtime's standard library or built-ins. The op
 
 Found a bug or missing rule? [Open an issue](https://github.com/jonaskahn/docforge/issues) with the request, actual output, and expected output.
 
-To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together, then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/docforge/references/adding-a-graph-source.md).
+To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together, then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/docforge/references/graph/adding-a-graph-source.md).
 
 ## ▓▒░ CREDITS ░▒▓
 

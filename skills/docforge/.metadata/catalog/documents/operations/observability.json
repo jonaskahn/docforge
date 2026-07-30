@@ -1,0 +1,24 @@
+{
+  "id": "observability",
+  "type": "observability",
+  "summary": "Signals, ownership, correlation, alert intent, blind spots",
+  "contract_file": "content/operations/contracts/observability.md",
+  "path": "docs/operations/observability.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/operations/instructions/observability.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 72,
+  "provenance_mode": "sections",
+  "audit_profile": "operations",
+  "template_file": "content/operations/templates/observability.md"
+}

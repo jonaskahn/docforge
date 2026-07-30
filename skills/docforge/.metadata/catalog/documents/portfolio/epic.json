@@ -1,0 +1,25 @@
+{
+  "id": "epic",
+  "type": "epic",
+  "summary": "Initiative outcome; member repos spanned; per repo, owning flow/feature and component touched; cross-repo sequence tying them together; open gaps",
+  "contract_file": "content/portfolio/contracts/epic.md",
+  "path": "docs-portfolio/epics/{slug}.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": "discovered_epic"
+  },
+  "instruction_file": "content/portfolio/epic.instruction.md",
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 104,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio",
+  "dominant_form": "sequenceDiagram",
+  "schema_min": "2.4.0",
+  "template_file": "content/portfolio/templates/epic.md"
+}

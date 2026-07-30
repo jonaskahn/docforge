@@ -1,0 +1,164 @@
+{
+  "$schema": "../category-index-schema.json",
+  "version": "2.5.0",
+  "category": "architecture",
+  "purpose": "System architecture: structure, boundaries, and integration surfaces.",
+  "source": "../index.json",
+  "records": [
+    {
+      "id": "architecture_index",
+      "path": "architecture_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "arch_high_level",
+      "path": "arch_high_level.json",
+      "summary": "Context, deployable or provisioned blocks labeled with implementing technology (e.g. 'React SPA', 'PostgreSQL 15', or for `infrastructure-platform`..."
+    },
+    {
+      "id": "arch_low_level",
+      "path": "arch_low_level.json",
+      "summary": "Module/component responsibilities and their interfaces (or, for `infrastructure-platform`, resource-group / stack responsibilities and apply order); one..."
+    },
+    {
+      "id": "architecture_constraints",
+      "path": "architecture_constraints.json",
+      "summary": "Hard bounds with source and design implication; deliberate non-goals"
+    },
+    {
+      "id": "dependencies",
+      "path": "dependencies.json",
+      "summary": "Direct dependencies/integrations, purpose, criticality, failure behavior"
+    },
+    {
+      "id": "tech_debt",
+      "path": "tech_debt.json",
+      "summary": "Shortcut, consequence, evidence, remediation direction"
+    },
+    {
+      "id": "concepts_index",
+      "path": "concepts_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "app_lifecycle",
+      "path": "app_lifecycle.json",
+      "summary": "Launch/activation/background/termination states, ownership, restoration, failure boundaries"
+    },
+    {
+      "id": "concept",
+      "path": "concept.json",
+      "summary": "One durable concept, responsibility, relationships, invariants, failure boundaries"
+    },
+    {
+      "id": "data_flow",
+      "path": "data_flow.json",
+      "summary": "Producers, transformations, contracts, checks, failure/recovery, schema ownership"
+    },
+    {
+      "id": "ai_integration",
+      "path": "ai_integration.json",
+      "summary": "Model/provider boundary, prompts/inputs, outputs, evaluation, safety, privacy, failure"
+    },
+    {
+      "id": "app_ui_state",
+      "path": "app_ui_state.json",
+      "summary": "Surfaces, navigation, state ownership, transitions, restoration, error presentation"
+    },
+    {
+      "id": "data_contracts_index",
+      "path": "data_contracts_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "persistence",
+      "path": "persistence.json",
+      "summary": "Entities, storage mapping, migrations, transactions, consistency, failure recovery"
+    },
+    {
+      "id": "system_overview",
+      "path": "system_overview.json",
+      "summary": "The handful of major capabilities; for each, the components it touches and its owning flow; the primary end-to-end path(s) tying features together; external..."
+    },
+    {
+      "id": "contract_system",
+      "path": "contract_system.json",
+      "summary": "Contracts, storage, authorities, networks, upgrade boundary, economic/security invariants"
+    },
+    {
+      "id": "dataset",
+      "path": "dataset.json",
+      "summary": "Dataset identity, producers/consumers, schema ownership, freshness/retention, failure/recovery"
+    },
+    {
+      "id": "gameplay_systems",
+      "path": "gameplay_systems.json",
+      "summary": "System boundaries, scenes/assets, loading, save state, platform builds"
+    },
+    {
+      "id": "hardware_map",
+      "path": "hardware_map.json",
+      "summary": "Boards, peripherals, protocols, boot/update states, memory/power, failure"
+    },
+    {
+      "id": "host_integration",
+      "path": "host_integration.json",
+      "summary": "Host contract, activation, contribution points, permissions, compatibility, sandbox, failure"
+    },
+    {
+      "id": "infra_environments",
+      "path": "infra_environments.json",
+      "summary": "Environment differences, promotion boundaries, configuration ownership"
+    },
+    {
+      "id": "model_lifecycle",
+      "path": "model_lifecycle.json",
+      "summary": "Datasets, training/evaluation, artifact lineage, inference, limitations, drift, ownership"
+    },
+    {
+      "id": "platform_integration",
+      "path": "platform_integration.json",
+      "summary": "OS services, adapters, permissions boundary, callbacks, failure and fallback"
+    },
+    {
+      "id": "web_rendering",
+      "path": "web_rendering.json",
+      "summary": "Lifecycle, boundaries, transitions, failure and recovery behavior"
+    },
+    {
+      "id": "worker_triggers",
+      "path": "worker_triggers.json",
+      "summary": "Trigger, payload, scheduling, concurrency, ownership, downstream effects"
+    },
+    {
+      "id": "firmware_lifecycle",
+      "path": "firmware_lifecycle.json",
+      "summary": "Boards, peripherals, protocols, boot/update states, memory/power, failure"
+    },
+    {
+      "id": "game_assets",
+      "path": "game_assets.json",
+      "summary": "System boundaries, scenes/assets, loading, save state, platform builds"
+    },
+    {
+      "id": "infra_network",
+      "path": "infra_network.json",
+      "summary": "Topology zones, boundary crossings, traffic purpose, enforcement, concentration-risk if a boundary is removed"
+    },
+    {
+      "id": "pwa_installation",
+      "path": "pwa_installation.json",
+      "summary": "Installability, cache/update lifecycle, offline boundaries, invalidation, recovery"
+    },
+    {
+      "id": "web_state",
+      "path": "web_state.json",
+      "summary": "Lifecycle, boundaries, transitions, failure and recovery behavior"
+    },
+    {
+      "id": "web_components",
+      "path": "web_components.json",
+      "summary": "Component responsibilities, composition, tokens/themes, browser matrix, degradation"
+    }
+  ]
+}

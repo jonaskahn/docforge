@@ -1,0 +1,28 @@
+{
+  "id": "cli_commands",
+  "type": "command-reference",
+  "summary": "Commands/subcommands, arguments, configuration, examples, side effects",
+  "contract_file": "content/reference/contracts/command-reference.md",
+  "path": "docs/reference/commands.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "cli-tui"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/reference/instructions/command-reference.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 64,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/reference/templates/command-reference.md"
+}

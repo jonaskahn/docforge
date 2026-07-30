@@ -1,0 +1,24 @@
+{
+  "id": "root_readme",
+  "type": "root-readme",
+  "summary": "Purpose, audience, verified quick start, links to setup/architecture/limitations",
+  "contract_file": "content/root/root-readme.contract.md",
+  "path": "README.md",
+  "group": "root",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "orientation",
+  "write_order": 40,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/root/root-readme.template.md"
+}

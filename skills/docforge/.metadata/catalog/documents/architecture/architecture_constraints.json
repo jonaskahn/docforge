@@ -1,0 +1,24 @@
+{
+  "id": "architecture_constraints",
+  "type": "constraints",
+  "summary": "Hard bounds with source and design implication; deliberate non-goals",
+  "contract_file": "content/architecture/contracts/constraints.md",
+  "path": "docs/architecture/constraints.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 12,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "template_file": "content/architecture/templates/constraints.md"
+}

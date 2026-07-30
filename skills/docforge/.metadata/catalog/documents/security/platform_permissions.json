@@ -1,0 +1,29 @@
+{
+  "id": "platform_permissions",
+  "type": "platform-permissions",
+  "summary": "Requested capability, trigger, user value, denial behavior, settings/recovery, manifest evidence",
+  "contract_file": "content/security/contracts/platform-permissions.md",
+  "path": "docs/security/permissions.md",
+  "group": "security",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/security/platform-permissions.instruction.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 79,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "template_file": "content/security/templates/platform-permissions.md"
+}

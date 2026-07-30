@@ -1,0 +1,27 @@
+{
+  "id": "api_rate_limits",
+  "type": "rate-limits",
+  "summary": "Public surface, inputs/outputs, auth contract, limits, errors, compatibility source",
+  "contract_file": "content/reference/contracts/rate-limits.md",
+  "path": "docs/reference/rate-limits.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "api-service"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/reference/instructions/api-rate-limits.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "reference",
+  "write_order": 67,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/reference/templates/api-rate-limits.md"
+}

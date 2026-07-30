@@ -1,0 +1,28 @@
+{
+  "id": "worker_triggers",
+  "type": "triggers-and-jobs",
+  "summary": "Trigger, payload, scheduling, concurrency, ownership, downstream effects",
+  "contract_file": "content/architecture/contracts/triggers-and-jobs.md",
+  "path": "docs/architecture/triggers-and-jobs.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "worker-serverless"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/triggers-and-jobs.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/triggers-and-jobs.md"
+}

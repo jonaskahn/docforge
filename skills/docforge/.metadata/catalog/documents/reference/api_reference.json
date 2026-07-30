@@ -1,0 +1,29 @@
+{
+  "id": "api_reference",
+  "type": "api-reference",
+  "summary": "Public surface, inputs/outputs, auth contract, limits, errors, compatibility source",
+  "contract_file": "content/reference/contracts/api-reference.md",
+  "path": "docs/reference/api.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "api-service",
+        "library-sdk"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/reference/instructions/api-reference.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 64,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/reference/templates/api-reference.md"
+}

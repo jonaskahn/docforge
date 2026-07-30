@@ -1,0 +1,21 @@
+{
+  "id": "security_root",
+  "type": "security-policy",
+  "summary": "Supported scope, reporting path, response expectations, safe harbor",
+  "contract_file": "content/security/contracts/security-policy.md",
+  "path": "SECURITY.md",
+  "group": "security",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/security/security-policy.instruction.md",
+  "requires": [],
+  "target_depth": "router",
+  "write_order": 75,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "template_file": "content/security/templates/root-security.md"
+}

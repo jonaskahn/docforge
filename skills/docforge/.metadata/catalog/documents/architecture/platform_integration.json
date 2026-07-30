@@ -1,0 +1,29 @@
+{
+  "id": "platform_integration",
+  "type": "platform-integration",
+  "summary": "OS services, adapters, permissions boundary, callbacks, failure and fallback",
+  "contract_file": "content/architecture/contracts/platform-integration.md",
+  "path": "docs/architecture/platform-integration.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/platform-integration.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/platform-integration.md"
+}

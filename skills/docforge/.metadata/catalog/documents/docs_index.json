@@ -1,0 +1,23 @@
+{
+  "id": "docs_index",
+  "type": "docs-index",
+  "summary": "Selected children and one-line purpose",
+  "contract_file": "content/root/docs-index.contract.md",
+  "path": "docs/README.md",
+  "group": "root",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 30,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/root/docs-index.template.md"
+}

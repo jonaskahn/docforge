@@ -1,0 +1,69 @@
+{
+  "$schema": "../category-index-schema.json",
+  "version": "2.5.0",
+  "category": "agent-context",
+  "purpose": "Agent-facing context: AGENTS.md and coding-agent views.",
+  "source": "../index.json",
+  "records": [
+    {
+      "id": "agents_kernel",
+      "path": "agents_kernel.json",
+      "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
+    },
+    {
+      "id": "claude_shim",
+      "path": "claude_shim.json",
+      "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
+    },
+    {
+      "id": "claude_local",
+      "path": "claude_local.json",
+      "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
+    },
+    {
+      "id": "claude_settings",
+      "path": "claude_settings.json",
+      "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
+    },
+    {
+      "id": "agents_index",
+      "path": "agents_index.json",
+      "summary": "Selected children and one-line purpose"
+    },
+    {
+      "id": "agents_architecture",
+      "path": "agents_architecture.json",
+      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+    },
+    {
+      "id": "agents_patterns",
+      "path": "agents_patterns.json",
+      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+    },
+    {
+      "id": "agents_testing",
+      "path": "agents_testing.json",
+      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+    },
+    {
+      "id": "agents_conventions",
+      "path": "agents_conventions.json",
+      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+    },
+    {
+      "id": "agents_tech_debt",
+      "path": "agents_tech_debt.json",
+      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+    },
+    {
+      "id": "agents_flow",
+      "path": "agents_flow.json",
+      "summary": "Compact flow/term lookup grounded in declared flow evidence and linked owners"
+    },
+    {
+      "id": "agents_glossary",
+      "path": "agents_glossary.json",
+      "summary": "Compact flow/term lookup grounded in declared flow evidence and linked owners"
+    }
+  ]
+}

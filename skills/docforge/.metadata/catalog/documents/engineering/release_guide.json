@@ -1,0 +1,24 @@
+{
+  "id": "release_guide",
+  "type": "release-guide",
+  "summary": "Prerequisites, versioning, build, verification, publication, rollback",
+  "contract_file": "content/engineering/contracts/release-guide.md",
+  "path": "docs/engineering/release.md",
+  "group": "engineering",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/engineering/instructions/release-guide.md",
+  "requires": [
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 54,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure",
+  "template_file": "content/engineering/templates/release-guide.md"
+}

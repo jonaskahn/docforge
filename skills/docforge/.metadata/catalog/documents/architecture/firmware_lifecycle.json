@@ -1,0 +1,29 @@
+{
+  "id": "firmware_lifecycle",
+  "type": "firmware-lifecycle",
+  "summary": "Boards, peripherals, protocols, boot/update states, memory/power, failure",
+  "contract_file": "content/architecture/contracts/firmware-lifecycle.md",
+  "path": "docs/architecture/firmware-lifecycle.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "embedded-iot"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/hardware-map.md",
+  "requires": [
+    "code_graph",
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 19,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/firmware-lifecycle.md"
+}

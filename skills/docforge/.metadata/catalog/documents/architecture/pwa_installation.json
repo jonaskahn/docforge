@@ -1,0 +1,28 @@
+{
+  "id": "pwa_installation",
+  "type": "offline-installation",
+  "summary": "Installability, cache/update lifecycle, offline boundaries, invalidation, recovery",
+  "contract_file": "content/architecture/contracts/offline-installation.md",
+  "path": "docs/architecture/offline-and-installation.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "platforms": [
+        "pwa"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/offline-installation.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 19,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/offline-installation.md"
+}

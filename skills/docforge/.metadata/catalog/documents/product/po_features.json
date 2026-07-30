@@ -1,0 +1,27 @@
+{
+  "id": "po_features",
+  "type": "feature-catalog",
+  "summary": "User outcome, audience, availability, owning flow",
+  "contract_file": "content/product/contracts/feature-catalog.md",
+  "path": "docs/product/product-owner/feature-catalog.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 48,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/product/templates/feature-catalog.md"
+}

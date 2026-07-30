@@ -1,0 +1,23 @@
+{
+  "id": "concepts_index",
+  "type": "folder-index",
+  "summary": "Selected children and one-line purpose",
+  "contract_file": "content/shared/folder-index.contract.md",
+  "path": "docs/architecture/concepts/README.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 15,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/shared/generic.template.md"
+}

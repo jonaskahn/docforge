@@ -1,0 +1,23 @@
+{
+  "id": "adr",
+  "type": "adr",
+  "summary": "Indexed decisions; for each ADR context, decision, alternatives, consequences, status",
+  "contract_file": "content/records/adr.contract.md",
+  "path": "docs/architecture/decisions/{slug}.md",
+  "group": "records",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": "discovered_decision"
+  },
+  "instruction_file": "content/shared/decision-records.instruction.md",
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 81,
+  "provenance_mode": "sections",
+  "audit_profile": "decision",
+  "template_file": "content/shared/adr.template.md"
+}

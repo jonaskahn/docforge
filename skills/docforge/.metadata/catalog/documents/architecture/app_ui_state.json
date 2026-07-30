@@ -1,0 +1,28 @@
+{
+  "id": "app_ui_state",
+  "type": "ui-navigation-state",
+  "summary": "Surfaces, navigation, state ownership, transitions, restoration, error presentation",
+  "contract_file": "content/architecture/contracts/ui-navigation-state.md",
+  "path": "docs/architecture/ui-and-state.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/ui-navigation-state.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/ui-navigation-state.md"
+}

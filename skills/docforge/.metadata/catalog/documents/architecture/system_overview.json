@@ -1,0 +1,26 @@
+{
+  "id": "system_overview",
+  "type": "system-overview",
+  "summary": "The handful of major capabilities; for each, the components it touches and its owning flow; the primary end-to-end path(s) tying features together; external...",
+  "contract_file": "content/architecture/contracts/system-overview.md",
+  "path": "docs/architecture/system-overview.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": "multi_flow_repo"
+  },
+  "instruction_file": "content/architecture/instructions/system-overview.md",
+  "requires": [
+    "flow_graph",
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 17,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "sequenceDiagram",
+  "schema_min": "2.4.0",
+  "template_file": "content/architecture/templates/system-overview.md"
+}

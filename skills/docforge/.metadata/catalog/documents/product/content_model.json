@@ -1,0 +1,28 @@
+{
+  "id": "content_model",
+  "type": "content-model",
+  "summary": "Content types, lifecycle, validation, ownership, publishing boundary",
+  "contract_file": "content/product/contracts/content-model.md",
+  "path": "docs/product/content-model.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "website"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/product/instructions/content-model.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 41,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/product/templates/content-model.md"
+}

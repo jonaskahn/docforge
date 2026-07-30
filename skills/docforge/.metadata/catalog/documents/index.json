@@ -1,0 +1,132 @@
+{
+  "version": "2.5.0",
+  "source": "../index.json",
+  "groups": [
+    {
+      "id": "root",
+      "kind": "flat",
+      "records": [
+        {
+          "id": "docs_index",
+          "path": "docs_index.json",
+          "summary": "Selected children and one-line purpose"
+        },
+        {
+          "id": "root_readme",
+          "path": "root_readme.json",
+          "summary": "Purpose, audience, verified quick start, links to setup/architecture/limitations"
+        },
+        {
+          "id": "changelog",
+          "path": "changelog.json",
+          "summary": "Released versions, dates, user-visible changes, compatibility notes"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "id": "product",
+      "kind": "folder",
+      "index": "product/index.json",
+      "count": 18
+    },
+    {
+      "id": "architecture",
+      "kind": "folder",
+      "index": "architecture/index.json",
+      "count": 31
+    },
+    {
+      "id": "flows",
+      "kind": "flat",
+      "records": [
+        {
+          "id": "flows_index",
+          "path": "flows_index.json",
+          "summary": "Every evidence-backed candidate, normalized entry reference, area, confidence, reach, priority, and main/deferred/placeholder/documented/skipped status"
+        },
+        {
+          "id": "flow",
+          "path": "flow.json",
+          "summary": "Trigger, actors, ordered steps, branches, rules, failures, outcome"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "id": "engineering",
+      "kind": "folder",
+      "index": "engineering/index.json",
+      "count": 8
+    },
+    {
+      "id": "operations",
+      "kind": "folder",
+      "index": "operations/index.json",
+      "count": 12
+    },
+    {
+      "id": "reference",
+      "kind": "folder",
+      "index": "reference/index.json",
+      "count": 19
+    },
+    {
+      "id": "security",
+      "kind": "folder",
+      "index": "security/index.json",
+      "count": 7
+    },
+    {
+      "id": "contributing",
+      "kind": "flat",
+      "records": [
+        {
+          "id": "contributing_root",
+          "path": "contributing_root.json",
+          "summary": "Verified contribution path, required checks, conventions and ownership links"
+        },
+        {
+          "id": "contributing_index",
+          "path": "contributing_index.json",
+          "summary": "Selected children and one-line purpose"
+        },
+        {
+          "id": "ownership",
+          "path": "ownership.json",
+          "summary": "Owned areas, responsibility boundaries, escalation tokens"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "id": "records",
+      "kind": "flat",
+      "records": [
+        {
+          "id": "decisions_index",
+          "path": "decisions_index.json",
+          "summary": "Indexed decisions; for each ADR context, decision, alternatives, consequences, status"
+        },
+        {
+          "id": "adr",
+          "path": "adr.json",
+          "summary": "Indexed decisions; for each ADR context, decision, alternatives, consequences, status"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "id": "portfolio",
+      "kind": "folder",
+      "index": "portfolio/index.json",
+      "count": 10
+    },
+    {
+      "id": "agent-context",
+      "kind": "folder",
+      "index": "agent-context/index.json",
+      "count": 12
+    }
+  ]
+}

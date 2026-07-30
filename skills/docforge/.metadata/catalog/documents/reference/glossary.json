@@ -1,0 +1,23 @@
+{
+  "id": "glossary",
+  "type": "glossary",
+  "summary": "Repository terms, precise definitions, owning document links",
+  "contract_file": "content/reference/contracts/glossary.md",
+  "path": "docs/reference/glossary.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/shared/glossary.instruction.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "reference",
+  "write_order": 63,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/reference/templates/glossary.md"
+}

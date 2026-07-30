@@ -1,0 +1,27 @@
+{
+  "id": "gameplay_systems",
+  "type": "gameplay-systems",
+  "summary": "System boundaries, scenes/assets, loading, save state, platform builds",
+  "contract_file": "content/architecture/contracts/gameplay-systems.md",
+  "path": "docs/architecture/gameplay-systems.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "game"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/architecture/instructions/gameplay-systems.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 18,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "template_file": "content/architecture/templates/gameplay-systems.md"
+}

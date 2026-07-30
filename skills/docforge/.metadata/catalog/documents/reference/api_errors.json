@@ -1,0 +1,27 @@
+{
+  "id": "api_errors",
+  "type": "error-catalog",
+  "summary": "Stable code/name, trigger, client behavior, retryability, observability",
+  "contract_file": "content/reference/contracts/error-catalog.md",
+  "path": "docs/reference/errors.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "api-service"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "reference",
+  "write_order": 65,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/reference/templates/error-catalog.md"
+}

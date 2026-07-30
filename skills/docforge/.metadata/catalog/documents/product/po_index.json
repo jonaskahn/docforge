@@ -1,0 +1,27 @@
+{
+  "id": "po_index",
+  "type": "po-index",
+  "summary": "Selected children and one-line purpose",
+  "contract_file": "content/product/contracts/po-index.md",
+  "path": "docs/product/product-owner/README.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 47,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/product/templates/po-readme.md"
+}

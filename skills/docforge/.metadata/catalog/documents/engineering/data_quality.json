@@ -1,0 +1,29 @@
+{
+  "id": "data_quality",
+  "type": "data-quality",
+  "summary": "Producers, transformations, contracts, checks, failure/recovery, schema ownership",
+  "contract_file": "content/engineering/contracts/data-quality.md",
+  "path": "docs/engineering/data-quality.md",
+  "group": "engineering",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "data-pipeline"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/engineering/instructions/data-quality.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 55,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "dominant_form": "erDiagram",
+  "template_file": "content/engineering/templates/data-quality.md"
+}

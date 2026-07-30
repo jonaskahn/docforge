@@ -1,0 +1,21 @@
+{
+  "id": "reference_index",
+  "type": "folder-index",
+  "summary": "Selected children and one-line purpose",
+  "contract_file": "content/shared/folder-index.contract.md",
+  "path": "docs/reference/README.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [],
+  "target_depth": "orientation",
+  "write_order": 60,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/shared/generic.template.md"
+}

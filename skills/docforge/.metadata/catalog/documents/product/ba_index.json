@@ -1,0 +1,27 @@
+{
+  "id": "ba_index",
+  "type": "ba-index",
+  "summary": "Selected children and one-line purpose",
+  "contract_file": "content/product/contracts/ba-index.md",
+  "path": "docs/product/business-analyst/README.md",
+  "group": "product",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "business-analysts"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 43,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/product/templates/ba-readme.md"
+}

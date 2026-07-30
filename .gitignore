@@ -27,4 +27,3 @@ venv/
 # docforge / understand-anything generated artifacts
 .ua/
 .understand-anything/
-tests/

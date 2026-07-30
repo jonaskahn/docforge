@@ -1,0 +1,23 @@
+{
+  "id": "contributing_root",
+  "type": "contributing-router",
+  "summary": "Verified contribution path, required checks, conventions and ownership links",
+  "contract_file": "content/contributing/contributing-router.contract.md",
+  "path": "CONTRIBUTING.md",
+  "group": "contributing",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "router",
+  "write_order": 84,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/shared/generic.template.md"
+}

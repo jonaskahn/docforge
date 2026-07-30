@@ -1,0 +1,28 @@
+{
+  "id": "model_card",
+  "type": "model-card",
+  "summary": "Datasets, training/evaluation, artifact lineage, inference, limitations, drift, ownership",
+  "contract_file": "content/reference/contracts/model-card.md",
+  "path": "docs/reference/model-card.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "ml-system"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/reference/instructions/model-card.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 68,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "template_file": "content/reference/templates/model-card.md"
+}

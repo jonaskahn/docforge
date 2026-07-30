@@ -1,0 +1,82 @@
+"""Catalog record integrity: every id resolves its record, contract, template,
+and optional instruction, with a summary under the 160-character budget."""
+
+from __future__ import annotations
+
+import json
+import unittest
+
+from _support import ROOT, run
+
+SKILL_ROOT = ROOT / "skills" / "docforge"
+CATALOG_DIR = SKILL_ROOT / ".metadata" / "catalog"
+
+
+class CatalogRecordTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.index = json.loads((CATALOG_DIR / "index.json").read_text(encoding="utf-8"))
+        cls.tiers = set(cls.index["tiers"])
+        cls.groups = set(cls.index["groups"])
+
+    def test_catalog_version_is_2_5_0(self) -> None:
+        self.assertEqual(self.index["version"], "2.5.0")
+
+    def test_document_type_count_and_unique_ids(self) -> None:
+        document_types = self.index["document_types"]
+        self.assertEqual(len(document_types), 127)
+        ids = [entry["id"] for entry in document_types]
+        self.assertEqual(len(ids), len(set(ids)), "duplicate document ids in index.json")
+
+    def test_profiles_path_map_resolves(self) -> None:
+        for dimension, rel in self.index["profiles"].items():
+            with self.subTest(dimension=dimension):
+                self.assertTrue((CATALOG_DIR / rel).is_file(), rel)
+
+    def test_every_record_path_resolves(self) -> None:
+        for entry in self.index["document_types"]:
+            with self.subTest(id=entry["id"]):
+                self.assertIn(entry["tier"], self.tiers)
+                self.assertTrue(entry["path"], "path must be non-empty")
+                self.assertIn("record", entry)
+                record_path = CATALOG_DIR / entry["record"]
+                self.assertTrue(record_path.is_file(), f"missing record for {entry['id']}")
+                detail = json.loads(record_path.read_text(encoding="utf-8"))
+                self.assertEqual(detail["id"], entry["id"])
+                self.assertIn(detail["group"], self.groups, entry["id"])
+
+    def test_every_summary_contract_and_template_resolve(self) -> None:
+        for entry in self.index["document_types"]:
+            detail = json.loads((CATALOG_DIR / entry["record"]).read_text(encoding="utf-8"))
+            with self.subTest(id=entry["id"]):
+                summary = detail.get("summary")
+                self.assertTrue(summary, f"{entry['id']}: summary must be non-empty")
+                self.assertLessEqual(len(summary), 160, f"{entry['id']}: summary exceeds 160 chars")
+
+                contract = detail.get("contract_file")
+                self.assertTrue(contract, f"{entry['id']}: contract_file is mandatory")
+                self.assertTrue((SKILL_ROOT / contract).is_file(), f"{entry['id']}: missing {contract}")
+
+                template = detail.get("template_file")
+                self.assertTrue(template, f"{entry['id']}: template_file is mandatory")
+                self.assertTrue((SKILL_ROOT / template).is_file(), f"{entry['id']}: missing {template}")
+
+                instruction = detail.get("instruction_file")
+                if instruction is not None:
+                    self.assertTrue(
+                        (SKILL_ROOT / instruction).is_file(),
+                        f"{entry['id']}: missing instruction {instruction}",
+                    )
+
+                # scaffold_template was renamed to template_file; the old key
+                # must not linger in a migrated record.
+                self.assertNotIn("scaffold_template", detail, entry["id"])
+
+    def test_query_catalog_validate_passes_on_both_runtimes(self) -> None:
+        for runtime in ("py", "js"):
+            result = run(runtime, "query_catalog", "--validate")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

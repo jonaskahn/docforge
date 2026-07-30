@@ -1,0 +1,24 @@
+{
+  "id": "portfolio_repo_inventory",
+  "type": "repo-inventory",
+  "summary": "Discovered repositories, role, owner token, documentation state, evidence",
+  "contract_file": "content/portfolio/contracts/repo-inventory.md",
+  "path": "docs-portfolio/repo-inventory.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "static",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 101,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio",
+  "template_file": "content/portfolio/templates/repo-inventory.md"
+}

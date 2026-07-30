@@ -1,0 +1,23 @@
+{
+  "id": "ownership",
+  "type": "ownership",
+  "summary": "Owned areas, responsibility boundaries, escalation tokens",
+  "contract_file": "content/contributing/ownership.contract.md",
+  "path": "docs/contributing/ownership.md",
+  "group": "contributing",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/contributing/ownership.instruction.md",
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 86,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/contributing/ownership.template.md"
+}

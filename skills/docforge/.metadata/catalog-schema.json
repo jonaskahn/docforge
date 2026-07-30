@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["version", "tiers", "profiles", "groups", "capabilities", "documents"],
   "properties": {
-    "version": {"const": "2.4.0"},
+    "version": {"const": "2.5.0"},
     "tiers": {"type": "array", "items": {"$ref": "#/definitions/namedOrder"}},
     "profiles": {
       "type": "object",
@@ -92,7 +92,7 @@
     },
     "document": {
       "type": "object",
-      "required": ["id", "type", "path", "group", "selection", "scaffold_template", "requires", "target_depth", "write_order", "provenance_mode", "audit_profile"],
+      "required": ["id", "type", "path", "group", "selection", "summary", "contract_file", "template_file", "requires", "target_depth", "write_order", "provenance_mode", "audit_profile"],
       "properties": {
         "id": {"type": "string"},
         "type": {"type": "string"},
@@ -109,7 +109,9 @@
           },
           "additionalProperties": false
         },
-        "scaffold_template": {"type": "string"},
+        "summary": {"type": "string", "maxLength": 160},
+        "contract_file": {"type": "string"},
+        "template_file": {"type": "string"},
         "instruction_file": {"type": ["string", "null"]},
         "requires": {"type": "array", "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}},
         "target_depth": {"type": "string"},

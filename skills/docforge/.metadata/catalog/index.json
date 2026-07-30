@@ -1,6 +1,13 @@
 {
   "$schema": "catalog-index-schema.json",
-  "version": "2.4.0",
+  "version": "2.5.0",
+  "profiles": {
+    "shapes": "profiles/shapes.json",
+    "platforms": "profiles/platforms.json",
+    "frameworks": "profiles/frameworks.json",
+    "concerns": "profiles/concerns.json",
+    "audiences": "profiles/audiences.json"
+  },
   "tiers": {
     "spine": {
       "order": 10
@@ -52,637 +59,764 @@
     {
       "id": "architecture_index",
       "tier": "spine",
-      "path": "docs/architecture/README.md"
+      "path": "docs/architecture/README.md",
+      "record": "documents/architecture/architecture_index.json"
     },
     {
       "id": "arch_high_level",
       "tier": "spine",
-      "path": "docs/architecture/high-level.md"
+      "path": "docs/architecture/high-level.md",
+      "record": "documents/architecture/arch_high_level.json"
     },
     {
       "id": "arch_low_level",
       "tier": "diligence",
-      "path": "docs/architecture/low-level.md"
+      "path": "docs/architecture/low-level.md",
+      "record": "documents/architecture/arch_low_level.json"
     },
     {
       "id": "architecture_constraints",
       "tier": "diligence",
-      "path": "docs/architecture/constraints.md"
+      "path": "docs/architecture/constraints.md",
+      "record": "documents/architecture/architecture_constraints.json"
     },
     {
       "id": "dependencies",
       "tier": "diligence",
-      "path": "docs/architecture/dependencies.md"
+      "path": "docs/architecture/dependencies.md",
+      "record": "documents/architecture/dependencies.json"
     },
     {
       "id": "tech_debt",
       "tier": "diligence",
-      "path": "docs/architecture/tech-debt.md"
+      "path": "docs/architecture/tech-debt.md",
+      "record": "documents/architecture/tech_debt.json"
     },
     {
       "id": "concepts_index",
       "tier": "diligence",
-      "path": "docs/architecture/concepts/README.md"
+      "path": "docs/architecture/concepts/README.md",
+      "record": "documents/architecture/concepts_index.json"
     },
     {
       "id": "app_lifecycle",
       "tier": "spine",
-      "path": "docs/architecture/application-lifecycle.md"
+      "path": "docs/architecture/application-lifecycle.md",
+      "record": "documents/architecture/app_lifecycle.json"
     },
     {
       "id": "concept",
       "tier": "diligence",
-      "path": "docs/architecture/concepts/{slug}.md"
+      "path": "docs/architecture/concepts/{slug}.md",
+      "record": "documents/architecture/concept.json"
     },
     {
       "id": "data_flow",
       "tier": "spine",
-      "path": "docs/architecture/data-flow.md"
+      "path": "docs/architecture/data-flow.md",
+      "record": "documents/architecture/data_flow.json"
     },
     {
       "id": "ai_integration",
       "tier": "spine",
-      "path": "docs/architecture/ai-integration.md"
+      "path": "docs/architecture/ai-integration.md",
+      "record": "documents/architecture/ai_integration.json"
     },
     {
       "id": "data_contracts_index",
       "tier": "spine",
-      "path": "docs/architecture/contracts/README.md"
+      "path": "docs/architecture/contracts/README.md",
+      "record": "documents/architecture/data_contracts_index.json"
     },
     {
       "id": "persistence",
       "tier": "spine",
-      "path": "docs/architecture/persistence.md"
+      "path": "docs/architecture/persistence.md",
+      "record": "documents/architecture/persistence.json"
     },
     {
       "id": "system_overview",
       "tier": "spine",
-      "path": "docs/architecture/system-overview.md"
+      "path": "docs/architecture/system-overview.md",
+      "record": "documents/architecture/system_overview.json"
     },
     {
       "id": "app_ui_state",
       "tier": "spine",
-      "path": "docs/architecture/ui-and-state.md"
+      "path": "docs/architecture/ui-and-state.md",
+      "record": "documents/architecture/app_ui_state.json"
     },
     {
       "id": "contract_system",
       "tier": "spine",
-      "path": "docs/architecture/contract-system.md"
+      "path": "docs/architecture/contract-system.md",
+      "record": "documents/architecture/contract_system.json"
     },
     {
       "id": "dataset",
       "tier": "spine",
-      "path": "docs/architecture/contracts/{slug}.md"
+      "path": "docs/architecture/contracts/{slug}.md",
+      "record": "documents/architecture/dataset.json"
     },
     {
       "id": "infra_environments",
       "tier": "spine",
-      "path": "docs/architecture/environments.md"
+      "path": "docs/architecture/environments.md",
+      "record": "documents/architecture/infra_environments.json"
     },
     {
       "id": "gameplay_systems",
       "tier": "spine",
-      "path": "docs/architecture/gameplay-systems.md"
+      "path": "docs/architecture/gameplay-systems.md",
+      "record": "documents/architecture/gameplay_systems.json"
     },
     {
       "id": "hardware_map",
       "tier": "spine",
-      "path": "docs/architecture/hardware-map.md"
+      "path": "docs/architecture/hardware-map.md",
+      "record": "documents/architecture/hardware_map.json"
     },
     {
       "id": "host_integration",
       "tier": "spine",
-      "path": "docs/architecture/host-integration.md"
+      "path": "docs/architecture/host-integration.md",
+      "record": "documents/architecture/host_integration.json"
     },
     {
       "id": "model_lifecycle",
       "tier": "spine",
-      "path": "docs/architecture/model-lifecycle.md"
+      "path": "docs/architecture/model-lifecycle.md",
+      "record": "documents/architecture/model_lifecycle.json"
     },
     {
       "id": "platform_integration",
       "tier": "spine",
-      "path": "docs/architecture/platform-integration.md"
+      "path": "docs/architecture/platform-integration.md",
+      "record": "documents/architecture/platform_integration.json"
     },
     {
       "id": "web_rendering",
       "tier": "spine",
-      "path": "docs/architecture/rendering.md"
+      "path": "docs/architecture/rendering.md",
+      "record": "documents/architecture/web_rendering.json"
     },
     {
       "id": "worker_triggers",
       "tier": "spine",
-      "path": "docs/architecture/triggers-and-jobs.md"
+      "path": "docs/architecture/triggers-and-jobs.md",
+      "record": "documents/architecture/worker_triggers.json"
     },
     {
       "id": "game_assets",
       "tier": "spine",
-      "path": "docs/architecture/assets-and-scenes.md"
+      "path": "docs/architecture/assets-and-scenes.md",
+      "record": "documents/architecture/game_assets.json"
     },
     {
       "id": "firmware_lifecycle",
       "tier": "spine",
-      "path": "docs/architecture/firmware-lifecycle.md"
+      "path": "docs/architecture/firmware-lifecycle.md",
+      "record": "documents/architecture/firmware_lifecycle.json"
     },
     {
       "id": "infra_network",
       "tier": "spine",
-      "path": "docs/architecture/network.md"
+      "path": "docs/architecture/network.md",
+      "record": "documents/architecture/infra_network.json"
     },
     {
       "id": "pwa_installation",
       "tier": "spine",
-      "path": "docs/architecture/offline-and-installation.md"
+      "path": "docs/architecture/offline-and-installation.md",
+      "record": "documents/architecture/pwa_installation.json"
     },
     {
       "id": "web_state",
       "tier": "spine",
-      "path": "docs/architecture/state.md"
+      "path": "docs/architecture/state.md",
+      "record": "documents/architecture/web_state.json"
     },
     {
       "id": "product_index",
       "tier": "spine",
-      "path": "docs/product/README.md"
+      "path": "docs/product/README.md",
+      "record": "documents/product/product_index.json"
     },
     {
       "id": "web_components",
       "tier": "spine",
-      "path": "docs/architecture/ui-components.md"
+      "path": "docs/architecture/ui-components.md",
+      "record": "documents/architecture/web_components.json"
     },
     {
       "id": "product_overview",
       "tier": "spine",
-      "path": "docs/product/overview.md"
+      "path": "docs/product/overview.md",
+      "record": "documents/product/product_overview.json"
     },
     {
       "id": "flows_index",
       "tier": "spine",
-      "path": "docs/flows/README.md"
+      "path": "docs/flows/README.md",
+      "record": "documents/flows_index.json"
     },
     {
       "id": "flow",
       "tier": "diligence",
-      "path": "docs/flows/{slug}.md"
+      "path": "docs/flows/{slug}.md",
+      "record": "documents/flow.json"
     },
     {
       "id": "docs_index",
       "tier": "spine",
-      "path": "docs/README.md"
+      "path": "docs/README.md",
+      "record": "documents/docs_index.json"
     },
     {
       "id": "root_readme",
       "tier": "spine",
-      "path": "README.md"
+      "path": "README.md",
+      "record": "documents/root_readme.json"
     },
     {
       "id": "content_model",
       "tier": "spine",
-      "path": "docs/product/content-model.md"
+      "path": "docs/product/content-model.md",
+      "record": "documents/product/content_model.json"
     },
     {
       "id": "quickstart",
       "tier": "spine",
-      "path": "docs/product/quickstart.md"
+      "path": "docs/product/quickstart.md",
+      "record": "documents/product/quickstart.json"
     },
     {
       "id": "accessibility",
       "tier": "spine",
-      "path": "docs/product/accessibility.md"
+      "path": "docs/product/accessibility.md",
+      "record": "documents/product/accessibility.json"
     },
     {
       "id": "localization",
       "tier": "spine",
-      "path": "docs/product/localization.md"
+      "path": "docs/product/localization.md",
+      "record": "documents/product/localization.json"
     },
     {
       "id": "library_migrations_index",
       "tier": "spine",
-      "path": "docs/product/migrations/README.md"
+      "path": "docs/product/migrations/README.md",
+      "record": "documents/product/library_migrations_index.json"
     },
     {
       "id": "api_versioning",
       "tier": "spine",
-      "path": "docs/product/versioning.md"
+      "path": "docs/product/versioning.md",
+      "record": "documents/product/api_versioning.json"
     },
     {
       "id": "ba_index",
       "tier": "spine",
-      "path": "docs/product/business-analyst/README.md"
+      "path": "docs/product/business-analyst/README.md",
+      "record": "documents/product/ba_index.json"
     },
     {
       "id": "migration",
       "tier": "spine",
-      "path": "docs/product/migrations/{slug}.md"
+      "path": "docs/product/migrations/{slug}.md",
+      "record": "documents/product/migration.json"
     },
     {
       "id": "ba_process_flows",
       "tier": "spine",
-      "path": "docs/product/business-analyst/process-flows.md"
+      "path": "docs/product/business-analyst/process-flows.md",
+      "record": "documents/product/ba_process_flows.json"
     },
     {
       "id": "ba_business_rules",
       "tier": "spine",
-      "path": "docs/product/business-analyst/business-rules.md"
+      "path": "docs/product/business-analyst/business-rules.md",
+      "record": "documents/product/ba_business_rules.json"
     },
     {
       "id": "ba_requirements",
       "tier": "spine",
-      "path": "docs/product/business-analyst/requirements-traceability.md"
+      "path": "docs/product/business-analyst/requirements-traceability.md",
+      "record": "documents/product/ba_requirements.json"
     },
     {
       "id": "po_index",
       "tier": "spine",
-      "path": "docs/product/product-owner/README.md"
+      "path": "docs/product/product-owner/README.md",
+      "record": "documents/product/po_index.json"
     },
     {
       "id": "po_features",
       "tier": "spine",
-      "path": "docs/product/product-owner/feature-catalog.md"
+      "path": "docs/product/product-owner/feature-catalog.md",
+      "record": "documents/product/po_features.json"
     },
     {
       "id": "po_metrics",
       "tier": "spine",
-      "path": "docs/product/product-owner/success-metrics.md"
+      "path": "docs/product/product-owner/success-metrics.md",
+      "record": "documents/product/po_metrics.json"
     },
     {
       "id": "engineering_index",
       "tier": "spine",
-      "path": "docs/engineering/README.md"
+      "path": "docs/engineering/README.md",
+      "record": "documents/engineering/engineering_index.json"
     },
     {
       "id": "po_release_notes",
       "tier": "spine",
-      "path": "docs/product/product-owner/release-notes.md"
+      "path": "docs/product/product-owner/release-notes.md",
+      "record": "documents/product/po_release_notes.json"
     },
     {
       "id": "setup_guide",
       "tier": "spine",
-      "path": "docs/engineering/setup.md"
+      "path": "docs/engineering/setup.md",
+      "record": "documents/engineering/setup_guide.json"
     },
     {
       "id": "backlog_traceability",
       "tier": "spine",
-      "path": "docs/product/product-owner/backlog-traceability.md"
+      "path": "docs/product/product-owner/backlog-traceability.md",
+      "record": "documents/product/backlog_traceability.json"
     },
     {
       "id": "testing_guide",
       "tier": "spine",
-      "path": "docs/engineering/testing.md"
+      "path": "docs/engineering/testing.md",
+      "record": "documents/engineering/testing_guide.json"
     },
     {
       "id": "conventions",
       "tier": "diligence",
-      "path": "docs/engineering/conventions.md"
+      "path": "docs/engineering/conventions.md",
+      "record": "documents/engineering/conventions.json"
     },
     {
       "id": "release_guide",
       "tier": "diligence",
-      "path": "docs/engineering/release.md"
+      "path": "docs/engineering/release.md",
+      "record": "documents/engineering/release_guide.json"
     },
     {
       "id": "data_quality",
       "tier": "spine",
-      "path": "docs/engineering/data-quality.md"
+      "path": "docs/engineering/data-quality.md",
+      "record": "documents/engineering/data_quality.json"
     },
     {
       "id": "web_styling",
       "tier": "spine",
-      "path": "docs/engineering/styling.md"
+      "path": "docs/engineering/styling.md",
+      "record": "documents/engineering/web_styling.json"
     },
     {
       "id": "library_publishing",
       "tier": "spine",
-      "path": "docs/engineering/publishing.md"
+      "path": "docs/engineering/publishing.md",
+      "record": "documents/engineering/library_publishing.json"
     },
     {
       "id": "reference_index",
       "tier": "spine",
-      "path": "docs/reference/README.md"
+      "path": "docs/reference/README.md",
+      "record": "documents/reference/reference_index.json"
     },
     {
       "id": "configuration",
       "tier": "spine",
-      "path": "docs/reference/configuration.md"
+      "path": "docs/reference/configuration.md",
+      "record": "documents/reference/configuration.json"
     },
     {
       "id": "limitations",
       "tier": "spine",
-      "path": "docs/reference/limitations.md"
+      "path": "docs/reference/limitations.md",
+      "record": "documents/reference/limitations.json"
     },
     {
       "id": "glossary",
       "tier": "diligence",
-      "path": "docs/reference/glossary.md"
+      "path": "docs/reference/glossary.md",
+      "record": "documents/reference/glossary.json"
     },
     {
       "id": "tech_stack",
       "tier": "spine",
-      "path": "docs/reference/tech-stack.md"
+      "path": "docs/reference/tech-stack.md",
+      "record": "documents/reference/tech_stack.json"
     },
     {
       "id": "api_reference",
       "tier": "spine",
-      "path": "docs/reference/api.md"
+      "path": "docs/reference/api.md",
+      "record": "documents/reference/api_reference.json"
     },
     {
       "id": "cli_commands",
       "tier": "spine",
-      "path": "docs/reference/commands.md"
+      "path": "docs/reference/commands.md",
+      "record": "documents/reference/cli_commands.json"
     },
     {
       "id": "api_errors",
       "tier": "spine",
-      "path": "docs/reference/errors.md"
+      "path": "docs/reference/errors.md",
+      "record": "documents/reference/api_errors.json"
     },
     {
       "id": "extension_points",
       "tier": "spine",
-      "path": "docs/reference/extension-points.md"
+      "path": "docs/reference/extension-points.md",
+      "record": "documents/reference/extension_points.json"
     },
     {
       "id": "cli_output",
       "tier": "spine",
-      "path": "docs/reference/output-and-exit-codes.md"
+      "path": "docs/reference/output-and-exit-codes.md",
+      "record": "documents/reference/cli_output.json"
     },
     {
       "id": "library_compatibility",
       "tier": "spine",
-      "path": "docs/reference/compatibility.md"
+      "path": "docs/reference/compatibility.md",
+      "record": "documents/reference/library_compatibility.json"
     },
     {
       "id": "platform_compatibility",
       "tier": "spine",
-      "path": "docs/reference/platform-compatibility.md"
+      "path": "docs/reference/platform-compatibility.md",
+      "record": "documents/reference/platform_compatibility.json"
     },
     {
       "id": "api_rate_limits",
       "tier": "spine",
-      "path": "docs/reference/rate-limits.md"
+      "path": "docs/reference/rate-limits.md",
+      "record": "documents/reference/api_rate_limits.json"
     },
     {
       "id": "data_types",
       "tier": "spine",
-      "path": "docs/reference/data-types.md"
+      "path": "docs/reference/data-types.md",
+      "record": "documents/reference/data_types.json"
     },
     {
       "id": "model_card",
       "tier": "spine",
-      "path": "docs/reference/model-card.md"
+      "path": "docs/reference/model-card.md",
+      "record": "documents/reference/model_card.json"
     },
     {
       "id": "performance_budgets",
       "tier": "spine",
-      "path": "docs/reference/performance-budgets.md"
+      "path": "docs/reference/performance-budgets.md",
+      "record": "documents/reference/performance_budgets.json"
     },
     {
       "id": "infra_resources",
       "tier": "spine",
-      "path": "docs/reference/resources.md"
+      "path": "docs/reference/resources.md",
+      "record": "documents/reference/infra_resources.json"
     },
     {
       "id": "infra_access",
       "tier": "spine",
-      "path": "docs/reference/access.md"
+      "path": "docs/reference/access.md",
+      "record": "documents/reference/infra_access.json"
     },
     {
       "id": "browser_support",
       "tier": "spine",
-      "path": "docs/reference/browser-support.md"
+      "path": "docs/reference/browser-support.md",
+      "record": "documents/reference/browser_support.json"
     },
     {
       "id": "operations_index",
       "tier": "diligence",
-      "path": "docs/operations/README.md"
+      "path": "docs/operations/README.md",
+      "record": "documents/operations/operations_index.json"
     },
     {
       "id": "deployment",
       "tier": "diligence",
-      "path": "docs/operations/deployment.md"
+      "path": "docs/operations/deployment.md",
+      "record": "documents/operations/deployment.json"
     },
     {
       "id": "distribution",
       "tier": "spine",
-      "path": "docs/operations/distribution.md"
+      "path": "docs/operations/distribution.md",
+      "record": "documents/operations/distribution.json"
     },
     {
       "id": "flashing_recovery",
       "tier": "spine",
-      "path": "docs/operations/flashing-and-recovery.md"
+      "path": "docs/operations/flashing-and-recovery.md",
+      "record": "documents/operations/flashing_recovery.json"
     },
     {
       "id": "worker_reliability",
       "tier": "spine",
-      "path": "docs/operations/job-reliability.md"
+      "path": "docs/operations/job-reliability.md",
+      "record": "documents/operations/worker_reliability.json"
     },
     {
       "id": "network_deployment",
       "tier": "spine",
-      "path": "docs/operations/network-deployment.md"
+      "path": "docs/operations/network-deployment.md",
+      "record": "documents/operations/network_deployment.json"
     },
     {
       "id": "observability",
       "tier": "diligence",
-      "path": "docs/operations/observability.md"
+      "path": "docs/operations/observability.md",
+      "record": "documents/operations/observability.json"
     },
     {
       "id": "infra_apply",
       "tier": "spine",
-      "path": "docs/operations/apply.md"
+      "path": "docs/operations/apply.md",
+      "record": "documents/operations/infra_apply.json"
     },
     {
       "id": "runbooks_index",
       "tier": "diligence",
-      "path": "docs/operations/runbooks/README.md"
+      "path": "docs/operations/runbooks/README.md",
+      "record": "documents/operations/runbooks_index.json"
     },
     {
       "id": "infra_disaster_recovery",
       "tier": "spine",
-      "path": "docs/operations/disaster-recovery.md"
+      "path": "docs/operations/disaster-recovery.md",
+      "record": "documents/operations/infra_disaster_recovery.json"
     },
     {
       "id": "runbook",
       "tier": "diligence",
-      "path": "docs/operations/runbooks/{slug}.md"
+      "path": "docs/operations/runbooks/{slug}.md",
+      "record": "documents/operations/runbook.json"
     },
     {
       "id": "infra_state",
       "tier": "spine",
-      "path": "docs/operations/state.md"
+      "path": "docs/operations/state.md",
+      "record": "documents/operations/infra_state.json"
     },
     {
       "id": "security_root",
       "tier": "diligence",
-      "path": "SECURITY.md"
+      "path": "SECURITY.md",
+      "record": "documents/security/security_root.json"
     },
     {
       "id": "security_index",
       "tier": "diligence",
-      "path": "docs/security/README.md"
+      "path": "docs/security/README.md",
+      "record": "documents/security/security_index.json"
     },
     {
       "id": "threat_model",
       "tier": "diligence",
-      "path": "docs/security/threat-model.md"
+      "path": "docs/security/threat-model.md",
+      "record": "documents/security/threat_model.json"
     },
     {
       "id": "data_handling",
       "tier": "diligence",
-      "path": "docs/security/data-handling.md"
+      "path": "docs/security/data-handling.md",
+      "record": "documents/security/data_handling.json"
     },
     {
       "id": "api_authentication",
       "tier": "spine",
-      "path": "docs/security/authentication.md"
+      "path": "docs/security/authentication.md",
+      "record": "documents/security/api_authentication.json"
     },
     {
       "id": "economic_invariants",
       "tier": "spine",
-      "path": "docs/security/economic-invariants.md"
+      "path": "docs/security/economic-invariants.md",
+      "record": "documents/security/economic_invariants.json"
     },
     {
       "id": "platform_permissions",
       "tier": "spine",
-      "path": "docs/security/permissions.md"
+      "path": "docs/security/permissions.md",
+      "record": "documents/security/platform_permissions.json"
     },
     {
       "id": "decisions_index",
       "tier": "diligence",
-      "path": "docs/architecture/decisions/README.md"
+      "path": "docs/architecture/decisions/README.md",
+      "record": "documents/decisions_index.json"
     },
     {
       "id": "adr",
       "tier": "diligence",
-      "path": "docs/architecture/decisions/{slug}.md"
+      "path": "docs/architecture/decisions/{slug}.md",
+      "record": "documents/adr.json"
     },
     {
       "id": "contributing_root",
       "tier": "diligence",
-      "path": "CONTRIBUTING.md"
+      "path": "CONTRIBUTING.md",
+      "record": "documents/contributing_root.json"
     },
     {
       "id": "contributing_index",
       "tier": "diligence",
-      "path": "docs/contributing/README.md"
+      "path": "docs/contributing/README.md",
+      "record": "documents/contributing_index.json"
     },
     {
       "id": "ownership",
       "tier": "diligence",
-      "path": "docs/contributing/ownership.md"
+      "path": "docs/contributing/ownership.md",
+      "record": "documents/ownership.json"
     },
     {
       "id": "changelog",
       "tier": "spine",
-      "path": "CHANGELOG.md"
+      "path": "CHANGELOG.md",
+      "record": "documents/changelog.json"
     },
     {
       "id": "portfolio_readme",
       "tier": "portfolio",
-      "path": "docs-portfolio/README.md"
+      "path": "docs-portfolio/README.md",
+      "record": "documents/portfolio/portfolio_readme.json"
     },
     {
       "id": "portfolio_repo_inventory",
       "tier": "portfolio",
-      "path": "docs-portfolio/repo-inventory.md"
+      "path": "docs-portfolio/repo-inventory.md",
+      "record": "documents/portfolio/portfolio_repo_inventory.json"
     },
     {
       "id": "portfolio_system_context",
       "tier": "portfolio",
-      "path": "docs-portfolio/system-context.md"
+      "path": "docs-portfolio/system-context.md",
+      "record": "documents/portfolio/portfolio_system_context.json"
     },
     {
       "id": "portfolio_decisions_index",
       "tier": "portfolio",
-      "path": "docs-portfolio/decisions/README.md"
+      "path": "docs-portfolio/decisions/README.md",
+      "record": "documents/portfolio/portfolio_decisions_index.json"
     },
     {
       "id": "portfolio_decision",
       "tier": "portfolio",
-      "path": "docs-portfolio/decisions/{slug}.md"
+      "path": "docs-portfolio/decisions/{slug}.md",
+      "record": "documents/portfolio/portfolio_decision.json"
     },
     {
       "id": "epic",
       "tier": "portfolio",
-      "path": "docs-portfolio/epics/{slug}.md"
+      "path": "docs-portfolio/epics/{slug}.md",
+      "record": "documents/portfolio/epic.json"
     },
     {
       "id": "portfolio_security",
       "tier": "portfolio",
-      "path": "docs-portfolio/security-posture.md"
+      "path": "docs-portfolio/security-posture.md",
+      "record": "documents/portfolio/portfolio_security.json"
     },
     {
       "id": "portfolio_operations",
       "tier": "portfolio",
-      "path": "docs-portfolio/operations.md"
+      "path": "docs-portfolio/operations.md",
+      "record": "documents/portfolio/portfolio_operations.json"
     },
     {
       "id": "portfolio_diligence_index",
       "tier": "portfolio",
-      "path": "docs-portfolio/diligence-index.md"
+      "path": "docs-portfolio/diligence-index.md",
+      "record": "documents/portfolio/portfolio_diligence_index.json"
     },
     {
       "id": "portfolio_glossary",
       "tier": "portfolio",
-      "path": "docs-portfolio/glossary.md"
+      "path": "docs-portfolio/glossary.md",
+      "record": "documents/portfolio/portfolio_glossary.json"
     },
     {
       "id": "agents_kernel",
       "tier": "spine",
-      "path": "AGENTS.md"
+      "path": "AGENTS.md",
+      "record": "documents/agent-context/agents_kernel.json"
     },
     {
       "id": "claude_shim",
       "tier": "spine",
-      "path": "CLAUDE.md"
+      "path": "CLAUDE.md",
+      "record": "documents/agent-context/claude_shim.json"
     },
     {
       "id": "claude_local",
       "tier": "spine",
-      "path": "CLAUDE.local.md"
+      "path": "CLAUDE.local.md",
+      "record": "documents/agent-context/claude_local.json"
     },
     {
       "id": "claude_settings",
       "tier": "spine",
-      "path": ".claude/settings.json"
+      "path": ".claude/settings.json",
+      "record": "documents/agent-context/claude_settings.json"
     },
     {
       "id": "agents_index",
       "tier": "spine",
-      "path": "docs/agents/README.md"
+      "path": "docs/agents/README.md",
+      "record": "documents/agent-context/agents_index.json"
     },
     {
       "id": "agents_architecture",
       "tier": "spine",
-      "path": "docs/agents/architecture.md"
+      "path": "docs/agents/architecture.md",
+      "record": "documents/agent-context/agents_architecture.json"
     },
     {
       "id": "agents_patterns",
       "tier": "spine",
-      "path": "docs/agents/patterns.md"
+      "path": "docs/agents/patterns.md",
+      "record": "documents/agent-context/agents_patterns.json"
     },
     {
       "id": "agents_testing",
       "tier": "spine",
-      "path": "docs/agents/testing.md"
+      "path": "docs/agents/testing.md",
+      "record": "documents/agent-context/agents_testing.json"
     },
     {
       "id": "agents_conventions",
       "tier": "spine",
-      "path": "docs/agents/conventions.md"
+      "path": "docs/agents/conventions.md",
+      "record": "documents/agent-context/agents_conventions.json"
     },
     {
       "id": "agents_tech_debt",
       "tier": "spine",
-      "path": "docs/agents/tech-debt.md"
+      "path": "docs/agents/tech-debt.md",
+      "record": "documents/agent-context/agents_tech_debt.json"
     },
     {
       "id": "agents_flow",
       "tier": "spine",
-      "path": "docs/agents/flow.md"
+      "path": "docs/agents/flow.md",
+      "record": "documents/agent-context/agents_flow.json"
     },
     {
       "id": "agents_glossary",
       "tier": "spine",
-      "path": "docs/agents/glossary.md"
+      "path": "docs/agents/glossary.md",
+      "record": "documents/agent-context/agents_glossary.json"
     }
   ]
 }

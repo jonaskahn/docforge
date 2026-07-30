@@ -1,0 +1,27 @@
+{
+  "id": "agents_testing",
+  "type": "agents-testing",
+  "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links",
+  "contract_file": "content/agent-context/contracts/agents-testing.md",
+  "path": "docs/agents/testing.md",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "orientation",
+  "write_order": 206,
+  "provenance_mode": "sections",
+  "audit_profile": "agent-view",
+  "template_file": "content/agent-context/templates/agents-testing.md"
+}

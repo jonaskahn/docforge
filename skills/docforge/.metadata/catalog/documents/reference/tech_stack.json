@@ -1,0 +1,25 @@
+{
+  "id": "tech_stack",
+  "type": "tech-stack",
+  "summary": "Detected languages/versions; runtimes/SDKs; primary frameworks per layer; datastores and messaging; build/package/dependency-management tooling; test and CI...",
+  "contract_file": "content/reference/contracts/tech-stack.md",
+  "path": "docs/reference/tech-stack.md",
+  "group": "reference",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "manifests"
+  ],
+  "target_depth": "reference",
+  "write_order": 63,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "dominant_form": "table",
+  "schema_min": "2.4.0",
+  "template_file": "content/reference/templates/tech-stack.md"
+}

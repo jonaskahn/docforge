@@ -1,0 +1,28 @@
+{
+  "id": "library_publishing",
+  "type": "publishing",
+  "summary": "Artifacts, version source, build/sign, registry/channel, verification, rollback/deprecation",
+  "contract_file": "content/engineering/contracts/publishing.md",
+  "path": "docs/engineering/publishing.md",
+  "group": "engineering",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "library-sdk"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/engineering/instructions/publishing.md",
+  "requires": [
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 57,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure",
+  "template_file": "content/engineering/templates/publishing.md"
+}

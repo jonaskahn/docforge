@@ -1,0 +1,32 @@
+{
+  "id": "distribution",
+  "type": "application-distribution",
+  "summary": "Artifact, build, signing, packaging, channels, verification, update/rollback",
+  "contract_file": "content/operations/contracts/application-distribution.md",
+  "path": "docs/operations/distribution.md",
+  "group": "operations",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "mobile-app",
+        "desktop-app",
+        "cli-tui",
+        "plugin-extension",
+        "game"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/operations/instructions/application-distribution.md",
+  "requires": [
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 71,
+  "provenance_mode": "sections",
+  "audit_profile": "procedure",
+  "template_file": "content/operations/templates/application-distribution.md"
+}

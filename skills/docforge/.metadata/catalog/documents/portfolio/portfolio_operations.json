@@ -1,0 +1,24 @@
+{
+  "id": "portfolio_operations",
+  "type": "portfolio-operations",
+  "summary": "Cross-repo controls, gaps, shared dependencies, operational coupling",
+  "contract_file": "content/portfolio/contracts/portfolio-operations.md",
+  "path": "docs-portfolio/operations.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "static",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/portfolio/security-posture.instruction.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 105,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio",
+  "template_file": "content/portfolio/templates/portfolio-operations.md"
+}

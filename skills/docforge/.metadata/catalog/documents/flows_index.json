@@ -1,0 +1,23 @@
+{
+  "id": "flows_index",
+  "type": "flow-index",
+  "summary": "Every evidence-backed candidate, normalized entry reference, area, confidence, reach, priority, and main/deferred/placeholder/documented/skipped status",
+  "contract_file": "content/flows/flow-index.contract.md",
+  "path": "docs/flows/README.md",
+  "group": "flows",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": null,
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 21,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "template_file": "content/flows/flow-index.template.md"
+}

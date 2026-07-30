@@ -1,0 +1,24 @@
+{
+  "id": "portfolio_diligence_index",
+  "type": "diligence-index",
+  "summary": "Evidence map, gaps, confidence, follow-up",
+  "contract_file": "content/portfolio/contracts/diligence-index.md",
+  "path": "docs-portfolio/diligence-index.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "static",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/portfolio/diligence-index.instruction.md",
+  "requires": [
+    "manifests",
+    "git_history"
+  ],
+  "target_depth": "reference",
+  "write_order": 106,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio",
+  "template_file": "content/portfolio/templates/diligence-index.md"
+}

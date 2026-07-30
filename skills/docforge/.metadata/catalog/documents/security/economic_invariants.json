@@ -1,0 +1,28 @@
+{
+  "id": "economic_invariants",
+  "type": "economic-invariants",
+  "summary": "Contracts, storage, authorities, networks, upgrade boundary, economic/security invariants",
+  "contract_file": "content/security/contracts/economic-invariants.md",
+  "path": "docs/security/economic-invariants.md",
+  "group": "security",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "shapes": [
+        "smart-contract"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/shared/contract-system.instruction.md",
+  "requires": [
+    "code_graph",
+    "git_history"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 79,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "template_file": "content/security/templates/economic-invariants.md"
+}

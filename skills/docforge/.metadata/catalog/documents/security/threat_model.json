@@ -1,0 +1,23 @@
+{
+  "id": "threat_model",
+  "type": "threat-model",
+  "summary": "Assets, trust boundaries, threats, controls, accepted residual risk",
+  "contract_file": "content/security/contracts/threat-model.md",
+  "path": "docs/security/threat-model.md",
+  "group": "security",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/security/threat-model.instruction.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "write_order": 77,
+  "provenance_mode": "sections",
+  "audit_profile": "risk",
+  "template_file": "content/security/templates/threat-model.md"
+}

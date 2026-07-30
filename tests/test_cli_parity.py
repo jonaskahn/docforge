@@ -1,0 +1,123 @@
+"""Python/Node runtime parity: same fixture, same exit code/stdout/files."""
+
+from __future__ import annotations
+
+import json
+import re
+import tempfile
+import unittest
+from pathlib import Path
+
+from _support import initialize, load_manifest, run, write_flow_index
+
+
+class RuntimeParityTests(unittest.TestCase):
+    def test_manifest_dry_run_and_filesystem_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            py_repo, js_repo = Path(tmp) / "py", Path(tmp) / "js"
+            py_repo.mkdir()
+            js_repo.mkdir()
+            kwargs = {
+                "shapes": ("api-service", "library-sdk"),
+                "audiences": ("coding-agents",),
+            }
+            py_result = initialize("py", py_repo, "portfolio", **kwargs)
+            js_result = initialize("js", js_repo, "portfolio", **kwargs)
+            self.assertEqual(py_result.returncode, js_result.returncode)
+            py_manifest, js_manifest = load_manifest(py_repo), load_manifest(js_repo)
+            for manifest in (py_manifest, js_manifest):
+                manifest["generated_at"] = "<TIME>"
+                manifest["metadata"]["last_updated"] = "<TIME>"
+                manifest["project"]["root"] = "<REPO>"
+                manifest["project"]["name"] = "<NAME>"
+            self.assertEqual(py_manifest, js_manifest)
+
+            py_tree = run("py", "scaffold_docs", "--repo", str(py_repo), "--manifest",
+                          str(py_repo / ".docforge/manifest.json"), "--dry-run")
+            js_tree = run("js", "scaffold_docs", "--repo", str(js_repo), "--manifest",
+                          str(js_repo / ".docforge/manifest.json"), "--dry-run")
+            self.assertEqual(py_tree.returncode, 0, py_tree.stderr)
+            self.assertEqual(py_tree.stdout, js_tree.stdout)
+            self.assertIn("Generation plan — tier: portfolio", py_tree.stdout)
+            self.assertIn("depth:", py_tree.stdout)
+            self.assertIn("requires:", py_tree.stdout)
+            self.assertIn("selected by:", py_tree.stdout)
+            self.assertRegex(
+                py_tree.stdout,
+                r"\d+ manifest documents; \d+ require a flow graph\.",
+            )
+            listed = {
+                match.group(1)
+                for line in py_tree.stdout.splitlines()
+                if (match := re.match(r"^\d{3}\s+\S+\s+(\S+)$", line))
+            }
+            self.assertEqual(listed, {doc["path"] for doc in py_manifest["documents"]})
+
+            for runtime, repo in (("py", py_repo), ("js", js_repo)):
+                write_flow_index(repo)
+                add = run(runtime, "manage_manifest", "add", "--repo", str(repo), "--type", "flow",
+                          "--id", "flow-checkout", "--path", "docs/flows/checkout.md")
+                self.assertEqual(add.returncode, 0, add.stderr)
+                create = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest",
+                             str(repo / ".docforge/manifest.json"), "--document", "flow-checkout")
+                self.assertEqual(create.returncode, 0, create.stderr)
+            py_files = sorted(str(item.relative_to(py_repo)) for item in py_repo.rglob("*") if item.is_file())
+            js_files = sorted(str(item.relative_to(js_repo)) for item in js_repo.rglob("*") if item.is_file())
+            self.assertEqual(py_files, js_files)
+            for rel in py_files:
+                if rel != ".docforge/manifest.json":
+                    self.assertEqual((py_repo / rel).read_bytes(), (js_repo / rel).read_bytes())
+
+    def test_unknown_flags_exit_two(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                result = run(runtime, "scaffold_docs", "--repo", tmp, "--manifest", "missing", "--wat")
+                self.assertEqual(result.returncode, 2)
+                result = run(runtime, "precheck_graph", "--repo", tmp, "--need", "domain")
+                self.assertEqual(result.returncode, 2)
+
+    def test_agent_settings_merge_and_local_ignore_are_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            results = []
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                (repo / ".claude").mkdir(parents=True)
+                (repo / ".claude" / "settings.json").write_text(
+                    json.dumps({
+                        "permissions": {"deny": ["Bash(custom-danger*)"]},
+                        "env": {"KEEP_ME": "yes"},
+                    }) + "\n",
+                    encoding="utf-8",
+                )
+                (repo / ".gitignore").write_text("build/\n", encoding="utf-8")
+                init = initialize(
+                    runtime, repo, "spine", audiences=("coding-agents",),
+                )
+                self.assertEqual(init.returncode, 0, init.stderr)
+                for doc_id in ("claude_settings", "claude_local"):
+                    created = run(
+                        runtime, "scaffold_docs",
+                        "--repo", str(repo),
+                        "--manifest", str(repo / ".docforge" / "manifest.json"),
+                        "--document", doc_id,
+                    )
+                    self.assertEqual(created.returncode, 0, created.stderr)
+                settings = json.loads(
+                    (repo / ".claude" / "settings.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(settings["env"], {"KEEP_ME": "yes"})
+                self.assertIn(
+                    "Bash(custom-danger*)", settings["permissions"]["deny"],
+                )
+                self.assertIn(
+                    "Bash(git reset --hard*)", settings["permissions"]["deny"],
+                )
+                ignore = (repo / ".gitignore").read_text(encoding="utf-8")
+                self.assertEqual(ignore.count("CLAUDE.local.md"), 1)
+                self.assertIn("build/\n", ignore)
+                results.append((settings, ignore))
+            self.assertEqual(results[0], results[1])
+
+
+if __name__ == "__main__":
+    unittest.main()
