@@ -22,6 +22,14 @@ link persistence or datasets for their model and storage mechanics. For each
 non-obvious failure, name evidence and the symptom or escalation boundary that
 hands control to operations or another owner.
 
+At `component-evidence` depth, every material responsibility and public contract
+uses `path#Lx-Ly @ <40-lowercase-hex-blob>` and the heading's provenance section
+contains the same source pair. Keep the prose at responsibility/interface level:
+no Level-4 code section, class diagram, private-symbol inventory, or directory
+walk. Each selected whitebox states why it is decomposed and the dependency
+direction it permits. The runtime scenario names its outcome and a material
+exception path; every message maps to a named component.
+
 ## Illustration
 
 - **Form:** an ASCII layered stack for static decomposition; a Mermaid

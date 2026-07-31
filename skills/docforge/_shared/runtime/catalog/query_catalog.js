@@ -19,7 +19,19 @@ const ALLOWED_DOMINANT_FORMS = new Set([
   "flowchart",
   "sequenceDiagram",
   "erDiagram",
+  "stateDiagram-v2",
 ]);
+const TARGET_DEPTHS = new Set(["orientation", "deep-dive", "reference", "router"]);
+const MODEL_DEPTHS = {
+  c4: ["context", "container", "component", "component-evidence"],
+  arc42: ["context", "building-block-l1", "building-block-l2", "runtime-scenarios"],
+  stride: ["boundary-element", "full-element", "interaction-risk"],
+  adr: ["nygard", "madr-min", "madr-full"],
+  prov: ["core", "expanded", "qualified"],
+  mermaid: ["single-form", "complementary", "annotated"],
+};
+const MODEL_DEPTH_ORDER = ["c4", "arc42", "stride", "adr", "prov", "mermaid"];
+const CONTRACT_REVISION_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const REQUIRED_DOC_FIELDS = [
   "id",
   "type",
@@ -35,7 +47,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.6.1";
+const CATALOG_VERSION = "2.7.0";
 
 function loadIndex() {
   if (!fs.existsSync(INDEX_PATH)) throw new Error(`catalog index not found: ${INDEX_PATH}`);
@@ -72,6 +84,18 @@ function indexRow(docId) {
   const row = index.document_types.find((r) => r.id === docId);
   if (!row) throw new Error(`unknown document type id: ${docId}`);
   return row;
+}
+function resolveCatalogId(value) {
+  const index = loadIndex();
+  if (index.document_types.some((row) => row.id === value)) return value;
+  const matches = index.document_types
+    .filter((row) => {
+      const detail = loadType(row.id);
+      return detail.selection && detail.selection.mode === "dynamic" && detail.type === value;
+    })
+    .map((row) => row.id);
+  if (matches.length === 1) return matches[0];
+  throw new Error(`unknown document type id or dynamic type: ${value}`);
 }
 
 function loadType(docId) {
@@ -128,10 +152,17 @@ function category(group) {
   };
 }
 
-function route(docId) {
+function route(value) {
+  const docId = resolveCatalogId(value);
   const row = indexRow(docId);
   const detail = loadType(docId);
   const record = row.record || `types/${docId}.json`;
+  const modelDepth = {};
+  for (const model of MODEL_DEPTH_ORDER) {
+    if (detail.model_depth && Object.prototype.hasOwnProperty.call(detail.model_depth, model)) {
+      modelDepth[model] = detail.model_depth[model];
+    }
+  }
   return {
     id: docId,
     group: detail.group,
@@ -142,6 +173,9 @@ function route(docId) {
     template: detail.template_file,
     workflow: ROUTE_WORKFLOW,
     requires: detail.requires || [],
+    target_depth: detail.target_depth,
+    audit_profile: detail.audit_profile,
+    model_depth: modelDepth,
   };
 }
 
@@ -393,6 +427,25 @@ function validate() {
     if (!tierIds.has(selection.min_tier)) {
       errors.push(`${docId}: unknown tier ${selection.min_tier}`);
     }
+    if (!TARGET_DEPTHS.has(doc.target_depth)) {
+      errors.push(`${docId}: target_depth must be one of: ${[...TARGET_DEPTHS].sort().join(", ")}`);
+    }
+    if (doc.model_depth !== undefined) {
+      if (!doc.model_depth || typeof doc.model_depth !== "object" || Array.isArray(doc.model_depth) || !Object.keys(doc.model_depth).length) {
+        errors.push(`${docId}: model_depth must be a non-empty object`);
+      } else {
+        for (const [model, rung] of Object.entries(doc.model_depth)) {
+          if (!(model in MODEL_DEPTHS)) errors.push(`${docId}: unknown model_depth model ${model}`);
+          else if (!MODEL_DEPTHS[model].includes(rung)) errors.push(`${docId}: invalid ${model} model_depth rung ${rung}`);
+        }
+      }
+    }
+    if (doc.contract_revision !== undefined && (typeof doc.contract_revision !== "string" || !CONTRACT_REVISION_RE.test(doc.contract_revision))) {
+      errors.push(`${docId}: contract_revision must be MAJOR.MINOR.PATCH`);
+    }
+    if (doc.selection_evidence_required !== undefined && typeof doc.selection_evidence_required !== "boolean") {
+      errors.push(`${docId}: selection_evidence_required must be boolean`);
+    }
     const selectors = selection.selectors || {};
     if (selectors.frameworks && selectors.frameworks.length) {
       errors.push(`${docId}: frameworks may tailor evidence but must not select documents`);
@@ -447,6 +500,7 @@ function validate() {
     } else if (selection.mode === "dynamic") {
       if (dynamicTypes.has(doc.type)) errors.push(`duplicate dynamic type: ${doc.type}`);
       dynamicTypes.add(doc.type);
+      if (indexIds.includes(doc.type) && doc.type !== docId) errors.push(`${docId}: dynamic type collides with catalog id ${doc.type}`);
     } else {
       errors.push(`${docId}: selection.mode must be static or dynamic`);
     }

@@ -32,6 +32,8 @@
 const fs = require("fs");
 const path = require("path");
 const pf = require("../common/provenance_frontmatter.js");
+const { validateLocators } = require("../common/evidence_locators.js");
+const { illustrationDefects: budgetDefects } = require("../common/illustration_metrics.js");
 
 const SCAFFOLD_RE = /\{\{.*?\}\}/g;
 const TOKEN_RE = /<[A-Z][A-Z0-9_]*>/g;
@@ -197,6 +199,12 @@ function checkDocument(filePath, requireHeadings) {
   const tokens = [];
   defects.push(...provenanceDefects(filePath, text));
   defects.push(...illustrationDefects(text));
+  const parsed = pf.parseFrontmatter(text);
+  const targetDepth = parsed.provenance && typeof parsed.provenance === "object"
+    ? parsed.provenance.target_depth || "deep-dive"
+    : "deep-dive";
+  defects.push(...budgetDefects(text, targetDepth));
+  defects.push(...validateLocators(filePath, text));
 
   // scaffold markers + tokens, with line numbers
   for (let i = 0; i < lines.length; i++) {

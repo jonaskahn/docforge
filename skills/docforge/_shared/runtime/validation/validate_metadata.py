@@ -15,11 +15,11 @@ from . import generate_indexes
 from runtime.catalog import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent
-REPO_ROOT = SKILL_ROOT.parent.parent
-CATALOG_VERSION = "2.6.1"
+REPO_ROOT = SKILL_ROOT.parent.parent.parent
+CATALOG_VERSION = "2.7.0"
 MARKDOWN_EXCEPTIONS = {"agents-kernel.md", "claude-md.md", "claude-local-md.md"}
 PUBLIC_CONTRACTS = {
-    "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--status", "--mode", "--verdict", "--report"],
+    "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report"],
     "detect_profiles": ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],

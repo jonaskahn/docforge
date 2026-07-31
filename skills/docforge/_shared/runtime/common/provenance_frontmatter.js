@@ -10,7 +10,7 @@ const crypto = require("crypto");
 const SCHEMA_VERSION = "2.0";
 const LEGACY_SCHEMA = "1.0";
 const GENERATOR_NAME = "docforge";
-const GENERATOR_VERSION = "2.6.1";
+const GENERATOR_VERSION = "2.7.0";
 const PROVENANCE_FIELDS = new Set([
   "schema", "doc_id", "path", "generated_at", "generator", "tier",
   "target_depth", "graph", "sections",

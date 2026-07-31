@@ -47,6 +47,8 @@ from runtime.common.provenance_frontmatter import (
     SOURCE_ROLES,
     parse_frontmatter as codec_parse_frontmatter,
 )
+from runtime.common.evidence_locators import validate_locators
+from runtime.common.illustration_metrics import illustration_defects as budget_defects
 
 SCAFFOLD_RE = re.compile(r"\{\{.*?\}\}")
 TOKEN_RE = re.compile(r"<[A-Z][A-Z0-9_]*>")
@@ -226,6 +228,10 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
     tokens: list[str] = []
     defects.extend(provenance_defects(path, text))
     defects.extend(illustration_defects(text))
+    _state, provenance, _end = codec_parse_frontmatter(text)
+    target_depth = provenance.get("target_depth", "deep-dive") if isinstance(provenance, dict) else "deep-dive"
+    defects.extend(budget_defects(text, target_depth))
+    defects.extend(validate_locators(path, text))
 
     # scaffold markers + tokens, with line numbers
     for i, line in enumerate(lines, 1):

@@ -1,6 +1,6 @@
 {
   "$schema": "catalog-index-schema.json",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "profiles": {
     "shapes": "profiles/shapes.json",
     "platforms": "profiles/platforms.json",
@@ -625,6 +625,12 @@
       "tier": "diligence",
       "path": "docs/security/threat-model.md",
       "record": "documents/security/threat_model.json"
+    },
+    {
+      "id": "threat_register",
+      "tier": "diligence",
+      "path": "docs/security/threat-register.md",
+      "record": "documents/security/threat_register.json"
     },
     {
       "id": "data_handling",

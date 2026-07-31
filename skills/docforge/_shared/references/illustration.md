@@ -35,10 +35,12 @@ important rules, inputs/outputs, and common failures.
 | Orientation (`orientation`) | One illustration | At most 5 meaningful elements |
 | Working depth | At most 2 illustrations | At most 8 meaningful elements |
 | Deep dive (`deep-dive`) | At most 3 illustrations | At most 12 meaningful elements |
+| Reference (`reference`) | Normally tables; at most 1 relationship illustration | At most 12 meaningful elements |
+| Router (`router`) | No illustrations | Not applicable |
 
 Reference documents normally use tables. Add one relationship illustration
 only when lookup fields cannot express the relationship clearly. Router
-documents normally use prose and links. Split any illustration that exceeds
+documents use prose and links. Split any illustration that exceeds
 its bound into linked views with one stated question each. A sequence diagram
 also has at most 5 participants; a state diagram at most 8 named states; an ER
 diagram at most 8 entities.
@@ -53,6 +55,10 @@ diagram at most 8 entities.
 - Keep direction and zoom consistent. Prefer `LR` for peer relationships and
   `TD` for ordered branching.
 - Keep labels short and explain detail in the surrounding prose.
+- Every meaningful relationship is directional and carries a specific active
+  verb; include a protocol or channel when evidence establishes one.
+- Prefer a second complementary form answering a different reader question to
+  enlarging a diagram. Never use deprecated `stateDiagram` syntax.
 
 Use stable semantic IDs even when the visible label is reader-facing:
 

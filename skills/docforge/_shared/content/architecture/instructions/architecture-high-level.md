@@ -29,7 +29,7 @@ consequences — rationale lives in decisions, not here.
   levels in the same diagram.
 - **Trigger:** only when it clarifies relationships among three or more
   blocks — per
-  [`illustration.md`](../../../references/illustration.md)'s deep-dive budget.
+   [`illustration.md`](../../../references/illustration.md)'s orientation budget.
 
 ## Connections
 
@@ -39,3 +39,7 @@ consequences — rationale lives in decisions, not here.
 | — | `records/` (decisions) | rationale for why a block is shaped this way lives in decisions, never restated here |
 | — | `tech-debt-register`, `constraints` | known shortcuts and hard bounds are tracked in their own registers, not folded into this stable document |
 | Each deployable block's implementing technology | `reference/tech-stack` | what the repository is built with is owned there; this document only labels each block with it |
+
+Every relationship is directional and uses a specific active verb. Name its protocol
+or channel when evidence establishes one; otherwise say `unknown`. Do not combine
+C4 Context and Container zooms in the one permitted orientation illustration.

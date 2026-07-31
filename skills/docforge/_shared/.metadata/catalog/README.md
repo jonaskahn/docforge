@@ -17,4 +17,4 @@ Machine-readable document catalog. Query it via `runtime/cli/python/query_catalo
 
 ## Boundaries
 
-127 document records across 12 groups. Category indexes are generated views; `index.json` and each record file remain authoritative.
+128 document records across 12 groups. Category indexes are generated views; `index.json` and each record file remain authoritative.

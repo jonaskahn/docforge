@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["version", "tiers", "profiles", "groups", "capabilities", "documents"],
   "properties": {
-    "version": {"const": "2.6.1"},
+    "version": {"const": "2.7.0"},
     "tiers": {"type": "array", "items": {"$ref": "#/definitions/namedOrder"}},
     "profiles": {
       "type": "object",
@@ -114,15 +114,30 @@
         "template_file": {"type": "string"},
         "instruction_file": {"type": ["string", "null"]},
         "requires": {"type": "array", "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}},
-        "target_depth": {"type": "string"},
+        "target_depth": {"enum": ["orientation", "deep-dive", "reference", "router"]},
         "write_order": {"type": "integer"},
         "provenance_mode": {"enum": ["sections", "manifest"]},
         "audit_profile": {"type": "string"},
         "dominant_form": {
           "type": ["string", "null"],
-          "enum": ["table", "flowchart", "sequenceDiagram", "erDiagram", null]
+            "enum": ["table", "flowchart", "sequenceDiagram", "stateDiagram-v2", "erDiagram", null]
         },
-        "schema_min": {"type": "string"}
+        "schema_min": {"type": "string"},
+        "model_depth": {
+          "type": "object",
+          "properties": {
+            "c4": {"enum": ["context", "container", "component", "component-evidence"]},
+            "arc42": {"enum": ["context", "building-block-l1", "building-block-l2", "runtime-scenarios"]},
+            "stride": {"enum": ["boundary-element", "full-element", "interaction-risk"]},
+            "adr": {"enum": ["nygard", "madr-min", "madr-full"]},
+            "prov": {"enum": ["core", "expanded", "qualified"]},
+            "mermaid": {"enum": ["single-form", "complementary", "annotated"]}
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "contract_revision": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+        "selection_evidence_required": {"type": "boolean"}
       }
     }
   }

@@ -19,7 +19,7 @@
   "requires": [
     "manifests"
   ],
-  "target_depth": "configuration",
+  "target_depth": "reference",
   "write_order": 203,
   "provenance_mode": "manifest",
   "audit_profile": "machine",

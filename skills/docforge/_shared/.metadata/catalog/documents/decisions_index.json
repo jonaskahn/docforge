@@ -1,7 +1,7 @@
 {
   "id": "decisions_index",
   "type": "decision-index",
-  "summary": "Indexed decisions; for each ADR context, decision, alternatives, consequences, status",
+  "summary": "Numeric decision router with title, status, date, and optional topic",
   "contract_file": "content/records/decision-index.contract.md",
   "path": "docs/architecture/decisions/README.md",
   "group": "records",
@@ -15,9 +15,10 @@
   "requires": [
     "git_history"
   ],
-  "target_depth": "orientation",
+  "target_depth": "router",
   "write_order": 80,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/decision-index.template.md",
+  "contract_revision": "2.7.0"
 }

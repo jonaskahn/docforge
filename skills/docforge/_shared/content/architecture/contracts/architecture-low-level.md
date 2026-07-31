@@ -4,4 +4,4 @@ Content contract for document type `architecture-low-level`.
 
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| architecture-low-level | module/component responsibilities and their interfaces (or, for `infrastructure-platform`, resource-group / stack responsibilities and apply order); one representative runtime scenario (arc42 runtime-view style — a single architecturally relevant sequence, not an exhaustive set; for `infrastructure-platform`, a representative promotion or rollback sequence); data/control paths; failure boundaries; an explicit link up to `architecture-high-level.md` as its parent zoom level | duplicated high-level map | Explanation | deep-dive |
+| architecture-low-level | selected whitebox decompositions under named high-level parents; component responsibility, technology, public contract, directional relationships, invariant/failure boundary, and immutable evidence locator for material claims; one distinct intra-block runtime scenario with outcome and error path | duplicated high-level map, Level-4/class prose, private-symbol tours, or unlabeled uses relationships | Explanation | deep-dive |

@@ -57,11 +57,11 @@ function isFolderGroup(records) {
 function categoryIndexPayload(group, records) {
   const categoryDir = path.join(DOCUMENTS_DIR, group);
   return {
-    $schema: "../category-index-schema.json",
+    $schema: "../../category-index-schema.json",
     version: queryCatalog.CATALOG_VERSION,
     category: group,
     purpose: queryCatalog.GROUP_SUMMARIES[group] || `${group} document definitions`,
-    source: "../index.json",
+    source: "../../index.json",
     records: records.map(([, docId, detail, record]) => ({
       id: docId,
       path: relativeRecordPath(record, categoryDir),

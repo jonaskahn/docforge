@@ -22,6 +22,10 @@ const TRANSITIONS = {
 };
 const TOOL_VERSION = pf.GENERATOR_VERSION;
 const MANIFEST_VERSION = "3.1";
+const USER_CONFIRMED_TRIGGERS = new Set([
+  "new-trust-boundary", "per-interaction-review", "regulated-workload",
+  "high-criticality", "new-external-integration", "new-data-classification",
+]);
 
 function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00");
@@ -109,6 +113,23 @@ function validateRelativePath(value) {
   if (!value || path.posix.isAbsolute(value) || value.split("/").includes("..") || value === ".") {
     throw new Error(`path must be a safe repository-relative path: ${value}`);
   }
+}
+function validateSelectionEvidence(repo, values) {
+  const validated = [];
+  for (const value of values) {
+    if (value.includes("\n")) throw new Error("selection evidence must not contain newlines");
+    if (value.startsWith("path:")) {
+      const rel = value.slice("path:".length); validateRelativePath(rel);
+      if (!exists(repo, rel)) throw new Error(`selection evidence path does not exist: ${rel}`);
+    } else if (value.startsWith("graph:")) {
+      if (!/^graph:[a-z0-9][a-z0-9-]*:[A-Za-z0-9._:/-]+$/.test(value)) throw new Error(`invalid graph selection evidence: ${value}`);
+    } else if (value.startsWith("user-confirmed:")) {
+      const trigger = value.slice("user-confirmed:".length);
+      if (!USER_CONFIRMED_TRIGGERS.has(trigger)) throw new Error(`unregistered user-confirmed trigger: ${trigger}`);
+    } else throw new Error(`selection evidence must use path:, graph:, or user-confirmed:: ${value}`);
+    if (!validated.includes(value)) validated.push(value);
+  }
+  return validated;
 }
 function makeDocument(definition, origins, evidence = [], catalogId = null) {
   // `definition` comes from the legacy-view catalog (bare filenames, kept
@@ -222,16 +243,16 @@ function parseArgs(argv) {
   const command = argv[0];
   const knownCommands = new Set(["init", "add", "set", "audit", "status"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
-  const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay"]);
+  const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence"]);
   const boolean = new Set(["force"]);
   const allowed = {
     init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force"]),
-    add: new Set(["repo", "type", "id", "path"]),
+    add: new Set(["repo", "type", "id", "path", "evidence"]),
     set: new Set(["repo", "id", "status"]),
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
   }[command];
-  const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [] };
+  const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [], evidence: [] };
   for (let i = 1; i < argv.length; i++) {
     const token = argv[i];
     if (!token.startsWith("--")) throw new Error(`unexpected argument: ${token}`);
@@ -308,6 +329,7 @@ function cmdAdd(args) {
     });
     const catalog = loadCatalog();
     const definition = dynamicDefinition(catalog, args.type);
+    const fullDefinition = queryCatalog.loadType(definition.id);
     validateRelativePath(args.path);
     let flowIndex = null;
     let flowRow = null;
@@ -324,11 +346,12 @@ function cmdAdd(args) {
         .join(", ");
       return fail(`dynamic type ${args.type} requires profile ${requirements}`, 2);
     }
-    let evidence = conditionEvidence(args.repo, rule.condition);
+    let evidence = [...conditionEvidence(args.repo, rule.condition), ...validateSelectionEvidence(args.repo, args.evidence || [])];
     if (flowRow) {
       evidence = [FLOW_INDEX_REL, ...(flowRow.evidence || []).map((item) => String(item.artifact || "")).filter(Boolean)];
     }
     if (rule.condition === "ticket_evidence" && !evidence.length) return fail(`dynamic type ${args.type} requires ticket evidence in the repository`, 2);
+    if (fullDefinition.selection_evidence_required && !evidence.length) return fail(`dynamic type ${args.type} requires selection evidence`, 2);
     if (!pathMatches(definition.path, args.path)) return fail(`path '${args.path}' does not match catalog pattern '${definition.path}'`, 2);
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(args.id)) return fail(`document id must use lowercase letters, digits, hyphens, or underscores: ${args.id}`, 2);
     if (manifest.documents.some((doc) => doc.id === args.id)) return fail(`document id already exists: ${args.id}`, 2);
@@ -425,7 +448,7 @@ function cmdStatus(args) {
   }
 }
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <subagent|cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path>");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <subagent|cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path>");
 }
 function main() {
   let args;

@@ -1,9 +1,9 @@
 {
-  "$schema": "../category-index-schema.json",
-  "version": "2.6.1",
+  "$schema": "../../category-index-schema.json",
+  "version": "2.7.0",
   "category": "product",
   "purpose": "Product surface: overview, quickstart, and audience-specific product views.",
-  "source": "../index.json",
+  "source": "../../index.json",
   "records": [
     {
       "id": "product_index",

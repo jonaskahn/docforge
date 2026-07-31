@@ -6,7 +6,7 @@ docforge_provenance:
   generated_at: "<GENERATED_AT>"
   generator:
     name: "docforge"
-    version: "2.6.1"
+    version: "2.7.0"
   tier: "<TIER>"
   target_depth: "<TARGET_DEPTH>"
   graph:
@@ -36,21 +36,27 @@ flowchart LR
 
 {{One sentence: what crosses each boundary and why the relationship matters.}}
 
-## Building blocks
+## Containers and blackboxes
 
 The major parts and what each is responsible for. One or two sentences each — behaviour,
 not code. Deep mechanism lives in [low-level.md](low-level.md) and
 [concepts/](concepts/README.md).
 
-| Block | Responsibility | Boundary it owns |
-|---|---|---|
-| {{block}} | {{what it does}} | {{trust / API / data boundary, if any}} |
+| Block | Responsibility | Technology | External interface | Boundary it owns |
+|---|---|---|---|---|
+| {{block}} | {{active responsibility}} | {{stack or unknown}} | {{protocol/channel}} | {{trust / API / data boundary, if any}} |
 
-## Boundaries and data flow
+## Relationship matrix
 
-{{Two or three paragraphs tracing how data and control move from input to output across
-the blocks above. A reader should be able to draw the box diagram from this alone.
-For the detailed flow, link [data-flow.md](data-flow.md) — do not restate it here.}}
+| Origin | Destination | Action | Protocol / channel |
+|---|---|---|---|
+| {{block}} | {{block or external actor}} | {{specific active verb}} | {{evidenced protocol or unknown}} |
+
+## Boundaries and invariants
+
+{{State stable boundary and invariant facts. A relationship must have an inline
+source citation or a one-sentence rationale. For detailed flow, link
+[data-flow.md](data-flow.md) rather than repeating it.}}
 
 ## Stable by design
 

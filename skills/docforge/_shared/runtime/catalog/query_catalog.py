@@ -22,7 +22,19 @@ ALLOWED_DOMINANT_FORMS = {
     "flowchart",
     "sequenceDiagram",
     "erDiagram",
+    "stateDiagram-v2",
 }
+TARGET_DEPTHS = {"orientation", "deep-dive", "reference", "router"}
+MODEL_DEPTHS = {
+    "c4": ("context", "container", "component", "component-evidence"),
+    "arc42": ("context", "building-block-l1", "building-block-l2", "runtime-scenarios"),
+    "stride": ("boundary-element", "full-element", "interaction-risk"),
+    "adr": ("nygard", "madr-min", "madr-full"),
+    "prov": ("core", "expanded", "qualified"),
+    "mermaid": ("single-form", "complementary", "annotated"),
+}
+MODEL_DEPTH_ORDER = ("c4", "arc42", "stride", "adr", "prov", "mermaid")
+CONTRACT_REVISION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
 REQUIRED_DOC_FIELDS = {
     "id",
@@ -39,7 +51,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.6.1"
+CATALOG_VERSION = "2.7.0"
 
 
 def load_index() -> dict:
@@ -79,6 +91,21 @@ def index_row(doc_id: str) -> dict:
     if row is None:
         raise ValueError(f"unknown document type id: {doc_id}")
     return row
+
+
+def resolve_catalog_id(value: str) -> str:
+    """Resolve a catalog id, or the unique dynamic type used by an instance."""
+    index = load_index()
+    if any(row["id"] == value for row in index["document_types"]):
+        return value
+    matches = [
+        row["id"] for row in index["document_types"]
+        if load_type(row["id"]).get("selection", {}).get("mode") == "dynamic"
+        and load_type(row["id"]).get("type") == value
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    raise ValueError(f"unknown document type id or dynamic type: {value}")
 
 
 def load_type(doc_id: str) -> dict:
@@ -178,10 +205,16 @@ def category(group: str) -> dict:
     }
 
 
-def route(doc_id: str) -> dict:
+def route(value: str) -> dict:
+    doc_id = resolve_catalog_id(value)
     row = index_row(doc_id)
     detail = load_type(doc_id)
     record = row.get("record", f"types/{doc_id}.json")
+    model_depth = {
+        model: detail["model_depth"][model]
+        for model in MODEL_DEPTH_ORDER
+        if model in detail.get("model_depth", {})
+    }
     return {
         "id": doc_id,
         "group": detail.get("group"),
@@ -192,6 +225,9 @@ def route(doc_id: str) -> dict:
         "template": detail.get("template_file"),
         "workflow": ROUTE_WORKFLOW,
         "requires": detail.get("requires", []),
+        "target_depth": detail.get("target_depth"),
+        "audit_profile": detail.get("audit_profile"),
+        "model_depth": model_depth,
     }
 
 
@@ -416,6 +452,23 @@ def validate() -> list[str]:
             errors.append(f"{doc_id}: unknown group {doc['group']}")
         if selection.get("min_tier") not in tier_ids:
             errors.append(f"{doc_id}: unknown tier {selection.get('min_tier')}")
+        if doc.get("target_depth") not in TARGET_DEPTHS:
+            errors.append(f"{doc_id}: target_depth must be one of: {', '.join(sorted(TARGET_DEPTHS))}")
+        model_depth = doc.get("model_depth")
+        if model_depth is not None:
+            if not isinstance(model_depth, dict) or not model_depth:
+                errors.append(f"{doc_id}: model_depth must be a non-empty object")
+            else:
+                for model, rung in model_depth.items():
+                    if model not in MODEL_DEPTHS:
+                        errors.append(f"{doc_id}: unknown model_depth model {model}")
+                    elif rung not in MODEL_DEPTHS[model]:
+                        errors.append(f"{doc_id}: invalid {model} model_depth rung {rung}")
+        revision = doc.get("contract_revision")
+        if revision is not None and (not isinstance(revision, str) or not CONTRACT_REVISION_RE.fullmatch(revision)):
+            errors.append(f"{doc_id}: contract_revision must be MAJOR.MINOR.PATCH")
+        if "selection_evidence_required" in doc and not isinstance(doc["selection_evidence_required"], bool):
+            errors.append(f"{doc_id}: selection_evidence_required must be boolean")
         selectors = selection.get("selectors", {})
         if selectors.get("frameworks"):
             errors.append(f"{doc_id}: frameworks may tailor evidence but must not select documents")
@@ -459,6 +512,8 @@ def validate() -> list[str]:
             if doc["type"] in dynamic_types:
                 errors.append(f"duplicate dynamic type: {doc['type']}")
             dynamic_types.add(doc["type"])
+            if doc["type"] in index_ids and doc["type"] != doc_id:
+                errors.append(f"{doc_id}: dynamic type collides with catalog id {doc['type']}")
         else:
             errors.append(f"{doc_id}: selection.mode must be static or dynamic")
 

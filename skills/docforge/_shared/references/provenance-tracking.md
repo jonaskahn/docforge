@@ -39,10 +39,9 @@ writes a deterministic YAML subset: 2-space indent, fixed key order, and every
 scalar double-quoted. It rejects anchors, aliases, block scalars, multi-document
 markers, and non-empty flow collections. `schema` is always `2.0`.
 
-`doc_id` and `path` identify the manifest entry (the PROV entity).
-`generated_at` and optional `git_commit` identify the write activity.
-`generator.name` and `generator.version` identify the PROV agent / AI
-Provenance Protocol generator. Optional `content_hash` is a SHA-256 of the
+`doc_id` and `path` identify the manifest entry. `generated_at` and optional
+`git_commit` identify the write activity. `generator.name` and
+`generator.version` identify the generator. Optional `content_hash` is a SHA-256 of the
 Markdown body after frontmatter (`sha256:<64 hex>`). Optional `review` records
 `mode`, `verdict`, and `report` from the independent audit. `tier` and
 `target_depth` carry the content contract. `graph.provider` names the selected
@@ -54,16 +53,27 @@ relative file paths, a Git blob hash of the working-tree bytes, and one role:
 `code`, `config`, `manifest`, `doc`, `test`, or `history`. `unresolved` lists
 typed external tokens intentionally retained in that section.
 
-### Standards mapping
+### Deterministic PROV core projection
 
-| Docforge field | W3C PROV-DM | AI Provenance Protocol |
-|---|---|---|
-| `doc_id`, `path` | Entity | content identity |
-| `generated_at`, `git_commit` | Activity | generation event |
-| `generator` | Agent | `generator` |
-| `graph`, `sections[].sources` | used inputs | `inputs` |
-| `content_hash` | entity digest | `content_hash` |
-| `review` | attribution / derivation note | `review` |
+Docforge projects existing provenance 2.0 into five W3C PROV core relations;
+it does not serialize PROV or add schema fields. The projection identifies the
+document entity as `doc:<doc_id>@<content_hash-or-generated_at>`, generation as
+`generation:<doc_id>@<generated_at>`, sources as `source:<path>@<git_blob>`,
+and generator as `agent:<name>@<version>`.
+
+| Relation | Projection |
+|---|---|
+| `wasGeneratedBy` | document -> generation activity |
+| `used` | generation activity -> each deduplicated section source |
+| `wasAttributedTo` | document -> generator agent |
+| `wasAssociatedWith` | generation activity -> generator agent |
+| `wasDerivedFrom` | document -> each deduplicated section source |
+
+Sources deduplicate by `(path, git_blob)` and sort by path then blob. A role
+conflict for that pair is invalid; role is not represented as qualified PROV.
+Expanded/qualified relations, plans, roles, bundles, prompt retention, JSON-LD,
+and C2PA bridging are deferred to a provenance schema ADR. There is no claimed
+canonical C2PA to PROV crosswalk.
 
 Templates and planned manifest entries use explicit string tokens such as
 `<DOC_ID>` and `<GENERATED_AT>` for values unavailable before writing. These

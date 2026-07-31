@@ -9,6 +9,7 @@ concern; workflows link here instead of repeating the rule.
 - "What does this audience or repository shape change?" → [profiles/](profiles/README.md)
 - "Where does this document go, and what is it named?" → [docs-tree.md](docs-tree.md)
 - "How deep should this document go for this audience?" → [depth-and-audience.md](depth-and-audience.md)
+- "What model-native rigor is required beyond reader depth?" → [model-depth-ladders.md](model-depth-ladders.md)
 - "The detection gate flagged an ambiguous cue — what now?" → [discovery-gate.md](discovery-gate.md)
 - "How do I gather evidence without reading everything?" → [source-analysis.md](source-analysis.md)
 - "Can I fan out evidence questions across agents?" → [parallel-execution.md](parallel-execution.md)
@@ -28,7 +29,7 @@ concern; workflows link here instead of repeating the rule.
 - [docs-tree.md](docs-tree.md), [depth-and-audience.md](depth-and-audience.md),
   [discovery-gate.md](discovery-gate.md), [source-analysis.md](source-analysis.md),
   [parallel-execution.md](parallel-execution.md), [document-audit.md](document-audit.md),
-  [document-composition.md](document-composition.md), [quality-bar.md](quality-bar.md),
+   [document-composition.md](document-composition.md), [model-depth-ladders.md](model-depth-ladders.md), [quality-bar.md](quality-bar.md),
   [provenance-tracking.md](provenance-tracking.md), [illustration.md](illustration.md),
   [host-neutrality.md](host-neutrality.md), [decision-records.md](decision-records.md),
   [portfolio.md](portfolio.md)

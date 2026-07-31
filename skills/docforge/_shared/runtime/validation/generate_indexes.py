@@ -59,11 +59,11 @@ def is_folder_group(records: list) -> bool:
 def category_index_payload(group: str, records: list[tuple[int, str, dict, str]]) -> dict:
     category_dir = DOCUMENTS_DIR / group
     return {
-        "$schema": "../category-index-schema.json",
+        "$schema": "../../category-index-schema.json",
         "version": query_catalog.CATALOG_VERSION,
         "category": group,
         "purpose": query_catalog.GROUP_SUMMARIES.get(group, f"{group} document definitions"),
-        "source": "../index.json",
+        "source": "../../index.json",
         "records": [
             {
                 "id": doc_id,

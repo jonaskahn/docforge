@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.7.0 - Model-native depth ladders
+
+- Added model-depth routing, evidence locators, illustration budgets, deterministic PROV core projection, and the conditional STRIDE interaction register.
+- Normalized target depths and added body-preserving metadata reconciliation prerequisites.
+
 ## 2.6.1 — Trusted sources and root README policy
 
 - Plan reporting names only READY graph providers; Understand Anything,

@@ -19,5 +19,11 @@
   "write_order": 77,
   "provenance_mode": "sections",
   "audit_profile": "risk",
+  "dominant_form": "flowchart",
+  "model_depth": {
+    "stride": "full-element",
+    "mermaid": "annotated"
+  },
+  "contract_revision": "2.7.0",
   "template_file": "content/security/templates/threat-model.md"
 }

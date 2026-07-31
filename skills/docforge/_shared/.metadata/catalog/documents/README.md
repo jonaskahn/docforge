@@ -13,7 +13,7 @@ One folder per large group; small groups stay flat.
 - [engineering/](engineering/index.json) — Engineering practices: conventions, testing, and tech debt. (8 documents)
 - [operations/](operations/index.json) — Deployment, observability, and operational runbooks. (12 documents)
 - [reference/](reference/index.json) — Reference lookups: APIs, configuration, and glossary. (19 documents)
-- [security/](security/index.json) — Security posture, permissions, and threat model. (7 documents)
+- [security/](security/index.json) — Security posture, permissions, and threat model. (8 documents)
 - contributing — Contribution guidelines and root-level contributor docs. (3 documents, flat)
 - records — Architecture decision records. (2 documents, flat)
 - [portfolio/](portfolio/index.json) — Cross-repository portfolio layer for multi-repo diligence. (10 documents)

@@ -17,7 +17,7 @@
   },
   "instruction_file": "content/agent-context/agents-kernel.instruction.md",
   "requires": [],
-  "target_depth": "shim",
+  "target_depth": "router",
   "write_order": 202,
   "provenance_mode": "manifest",
   "audit_profile": "shim",

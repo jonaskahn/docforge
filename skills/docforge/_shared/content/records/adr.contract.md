@@ -2,8 +2,6 @@
 
 Content contract for document type `adr`.
 
-Aliased with: `decision-index` (same content contract).
-
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| adr | indexed decisions; for each ADR context, decision, alternatives, consequences, status | rewritten history | Explanation | deep-dive |
+| adr | outcome title, status/date, context/problem, active decision, consequences, revisit condition, and source or reconstructed-history notice; evidenced options/drivers when recoverable; full tradeoffs and confirmation only for load-bearing decisions | rewritten or invented history; index routing | Explanation | reference |

@@ -1,5 +1,5 @@
 {
-  "version": "2.6.1",
+  "version": "2.7.0",
   "source": "../index.json",
   "groups": [
     {
@@ -75,7 +75,7 @@
       "id": "security",
       "kind": "folder",
       "index": "security/index.json",
-      "count": 7
+      "count": 8
     },
     {
       "id": "contributing",
@@ -106,7 +106,7 @@
         {
           "id": "decisions_index",
           "path": "decisions_index.json",
-          "summary": "Indexed decisions; for each ADR context, decision, alternatives, consequences, status"
+          "summary": "Numeric decision router with title, status, date, and optional topic"
         },
         {
           "id": "adr",

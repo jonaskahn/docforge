@@ -2,8 +2,6 @@
 
 Content contract for document type `decision-index`.
 
-Aliased with: `adr` (same content contract).
-
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| decision-index | indexed decisions; for each ADR context, decision, alternatives, consequences, status | rewritten history | Explanation | deep-dive |
+| decision-index | ascending numeric router table: number, title link, status, date, and optional topic | ADR rationale, options, or tradeoffs | Routing | router |

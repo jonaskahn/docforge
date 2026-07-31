@@ -5,6 +5,12 @@ provenance stamping, status transitions, mechanical linting, the independent
 audit, and continuing an incomplete run (intake goal or plain language — there
 is no `--resume` flag).
 
+For each routed document, load `model_depth` from `query_catalog --route` and
+apply the minimum rung in [`../references/model-depth-ladders.md`](../references/model-depth-ladders.md).
+It is not a heading checklist: verify evidence, decisions, controls, interfaces,
+and stopping conditions before requesting independent audit. Document lint also
+validates illustration budgets and immutable evidence locators.
+
 ## Continue incomplete run
 
 When the user chooses Resume in intake or asks to continue an incomplete

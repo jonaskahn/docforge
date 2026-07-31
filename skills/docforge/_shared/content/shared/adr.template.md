@@ -6,7 +6,7 @@ docforge_provenance:
   generated_at: "<GENERATED_AT>"
   generator:
     name: "docforge"
-    version: "2.6.1"
+    version: "2.7.0"
   tier: "<TIER>"
   target_depth: "<TARGET_DEPTH>"
   graph:
@@ -35,6 +35,16 @@ so it makes sense to someone who joins in two years knowing none of the history.
 
 We chose **{{option}}**, because {{the reasoning that was actually decisive}}.
 
+## Decision drivers
+
+- {{evidenced driver, or state that this is a reconstructed Nygard baseline}}
+
+## Option comparison
+
+| Option | Good | Neutral | Bad |
+|---|---|---|---|
+| {{option}} | {{evidenced benefit}} | {{tradeoff}} | {{evidenced cost}} |
+
 ## Consequences
 
 **Positive:** {{what this buys}}
@@ -47,3 +57,8 @@ We chose **{{option}}**, because {{the reasoning that was actually decisive}}.
 
 {{The conditions that should trigger reconsideration: a scale threshold, a
 dependency's end of life, a change in team size or requirements.}}
+
+## Confirmation
+
+{{For a load-bearing decision, name the concrete test, lint, review, or CI gate.
+Otherwise state why a confirmation mechanism is not established.}}

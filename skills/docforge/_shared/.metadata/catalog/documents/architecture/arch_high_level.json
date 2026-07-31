@@ -15,10 +15,16 @@
   "requires": [
     "code_graph"
   ],
-  "target_depth": "deep-dive",
+  "target_depth": "orientation",
   "write_order": 10,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "flowchart",
+  "model_depth": {
+    "c4": "container",
+    "arc42": "building-block-l1",
+    "mermaid": "annotated"
+  },
+  "contract_revision": "2.7.0",
   "template_file": "content/architecture/templates/architecture-high-level.md"
 }

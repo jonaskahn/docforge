@@ -1,9 +1,9 @@
 {
-  "$schema": "../category-index-schema.json",
-  "version": "2.6.1",
+  "$schema": "../../category-index-schema.json",
+  "version": "2.7.0",
   "category": "security",
   "purpose": "Security posture, permissions, and threat model.",
-  "source": "../index.json",
+  "source": "../../index.json",
   "records": [
     {
       "id": "security_root",
@@ -24,6 +24,11 @@
       "id": "data_handling",
       "path": "data_handling.json",
       "summary": "Data classes, lifecycle, access, retention, deletion"
+    },
+    {
+      "id": "threat_register",
+      "path": "threat_register.json",
+      "summary": "Evidence-gated interaction STRIDE register with score, controls, owner, and residual uncertainty"
     },
     {
       "id": "api_authentication",

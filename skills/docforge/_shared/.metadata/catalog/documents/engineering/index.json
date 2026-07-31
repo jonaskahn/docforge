@@ -1,9 +1,9 @@
 {
-  "$schema": "../category-index-schema.json",
-  "version": "2.6.1",
+  "$schema": "../../category-index-schema.json",
+  "version": "2.7.0",
   "category": "engineering",
   "purpose": "Engineering practices: conventions, testing, and tech debt.",
-  "source": "../index.json",
+  "source": "../../index.json",
   "records": [
     {
       "id": "engineering_index",

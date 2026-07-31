@@ -27,7 +27,6 @@ venv/
 # docforge / understand-anything generated artifacts
 .ua/
 .understand-anything/
-tests/
 
 # Docforge run state: manifest.json and flow-index.json are the tool's
 # persistent plan/state/provenance record and stay tracked. tmp/ is a scratch

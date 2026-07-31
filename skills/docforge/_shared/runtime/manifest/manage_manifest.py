@@ -29,6 +29,10 @@ TRANSITIONS = {
 }
 TOOL_VERSION = GENERATOR_VERSION
 MANIFEST_VERSION = "3.1"
+USER_CONFIRMED_TRIGGERS = {
+    "new-trust-boundary", "per-interaction-review", "regulated-workload",
+    "high-criticality", "new-external-integration", "new-data-classification",
+}
 
 
 def now_iso() -> str:
@@ -143,6 +147,31 @@ def validate_relative_path(value: str) -> None:
     path = PurePosixPath(value)
     if path.is_absolute() or ".." in path.parts or value in ("", "."):
         raise ValueError(f"path must be a safe repository-relative path: {value}")
+
+
+def validate_selection_evidence(repo: Path, values: list[str]) -> list[str]:
+    """Validate bounded CLI evidence without placing free-form text in manifests."""
+    validated: list[str] = []
+    for value in values:
+        if "\n" in value:
+            raise ValueError("selection evidence must not contain newlines")
+        if value.startswith("path:"):
+            rel = value.removeprefix("path:")
+            validate_relative_path(rel)
+            if not (repo / rel).is_file():
+                raise ValueError(f"selection evidence path does not exist: {rel}")
+        elif value.startswith("graph:"):
+            if re.fullmatch(r"graph:[a-z0-9][a-z0-9-]*:[A-Za-z0-9._:/-]+", value) is None:
+                raise ValueError(f"invalid graph selection evidence: {value}")
+        elif value.startswith("user-confirmed:"):
+            trigger = value.removeprefix("user-confirmed:")
+            if trigger not in USER_CONFIRMED_TRIGGERS:
+                raise ValueError(f"unregistered user-confirmed trigger: {trigger}")
+        else:
+            raise ValueError(f"selection evidence must use path:, graph:, or user-confirmed:: {value}")
+        if value not in validated:
+            validated.append(value)
+    return validated
 
 
 def make_document(
@@ -358,6 +387,7 @@ def cmd_add(args: argparse.Namespace) -> int:
         )
         catalog = load_catalog()
         definition = dynamic_definition(catalog, args.type)
+        full_definition = query_catalog.load_type(definition["id"])
         validate_relative_path(args.path)
         if args.type == "flow":
             flow_index, flow_row = load_main_flow(args.repo, args.id, args.path)
@@ -378,6 +408,10 @@ def cmd_add(args: argparse.Namespace) -> int:
             )
             return fail(f"dynamic type {args.type} requires profile {requirements}", 2)
     evidence = condition_evidence(args.repo, rule.get("condition"))
+    try:
+        evidence.extend(validate_selection_evidence(args.repo, args.evidence))
+    except ValueError as exc:
+        return fail(str(exc), 2)
     if flow_row is not None:
         evidence = [str(FLOW_INDEX_REL), *[
             str(item.get("artifact"))
@@ -386,6 +420,8 @@ def cmd_add(args: argparse.Namespace) -> int:
         ]]
     if rule.get("condition") == "ticket_evidence" and not evidence:
         return fail(f"dynamic type {args.type} requires ticket evidence in the repository", 2)
+    if full_definition.get("selection_evidence_required") and not evidence:
+        return fail(f"dynamic type {args.type} requires selection evidence", 2)
     if not path_matches(definition["path"], args.path):
         return fail(f"path '{args.path}' does not match catalog pattern '{definition['path']}'", 2)
     if re.fullmatch(r"[a-z0-9][a-z0-9_-]*", args.id) is None:
@@ -524,6 +560,7 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--type", required=True)
     add.add_argument("--id", required=True)
     add.add_argument("--path", required=True)
+    add.add_argument("--evidence", action="append", default=[])
     add.set_defaults(func=cmd_add)
 
     set_status = sub.add_parser("set")

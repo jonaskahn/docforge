@@ -20,5 +20,11 @@
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "sequenceDiagram",
+  "model_depth": {
+    "c4": "component-evidence",
+    "arc42": "runtime-scenarios",
+    "mermaid": "annotated"
+  },
+  "contract_revision": "2.7.0",
   "template_file": "content/architecture/templates/architecture-low-level.md"
 }

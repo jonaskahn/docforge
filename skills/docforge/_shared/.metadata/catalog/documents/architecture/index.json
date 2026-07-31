@@ -1,9 +1,9 @@
 {
-  "$schema": "../category-index-schema.json",
-  "version": "2.6.1",
+  "$schema": "../../category-index-schema.json",
+  "version": "2.7.0",
   "category": "architecture",
   "purpose": "System architecture: structure, boundaries, and integration surfaces.",
-  "source": "../index.json",
+  "source": "../../index.json",
   "records": [
     {
       "id": "architecture_index",

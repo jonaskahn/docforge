@@ -1,9 +1,9 @@
 {
-  "$schema": "../category-index-schema.json",
-  "version": "2.6.1",
+  "$schema": "../../category-index-schema.json",
+  "version": "2.7.0",
   "category": "reference",
   "purpose": "Reference lookups: APIs, configuration, and glossary.",
-  "source": "../index.json",
+  "source": "../../index.json",
   "records": [
     {
       "id": "reference_index",

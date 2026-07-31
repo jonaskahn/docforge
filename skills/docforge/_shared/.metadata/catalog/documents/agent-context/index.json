@@ -1,9 +1,9 @@
 {
-  "$schema": "../category-index-schema.json",
-  "version": "2.6.1",
+  "$schema": "../../category-index-schema.json",
+  "version": "2.7.0",
   "category": "agent-context",
   "purpose": "Agent-facing context: AGENTS.md and coding-agent views.",
-  "source": "../index.json",
+  "source": "../../index.json",
   "records": [
     {
       "id": "agents_kernel",

@@ -15,9 +15,13 @@
   "requires": [
     "git_history"
   ],
-  "target_depth": "deep-dive",
+  "target_depth": "reference",
   "write_order": 81,
   "provenance_mode": "sections",
   "audit_profile": "decision",
-  "template_file": "content/shared/adr.template.md"
+  "template_file": "content/shared/adr.template.md",
+  "model_depth": {
+    "adr": "nygard"
+  },
+  "contract_revision": "2.7.0"
 }

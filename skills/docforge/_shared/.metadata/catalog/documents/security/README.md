@@ -10,6 +10,7 @@ Security posture, permissions, and threat model.
 - `security_index` — Selected children and one-line purpose → [index.json](index.json)
 - `threat_model` — Assets, trust boundaries, threats, controls, accepted residual risk → [index.json](index.json)
 - `data_handling` — Data classes, lifecycle, access, retention, deletion → [index.json](index.json)
+- `threat_register` — Evidence-gated interaction STRIDE register with score, controls, owner, and residual uncertainty → [index.json](index.json)
 - `api_authentication` — Public surface, inputs/outputs, auth contract, limits, errors, compatibility source → [index.json](index.json)
 - `economic_invariants` — Contracts, storage, authorities, networks, upgrade boundary, economic/security invariants → [index.json](index.json)
 - `platform_permissions` — Requested capability, trigger, user value, denial behavior, settings/recovery, manifest evidence → [index.json](index.json)
