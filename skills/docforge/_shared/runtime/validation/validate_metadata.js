@@ -255,6 +255,16 @@ function validate() {
   if (fs.existsSync(path.join(REPO_ROOT, "meta.json"))) {
     errors.push("obsolete meta.json remains; Agent Skills install uses SKILL.md only");
   }
+  const IGNORED_DIRS = new Set([".git", ".pytest_cache", "__pycache__", ".venv", "venv", "node_modules"]);
+  function collectReadmes(dir, out) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory() && !IGNORED_DIRS.has(entry.name)) collectReadmes(full, out);
+      else if (entry.isFile() && entry.name === "README.md") out.push(path.relative(REPO_ROOT, full).split(path.sep).join("/"));
+    }
+  }
+  const readmes = []; collectReadmes(REPO_ROOT, readmes);
+  if (readmes.length) errors.push(`README.md files are obsolete; use INDEX.md: ${readmes.sort().join(", ")}`);
   const forbidden = new Set(["document" + "-templates.json", "generation" + "-status.json", "status" + "-schema.json", "template" + "-schema.json"]);
   const present = fs.readdirSync(metadata).filter((name) => forbidden.has(name)).sort();
   if (present.length) errors.push(`obsolete metadata files remain: ${present.join(", ")}`);

@@ -13,7 +13,7 @@ CLAUDE.md
 CLAUDE.local.md
 .claude/settings.json
 docs/agents/
-├── README.md
+├── INDEX.md
 ├── architecture.md
 ├── patterns.md
 ├── testing.md

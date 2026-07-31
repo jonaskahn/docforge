@@ -178,7 +178,7 @@ def catalog_readme_text(index: dict, groups: dict[str, list]) -> str:
         "`runtime/cli/python/query_catalog.py` or the equivalent Node launcher rather than "
         "treating generated indexes as source data.",
         "## Start here\n\n"
-        "- Browse a subject area → [documents/README.md](documents/README.md)\n"
+        "- Browse a subject area → [documents/INDEX.md](documents/INDEX.md)\n"
         "- Resolve one document and its writing inputs → `query_catalog --route <id>`\n"
         "- Check which documents a profile selects → `query_catalog --applicable ...`\n"
         "- Validate the split catalog before changing it → `query_catalog --validate`",
@@ -190,13 +190,13 @@ def catalog_readme_text(index: dict, groups: dict[str, list]) -> str:
         "## Contents\n\n"
         "- [index.json](index.json) — root catalog: tiers, groups, capabilities, "
         "profile paths, and every document's `record` path.\n"
-        "- [documents/](documents/README.md) — per-group generated routers.\n"
+        "- [documents/](documents/INDEX.md) — per-group generated routers.\n"
         "- [profiles/](profiles/) — shape/platform/framework/concern/audience "
         "definitions.",
         "## Boundaries\n\n"
         f"{len(index['document_types'])} document records across "
         f"{len(index['groups'])} groups. Category indexes are generated views; "
-        "`index.json` and each record file remain authoritative. Regenerate these README "
+        "`index.json` and each record file remain authoritative. Regenerate these INDEX.md "
         "views with `generate_indexes --write`; never edit them directly.",
     ]
     return "\n\n".join(blocks) + "\n"
@@ -206,14 +206,14 @@ def targets(index: dict) -> dict[Path, str]:
     groups = grouped_records(index)
     out: dict[Path, str] = {
         DOCUMENTS_DIR / "index.json": dump_json_lf(documents_index_payload(index, groups)),
-        DOCUMENTS_DIR / "README.md": documents_readme_text(index, groups),
-        CATALOG_DIR / "README.md": catalog_readme_text(index, groups),
+        DOCUMENTS_DIR / "INDEX.md": documents_readme_text(index, groups),
+        CATALOG_DIR / "INDEX.md": catalog_readme_text(index, groups),
     }
     for group, records in groups.items():
         if not is_folder_group(records):
             continue
         out[DOCUMENTS_DIR / group / "index.json"] = dump_json_lf(category_index_payload(group, records))
-        out[DOCUMENTS_DIR / group / "README.md"] = category_readme_text(group, records)
+        out[DOCUMENTS_DIR / group / "INDEX.md"] = category_readme_text(group, records)
     return out
 
 

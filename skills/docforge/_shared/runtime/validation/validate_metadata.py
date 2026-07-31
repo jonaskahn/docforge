@@ -239,6 +239,14 @@ def validate() -> list[str]:
         errors.append("package descriptions disagree (plugin, marketplace, docforge SKILL.md)")
     if (REPO_ROOT / "meta.json").exists():
         errors.append("obsolete meta.json remains; Agent Skills install uses SKILL.md only")
+    ignored_dirs = {".git", ".pytest_cache", "__pycache__", ".venv", "venv", "node_modules"}
+    readmes = sorted(
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in REPO_ROOT.rglob("README.md")
+        if not any(part in ignored_dirs for part in path.relative_to(REPO_ROOT).parts)
+    )
+    if readmes:
+        errors.append(f"README.md files are obsolete; use INDEX.md: {', '.join(readmes)}")
     forbidden_files = {
         "document" + "-templates.json",
         "generation" + "-status.json",

@@ -37,4 +37,4 @@ and any version or configuration details.
 
 ## Full posture
 
-Threat model, data handling and controls: [docs/security/](docs/security/README.md).
+Threat model, data handling and controls: [docs/security/](docs/security/INDEX.md).

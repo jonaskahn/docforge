@@ -16,10 +16,10 @@ sys.path.insert(0, str(ROOT / "skills" / "docforge" / "_shared"))
 sys.path.insert(0, str(CLI_PY))
 
 PORTFOLIO_PATHS = {
-    "docs-portfolio/README.md",
+    "docs-portfolio/INDEX.md",
     "docs-portfolio/repo-inventory.md",
     "docs-portfolio/system-context.md",
-    "docs-portfolio/decisions/README.md",
+    "docs-portfolio/decisions/INDEX.md",
     "docs-portfolio/security-posture.md",
     "docs-portfolio/operations.md",
     "docs-portfolio/diligence-index.md",

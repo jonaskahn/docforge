@@ -27,10 +27,10 @@ docforge_provenance:
 |---|---|
 | New to the project | [product/overview.md](product/overview.md) |
 | A new engineer | [architecture/high-level.md](architecture/high-level.md) → [engineering/setup.md](engineering/setup.md) |
-| Consuming this service | [product/quickstart.md](product/quickstart.md) → [reference/](reference/README.md) |
-| On call | [operations/](operations/README.md) |
-| Reviewing risk | [security/](security/README.md) · [architecture/dependencies.md](architecture/dependencies.md) · [reference/limitations.md](reference/limitations.md) |
-| Contributing | [contributing/](contributing/README.md) |
+| Consuming this service | [product/quickstart.md](product/quickstart.md) → [reference/](reference/INDEX.md) |
+| On call | [operations/](operations/INDEX.md) |
+| Reviewing risk | [security/](security/INDEX.md) · [architecture/dependencies.md](architecture/dependencies.md) · [reference/limitations.md](reference/limitations.md) |
+| Contributing | [contributing/](contributing/INDEX.md) |
 
 ## By folder
 
@@ -50,4 +50,4 @@ docforge_provenance:
 - Reference material is generated where a machine-readable source exists; generated
   files say so and name the regeneration command.
 - Documentation is host-neutral: forge-specific detail lives only in
-  [contributing/README.md](contributing/README.md).
+  [contributing/INDEX.md](contributing/INDEX.md).

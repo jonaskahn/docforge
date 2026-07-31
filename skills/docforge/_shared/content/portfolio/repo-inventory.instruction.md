@@ -33,4 +33,4 @@ place judgment calls get resolved.
 |---|---|---|
 | Discovered repositories, role, owner token, documentation state, evidence | `system-context` | dependency and boundary relationships between repos are owned there; this document owns only the flat inventory |
 | A gap in a repository's evidence | `diligence-index` | confidence and follow-up gaps are tracked there, not resolved here |
-| A repository's own documentation tier | that repository's own `docs/README.md` | this document names the tier; the repository's own docs are the source of truth for their content |
+| A repository's own documentation tier | that repository's own `docs/INDEX.md` | this document names the tier; the repository's own docs are the source of truth for their content |

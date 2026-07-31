@@ -9,19 +9,19 @@ Contracts, instructions, and templates for every catalog document, organized by 
 
 ## Contents
 
-- [agent-context/](agent-context/README.md) — Agent-facing context: AGENTS.md and coding-agent views.
-- [architecture/](architecture/README.md) — System architecture: structure, boundaries, and integration surfaces.
-- [contributing/](contributing/README.md) — Contribution guidelines and root-level contributor docs.
-- [engineering/](engineering/README.md) — Engineering practices: conventions, testing, and tech debt.
-- [flows/](flows/README.md) — End-to-end flow documentation derived from the flow index.
-- [operations/](operations/README.md) — Deployment, observability, and operational runbooks.
-- [portfolio/](portfolio/README.md) — Cross-repository portfolio layer for multi-repo diligence.
-- [product/](product/README.md) — Product surface: overview, quickstart, and audience-specific product views.
-- [records/](records/README.md) — Architecture decision records.
-- [reference/](reference/README.md) — Reference lookups: APIs, configuration, and glossary.
-- [root/](root/README.md) — Root-level entrypoints: README, SKILL.md, and package descriptors.
-- [security/](security/README.md) — Security posture, permissions, and threat model.
-- [shared/](shared/README.md) — artifacts referenced by more than one group
+- [agent-context/](agent-context/INDEX.md) — Agent-facing context: AGENTS.md and coding-agent views.
+- [architecture/](architecture/INDEX.md) — System architecture: structure, boundaries, and integration surfaces.
+- [contributing/](contributing/INDEX.md) — Contribution guidelines and root-level contributor docs.
+- [engineering/](engineering/INDEX.md) — Engineering practices: conventions, testing, and tech debt.
+- [flows/](flows/INDEX.md) — End-to-end flow documentation derived from the flow index.
+- [operations/](operations/INDEX.md) — Deployment, observability, and operational runbooks.
+- [portfolio/](portfolio/INDEX.md) — Cross-repository portfolio layer for multi-repo diligence.
+- [product/](product/INDEX.md) — Product surface: overview, quickstart, and audience-specific product views.
+- [records/](records/INDEX.md) — Architecture decision records.
+- [reference/](reference/INDEX.md) — Reference lookups: APIs, configuration, and glossary.
+- [root/](root/INDEX.md) — Root-level entrypoints: README, SKILL.md, and package descriptors.
+- [security/](security/INDEX.md) — Security posture, permissions, and threat model.
+- [shared/](shared/INDEX.md) — artifacts referenced by more than one group
 
 ## Universal contract
 
@@ -71,7 +71,7 @@ restate the inventory.
   user-facing release notes. Backlog traceability is dynamic and exists only
   with ticket evidence.
 - Agent views are compact linking views. Architecture and patterns require the
-  code graph; only flow and flow-derived glossary views require the flow graph;
+   repository evidence; only flow and flow-derived glossary views require ordered flow evidence;
   conventions require a conventions source.
 
 The optional instruction file named by the catalog adds writing craft only. It

@@ -169,7 +169,7 @@ function catalogReadmeText(index) {
       + "`runtime/cli/python/query_catalog.py` or the equivalent Node launcher rather than "
       + "treating generated indexes as source data.",
     "## Start here\n\n"
-      + "- Browse a subject area → [documents/README.md](documents/README.md)\n"
+      + "- Browse a subject area → [documents/INDEX.md](documents/INDEX.md)\n"
       + "- Resolve one document and its writing inputs → `query_catalog --route <id>`\n"
       + "- Check which documents a profile selects → `query_catalog --applicable ...`\n"
       + "- Validate the split catalog before changing it → `query_catalog --validate`",
@@ -181,13 +181,13 @@ function catalogReadmeText(index) {
     "## Contents\n\n" +
       "- [index.json](index.json) — root catalog: tiers, groups, capabilities, " +
       "profile paths, and every document's `record` path.\n" +
-      "- [documents/](documents/README.md) — per-group generated routers.\n" +
+      "- [documents/](documents/INDEX.md) — per-group generated routers.\n" +
       "- [profiles/](profiles/) — shape/platform/framework/concern/audience " +
       "definitions.",
     "## Boundaries\n\n" +
       `${index.document_types.length} document records across ` +
       `${index.groups.length} groups. Category indexes are generated views; ` +
-        "`index.json` and each record file remain authoritative. Regenerate these README " +
+        "`index.json` and each record file remain authoritative. Regenerate these INDEX.md " +
         "views with `generate_indexes --write`; never edit them directly.",
   ];
   return blocks.join("\n\n") + "\n";
@@ -197,15 +197,15 @@ function targets(index) {
   const groups = groupedRecords(index);
   const out = new Map();
   out.set(path.join(DOCUMENTS_DIR, "index.json"), dumpJsonLf(documentsIndexPayload(index, groups)));
-  out.set(path.join(DOCUMENTS_DIR, "README.md"), documentsReadmeText(index, groups));
-  out.set(path.join(CATALOG_DIR, "README.md"), catalogReadmeText(index, groups));
+  out.set(path.join(DOCUMENTS_DIR, "INDEX.md"), documentsReadmeText(index, groups));
+  out.set(path.join(CATALOG_DIR, "INDEX.md"), catalogReadmeText(index, groups));
   for (const [group, records] of Object.entries(groups)) {
     if (!isFolderGroup(records)) continue;
     out.set(
       path.join(DOCUMENTS_DIR, group, "index.json"),
       dumpJsonLf(categoryIndexPayload(group, records)),
     );
-    out.set(path.join(DOCUMENTS_DIR, group, "README.md"), categoryReadmeText(group, records));
+    out.set(path.join(DOCUMENTS_DIR, group, "INDEX.md"), categoryReadmeText(group, records));
   }
   return out;
 }

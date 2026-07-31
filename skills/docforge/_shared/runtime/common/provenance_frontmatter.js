@@ -262,6 +262,14 @@ function emitYaml(provenance) {
   return lines.join("\n");
 }
 
+function emitDocumentFrontmatter(docId, title, provenance) {
+  if (!docId || !title) throw new YamlCodecError("document id and title must be non-empty");
+  const lines = ["---", `id: ${quoteScalar(docId)}`, `title: ${quoteScalar(title)}`, "docforge_provenance:"];
+  emitMapping(lines, provenance, PROVENANCE_KEY_ORDER, 2);
+  lines.push("---", "");
+  return lines.join("\n");
+}
+
 function wrapDocument(provenance, body) {
   let next = body;
   if (next.startsWith("\n")) next = next.replace(/^\n+/, "");
@@ -463,6 +471,7 @@ module.exports = {
   normalizeSections,
   migrateV1ToV2,
   emitYaml,
+  emitDocumentFrontmatter,
   wrapDocument,
   parseYamlMapping,
   splitFrontmatter,

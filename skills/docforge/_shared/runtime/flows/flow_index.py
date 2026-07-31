@@ -741,7 +741,7 @@ def prune_orphan_stubs(repo: Path, rows: list[dict]) -> list[str]:
     removed: list[str] = []
     for path in flows_dir.rglob("*.md"):
         rel = path.relative_to(repo).as_posix()
-        if path.name == "README.md":
+        if path.name == "INDEX.md":
             continue
         if rel in keep:
             continue
@@ -776,7 +776,7 @@ def link_for_row(row: dict) -> str:
     rel = resolve_doc_path(row)
     if not rel:
         return name
-    # README lives at docs/flows/README.md — link relative to that.
+    # README lives at docs/flows/INDEX.md — link relative to that.
     link = rel
     if link.startswith("docs/flows/"):
         link = "./" + link[len("docs/flows/"):]
@@ -790,7 +790,7 @@ def markdown(index: dict, tier: str = "spine", repo: Path | None = None) -> str:
     provider = ", ".join(index.get("providers") or []) or "unknown"
     provenance = scaffold_provenance(
         "flows_index",
-        "docs/flows/README.md",
+        "docs/flows/INDEX.md",
         tier=tier,
         target_depth="orientation",
         provider=provider,
@@ -1245,7 +1245,7 @@ def cmd_render(args: argparse.Namespace) -> int:
             tier = read_json(manifest_path).get("project", {}).get("tier", tier)
         except ValueError:
             pass
-    target = args.output or args.repo / "docs/flows/README.md"
+    target = args.output or args.repo / "docs/flows/INDEX.md"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(markdown(index, tier, args.repo), encoding="utf-8")
     print(f"Rendered {target} — {len(index.get('flows', []))} indexed flows.")

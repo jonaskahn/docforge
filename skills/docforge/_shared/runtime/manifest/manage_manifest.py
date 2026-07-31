@@ -191,6 +191,7 @@ def make_document(
     detail = query_catalog.load_type(catalog_id or definition["id"])
     return {
         "id": definition["id"],
+        "title": detail.get("title") or definition["id"].replace("_", " ").replace("-", " ").title(),
         "type": definition["type"],
         "path": definition["path"],
         "group": definition["group"],
@@ -274,7 +275,7 @@ def add_ancestor_indexes(catalog: dict, selected: list[dict]) -> None:
             path = PurePosixPath(child["path"])
             parent = path.parent
             while str(parent) not in (".", ""):
-                candidate = str(parent / "README.md")
+                candidate = str(parent / "INDEX.md")
                 definition = definitions.get(candidate)
                 if definition and candidate not in selected_paths:
                     selected.append(make_document(
@@ -433,6 +434,8 @@ def cmd_add(args: argparse.Namespace) -> int:
     actual = dict(definition)
     actual["id"] = args.id
     actual["path"] = args.path
+    if args.title:
+        actual["title"] = args.title
     origins = [{"kind": "dynamic", "id": definition["type"]}, *profile_origins]
     if rule.get("condition"):
         origins.append({"kind": "condition", "id": rule["condition"]})
@@ -560,6 +563,7 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--type", required=True)
     add.add_argument("--id", required=True)
     add.add_argument("--path", required=True)
+    add.add_argument("--title")
     add.add_argument("--evidence", action="append", default=[])
     add.set_defaults(func=cmd_add)
 

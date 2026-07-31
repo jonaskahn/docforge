@@ -73,7 +73,7 @@ Backfilled records must be honest about their provenance. Add a line under the s
 
 Records are immutable once accepted. When a decision changes, write a new record and update the old one's status to `superseded by [NNNN]` — do not edit history. The chain of superseded records is itself evidence: it shows a team that revisits decisions deliberately rather than drifting.
 
-The folder `README.md` holds the index:
+The folder `INDEX.md` holds the index:
 
 | # | Decision | Status | Date |
 |---|---|---|---|

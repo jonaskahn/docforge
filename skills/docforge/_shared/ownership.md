@@ -2,10 +2,10 @@
 
 - [`references/docs-tree.md`](references/docs-tree.md): paths, naming, tiers,
   placement.
-- [`content/README.md`](content/README.md): must-present content, keep-out
+- [`content/INDEX.md`](content/INDEX.md): must-present content, keep-out
   boundaries, mode, and depth — one contract per document type, routed by
   group.
-- [`references/graph/`](references/graph/README.md): provider dispatch and
+- [`references/graph/`](references/graph/INDEX.md): provider dispatch and
   selection.
 - [`references/document-composition.md`](references/document-composition.md):
   topic ownership and no-duplication.
@@ -36,5 +36,5 @@ link.
 | `workflows/validation.md` | Staleness, migration, whole-tree audit, cross-document quality gate |
 | `workflows/tools.md` | Every public script: Python/Node invocation, inputs, outputs, exit codes |
 
-See [`workflows/README.md`](workflows/README.md) to route an unfamiliar
+See [`workflows/INDEX.md`](workflows/INDEX.md) to route an unfamiliar
 invocation to exactly one file.

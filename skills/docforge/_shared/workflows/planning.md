@@ -48,7 +48,7 @@ Inspect repository manifests, code, existing documentation, CI/deployment
 configuration, git history, and child repositories. Existing documents are
 evidence: propose keep, migrate, merge, archive, or delete decisions and obtain
 explicit approval before moving or removing them. When a non-trivial
-repo-root `README.md` already exists, do not announce overwrite — require an
+repo-root `INDEX.md` already exists, do not announce overwrite — require an
 explicit migrate / skip / rewrite choice (see Existing-doc actions below).
 
 ## 2. Select scope
@@ -77,7 +77,7 @@ documents, decisions, runbooks, datasets, concepts, migrations, backlog
 traceability, and portfolio decisions are dynamic and must be added after
 discovery. Harvest every evidenced flow candidate into
 `.docforge/flow-index.json` during analysis; after the plan gate, render it as
-`docs/flows/README.md` when that document reaches its write turn. On revise
+`docs/flows/INDEX.md` when that document reaches its write turn. On revise
 flow, upsert all candidates as `placeholder` with stubs, update existing
 documented flows, and add dynamic deep-dive flow documents only for
 main-priority rows (with a user NOTICE — see [`revision.md`](revision.md)).
@@ -166,13 +166,13 @@ Present a human-readable plan before writing. It must contain:
    unless both were actually READY and the user chose both for corroboration.
 6. **Existing-doc actions** — keep/migrate/merge/archive/delete proposals for
    ordinary paths, with destructive or moving actions still awaiting separate
-   approval. For an existing repo-root `README.md` that is non-trivial /
+   approval. For an existing repo-root `INDEX.md` that is non-trivial /
    valuable (substantial user-facing content, not an empty stub), present
    exactly **migrate** / **skip** / **rewrite** and wait for confirmation
    before any write to that path:
    - **migrate** — reshape into the `root_readme` contract/template; preserve
      purpose, audience, install/quickstart, and other key facts from the file;
-   - **skip** — leave `README.md` untouched; do not write `root_readme` over it
+   - **skip** — leave `INDEX.md` untouched; do not write `root_readme` over it
      this run (mark that catalog path skipped);
    - **rewrite** — replace with the Docforge `root_readme` template from fresh
      graph/repo evidence.

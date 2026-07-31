@@ -16,7 +16,7 @@ from runtime.common.provenance_frontmatter import (
     PROVENANCE_FIELDS,
     SCAFFOLD_TOKEN,
     SOURCE_ROLES,
-    emit_yaml,
+    emit_document_frontmatter,
     parse_frontmatter as codec_parse_frontmatter,
     scaffold_provenance as build_provenance,
 )
@@ -76,7 +76,7 @@ def preview(manifest: dict) -> int:
 
 
 def title_for(doc: dict) -> str:
-    return Path(doc["path"]).stem.replace("-", " ").replace("_", " ").title()
+    return doc.get("title") or doc["id"].replace("-", " ").replace("_", " ").title()
 
 
 def scaffold_provenance(doc: dict, manifest: dict) -> str:
@@ -86,7 +86,7 @@ def scaffold_provenance(doc: dict, manifest: dict) -> str:
         tier=manifest.get("project", {}).get("tier", "<TIER>"),
         target_depth=doc["target_depth"],
     )
-    return emit_yaml(provenance)
+    return emit_document_frontmatter(doc["id"], title_for(doc), provenance)
 
 
 def index_body(doc: dict, manifest: dict) -> str:
@@ -100,12 +100,16 @@ def index_body(doc: dict, manifest: dict) -> str:
             relative = candidate_path.relative_to(directory)
         except ValueError:
             continue
-        if len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md"):
+        if len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "INDEX.md"):
             children.append(candidate)
     lines = [
         f"# {title_for(doc)}",
         "",
-        "_Last reviewed: {{YYYY-MM-DD}}_",
+        "## Overview",
+        "",
+        "{{Explain this section's purpose, its major facts, boundaries, and how a reader should use the documents below.}}",
+        "",
+        "## Contents",
         "",
         "| Document | Purpose |",
         "|---|---|",
@@ -179,7 +183,7 @@ def required_indexes(doc: dict, manifest: dict) -> list[dict]:
     ancestors = []
     parent = doc_path.parent
     while str(parent) not in ("", "."):
-        ancestors.append((parent / "README.md").as_posix())
+        ancestors.append((parent / "INDEX.md").as_posix())
         parent = parent.parent
     by_path = {item["path"]: item for item in active_documents(manifest)}
     indexes = [by_path[path] for path in reversed(ancestors) if path in by_path and path != doc["path"]]
@@ -388,10 +392,10 @@ def audit(repo: Path, manifest: dict) -> int:
         for folder in sorted(folders):
             if folder == prefix.rstrip("/"):
                 continue
-            if f"{folder}/README.md" in expected:
+            if f"{folder}/INDEX.md" in expected:
                 children = [
                     path for path in expected
-                    if str(PurePosixPath(path).parent) == folder and not path.endswith("/README.md")
+                    if str(PurePosixPath(path).parent) == folder and not path.endswith("/INDEX.md")
                 ]
                 if not children:
                     findings["folder-only promotion"].append(folder)

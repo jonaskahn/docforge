@@ -3,7 +3,7 @@
   "type": "decision-index",
   "summary": "Numeric decision router with title, status, date, and optional topic",
   "contract_file": "content/records/decision-index.contract.md",
-  "path": "docs/architecture/decisions/README.md",
+  "path": "docs/architecture/decisions/INDEX.md",
   "group": "records",
   "selection": {
     "mode": "static",

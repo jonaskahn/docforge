@@ -6,7 +6,7 @@ The catalog is Docforge's machine-readable map of document types, selection rule
 
 ## Start here
 
-- Browse a subject area → [documents/README.md](documents/README.md)
+- Browse a subject area → [documents/INDEX.md](documents/INDEX.md)
 - Resolve one document and its writing inputs → `query_catalog --route <id>`
 - Check which documents a profile selects → `query_catalog --applicable ...`
 - Validate the split catalog before changing it → `query_catalog --validate`
@@ -18,9 +18,9 @@ The root index owns tiers, capability names, profile registries, and the list of
 ## Contents
 
 - [index.json](index.json) — root catalog: tiers, groups, capabilities, profile paths, and every document's `record` path.
-- [documents/](documents/README.md) — per-group generated routers.
+- [documents/](documents/INDEX.md) — per-group generated routers.
 - [profiles/](profiles/) — shape/platform/framework/concern/audience definitions.
 
 ## Boundaries
 
-128 document records across 12 groups. Category indexes are generated views; `index.json` and each record file remain authoritative. Regenerate these README views with `generate_indexes --write`; never edit them directly.
+128 document records across 12 groups. Category indexes are generated views; `index.json` and each record file remain authoritative. Regenerate these INDEX.md views with `generate_indexes --write`; never edit them directly.

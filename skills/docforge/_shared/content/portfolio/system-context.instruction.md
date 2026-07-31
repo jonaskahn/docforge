@@ -27,7 +27,7 @@ never invent edges. Keep heuristic rows visually distinct via the
 Resolution column. Coupling types include shared library, API contract,
 event schema, and — when an `infrastructure-platform` member is present —
 `provisions-for` / `deploys-into`. If edges and both tables outgrow one
-reviewable file, promote to `system-context/README.md` +
+reviewable file, promote to `system-context/INDEX.md` +
 `system-context/dependency-map.md` in the same pass that writes the
 deep-dive (see `document-composition.md`); do not pre-split.
 

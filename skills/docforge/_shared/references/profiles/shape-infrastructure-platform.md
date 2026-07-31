@@ -55,4 +55,4 @@ Typical entries: provider quotas and limits that constrain scaling; resources th
 
 ## Security note
 
-Infrastructure repos attract secrets. State in `docs/security/README.md` how secrets are handled — the secret manager used, how values reach running workloads, and how the repo is scanned for accidental commits. If any credential has ever been committed, rotation is not optional, and the fact that a scanner is in place is worth documenting explicitly for reviewers.
+Infrastructure repos attract secrets. State in `docs/security/INDEX.md` how secrets are handled — the secret manager used, how values reach running workloads, and how the repo is scanned for accidental commits. If any credential has ever been committed, rotation is not optional, and the fact that a scanner is in place is worth documenting explicitly for reviewers.

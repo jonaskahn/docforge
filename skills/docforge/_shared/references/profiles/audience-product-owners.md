@@ -9,7 +9,7 @@ owns intent and targets.
 
 ```text
 docs/product/product-owner/
-├── README.md
+├── INDEX.md
 ├── feature-catalog.md
 ├── success-metrics.md
 ├── release-notes.md
@@ -22,7 +22,7 @@ It is never scaffolded and later deleted as cleanup.
 
 ## Content ownership
 
-### `README.md`
+### `INDEX.md`
 
 Route product readers to value/status, metrics, and release impact. Link to the
 BA view only when that profile is selected.

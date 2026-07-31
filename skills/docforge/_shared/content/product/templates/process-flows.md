@@ -18,7 +18,7 @@ docforge_provenance:
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
-The business process as actually executed by the system — business-language steps a domain expert recognizes, not the technical call graph. Source it from the selected flow graph; decision points link to `business-rules.md` rather than restating the condition.
+The business process as actually executed by the system — business-language steps a domain expert recognizes, not a technical implementation map. Source it from repository evidence; decision points link to `business-rules.md` rather than restating the condition.
 
 
 ### Flow: {{business name, e.g. "Order approval"}}

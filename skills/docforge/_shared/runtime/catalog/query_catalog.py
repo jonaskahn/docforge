@@ -418,7 +418,7 @@ def validate() -> list[str]:
         declared_records.add(record_path.resolve())
     # Records may live flat in types/ (pre-migration) or under documents/
     # (per-group folders + flat small groups, post-migration); scan both.
-    # Generated routers (index.json, README.md) are excluded, not records.
+    # Generated routers (index.json, INDEX.md) are excluded, not records.
     candidate_dirs = [d for d in (TYPES_DIR, CATALOG_DIR / "documents") if d.is_dir()]
     on_disk_records: set[Path] = set()
     for base in candidate_dirs:

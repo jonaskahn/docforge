@@ -43,7 +43,7 @@ sequenceDiagram
 
 | Capability | Owning flow | Implementing subsystem |
 |---|---|---|
-| {{capability}} | [{{flow}}](../flows/README.md) | {{subsystem}} |
+| {{capability}} | [{{flow}}](../flows/INDEX.md) | {{subsystem}} |
 
-Link out to [`docs/flows/README.md`](../flows/README.md) for the full matrix;
+Link out to [`docs/flows/INDEX.md`](../flows/INDEX.md) for the full matrix;
 do not duplicate its rows.

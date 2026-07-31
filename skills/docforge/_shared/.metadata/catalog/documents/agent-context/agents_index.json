@@ -3,7 +3,7 @@
   "type": "folder-index",
   "summary": "Selected children and one-line purpose",
   "contract_file": "content/shared/folder-index.contract.md",
-  "path": "docs/agents/README.md",
+  "path": "docs/agents/INDEX.md",
   "group": "agent-context",
   "selection": {
     "mode": "static",

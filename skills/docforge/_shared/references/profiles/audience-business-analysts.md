@@ -9,7 +9,7 @@ tree.
 
 ```text
 docs/product/business-analyst/
-├── README.md
+├── INDEX.md
 ├── process-flows.md
 ├── business-rules.md
 └── requirements-traceability.md
@@ -21,7 +21,7 @@ or agent documents depend on a flow graph.
 
 ## Content ownership
 
-### `README.md`
+### `INDEX.md`
 
 Route a BA to the process, rule, and traceability view. Link to the Product
 Owner view only when that profile is selected.

@@ -1,12 +1,12 @@
 ---
 name: docforge
-description: Catalog-driven repository documentation with bounded graph-grounded retrieval, manifest 3.1, YAML provenance 2.0, independent audits, and equivalent Python/Node tools.
+description: Catalog-driven repository documentation with bounded repository-evidence retrieval, manifest metadata, independent audits, and equivalent Python/Node tools.
 ---
 
 # Docforge
 
 Slash command: `/docforge`. Plan and write documentation from repository
-evidence. Shared cartridge: [`./_shared/`](./_shared/README.md).
+evidence. Shared cartridge: [`./_shared/`](./_shared/INDEX.md).
 
 ## Load order
 
@@ -17,7 +17,7 @@ evidence. Shared cartridge: [`./_shared/`](./_shared/README.md).
 3. [`./_shared/retrieval.md`](./_shared/retrieval.md) — catalog retrieval
    protocol.
 4. Select a workflow from
-   [`./_shared/workflows/README.md`](./_shared/workflows/README.md).
+   [`./_shared/workflows/INDEX.md`](./_shared/workflows/INDEX.md).
 5. Load [`./_shared/ownership.md`](./_shared/ownership.md) when resolving
    which file owns a rule.
 

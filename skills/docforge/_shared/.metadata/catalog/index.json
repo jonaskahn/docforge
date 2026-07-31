@@ -59,7 +59,7 @@
     {
       "id": "architecture_index",
       "tier": "spine",
-      "path": "docs/architecture/README.md",
+      "path": "docs/architecture/INDEX.md",
       "record": "documents/architecture/architecture_index.json"
     },
     {
@@ -95,7 +95,7 @@
     {
       "id": "concepts_index",
       "tier": "diligence",
-      "path": "docs/architecture/concepts/README.md",
+      "path": "docs/architecture/concepts/INDEX.md",
       "record": "documents/architecture/concepts_index.json"
     },
     {
@@ -125,7 +125,7 @@
     {
       "id": "data_contracts_index",
       "tier": "spine",
-      "path": "docs/architecture/contracts/README.md",
+      "path": "docs/architecture/contracts/INDEX.md",
       "record": "documents/architecture/data_contracts_index.json"
     },
     {
@@ -239,7 +239,7 @@
     {
       "id": "product_index",
       "tier": "spine",
-      "path": "docs/product/README.md",
+      "path": "docs/product/INDEX.md",
       "record": "documents/product/product_index.json"
     },
     {
@@ -257,7 +257,7 @@
     {
       "id": "flows_index",
       "tier": "spine",
-      "path": "docs/flows/README.md",
+      "path": "docs/flows/INDEX.md",
       "record": "documents/flows_index.json"
     },
     {
@@ -269,13 +269,13 @@
     {
       "id": "docs_index",
       "tier": "spine",
-      "path": "docs/README.md",
+      "path": "docs/INDEX.md",
       "record": "documents/docs_index.json"
     },
     {
       "id": "root_readme",
       "tier": "spine",
-      "path": "README.md",
+      "path": "INDEX.md",
       "record": "documents/root_readme.json"
     },
     {
@@ -305,7 +305,7 @@
     {
       "id": "library_migrations_index",
       "tier": "spine",
-      "path": "docs/product/migrations/README.md",
+      "path": "docs/product/migrations/INDEX.md",
       "record": "documents/product/library_migrations_index.json"
     },
     {
@@ -317,7 +317,7 @@
     {
       "id": "ba_index",
       "tier": "spine",
-      "path": "docs/product/business-analyst/README.md",
+      "path": "docs/product/business-analyst/INDEX.md",
       "record": "documents/product/ba_index.json"
     },
     {
@@ -347,7 +347,7 @@
     {
       "id": "po_index",
       "tier": "spine",
-      "path": "docs/product/product-owner/README.md",
+      "path": "docs/product/product-owner/INDEX.md",
       "record": "documents/product/po_index.json"
     },
     {
@@ -365,7 +365,7 @@
     {
       "id": "engineering_index",
       "tier": "spine",
-      "path": "docs/engineering/README.md",
+      "path": "docs/engineering/INDEX.md",
       "record": "documents/engineering/engineering_index.json"
     },
     {
@@ -425,7 +425,7 @@
     {
       "id": "reference_index",
       "tier": "spine",
-      "path": "docs/reference/README.md",
+      "path": "docs/reference/INDEX.md",
       "record": "documents/reference/reference_index.json"
     },
     {
@@ -539,7 +539,7 @@
     {
       "id": "operations_index",
       "tier": "diligence",
-      "path": "docs/operations/README.md",
+      "path": "docs/operations/INDEX.md",
       "record": "documents/operations/operations_index.json"
     },
     {
@@ -587,7 +587,7 @@
     {
       "id": "runbooks_index",
       "tier": "diligence",
-      "path": "docs/operations/runbooks/README.md",
+      "path": "docs/operations/runbooks/INDEX.md",
       "record": "documents/operations/runbooks_index.json"
     },
     {
@@ -617,7 +617,7 @@
     {
       "id": "security_index",
       "tier": "diligence",
-      "path": "docs/security/README.md",
+      "path": "docs/security/INDEX.md",
       "record": "documents/security/security_index.json"
     },
     {
@@ -659,7 +659,7 @@
     {
       "id": "decisions_index",
       "tier": "diligence",
-      "path": "docs/architecture/decisions/README.md",
+      "path": "docs/architecture/decisions/INDEX.md",
       "record": "documents/decisions_index.json"
     },
     {
@@ -677,7 +677,7 @@
     {
       "id": "contributing_index",
       "tier": "diligence",
-      "path": "docs/contributing/README.md",
+      "path": "docs/contributing/INDEX.md",
       "record": "documents/contributing_index.json"
     },
     {
@@ -695,7 +695,7 @@
     {
       "id": "portfolio_readme",
       "tier": "portfolio",
-      "path": "docs-portfolio/README.md",
+      "path": "docs-portfolio/INDEX.md",
       "record": "documents/portfolio/portfolio_readme.json"
     },
     {
@@ -713,7 +713,7 @@
     {
       "id": "portfolio_decisions_index",
       "tier": "portfolio",
-      "path": "docs-portfolio/decisions/README.md",
+      "path": "docs-portfolio/decisions/INDEX.md",
       "record": "documents/portfolio/portfolio_decisions_index.json"
     },
     {
@@ -779,7 +779,7 @@
     {
       "id": "agents_index",
       "tier": "spine",
-      "path": "docs/agents/README.md",
+      "path": "docs/agents/INDEX.md",
       "record": "documents/agent-context/agents_index.json"
     },
     {

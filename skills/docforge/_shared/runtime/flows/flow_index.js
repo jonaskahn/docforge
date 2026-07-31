@@ -588,7 +588,7 @@ function pruneOrphanStubs(repo, rows) {
   const repoResolved = path.resolve(repo);
   for (const full of walkMarkdownFiles(flowsDir)) {
     const rel = path.relative(repoResolved, full).split(path.sep).join("/");
-    if (path.basename(full) === "README.md") continue;
+    if (path.basename(full) === "INDEX.md") continue;
     if (keep.has(rel)) continue;
     let text;
     try {
@@ -627,7 +627,7 @@ function linkForRow(row) {
 function markdown(index, tier = "spine", repo = null) {
   const generated = index.generated_at;
   const provider = (index.providers || []).join(", ") || "unknown";
-  const provenance = pf.scaffoldProvenance("flows_index", "docs/flows/README.md", {
+  const provenance = pf.scaffoldProvenance("flows_index", "docs/flows/INDEX.md", {
     tier,
     target_depth: "orientation",
     provider,
@@ -1074,7 +1074,7 @@ function cmdRender(args) {
       // A malformed manifest is handled by manifest tooling; index render can continue.
     }
   }
-  const target = args.output || path.join(args.repo, "docs", "flows", "README.md");
+  const target = args.output || path.join(args.repo, "docs", "flows", "INDEX.md");
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, markdown(index, tier, args.repo));
   console.log(`Rendered ${target} — ${(index.flows || []).length} indexed flows.`);

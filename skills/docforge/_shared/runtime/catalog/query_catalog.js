@@ -382,7 +382,7 @@ function validate() {
   }
   // Records may live flat in types/ (pre-migration) or under documents/
   // (per-group folders + flat small groups, post-migration); scan both.
-  // Generated routers (index.json, README.md) are excluded, not records.
+  // Generated routers (index.json, INDEX.md) are excluded, not records.
   function walkJsonFiles(dir, out) {
     for (const name of fs.readdirSync(dir)) {
       const full = path.join(dir, name);

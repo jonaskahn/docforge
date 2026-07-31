@@ -36,7 +36,7 @@ three flows lives once, in the rule's own document.
 
 | This document owns | Links to | Because |
 |---|---|---|
-| Trigger, actors, ordered steps, branches, failures, outcome | its `flow-index` row in `docs/flows/README.md` | the index tracks discovery status/priority/confidence, never the steps themselves — one owner per fact |
+| Trigger, actors, ordered steps, branches, failures, outcome | its `flow-index` row in `docs/flows/INDEX.md` | the index tracks discovery status/priority/confidence, never the steps themselves — one owner per fact |
 | — (once promoted) | its own `business-analyst.md` subfile | BA rules and requirement traceability link back to this flow; they never restate its steps |
 | — (once promoted) | its own `engineering.md` subfile | implementation mechanism links back; this document keeps only a one-line gist |
 | A business rule referenced by 3+ flows | the rule's own document | never duplicated per-flow; link, don't restate |

@@ -1,7 +1,7 @@
 # Shared rules
 
 Always load with either skill entrypoint. Procedural detail lives under
-[`workflows/`](workflows/README.md); this file is the always-on contract.
+[`workflows/`](workflows/INDEX.md); this file is the always-on contract.
 
 ## Session tool runtime
 
@@ -14,7 +14,7 @@ detects `PATH` and locks **one** engine for every Docforge tool call:
 
 Do not switch engines mid-session. Prefer Python when both families work.
 Detail: [`workflows/tools.md`](workflows/tools.md),
-[`runtime/cli/README.md`](runtime/cli/README.md).
+[`runtime/cli/INDEX.md`](runtime/cli/INDEX.md).
 
 ## Code-graph precondition
 

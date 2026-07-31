@@ -130,7 +130,7 @@ def emit(*, dry_run: bool) -> int:
     readme = HEADER + "\n".join(index_lines) + "\n\n" + trailing
 
     if dry_run:
-        print(f"would write {len(files)} contract files + README.md")
+        print(f"would write {len(files)} contract files + INDEX.md")
         for name in sorted(files):
             print(f"  {name}.md")
         return 0
@@ -139,7 +139,7 @@ def emit(*, dry_run: bool) -> int:
     # Clear prior contract files (keep directory).
     for path in OUT_DIR.glob("*.md"):
         path.unlink()
-    (OUT_DIR / "README.md").write_text(readme, encoding="utf-8")
+    (OUT_DIR / "INDEX.md").write_text(readme, encoding="utf-8")
     for type_id, body in files.items():
         (OUT_DIR / f"{type_id}.md").write_text(body, encoding="utf-8")
 
@@ -147,10 +147,10 @@ def emit(*, dry_run: bool) -> int:
     stub = (
         "# Document catalog\n\n"
         "This file has been split for context efficiency. Content contracts live in\n"
-        "[`catalog-contracts/`](catalog-contracts/README.md). The machine catalog is\n"
+        "[`catalog-contracts/`](catalog-contracts/INDEX.md). The machine catalog is\n"
         "queried via `runtime/cli/python/query_catalog.py` against `.metadata/catalog/`.\n\n"
         "Universal contract, risk-register routing, and typed profile behavior are\n"
-        "preserved in [`catalog-contracts/README.md`](catalog-contracts/README.md).\n"
+        "preserved in [`catalog-contracts/INDEX.md`](catalog-contracts/INDEX.md).\n"
     )
     SOURCE.write_text(stub, encoding="utf-8")
     print(f"Wrote {len(files)} contracts under {OUT_DIR.relative_to(SKILL_ROOT)}/")

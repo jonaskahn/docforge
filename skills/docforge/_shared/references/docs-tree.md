@@ -6,7 +6,7 @@ path list is `.metadata/catalog/` (queried via `runtime/cli/python/query_catalog
 ## Naming and placement
 
 - Reader documentation lives under `docs/`.
-- Root files exist only where repository tooling expects them: `README.md`,
+- Root files exist only where repository tooling expects them: `INDEX.md`,
   `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, and explicitly selected
   agent shims/configuration.
 - Portfolio documents live under `docs-portfolio/`.
@@ -29,19 +29,19 @@ order. Higher tiers include lower tiers.
 Spine supplies the universal front doors and operating baseline:
 
 ```text
-README.md
+INDEX.md
 CHANGELOG.md
 docs/
-  README.md
-  product/README.md
+  INDEX.md
+  product/INDEX.md
   product/overview.md
-  architecture/README.md
+  architecture/INDEX.md
   architecture/high-level.md
-  flows/README.md
-  engineering/README.md
+  flows/INDEX.md
+  engineering/INDEX.md
   engineering/setup.md
   engineering/testing.md
-  reference/README.md
+  reference/INDEX.md
   reference/configuration.md
   reference/limitations.md
 ```
@@ -53,7 +53,7 @@ dependency records, security, operations/runbook indexes, release/contribution
 guidance, and a glossary. Conditional conventions documents appear only when a
 conventions source exists.
 
-`docs/flows/README.md` exists at Spine as the rendered complete candidate
+`docs/flows/INDEX.md` exists at Spine as the rendered complete candidate
 matrix backed by `.docforge/flow-index.json`. Revise flow creates stub
 `docs/flows/{slug}.md` files for every harvested candidate. Diligence adds
 full deep-dive flow documents only for main-priority rows; deferred-priority
@@ -65,10 +65,10 @@ Portfolio includes all Diligence documents plus:
 
 ```text
 docs-portfolio/
-  README.md
+  INDEX.md
   repo-inventory.md
   system-context.md
-  decisions/README.md
+  decisions/INDEX.md
   security-posture.md
   operations.md
   diligence-index.md
@@ -93,7 +93,7 @@ The catalog owns five independent dimensions:
 
 All dimensions are multi-select. Shared paths are defined once with multiple
 selectors, retain every matching origin, and never duplicate. Selecting any
-child also selects each cataloged ancestor `README.md`; there are no manual
+child also selects each cataloged ancestor `INDEX.md`; there are no manual
 folder-index trigger lists.
 
 ### Shape-owned paths
@@ -161,13 +161,13 @@ Audience-profile roots are intentionally visible in the plan:
 
 ```text
 docs/product/business-analyst/
-  README.md
+  INDEX.md
   process-flows.md
   business-rules.md
   requirements-traceability.md
 
 docs/product/product-owner/
-  README.md
+  INDEX.md
   feature-catalog.md
   success-metrics.md
   release-notes.md
@@ -178,7 +178,7 @@ CLAUDE.md
 CLAUDE.local.md
 .claude/settings.json
 docs/agents/
-  README.md
+  INDEX.md
   architecture.md
   patterns.md
   testing.md
@@ -205,8 +205,8 @@ keep, migrate, merge, archive, or delete. Moving, merging, archiving, and
 deleting require explicit user approval. Archive approved obsolete material
 under `docs/_archive/<year>/`; audits exclude that directory.
 
-**Root `README.md` special case.** Catalog `root_readme` targets the
-repo-root `README.md`. When that file already exists and is non-trivial /
+**Root `INDEX.md` special case.** Catalog `root_readme` targets the
+repo-root `INDEX.md`. When that file already exists and is non-trivial /
 valuable (substantial user-facing content, not an empty stub), do not silently
 overwrite it with the Docforge template. Present exactly **migrate** / **skip**
 / **rewrite** and wait for confirmation before any write:

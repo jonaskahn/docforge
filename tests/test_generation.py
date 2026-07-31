@@ -12,7 +12,7 @@ import unittest
 from _support import ROOT, run
 
 SKILL_ROOT = ROOT / "skills" / "docforge" / "_shared"
-GENERATED_README = SKILL_ROOT / ".metadata" / "catalog" / "documents" / "README.md"
+GENERATED_README = SKILL_ROOT / ".metadata" / "catalog" / "documents" / "INDEX.md"
 
 
 class GenerationTests(unittest.TestCase):
@@ -46,7 +46,7 @@ class GenerationTests(unittest.TestCase):
             for runtime in ("py", "js"):
                 result = run(runtime, "generate_indexes", "--check")
                 self.assertEqual(result.returncode, 1)
-                self.assertIn("documents/README.md", result.stdout)
+                self.assertIn("documents/INDEX.md", result.stdout)
                 # --check must never write.
                 self.assertEqual(GENERATED_README.read_text(encoding="utf-8"), original + "MUTATED\n")
         finally:

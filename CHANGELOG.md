@@ -11,7 +11,7 @@
   GitNexus, and CodeGraph are equally trusted for `code_graph`. Native
   `flow_graph` remains UA/GitNexus only; CodeGraph-only runs schedule
   Docforge-derived flows.
-- Existing root `README.md` requires explicit migrate / skip / rewrite —
+- Existing root `INDEX.md` requires explicit migrate / skip / rewrite —
   no silent overwrite with the `root_readme` template.
 - Keep a single tree for Agent Skills and Claude Code: root [`skills/`](skills/)
   and [`agents/`](agents/). Marketplace entry uses an HTTPS git URL plugin
@@ -64,8 +64,8 @@ move.
   `manifest`, `documents`, `portfolio`, `validation`, `migrations`).
   `scripts/*.py`/`*.js` are now thin launchers that import and delegate to
   the runtime implementation — never business logic.
-- Generated routers (`.metadata/catalog/README.md`,
-  `documents/README.md`, and category `index.json`/`README.md` pairs) are
+- Generated routers (`.metadata/catalog/INDEX.md`,
+  `documents/INDEX.md`, and category `index.json`/`INDEX.md` pairs) are
   produced deterministically by the new `scripts/generate_indexes.py`/`.js`.
 
 ### Stable public interfaces (unchanged)

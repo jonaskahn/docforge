@@ -142,6 +142,7 @@ function makeDocument(definition, origins, evidence = [], catalogId = null) {
   const detail = queryCatalog.loadType(catalogId || definition.id);
   return {
     id: definition.id,
+    title: detail.title || definition.id.replace(/[-_]/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
     type: definition.type,
     path: definition.path,
     group: definition.group,
@@ -206,7 +207,7 @@ function addAncestorIndexes(catalog, selected) {
     for (const child of [...selected]) {
       let parent = path.posix.dirname(child.path);
       while (parent !== ".") {
-        const candidate = path.posix.join(parent, "README.md");
+        const candidate = path.posix.join(parent, "INDEX.md");
         const definition = definitions.get(candidate);
         if (definition && !selectedPaths.has(candidate)) {
           selected.push(makeDocument(definition, [{ kind: "ancestor", id: child.id }]));
@@ -247,7 +248,7 @@ function parseArgs(argv) {
   const boolean = new Set(["force"]);
   const allowed = {
     init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force"]),
-    add: new Set(["repo", "type", "id", "path", "evidence"]),
+    add: new Set(["repo", "type", "id", "path", "title", "evidence"]),
     set: new Set(["repo", "id", "status"]),
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
@@ -357,6 +358,7 @@ function cmdAdd(args) {
     if (manifest.documents.some((doc) => doc.id === args.id)) return fail(`document id already exists: ${args.id}`, 2);
     if (manifest.documents.some((doc) => doc.path === args.path)) return fail(`document path already exists: ${args.path}`, 2);
     const actual = { ...definition, id: args.id, path: args.path };
+    if (args.title) actual.title = args.title;
     const origins = [{ kind: "dynamic", id: definition.type }, ...profileOrigins];
     if (rule.condition) origins.push({ kind: "condition", id: rule.condition });
     manifest.documents.push(makeDocument(actual, origins, evidence, definition.id));

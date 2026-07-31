@@ -3,7 +3,7 @@
   "type": "portfolio-index",
   "summary": "Selected children and one-line purpose",
   "contract_file": "content/portfolio/contracts/portfolio-index.md",
-  "path": "docs-portfolio/README.md",
+  "path": "docs-portfolio/INDEX.md",
   "group": "portfolio",
   "selection": {
     "mode": "static",

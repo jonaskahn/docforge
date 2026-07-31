@@ -2,7 +2,7 @@
 
 Coverage grows phase by phase per the context-bounded refactor: budget/router/
 link checks are added once SKILL.md and the catalog routers actually exist in
-their target shape (see tests/README.md).
+their target shape (see tests/INDEX.md).
 """
 
 from __future__ import annotations
@@ -98,12 +98,12 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("deduplicated label summary", derivation)
 
     def test_root_readme_describes_bare_invocation(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = (ROOT / "INDEX.md").read_text(encoding="utf-8")
         self.assertIn("/docforge", readme)
         self.assertIn("all applicable unresolved scope questions together", readme)
         self.assertIn("summarizes the complete scope and asks you to", readme)
         self.assertIn("confirm, edit, or cancel", readme)
-        self.assertIn("Only one readable provider is required", readme)
+        self.assertIn("repository evidence", readme)
 
     def test_claude_plugin_is_whole_repo(self) -> None:
         """Marketplace installs this GitHub repo as the plugin; no mirrored package."""

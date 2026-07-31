@@ -3,7 +3,7 @@
 1. Read the active skill entrypoint (`docforge` or `docforge-revise`), then
    this cartridge’s [`rules.md`](rules.md) and [`flags.md`](flags.md).
 2. Select the applicable workflow from
-   [`workflows/README.md`](workflows/README.md).
+   [`workflows/INDEX.md`](workflows/INDEX.md).
 3. For a document task, resolve it in one call (from this cartridge root):
    `python runtime/cli/python/query_catalog.py --route <document-id>`
    (or `node` / `bun` / `deno run -A` against

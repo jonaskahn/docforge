@@ -3,7 +3,7 @@
   "type": "root-readme",
   "summary": "Purpose, audience, verified quick start, links to setup/architecture/limitations",
   "contract_file": "content/root/root-readme.contract.md",
-  "path": "README.md",
+  "path": "INDEX.md",
   "group": "root",
   "selection": {
     "mode": "static",

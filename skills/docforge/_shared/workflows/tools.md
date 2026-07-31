@@ -4,7 +4,7 @@ Owns: every public CLI, its Python and JS invocation forms, inputs, outputs,
 side effects, and exit-code expectations.
 
 Paths are relative to the cartridge root (`skills/docforge/_shared/`). Launchers live
-under [`../runtime/cli/`](../runtime/cli/README.md); implementations under
+under [`../runtime/cli/`](../runtime/cli/INDEX.md); implementations under
 `../runtime/<subsystem>/`.
 
 Every public command has a standard-library Python peer and a built-in-only

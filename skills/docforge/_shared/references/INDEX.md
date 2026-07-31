@@ -5,8 +5,8 @@ concern; workflows link here instead of repeating the rule.
 
 ## Load this when
 
-- "Which graph provider, and how do I read it?" → [graph/](graph/README.md)
-- "What does this audience or repository shape change?" → [profiles/](profiles/README.md)
+- "Which graph provider, and how do I read it?" → [graph/](graph/INDEX.md)
+- "What does this audience or repository shape change?" → [profiles/](profiles/INDEX.md)
 - "Where does this document go, and what is it named?" → [docs-tree.md](docs-tree.md)
 - "How deep should this document go for this audience?" → [depth-and-audience.md](depth-and-audience.md)
 - "What model-native rigor is required beyond reader depth?" → [model-depth-ladders.md](model-depth-ladders.md)
@@ -24,8 +24,8 @@ concern; workflows link here instead of repeating the rule.
 
 ## Contents
 
-- [graph/](graph/README.md) — provider selection, per-provider reads, flow derivation.
-- [profiles/](profiles/README.md) — audience and shape guides.
+- [graph/](graph/INDEX.md) — provider selection, per-provider reads, flow derivation.
+- [profiles/](profiles/INDEX.md) — audience and shape guides.
 - [docs-tree.md](docs-tree.md), [depth-and-audience.md](depth-and-audience.md),
   [discovery-gate.md](discovery-gate.md), [source-analysis.md](source-analysis.md),
   [parallel-execution.md](parallel-execution.md), [document-audit.md](document-audit.md),

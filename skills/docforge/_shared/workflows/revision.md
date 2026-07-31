@@ -30,8 +30,8 @@ apply in scope:
    `/docforge-revise <area>`, `/docforge-revise flow`, and any natural-language
    revise that rediscovers docs. Do not silent-add audiences.
 4. **Update the big picture** — refresh owning indexes and overview docs
-   affected by adds or rewires (for example `docs/README.md`, area READMEs,
-   `docs/flows/README.md`, `system-overview` when selected) so the tree and
+   affected by adds or rewires (for example `docs/INDEX.md`, area READMEs,
+   `docs/flows/INDEX.md`, `system-overview` when selected) so the tree and
    navigation stay coherent.
 5. **Add connections** — update cross-links, flow-index composition /
    families, and related-document pointers so new or reorganized flows and
@@ -153,7 +153,7 @@ still `FRESH`.
      rework to `PARTIAL` / `UNTRACKED` sections, but still update connection,
      composition, and cross-link sections when the flow index or neighbors
      changed, even if blobs are `FRESH`.
-7. Refresh the big picture: render `docs/flows/README.md`, and update any
+7. Refresh the big picture: render `docs/flows/INDEX.md`, and update any
    selected overview / index docs whose flow counts or links changed
    (for example `system-overview` when selected).
 8. Add any other missing flow-related dynamic documents required by the

@@ -13,4 +13,4 @@ Architecture decision records.
 
 ## Boundaries
 
-Owns contracts, instructions, and templates used exclusively by `records` documents. Artifacts used by more than one group live in [`../shared/`](../shared/README.md) instead.
+Owns contracts, instructions, and templates used exclusively by `records` documents. Artifacts used by more than one group live in [`../shared/`](../shared/INDEX.md) instead.
