@@ -159,12 +159,14 @@ Ask only what remains unresolved, in this order:
 
 Collect the applicable answers as one response. If the user supplied one or
 more choices in the original request, retain them and include only unresolved
-questions in the intake. For Resume or Status, omit tier, audience, and shape
-questions that the existing manifest already resolves. For
-`/docforge-revise all`, `/docforge-revise <area>`, `/docforge-revise flow`, or
-any revise that rediscovers docs, omit tier and shape questions the manifest
-already resolves, but still run the Output audience confirm/add-more prompt
-(with suitable missing audiences pre-checked) above. If the reply leaves a
+ questions in the intake. For Resume or Status, omit tier, audience, and shape
+ questions that the existing manifest already resolves. For
+ `/docforge-revise all`, `/docforge-revise <area>`, `/docforge-revise flow`, or
+ any revise that rediscovers docs, omit shape questions the manifest already
+ resolves, but still ask tier when the invocation did not make it explicit
+ (keep the manifest tier or change it repo-wide), and still run the Output
+ audience confirm/add-more prompt
+ (with suitable missing audiences pre-checked) above. If the reply leaves a
 material choice missing or ambiguous — including Output audience or Execution
 mode when required — ask one concise follow-up containing only those
 unresolved choices.

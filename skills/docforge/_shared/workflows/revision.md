@@ -46,6 +46,49 @@ apply in scope:
 **Update / refresh of one named document** is the cheap exception: blob-first,
 no rediscovery, unless that document is untracked.
 
+## Questions revise asks
+
+Revise is not a fresh intake. It re-asks only what the manifest cannot resolve:
+
+1. **Scope** — `all`, `<area>`, or `flow`. Asked only on a bare
+   `/docforge-revise` invocation with no scope argument.
+2. **Tier** — asked whenever the invocation did not make the tier explicit.
+   Revise asks whether to keep the manifest's current tier or change it
+   (repo-wide, e.g. `spine` → `diligence` to unlock low-level, threat-model,
+   and other diligence documents). This is the supported way to raise a tier
+   without `init --force`.
+3. **Output audience confirm/add-more** — asked only when rediscovery finds
+   missing, new, or updated documents whose catalog `selection.audiences` are
+   not already on the manifest. Pre-check the suitable missing audiences (one
+   line each, e.g. which `ba_*` / `po_*` / `agents_*` docs they unlock), let the
+   user confirm or **add more** (see [`intake.md`](intake.md) Output audience).
+   If the manifest has no audiences, run the full audience multi-select.
+4. **Execution mode** — asked only when the action will plan or write and the
+   reply did not make it derivable; one mode-only follow-up.
+
+Never re-ask: goal/action (revise has a fixed meaning), shape/platform/framework/
+concern dimensions (re-detected and shown as a delta), or graph source (internal;
+shown in the summary only). The final confirmation summary shows action, tier,
+every profile dimension, audiences, evidence provider, and execution mode before
+anything is written.
+
+## Annotated plan tree
+
+Before any writing, revise (and fresh-start planning) displays the plan tree
+with a per-document action comment, so the user sees exactly what will happen:
+
+- `add` — not planned yet, or planned with no file (will be scaffolded).
+- `update` — file exists; changed sections will be re-grounded.
+- `rewrite` — full re-ground (provenance missing/unparseable, or status is
+  `in_progress` / `needs_review`).
+- `unchanged` — fresh with valid provenance; re-checked only when a structural
+  change touches it.
+- `skip` — explicitly skipped.
+
+Main-priority flows are listed under a `Flows:` section mapping each flow to its
+document path (`docs/flows/<slug>.md`) with the same action annotation. Run it
+directly with `scaffold_docs --dry-run --revise`.
+
 ## Commands
 
 ### `/docforge-revise`

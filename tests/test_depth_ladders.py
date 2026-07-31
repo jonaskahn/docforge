@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
-from _support import CLI_JS, ROOT
+from _support import CLI_JS, ROOT, initialize, run, write_flow_index
 from runtime.common.illustration_metrics import illustration_defects
 from runtime.common.prov_projection import project_core
 
@@ -34,6 +36,24 @@ class DepthLadderTests(unittest.TestCase):
     def test_illustration_budget_rejects_router_visual(self) -> None:
         document = "```mermaid\nflowchart TD\nA --> B\n```\n"
         self.assertTrue(illustration_defects(document, "router"))
+
+    def test_plan_tree_annotates_actions_and_flows_with_runtime_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(initialize("py", repo, "spine").returncode, 0)
+            write_flow_index(repo, status="main", priority="main")
+            outputs = {}
+            for runtime in ("py", "js"):
+                result = run(runtime, "scaffold_docs", "--repo", str(repo),
+                             "--manifest", str(repo / ".docforge/manifest.json"),
+                             "--dry-run", "--revise")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                outputs[runtime] = result.stdout
+                self.assertIn("action: add — planned; will be scaffolded", result.stdout)
+                self.assertIn("Flows:", result.stdout)
+                self.assertIn("Checkout (flow-checkout) → docs/flows/checkout.md  [add]", result.stdout)
+                self.assertIn("1 main-priority flow documents", result.stdout)
+            self.assertEqual(outputs["py"], outputs["js"])
 
 
 if __name__ == "__main__":

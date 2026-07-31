@@ -5,6 +5,7 @@
 const fs = require("fs");
 const path = require("path");
 const { dumpJson, ensureGitignoredDir, fail, loadManifest } = require("../common/_util.js");
+const { planLines } = require("../common/plan.js");
 const { detect: detectProfiles } = require("../catalog/detect_profiles.js");
 const pf = require("../common/provenance_frontmatter.js");
 const queryCatalog = require("../catalog/query_catalog.js");
@@ -308,6 +309,10 @@ function cmdInit(args) {
   };
   saveManifest(args.repo, manifest);
   console.log(`Wrote ${target} — tier ${args.tier}, ${docs.length} static documents planned.`);
+  console.log("");
+  for (const line of planLines(args.repo, manifest, path.join(args.repo, ".docforge", "flow-index.json"))) {
+    console.log(line);
+  }
   return 0;
 }
 function dynamicDefinition(catalog, typeName) {

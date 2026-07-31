@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { fail, loadManifest } = require("../common/_util.js");
 const pf = require("../common/provenance_frontmatter.js");
+const { planEntries } = require("../common/plan.js");
 const SKILL_ROOT = path.resolve(__dirname, "..", "..");
 const PLACEHOLDER = /\{\{[^}]+\}\}|TODO\([^)]*\)/g;
 const TOKEN = /<[A-Z][A-Z0-9_]{2,}>/g;
@@ -26,7 +27,7 @@ function resolveManifest(value, repo) {
 function activeDocuments(manifest) {
   return manifest.documents.filter((doc) => doc.status !== "skipped");
 }
-function preview(manifest) {
+function preview(manifest, repo, revise) {
   const docs = activeDocuments(manifest);
   const project = manifest.project || {};
   console.log(`Generation plan — tier: ${project.tier || "unknown"}`);
@@ -35,15 +36,32 @@ function preview(manifest) {
     console.log(`  ${dimension}: ${(profiles[dimension] || []).join(", ") || "none"}`);
   }
   console.log();
+  const flowIndexPath = path.join(repo, ".docforge", "flow-index.json");
+  const entries = planEntries(repo, manifest, flowIndexPath, revise);
+  const manifestEntries = new Map(entries.filter((entry) => !entry.is_flow).map((entry) => [entry.id, entry]));
+  const flowEntries = entries.filter((entry) => entry.is_flow);
   for (const doc of docs) {
+    const entry = manifestEntries.get(doc.id) || {};
+    const action = entry.action || "?";
+    const reason = entry.reason || "";
     console.log(`${String(doc.write_order).padStart(3, "0")}  ${doc.id.padEnd(28)}  ${doc.path}`);
     const requires = (doc.requires || []).join(", ") || "none";
     const origins = (((doc.selection || {}).origins) || [])
       .map((origin) => `${origin.kind}:${origin.id}`).join(", ") || "manifest";
-    console.log(`     ${doc.group} / ${doc.type} | depth: ${doc.target_depth} | requires: ${requires} | selected by: ${origins}`);
+    console.log(`     ${doc.group} / ${doc.type} | depth: ${doc.target_depth} | requires: ${requires} | selected by: ${origins} | action: ${action} — ${reason}`);
+  }
+  if (flowEntries.length) {
+    console.log("");
+    console.log("Flows:");
+    for (const entry of flowEntries) {
+      const label = entry.flow_id ? `${entry.flow_name} (${entry.flow_id})` : entry.path;
+      console.log(`  ${label} → ${entry.path}  [${entry.action}] ${entry.reason}`);
+    }
   }
   const flowCount = docs.filter((doc) => (doc.requires || []).includes("flow_graph")).length;
-  console.log(`\n${docs.length} manifest documents; ${flowCount} require a flow graph.`);
+  let summary = `\n${docs.length} manifest documents; ${flowCount} require a flow graph`;
+  if (flowEntries.length) summary += `; ${flowEntries.length} main-priority flow documents`;
+  console.log(`${summary}.`);
   return 0;
 }
 function posixDirname(value) {
@@ -357,7 +375,7 @@ function audit(repo, manifest) {
 }
 function parseArgs(argv) {
   const result = {};
-  const allowed = new Set(["repo", "manifest", "dry-run", "document", "audit"]);
+  const allowed = new Set(["repo", "manifest", "dry-run", "document", "audit", "revise"]);
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
     if (token === "-h" || token === "--help") return { help: true };
@@ -365,7 +383,7 @@ function parseArgs(argv) {
     const raw = token.slice(2);
     if (!allowed.has(raw)) throw new Error(`unknown option: ${token}`);
     const key = raw.replace(/-/g, "_");
-    if (raw === "dry-run" || raw === "audit") result[key] = true;
+    if (raw === "dry-run" || raw === "audit" || raw === "revise") result[key] = true;
     else {
       if (i + 1 >= argv.length || argv[i + 1].startsWith("--")) throw new Error(`option requires a value: ${token}`);
       result[key] = argv[++i];
@@ -374,7 +392,7 @@ function parseArgs(argv) {
   return result;
 }
 function usage() {
-  console.log("usage: scaffold_docs.js --repo <path> --manifest <path> (--dry-run | --document <id> | --audit)");
+  console.log("usage: scaffold_docs.js --repo <path> --manifest <path> (--dry-run [--revise] | --document <id> | --audit)");
 }
 function main() {
   let args;
@@ -388,7 +406,7 @@ function main() {
     const manifest = loadManifest(resolveManifest(args.manifest, args.repo), {
       requireDocuments: true,
     });
-    if (args.dry_run) return preview(manifest);
+    if (args.dry_run) return preview(manifest, args.repo, args.revise);
     if (args.document) return materialize(args.repo, manifest, args.document);
     return audit(args.repo, manifest);
   } catch (error) {

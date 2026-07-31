@@ -16,7 +16,7 @@ const CATALOG_VERSION = "2.7.0";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
-  scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
+  scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
   flow_index: ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
@@ -260,11 +260,13 @@ function validate() {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory() && !IGNORED_DIRS.has(entry.name)) collectReadmes(full, out);
-      else if (entry.isFile() && entry.name === "README.md") out.push(path.relative(REPO_ROOT, full).split(path.sep).join("/"));
+      else if (entry.isFile() && entry.name === "README.md" && full !== path.join(REPO_ROOT, "README.md")) {
+        out.push(path.relative(REPO_ROOT, full).split(path.sep).join("/"));
+      }
     }
   }
   const readmes = []; collectReadmes(REPO_ROOT, readmes);
-  if (readmes.length) errors.push(`README.md files are obsolete; use INDEX.md: ${readmes.sort().join(", ")}`);
+  if (readmes.length) errors.push(`nested README.md files are obsolete; use INDEX.md: ${readmes.sort().join(", ")}`);
   const forbidden = new Set(["document" + "-templates.json", "generation" + "-status.json", "status" + "-schema.json", "template" + "-schema.json"]);
   const present = fs.readdirSync(metadata).filter((name) => forbidden.has(name)).sort();
   if (present.length) errors.push(`obsolete metadata files remain: ${present.join(", ")}`);

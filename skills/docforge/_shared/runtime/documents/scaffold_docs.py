@@ -10,6 +10,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 from runtime.common._util import fail, load_manifest
+from runtime.common.plan import plan_entries
 from runtime.common.provenance_frontmatter import (
     BLOB,
     FLOW_VALUES,
@@ -47,7 +48,7 @@ def active_documents(manifest: dict) -> list[dict]:
     return [doc for doc in manifest["documents"] if doc.get("status") != "skipped"]
 
 
-def preview(manifest: dict) -> int:
+def preview(manifest: dict, repo: Path, revise: bool = False) -> int:
     docs = active_documents(manifest)
     project = manifest.get("project", {})
     print(f"Generation plan — tier: {project.get('tier', 'unknown')}")
@@ -56,7 +57,14 @@ def preview(manifest: dict) -> int:
         values = ", ".join(profiles.get(dimension, [])) or "none"
         print(f"  {dimension}: {values}")
     print()
+    flow_index_path = repo / ".docforge" / "flow-index.json"
+    entries = plan_entries(repo, manifest, flow_index_path, revise)
+    manifest_entries = {entry["id"]: entry for entry in entries if not entry["is_flow"]}
+    flow_entries = [entry for entry in entries if entry["is_flow"]]
     for doc in docs:
+        entry = manifest_entries.get(doc["id"], {})
+        action = entry.get("action", "?")
+        reason = entry.get("reason", "")
         print(f"{doc['write_order']:03d}  {doc['id']:<28}  {doc['path']}")
         requires = ", ".join(doc.get("requires", [])) or "none"
         origins = ", ".join(
@@ -65,13 +73,19 @@ def preview(manifest: dict) -> int:
         ) or "manifest"
         print(
             f"     {doc['group']} / {doc['type']} | depth: {doc['target_depth']} | "
-            f"requires: {requires} | selected by: {origins}"
+            f"requires: {requires} | selected by: {origins} | action: {action} — {reason}"
         )
+    if flow_entries:
+        print()
+        print("Flows:")
+        for entry in flow_entries:
+            label = f"{entry['flow_name']} ({entry['flow_id']})" if entry["flow_id"] else entry["path"]
+            print(f"  {label} → {entry['path']}  [{entry['action']}] {entry['reason']}")
     flow_count = sum("flow_graph" in doc.get("requires", []) for doc in docs)
-    print(
-        f"\n{len(docs)} manifest documents; "
-        f"{flow_count} require a flow graph."
-    )
+    summary = f"\n{len(docs)} manifest documents; {flow_count} require a flow graph"
+    if flow_entries:
+        summary += f"; {len(flow_entries)} main-priority flow documents"
+    print(summary + ".")
     return 0
 
 
@@ -424,6 +438,7 @@ def main() -> int:
     modes.add_argument("--dry-run", action="store_true")
     modes.add_argument("--document")
     modes.add_argument("--audit", action="store_true")
+    parser.add_argument("--revise", action="store_true")
     args = parser.parse_args()
     if not args.repo.is_dir():
         return fail(f"not a directory: {args.repo}", 2)
@@ -435,7 +450,7 @@ def main() -> int:
     except (ValueError, json.JSONDecodeError) as exc:
         return fail(str(exc), 2)
     if args.dry_run:
-        return preview(manifest)
+        return preview(manifest, args.repo, args.revise)
     if args.document:
         return materialize(args.repo, manifest, args.document)
     return audit(args.repo, manifest)

@@ -98,7 +98,7 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("deduplicated label summary", derivation)
 
     def test_root_readme_describes_bare_invocation(self) -> None:
-        readme = (ROOT / "INDEX.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("/docforge", readme)
         self.assertIn("all applicable unresolved scope questions together", readme)
         self.assertIn("summarizes the complete scope and asks you to", readme)

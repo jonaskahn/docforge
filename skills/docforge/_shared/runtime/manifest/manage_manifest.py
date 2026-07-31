@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 from runtime.common._util import dump_json, ensure_gitignored_dir, fail, load_manifest
+from runtime.common.plan import plan_lines
 from runtime.catalog.detect_profiles import detect as detect_profiles
 from runtime.common.provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 from runtime.catalog import query_catalog
@@ -356,6 +357,9 @@ def cmd_init(args: argparse.Namespace) -> int:
     }
     save_manifest(args.repo, manifest)
     print(f"Wrote {path} — tier {args.tier}, {len(docs)} static documents planned.")
+    print()
+    for line in plan_lines(args.repo, manifest, args.repo / ".docforge" / "flow-index.json"):
+        print(line)
     return 0
 
 

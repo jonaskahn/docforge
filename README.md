@@ -20,7 +20,7 @@ Created by [Jonas Kahn](https://github.com/jonaskahn), Docforge is a source-grou
 - [Boot sequence](#-boot-sequence-)
 - [Start game](#-start-game-)
 - [Core loop](#-core-loop-)
-- [Graph cartridges](#-graph-cartridges-)
+- [Evidence and flows](#-evidence-and-flows-)
 - [Stage select](#-stage-select-)
 - [Controller mapping](#-controller-mapping-)
 - [Inventory](#-inventory-)
@@ -105,28 +105,26 @@ or `/docforge-revise`; plain-language requests work across compatible agents.
 
 Expected result:
 
-1. Docforge performs only read-only discovery: repository/manifest state and
-   available graph sources.
+1. Docforge performs only read-only discovery of repository and manifest state.
 2. It presents all applicable unresolved scope questions together: goal,
-   documentation tier, the five typed repository-profile dimensions, graph
-   source only when it is unresolved, and execution mode. Each question
+   documentation tier, the five typed repository-profile dimensions, evidence
+   availability only when it is unresolved, and execution mode. Each question
    explains its choices; native selection controls are used when the host
    provides them.
 3. After you answer the set, it summarizes the complete scope and asks you to
    confirm, edit, or cancel. This confirmation is required even when
    Auto-accept is selected. It does not create a manifest, documents, or a
-   graph index during intake.
-4. After you confirm the scope, it reuses the selected provider’s persisted graph
-   and native skill/MCP queries to inventory the repository.
+   repository analysis during intake.
+4. After you confirm the scope, it inventories the repository from approved
+   evidence sources.
 5. It always shows the exact manifest-backed tree plus a one-line
    content/evidence card for every document before writing. Auto-accept skips
    only the pause, not the displayed tree.
 6. If discovery changes the manifest later, it shows the path/requirement delta
    and refreshed tree before writing continues.
 
-If no code graph exists, Docforge explains the setup choices. It never installs
-or wires a provider automatically, and it requests separate approval before an
-agent runs a repository index build or refresh.
+If evidence is insufficient, Docforge explains the available setup choices. It
+never changes repository analysis tooling automatically.
 
 ## ▓▒░ CORE LOOP ░▒▓
 
@@ -134,8 +132,8 @@ agent runs a repository index build or refresh.
 PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 ```
 
-1. **PRECHECK** — require one supported code graph.
-2. **ANALYZE** — read graph data, source, config, manifests, existing docs, CI, deployment files, git history, and child repositories.
+1. **PRECHECK** — confirm sufficient repository evidence.
+2. **ANALYZE** — read source, config, manifests, existing docs, CI, deployment files, git history, and child repositories.
 3. **PLAN** — choose a named tier and typed profiles, harvest a complete ranked
    flow index, initialize manifest 3.1, then preview its exact tree.
 4. **WRITE** — generate one document at a time in dependency order.
@@ -144,36 +142,15 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 
 Docforge writes behavior and boundaries, not prose tied to private symbols or line numbers. Derivable facts must be completed; only truly external values may remain as typed tokens such as `<SECURITY_CONTACT>`.
 
-Read the full [workflow](skills/docforge/_shared/workflows/README.md), [document contracts](skills/docforge/_shared/content/README.md), [audit gate](skills/docforge/_shared/references/document-audit.md), and [provenance model](skills/docforge/_shared/references/provenance-tracking.md).
+Read the full [workflow](skills/docforge/_shared/workflows/INDEX.md), [document contracts](skills/docforge/_shared/content/INDEX.md), [audit gate](skills/docforge/_shared/references/document-audit.md), and [provenance model](skills/docforge/_shared/references/provenance-tracking.md).
 
-## ▓▒░ GRAPH CARTRIDGES ░▒▓
+## ▓▒░ EVIDENCE AND FLOWS ░▒▓
 
-A code graph is the universal key. Docforge reuses, rather than replaces, the
-provider’s pre-generated index:
-
-- Understand Anything’s shareable code-graph and flow-graph JSON, queried
-  through its skills or the deterministic JSON reader;
-- GitNexus’s LadybugDB code graph and indexed processes, queried through
-  its MCP/skills or project-local CLI;
-- CodeGraph’s auto-synchronized SQLite index, queried through
-  `codegraph_explore` for relevant source, call paths, and blast radius.
-
-Only one readable provider is required. When GitNexus, Understand Anything, or
-CodeGraph is ready, the normal intake reports and uses that provider; absent
-competitor indexes are not gaps and stay hidden unless you request provider
-comparison or troubleshooting.
-
-Docforge writes every evidenced flow candidate to `.docforge/flow-index.json`
-and renders the full matrix in `docs/flows/README.md`. Harvest ranks candidates
-as main/deferred; revise flow upserts them as `placeholder` with stub files and
-fully documents main-priority flows (with an explicit user notice). GitNexus
-Processes are grouped by entry point, while Understand Anything domain flows
-are augmented from its knowledge graph. Only catalog entries declaring
-`flow_graph` require detailed flow data. They prefer native flow data; when
-only a code graph is available, Docforge derives a provisional,
-entry-point-first flow graph in the git-ignored `.docforge/tmp/` workspace.
-
-Provider capabilities and setup live in [graph dispatch](skills/docforge/_shared/references/graph/graph-sources.md); the reasoning loop lives in [flow derivation](skills/docforge/_shared/references/graph/flow-derivation.md).
+Docforge grounds documents in the repository evidence available to the current
+session. It writes evidence-backed flow candidates to `.docforge/flow-index.json`
+and renders the resulting flow matrix in `docs/flows/INDEX.md`. Main flows are
+documented in depth; lower-confidence or deferred candidates remain visible as
+clearly labeled placeholders until their evidence improves.
 
 ## ▓▒░ STAGE SELECT ░▒▓
 
@@ -194,7 +171,7 @@ independent profile dimensions:
 - audiences such as engineers, beginners, Business Analysts, Product Owners,
   coding agents, operators, and security reviewers.
 
-Frameworks tailor detection, graph queries, terminology, and verified commands;
+Frameworks tailor evidence retrieval, terminology, and verified commands;
 shapes and platforms own the durable document tree. Shared paths are selected
 once and retain every profile origin. With no audience flag, manifest
 initialization records `engineers` and `beginners` as the default audience.
@@ -231,18 +208,18 @@ intake or plain language; for a progress report, ask in plain language or run
 
 `--auto-accept` skips routine conversational pauses after the scope has been
 explicitly confirmed. It does not silently choose unresolved profiles or
-authorize installation, global configuration, graph construction or refresh,
+authorize installation, global configuration, evidence tooling changes,
 archive/delete actions, or other separately approved side effects; it also
 does not skip grounding, plan display, audits, or final checks.
 
-The exact flag semantics and composition rules live in the [workflow](skills/docforge/_shared/workflows/README.md) and [shared flags](skills/docforge/_shared/flags.md).
+The exact flag semantics and composition rules live in the [workflow](skills/docforge/_shared/workflows/INDEX.md) and [shared flags](skills/docforge/_shared/flags.md).
 
 ## ▓▒░ INVENTORY ░▒▓
 
 [`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) and
 [`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md) are thin
 command entrypoints. The shared cartridge lives under
-[`skills/docforge/_shared/`](skills/docforge/_shared/README.md):
+[`skills/docforge/_shared/`](skills/docforge/_shared/INDEX.md):
 [`.metadata/catalog/`](skills/docforge/_shared/.metadata/catalog/) is the canonical
 registry; [`workflows/`](skills/docforge/_shared/workflows/) holds the step-by-step
 procedure; [`references/`](skills/docforge/_shared/references/) holds owned policy
@@ -266,19 +243,17 @@ directly (no root `meta.json`).
 
 - a compatible AI coding agent
 - `git`
-- one supported code-graph producer
+- a supported source of repository evidence
 - **one** tool runtime: Python 3.10+ **or** a JS engine (Node.js 18+, Bun, or Deno)
 
-The agent picks the session engine from what is installed. Core tools use
-only the selected runtime's standard library or built-ins. The optional
-offline GitNexus reader is the exception: it needs `@ladybugdb/core` or a
-compatible LadybugDB Python binding. GitNexus MCP tools are preferred.
+The agent picks the session engine from what is installed. Core tools use only
+the selected runtime's standard library or built-ins.
 
 ## ▓▒░ MULTIPLAYER ░▒▓
 
 Found a bug or missing rule? [Open an issue](https://github.com/jonaskahn/docforge/issues) with the request, actual output, and expected output.
 
-To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together under `skills/` (and agent wrappers under `agents/`), then [open a pull request](https://github.com/jonaskahn/docforge/pulls). New graph providers follow the [graph-source extension contract](skills/docforge/_shared/references/graph/adding-a-graph-source.md).
+To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together under `skills/` (and agent wrappers under `agents/`), then [open a pull request](https://github.com/jonaskahn/docforge/pulls).
 
 ## ▓▒░ CREDITS ░▒▓
 

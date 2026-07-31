@@ -21,7 +21,7 @@ MARKDOWN_EXCEPTIONS = {"agents-kernel.md", "claude-md.md", "claude-local-md.md"}
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "status", "audit", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report"],
     "detect_profiles": ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
-    "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit"],
+    "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
     "check_staleness": ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
     "flow_index": ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
@@ -243,10 +243,11 @@ def validate() -> list[str]:
     readmes = sorted(
         path.relative_to(REPO_ROOT).as_posix()
         for path in REPO_ROOT.rglob("README.md")
-        if not any(part in ignored_dirs for part in path.relative_to(REPO_ROOT).parts)
+        if path != REPO_ROOT / "README.md"
+        and not any(part in ignored_dirs for part in path.relative_to(REPO_ROOT).parts)
     )
     if readmes:
-        errors.append(f"README.md files are obsolete; use INDEX.md: {', '.join(readmes)}")
+        errors.append(f"nested README.md files are obsolete; use INDEX.md: {', '.join(readmes)}")
     forbidden_files = {
         "document" + "-templates.json",
         "generation" + "-status.json",

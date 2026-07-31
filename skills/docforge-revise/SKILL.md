@@ -43,6 +43,12 @@ node runtime/cli/js/query_catalog.js --route <document-id>
 | `/docforge-revise <area>` | Scoped revise (architecture, flows, operations, …) |
 | `/docforge-revise flow` | Full flow pipeline |
 
+Revise re-asks only what the manifest cannot resolve: scope (bare invocation),
+tier when not explicit (keep the manifest tier or change it repo-wide), the
+suitable-missing-audiences confirm/add-more prompt, and execution mode when
+needed. It displays an annotated plan tree (`add` / `update` / `rewrite` /
+`unchanged` / `skip`) before writing, including the `Flows:` mapping.
+
 ## Flags
 
 Same flags as `/docforge` (combinable with a scope argument). Detail:
