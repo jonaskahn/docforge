@@ -1,5 +1,10 @@
 # Security-policy writing craft
 
+Add a distinct Safe harbor and authorized testing section only when an accountable
+policy decision establishes it, including good-faith limits and exclusions. Cite
+policy, release, configuration, or maintainer evidence for scope, contact, and
+response commitments; otherwise retain typed external unknowns.
+
 **Preferred illustration:** Follow
 [`../../references/illustration.md`](../../references/illustration.md); disclosure
 policy is procedural prose, not a diagram, unless an evidenced lifecycle needs

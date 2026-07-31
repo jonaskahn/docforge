@@ -1,5 +1,9 @@
 # Api-versioning writing craft
 
+For every public deprecation, link the evidenced migration path or state that
+none is published. Ground compatibility and removal claims in current public
+contracts and history; never promise an unverified future version or date.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a compact
 table for the version/date/status facts, prose for the compatibility

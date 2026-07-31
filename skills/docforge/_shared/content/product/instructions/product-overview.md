@@ -1,5 +1,9 @@
 # Product-overview writing craft
 
+State users, problems, capabilities, and non-goals only where source, manifest,
+or linked owning documentation supports them. Expose unresolved scope as a limit
+and link behavior to its flow or feature-catalog owner rather than implementation detail.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); this
 orientation page normally uses prose, with a table only for enumerable facts.

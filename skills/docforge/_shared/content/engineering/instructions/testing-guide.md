@@ -1,5 +1,10 @@
 # Testing-guide writing craft
 
+For each test layer, identify fixture source, setup/reset/cleanup, synthetic or
+sensitive-data status, and owner of each shared dependency. Derive commands and
+CI-only differences from manifests and CI, give each an observable pass
+condition, and retain unsupported environments as explicit limitations.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); prose and
 commands per layer, table only for the layer-comparison overview.

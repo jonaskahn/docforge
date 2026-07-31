@@ -1,5 +1,10 @@
 # Data-quality writing craft
 
+For each governed dataset, identify producer, transformation boundary, linked
+data contract, schema owner, and recovery or runbook handoff. Ground checks in
+their implementation; use a bounded ER diagram only for evidenced durable
+relationships, never inferred lineage or cardinality.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 mapping dimension to check and enforcement point.

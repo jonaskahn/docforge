@@ -1,5 +1,10 @@
 # Persistence writing craft
 
+Ground entity mappings, transaction boundaries, and atomicity claims in schema,
+migration, manifest, or code evidence. Name the owning component and mark
+unverified crash-recovery behavior as unknown; storage mechanics remain here,
+while data contract semantics stay with their reference owner.
+
 Map each entity to its storage representation — table/collection name, key
 strategy, and any denormalization that departs from the obvious mapping,
 stated with the reason. State the migration mechanism (tool, versioning

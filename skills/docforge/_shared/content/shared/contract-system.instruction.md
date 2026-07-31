@@ -26,3 +26,11 @@ Never render an unsupported audit verdict ("this contract is safe"); state
 evidence and accepted residual risk instead, the same discipline
 [threat-model.md](threat-model.md) uses. Never include a private key or a
 fabricated address — placeholders only.
+
+Keep the paired views distinct: `contract_system` owns the contract, network,
+storage, authority, and upgrade inventory; `economic_invariants` owns each
+invariant, enforcement mechanism, break condition, and evidence status. Link
+from inventory rows to invariant identifiers rather than restating them, and
+link accepted risks to the threat model. Network, authority, upgrade, and
+governance claims require deployment or governance evidence; absent evidence is
+an explicit unknown, never a safety conclusion.

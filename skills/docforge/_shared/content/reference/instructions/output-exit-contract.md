@@ -1,5 +1,9 @@
 # Output-exit-contract writing craft
 
+For each captured example, cite the command and version that produced its exit
+status and streams. Link command-specific side effects back to
+`command-reference`; this contract owns stable output semantics, not usage prose.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); tables
 for exit codes and stream ownership — this document exists so a script can

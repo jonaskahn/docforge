@@ -1,5 +1,10 @@
 # Application-distribution writing craft
 
+Derive build, signing mechanism, package format, channel eligibility, and update
+behavior from manifests, CI, release configuration, or history. Name the role
+authorized to publish, revoke, or roll back each channel; external store policy
+and timing remain unknown unless evidenced.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); this is a
 how-to — ordered steps and verification, not a diagram.

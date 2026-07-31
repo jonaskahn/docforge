@@ -9,6 +9,13 @@ what triggers each transition. For state: state ownership boundaries (who
 mutates what) and failure/recovery behavior on a bad state transition.
 Keep the component catalog out — that's [ui-components.md](ui-components.md).
 
+`web_rendering` owns where rendering occurs, server/client handoff when present,
+loading and error presentation, and render-boundary recovery. `web_state` owns
+mutation authority, invalid transitions, synchronization, cache invalidation,
+and recovery. State the trigger and evidence for every material transition; do
+not infer hydration, persistence, or route behavior from framework defaults.
+Link navigation, persistence, and the component catalog for facts they own.
+
 ## Illustration
 
 - **Form:** a Mermaid `stateDiagram-v2` for lifecycle/transitions.

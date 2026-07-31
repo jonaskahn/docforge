@@ -1,5 +1,10 @@
 # Application-lifecycle writing craft
 
+For every state and transition, name its accountable owner and cite the platform
+declaration, lifecycle handler, manifest, or tested behavior. Treat unproven
+termination, restoration, and kill behavior as unknown; link persisted state to
+its persistence owner.
+
 Walk states in the order the platform actually defines them (launch,
 activation, background, termination), stating per state what triggers
 entry, what the app must do before leaving it, and the restoration

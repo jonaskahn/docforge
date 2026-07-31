@@ -1,5 +1,9 @@
 # Browser-support writing craft
 
+Cite CI or manual-browser evidence and date for every support row. Link
+component degradation behavior to `ui-components`; a browser absent from the
+matrix is not implicitly supported or unsupported.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a
 browser × minimum-version matrix table is the whole document.

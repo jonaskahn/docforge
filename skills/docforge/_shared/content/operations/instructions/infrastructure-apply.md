@@ -20,3 +20,10 @@ this document exists to prevent.
 Never include a credential or an unverified destructive command; every
 apply-adjacent command shown here must be one a reader could safely run
 against a real environment after reading the surrounding prose.
+
+`infra_apply` owns the authorized actor, gate, preflight, approved artifact,
+execution boundary, and abort condition. `infra_state` owns backend, locking,
+state owner, drift detection, and recovery. Resource inventory and access grants
+belong to their reference documents. Show a command only with its environment,
+mutability, prerequisites, expected result, and safe failure behavior; otherwise
+link to the authoritative tool procedure instead of inventing a runnable path.

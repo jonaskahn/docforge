@@ -1,5 +1,9 @@
 # Data-flow writing craft
 
+For every handoff, identify producer, consumer, validation or check, and the
+owner of that guarantee. Ground the path in code or flow evidence, link schema
+semantics to their owner, and label an unevidenced guarantee as unknown.
+
 Trace one lineage per section: producer, each transformation in order, and
 every consumer — the data-contract pattern (a named owner and an explicit
 compatibility promise per handoff), not an unbounded diagram of everything

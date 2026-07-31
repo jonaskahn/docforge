@@ -15,7 +15,7 @@
     },
     "condition": "ticket_evidence"
   },
-  "instruction_file": null,
+  "instruction_file": "content/product/instructions/backlog-traceability.md",
   "requires": [
     "git_history"
   ],

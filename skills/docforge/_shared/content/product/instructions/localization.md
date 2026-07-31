@@ -1,5 +1,9 @@
 # Localization writing craft
 
+For every locale or fallback behavior, state the resource-inventory source and
+how coverage was verified. Add known limits for unsupported content, partial
+coverage, formatting, or fallback behavior; file presence alone does not prove support.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a
 supported-locale table is the whole document.

@@ -1,5 +1,9 @@
 # Data-types writing craft
 
+Cite the authoritative schema or export for every type, constraint, and
+representation change. Link business semantics to their glossary or rule owner;
+do not reconstruct field meaning from a sample payload.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a single
 table is almost always sufficient — this document is a lookup, not an

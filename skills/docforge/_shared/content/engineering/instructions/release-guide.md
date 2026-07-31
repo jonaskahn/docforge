@@ -1,5 +1,10 @@
 # Release-guide writing craft
 
+For every release gate and rollback decision, state the evidenced check or
+approval, responsible role, release-health signal, and escalation trigger. Link
+to the catalog-selected changelog path: it owns released-change history, while
+this guide owns the procedure.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); this is a
 how-to (Diataxis) — ordered commands and verification, not prose

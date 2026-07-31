@@ -1,5 +1,9 @@
 # Network writing craft
 
+Name the infrastructure or network-policy source of truth for every zone crossing
+and enforcement boundary. Mark unverified topology and removal-impact claims as
+unknown rather than treating a configuration snapshot as current reality.
+
 Draw trust zones first — public, internal, restricted — before any single
 rule; a reader needs the zone map before a rule means anything. For each
 boundary crossing, state what traffic crosses it and why, not every open

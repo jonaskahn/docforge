@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { dumpJson, fail, loadManifest } = require("../common/_util.js");
+const { dumpJson, ensureGitignoredDir, fail, loadManifest } = require("../common/_util.js");
 const { detect: detectProfiles } = require("../catalog/detect_profiles.js");
 const pf = require("../common/provenance_frontmatter.js");
 const queryCatalog = require("../catalog/query_catalog.js");
@@ -74,6 +74,10 @@ function saveManifest(repo, manifest) {
   const target = manifestPath(repo);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, dumpJson(manifest));
+  // tmp/ (derived flow graph scratch) and audits/ (per-run reports) are
+  // ephemeral run state, never committed in whichever repo this is.
+  ensureGitignoredDir(path.join(path.dirname(target), "tmp"));
+  ensureGitignoredDir(path.join(path.dirname(target), "audits"));
 }
 function exists(repo, rel) {
   return fs.existsSync(path.join(repo, ...rel.split("/")));

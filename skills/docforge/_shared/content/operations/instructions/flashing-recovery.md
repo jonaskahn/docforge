@@ -1,5 +1,10 @@
 # Flashing-recovery writing craft
 
+Before flashing, identify the evidenced artifact version, target hardware or
+revision, integrity or compatibility check, and source location. Put a
+confirmation checkpoint immediately before erase, overwrite, or irreversible
+actions, and name the recovery authority and escalation owner.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); this is a
 safety-gated how-to — ordered steps, explicit warnings, no diagram.

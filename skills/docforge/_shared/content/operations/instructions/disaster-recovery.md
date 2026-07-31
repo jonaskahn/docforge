@@ -1,5 +1,10 @@
 # Disaster-recovery writing craft
 
+For each scenario, name recovery lead, escalation authority, and the role
+authorized to approve failover, restore, or destructive action. Ground RTO, RPO,
+recovery order, and data-loss boundary in backup, test, or incident evidence;
+label untested paths and unknown objectives explicitly.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); prose and
 an ordered command list — this is a runbook shape, not a diagram.

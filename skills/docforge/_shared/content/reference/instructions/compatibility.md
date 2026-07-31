@@ -1,5 +1,9 @@
 # Compatibility writing craft
 
+Every supported row cites CI, manual, or community evidence with its date. Link
+migration procedures to their owner rather than embedding upgrade steps, and
+mark an untested version or platform as unknown rather than compatible by default.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a
 version/platform matrix table is the whole document.

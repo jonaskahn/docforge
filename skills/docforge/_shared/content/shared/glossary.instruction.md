@@ -16,6 +16,13 @@ a term local to one repo belongs in that repo's own glossary, not here.
 Link each portfolio entry to the clearest member-repo definition rather
 than restating it.
 
+Admit a term only when it is ambiguous, domain-specific, or stable project
+vocabulary that a reader needs to interpret another document. Link its evidence
+and canonical owner. When usage differs across code, teams, or repositories,
+record scoped variants and link each source; do not manufacture one canonical
+meaning. If no owner exists, state that boundary rather than expanding the
+glossary into a concept document.
+
 ## Illustration
 
 - **Form:** an alphabetical table is the whole document.

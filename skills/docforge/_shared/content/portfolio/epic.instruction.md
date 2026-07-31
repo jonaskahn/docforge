@@ -1,5 +1,10 @@
 # Epic (portfolio) writing craft
 
+Ground each repository contribution and handoff in member documentation or history
+evidence. Mark an unproved sequence as an open gap; assign an owner token only
+when evidenced, otherwise use `undetermined` and link the follow-up in
+`diligence-index`.
+
 An epic names a cross-repository initiative. State the outcome first, then the
 member repos it spans with each repo's owning flow/feature and component, then
 the cross-repo sequence that ties them together. Link to member documents by

@@ -1,5 +1,10 @@
 # Diligence-index writing craft
 
+Each evidence cell links to a member document or repository-relative source path,
+not merely an area name. For every partial or unsupported claim, state a concrete
+follow-up and its evidenced owner token or `undetermined`; never promote it to a
+verdict without support.
+
 One row per claim under review: the claim, the evidence found for it, a
 confidence level, and the gap remaining if confidence is anything less than
 high. State confidence honestly on a small, fixed scale (for example

@@ -1,5 +1,10 @@
 # Publishing writing craft
 
+Before publishing, name artifact identity, version-tag consistency, required
+build/test/approval gates, and the non-secret credential mechanism from
+manifests, CI, and history. State the evidenced bad-release branch
+(unpublish/yank, deprecate, or patch) and link the catalog-selected changelog.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); this is a
 how-to — ordered commands and verification, not prose explanation.

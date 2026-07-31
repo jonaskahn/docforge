@@ -1,5 +1,9 @@
 # System-overview writing craft
 
+Trace every capability, subsystem, and path to its owning flow or architecture
+source. Omit or label unresolved ownership instead of synthesizing a new fact;
+this overview connects established documents and does not become another owner.
+
 Keep the zoom at one level above individual flows: name the handful of major
 capabilities, the components each touches, and the owning flow — then link to
 `docs/flows/README.md` for the matrix rather than restating flow steps or

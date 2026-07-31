@@ -1,5 +1,9 @@
 # Technical-debt writing craft
 
+Each entry links to code, issue, test, or incident evidence and names a
+remediation owner when established. Distinguish observed debt from suspected
+debt, and retain an unowned item as such instead of assigning responsibility.
+
 Name each debt item by the shortcut taken, not a vague quality label — "the retry loop has
 no backoff," not "reliability issues." Use the same sequence for every entry: mechanism,
 consequence, trigger for action, credible remediation direction.

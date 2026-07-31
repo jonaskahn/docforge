@@ -28,3 +28,10 @@ venv/
 .ua/
 .understand-anything/
 tests/
+
+# Docforge run state: manifest.json and flow-index.json are the tool's
+# persistent plan/state/provenance record and stay tracked. tmp/ is a scratch
+# derivation workspace and audits/ are per-run reports read locally during
+# generation; neither needs to live in git history.
+.docforge/tmp/
+.docforge/audits/

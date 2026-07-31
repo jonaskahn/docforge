@@ -1,5 +1,9 @@
 # Api-rate-limits writing craft
 
+Cite gateway, configuration, or specification evidence for every limit, header,
+and 429 behavior. Link endpoint-specific authentication to `api-authentication`;
+an absent documented limit is an unknown, not an unlimited contract.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 for limit values by dimension, prose only for the retry contract.

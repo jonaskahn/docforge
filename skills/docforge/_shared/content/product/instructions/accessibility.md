@@ -1,5 +1,10 @@
 # Accessibility writing craft
 
+For each supported interaction, state implemented semantic or resource behavior
+and its fallback or degraded experience. Treat targets and verification results
+as evidence-backed claims with dates; list unverified areas as limits and link
+unresolved gaps to their feature or limitation owner.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 for the conformance checklist, prose for verification method and gaps.

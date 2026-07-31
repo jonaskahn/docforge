@@ -1,5 +1,10 @@
 # Setup-guide writing craft
 
+Ground every prerequisite, version, command, and success signal in manifests,
+CI, or local verification. Record unavailable external access as a typed unknown
+with its grantor; link configuration semantics and technology inventory to their
+reference owners rather than recreating them here.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); use prose and
 commands by default, with an ASCII timeline only when sequencing is otherwise

@@ -1,5 +1,10 @@
 # Styling writing craft
 
+State styling-specific component responsibilities and token-composition
+boundaries, linking general hierarchy to `architecture/ui-components`. Include
+an evidence-backed browser or feature fallback and link the authoritative
+support policy, accessibility, and performance claims to their owners.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 for the token system, prose for the theming mechanism.

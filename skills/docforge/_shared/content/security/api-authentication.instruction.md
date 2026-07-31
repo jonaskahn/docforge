@@ -1,5 +1,10 @@
 # Api-authentication writing craft
 
+Open with the authoritative schema, export, or generator that defines the public
+surface and compatibility boundary. Ground issuance, rotation, revocation,
+scopes, statuses, and caller actions in code, config, or schema evidence; link
+quota and shared error contracts to their reference owners.
+
 **Preferred illustration:** Follow
 [`../../references/illustration.md`](../../references/illustration.md); a
 sequence diagram only when a flow (OAuth2 authorization code, mTLS

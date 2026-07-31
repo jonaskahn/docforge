@@ -1,5 +1,9 @@
 # Model-card writing craft
 
+Cite dataset, run or artifact, and evaluation evidence for every metric, and
+name the model owner when established. Link lifecycle mechanics to
+`model-lifecycle`; do not infer model quality from a declared architecture.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); prose
 sections per Mitchell et al.'s standard shape, table only for evaluation

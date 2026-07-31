@@ -10,7 +10,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
-from runtime.common._util import dump_json, fail, load_manifest
+from runtime.common._util import dump_json, ensure_gitignored_dir, fail, load_manifest
 from runtime.catalog.detect_profiles import detect as detect_profiles
 from runtime.common.provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 from runtime.catalog import query_catalog
@@ -101,6 +101,10 @@ def save_manifest(repo: Path, manifest: dict) -> None:
     path = manifest_path(repo)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dump_json(manifest), encoding="utf-8")
+    # tmp/ (derived flow graph scratch) and audits/ (per-run reports) are
+    # ephemeral run state, never committed in whichever repo this is.
+    ensure_gitignored_dir(path.parent / "tmp")
+    ensure_gitignored_dir(path.parent / "audits")
 
 
 def condition_evidence(repo: Path, condition: str | None) -> list[str]:

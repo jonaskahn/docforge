@@ -1,5 +1,10 @@
 # Quickstart writing craft
 
+Derive prerequisites and commands from manifests and the reachable entry path,
+then verify the stated first result where possible. When verification cannot run,
+state the blocker and do not present a plausible command or output as verified;
+link full setup and troubleshooting to their owners.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); commands
 and prose only — no diagram at this depth.

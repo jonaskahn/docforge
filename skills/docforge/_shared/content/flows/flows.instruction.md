@@ -1,5 +1,10 @@
 # Flow (`flow`) writing craft
 
+Default to an evidence-backed `sequenceDiagram`; use a flowchart only when branch
+selection is the reader's primary question. Trace each step, branch, rule, and
+failure to an entry point, handler, test, or trace, and link adjacent facts to
+their owners rather than duplicating them.
+
 Name the flow as a reader-recognizable outcome, not a function name. The file
 slug and `display_name` in `.docforge/flow-index.json` must match that outcome
 (for example `save-highlight`, never bare `save`). Shape it like a BPMN process

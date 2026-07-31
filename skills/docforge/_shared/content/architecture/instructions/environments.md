@@ -1,5 +1,9 @@
 # Environments writing craft
 
+Link every environment difference and promotion gate to deployment configuration,
+CI policy, or its operations owner. Keep configuration values in
+`reference/configuration` and record unverified parity or gate behavior as unknown.
+
 State what actually differs between environments — configuration values,
 scale, data realism, external service stubs — as a comparison table, one
 row per dimension, environments as columns; a reader should be able to spot

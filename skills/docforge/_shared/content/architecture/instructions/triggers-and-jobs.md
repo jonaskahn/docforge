@@ -1,5 +1,9 @@
 # Triggers-and-jobs writing craft
 
+Trace each trigger, schedule, and concurrency rule to scheduler, queue, manifest,
+or code evidence. Name an owner only when established; link recovery procedures
+to their runbook and mark inferred downstream effects as unknown.
+
 One entry per job or trigger, in this order: what triggers it (schedule,
 event, manual), the payload shape, concurrency behavior (can it run
 overlapping instances, and what happens if it does), and the downstream

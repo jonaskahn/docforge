@@ -1,5 +1,9 @@
 # Dependency-inventory writing craft
 
+For every direct dependency, cite manifest, lockfile, or SBOM evidence and its
+integration path. Mark an unverified license, failure mode, or replacement
+assumption as unknown; do not turn package metadata into an operational claim.
+
 Lead with a compact risk-oriented table, ordered by criticality — the dependency whose
 failure or removal would hurt most goes first, not the alphabetically first package. Keep an
 "if it disappeared" column (or equivalent prose): it forces concentration-risk assessment

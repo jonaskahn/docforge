@@ -1,5 +1,9 @@
 # Configuration writing craft
 
+For every setting, cite its exact configuration source and consuming code, and
+state scope and sensitivity only when evidenced. Link environment-specific
+differences to `environments`; do not infer defaults from one deployment file.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 is the whole document — one row per setting.

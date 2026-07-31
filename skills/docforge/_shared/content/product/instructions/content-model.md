@@ -1,5 +1,9 @@
 # Content-model writing craft
 
+Derive every field, transition, validation, visibility boundary, and authority
+from schema, route, publishing configuration, or access evidence. Record
+unsupported transitions as gaps and link data representation to its reference owner.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 per content type for fields, prose for lifecycle and publishing boundary.

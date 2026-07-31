@@ -1,5 +1,10 @@
 # Limitations-register writing craft
 
+Each limitation cites implementation, test, issue, or incident evidence and
+names a review owner when established. Route remediable engineering debt to
+`tech-debt-register`; preserve an unowned or unresolved limitation without
+softening it into a roadmap promise.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); use tables
 for comparable limits and prose for trigger, impact, workaround, and evidence.

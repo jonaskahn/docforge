@@ -21,6 +21,13 @@ portfolio when it degrades. Never repeat member-level detail that adds no
 cross-repo information — that repetition is exactly what this document
 type exists to avoid.
 
+Every shared control, gap, or coupling row names assessed repositories, status
+(`covered`, `absent`, `not applicable`, or `unknown`), evidence and as-of date,
+cross-repo blast radius, and accountable follow-up. Assessment scope is not
+coverage: state what was not reviewed. Link member security or operations
+documents for local evidence, and link the diligence index whenever ownership,
+evidence, or risk disposition remains unresolved.
+
 ## Illustration
 
 - **Form:** a table per repository is primary; a Mermaid `flowchart` only

@@ -1,5 +1,10 @@
 # Job-reliability writing craft
 
+For every job class, identify failure, lag, or queue signals, their visibility,
+alert owner, and correlation identifier; link shared inventories instead of
+copying them. Ground retry, timeout, backpressure, dead-letter, and replay in
+configuration or code, and require an authorized replay role plus integrity check.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 per job class — retry, idempotency, timeout, backpressure, dead-letter,

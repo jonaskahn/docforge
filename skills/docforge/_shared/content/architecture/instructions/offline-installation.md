@@ -1,5 +1,9 @@
 # Offline-installation writing craft
 
+Ground install and cache behavior in manifests, service-worker or cache
+configuration, implementation, and offline test evidence. Mark untested
+offline/reconnect behavior as unknown and link freshness guarantees to their data-flow owner.
+
 State installability criteria first (what makes the app installable at
 all), then the cache lifecycle: what's cached, when the cache updates,
 and how a stale cache is invalidated. State the offline boundary

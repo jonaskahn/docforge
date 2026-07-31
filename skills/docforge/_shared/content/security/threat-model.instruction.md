@@ -1,5 +1,10 @@
 # Threat-model writing craft
 
+For every control and response, cite code, configuration, or test evidence and
+name an accountable owner only when established. Record accepted risk only with
+a documented decision, rationale, review condition, and owner; otherwise leave
+the exposure unresolved rather than describing it as mitigated.
+
 **Preferred illustration:** Follow
 [`../../references/illustration.md`](../../references/illustration.md); a data-flow
 Mermaid diagram naming trust boundaries, prose for each threat and its

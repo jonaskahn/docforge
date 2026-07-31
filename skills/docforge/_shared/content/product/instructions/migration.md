@@ -1,5 +1,10 @@
 # Migration writing craft
 
+Create a migration guide only for an evidenced source-to-target transition, with
+breaking changes grounded in public-surface comparison and history. Distinguish
+verified mechanical steps from manual or unresolved work, and link rollback only
+where an evidenced recovery path exists.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); this is a
 how-to — ordered changes and verification, not a full compatibility

@@ -1,5 +1,9 @@
 # Api-reference writing craft
 
+For every operation, cite the authoritative schema, export, or generator. Link
+authentication, limits, errors, compatibility, and version policy to their
+respective owners instead of maintaining parallel copies of those contracts.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); this is a
 reference document — tables for endpoint and field lookups, prose only to

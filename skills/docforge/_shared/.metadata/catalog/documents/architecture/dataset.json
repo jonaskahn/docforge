@@ -15,7 +15,7 @@
     },
     "condition": "discovered_dataset"
   },
-  "instruction_file": null,
+  "instruction_file": "content/architecture/instructions/dataset.md",
   "requires": [
     "code_graph",
     "manifests"

@@ -9,3 +9,16 @@ Use terse, imperative language and front-load executable commands. Keep
 non-obvious conventions, hard boundaries, and links to deeper human documents.
 Agent views should read like indexes, not second copies of the linked content.
 Keep fixed shims exactly fixed and format machine settings as stable JSON.
+
+Apply the mode-specific rule before writing. The root kernel contains only
+graph- and manifest-verified commands, paths, constraints, and precedence.
+Agent views link each material claim to its human owner; `patterns` may add a
+representative, graph-observed editing exemplar only when no human document owns
+that guidance. Fixed shims and local extension files are emitted literally, not
+expanded into a second kernel. Machine settings preserve user-owned keys and add
+only portable, evidence-supported generated keys.
+
+Do not infer a command from a package manifest, a convention from one file, or
+permission from host defaults. Mark a missing verification command or local
+override boundary clearly and route to its owner; compactness never licenses a
+plausible but unsafe instruction.

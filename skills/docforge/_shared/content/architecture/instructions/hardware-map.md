@@ -12,6 +12,14 @@ behavior is the single fact a reader most needs before trusting an OTA
 process. Avoid generic component-datasheet prose; describe this
 repository's actual configuration.
 
+The hardware map is reference-grade: identify the stable board or peripheral
+revision, interface role, unit-qualified memory and power limits, and the
+source that establishes each material value. State an unavailable revision,
+budget, or fault behavior as unknown rather than borrowing a datasheet default.
+Firmware lifecycle owns transition validation and retry, rollback, or
+non-recovery behavior; link hands-on flashing and recovery procedures to
+operations instead of duplicating them.
+
 ## Illustration
 
 - **Form:** a table for the board/peripheral inventory; a Mermaid

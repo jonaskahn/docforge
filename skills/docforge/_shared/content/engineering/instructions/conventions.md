@@ -1,5 +1,9 @@
 # Conventions writing craft
 
+For every review convention, name the evidenced required reviewer or check, its
+applicable artifact or path, and the documented exception route. Cite a durable
+rule or representative source and distinguish a mandatory gate from a team habit.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); prose per
 convention with one code fence each, table only if comparing many

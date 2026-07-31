@@ -1,5 +1,10 @@
 # Ownership writing craft
 
+Use current CODEOWNERS or team declarations as primary evidence; use history only
+for rationale or chronology when metadata is absent, never as proof that frequent
+authorship is ownership. For every row, retain an evidence link or state the area
+is unowned or undetermined with its escalation route.
+
 **Preferred illustration:** Follow
 [`../../references/illustration.md`](../../references/illustration.md); a table
 is the whole document.

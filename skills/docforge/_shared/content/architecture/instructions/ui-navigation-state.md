@@ -1,5 +1,9 @@
 # Ui-navigation-state writing craft
 
+For each surface, state allowed transitions and their owner using navigation or
+code-graph evidence. Cite tested restoration and error behavior where available;
+otherwise mark it unknown and link process-lifecycle behavior to its owner.
+
 Name each navigation surface, who owns its state (a global store, local
 component state, the platform's own navigation stack), and how state
 survives or resets across a transition. State restoration behavior on

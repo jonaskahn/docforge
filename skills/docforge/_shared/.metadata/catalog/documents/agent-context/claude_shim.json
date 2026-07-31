@@ -15,7 +15,7 @@
     },
     "condition": null
   },
-  "instruction_file": null,
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
   "requires": [],
   "target_depth": "shim",
   "write_order": 201,

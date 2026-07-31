@@ -1,5 +1,9 @@
 # Performance-budgets writing craft
 
+Every budget cites its measurement artifact and date, then names the owner and
+remediation or limit when breached. Link user-visible constraints and detailed
+remediation to their owning register rather than hiding them in a threshold row.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 of budget × measurement × degradation is the whole document.

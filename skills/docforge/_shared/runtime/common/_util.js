@@ -3,6 +3,7 @@
 /** Shared Node built-in helpers for Docforge scripts. Not a public CLI. */
 
 const fs = require("fs");
+const path = require("path");
 
 function fail(message, code = 1) {
   process.stderr.write(`error: ${message}\n`);
@@ -25,6 +26,16 @@ function readJson(target) {
 
 function dumpJson(value) {
   return JSON.stringify(value, null, 2) + "\n";
+}
+
+// Create dirPath if needed and drop a .gitignore containing '*' inside it so
+// its contents are never committed, in whichever repo Docforge is
+// documenting. Idempotent.
+function ensureGitignoredDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+  const gitignore = path.join(dirPath, ".gitignore");
+  if (!fs.existsSync(gitignore)) fs.writeFileSync(gitignore, "*\n", "utf-8");
+  return gitignore;
 }
 
 function loadManifest(target, options = {}) {
@@ -53,6 +64,7 @@ module.exports = {
   readJson,
   dumpJson,
   loadManifest,
+  ensureGitignoredDir,
 };
 
 if (require.main === module) {

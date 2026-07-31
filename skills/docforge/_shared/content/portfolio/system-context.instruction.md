@@ -1,5 +1,10 @@
 # System-context (portfolio) writing craft
 
+For every dependency edge, record repository or source locator, resolution method,
+and separate confidence; heuristic matching never appears confirmed. Explain each
+material diagrammed boundary and exception in prose, linking member-owned flows
+instead of synthesizing execution sequences.
+
 Map repository and system boundaries at the portfolio level: which member
 repos exist, what shared services or external systems the portfolio as a
 whole borders, and which cross-repo flows cross those boundaries. Keep the

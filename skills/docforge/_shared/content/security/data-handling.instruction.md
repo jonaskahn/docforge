@@ -1,5 +1,10 @@
 # Data-handling writing craft
 
+For each data-class lifecycle row, cite repository evidence for collection, use,
+access, storage or retention, and deletion. Keep classification here, but link
+retention authority and deletion execution to their evidence-backed owner; state
+unevidenced duration, processor, or outcome as a limit.
+
 **Preferred illustration:** Follow
 [`../../references/illustration.md`](../../references/illustration.md); a table
 for data class × lifecycle stage, prose only for a nuance a table cannot

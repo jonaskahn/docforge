@@ -17,3 +17,10 @@ if that's true rather than leaving it silent.
 Never include a credential, secret, or literal access key — name the
 mechanism (a role, a policy, a secret manager reference), never the
 value.
+
+For each resource, include a stable locator or context (such as account,
+environment, region, or canonical address) and a source-of-truth link; do not
+copy mutable state or apply procedure. For access, distinguish an evidenced
+review cadence from `unknown` rather than treating silence as permanence. Keep
+resource inventory and grants separate: a resource does not prove who can use
+it, and a grant does not prove current resource state.

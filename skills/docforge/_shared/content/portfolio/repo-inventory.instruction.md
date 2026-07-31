@@ -1,5 +1,10 @@
 # Repo-inventory writing craft
 
+For every discovered member, record relative path, membership evidence, explicit
+inclusion or exclusion decision and reason, pre-review baseline, work performed,
+and remaining gap. Include role and owner only when directly supported; preserve
+`undetermined` and link unresolved ownership to `diligence-index`.
+
 One row per discovered repository: its role in the portfolio, an owner token
 (team or individual accountable for it), documentation state (undocumented,
 spine, diligence, portfolio-aware), and the evidence for each field — where

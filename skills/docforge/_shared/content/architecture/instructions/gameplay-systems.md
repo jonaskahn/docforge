@@ -11,6 +11,14 @@ scenes, and the platform-build variance where asset pipelines differ by
 target. Keep design-document aspiration out; describe what's implemented,
 not the vision for it.
 
+`gameplay_systems` owns runtime system boundaries, event/update ordering, and
+save-state semantics. `game_assets` owns the scene graph, load/unload
+dependencies, asset pipeline, and target variance. Describe recovery for
+missing or corrupt assets and incompatible saved state when evidence shows it;
+otherwise record the behavior as unknown. Ground runtime behavior in code paths
+and build variance in manifests or packaging configuration; link persistence and
+platform-integration rather than copying their mechanics.
+
 ## Illustration
 
 - **Form:** prose per system; a table for scene/asset loading order.

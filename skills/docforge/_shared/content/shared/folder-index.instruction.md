@@ -15,6 +15,11 @@ breaks trust in every other link on the page. When the manifest changes which
 children are selected, regenerate the index in the same pass — a stale index
 is a defect, not a lag.
 
+An entry is valid only when its child is selected, materialized, and its
+relative link resolves from this index. A nested index links exactly one parent
+index; use a child link only when that child is part of this run. Do not turn a
+missing child into a disabled link, a future-work note, or a prose substitute.
+
 Keep the index itself short enough to scan in one pass. If a group's child
 list grows past what fits on one screen, that is a signal the group itself
 needs sub-grouping (a nested index), not a signal to compress purposes into

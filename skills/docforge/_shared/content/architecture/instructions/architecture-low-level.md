@@ -14,6 +14,14 @@ recover by reading code ("never retries a non-idempotent write") — the same di
 scaffold's own Invariant field asks for. Close each section with the stable file/module
 paths that orient implementation work.
 
+`arch_low_level` is a component zoom-in and must trace each component to a
+high-level block. `concept` is a durable subsystem topic: define its
+responsibility, relationships, invariant, and failure boundary without forcing
+a parent-component decomposition. State only dependency semantics for data;
+link persistence or datasets for their model and storage mechanics. For each
+non-obvious failure, name evidence and the symptom or escalation boundary that
+hands control to operations or another owner.
+
 ## Illustration
 
 - **Form:** an ASCII layered stack for static decomposition; a Mermaid

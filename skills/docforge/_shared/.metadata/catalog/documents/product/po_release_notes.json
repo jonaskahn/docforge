@@ -15,7 +15,7 @@
     },
     "condition": null
   },
-  "instruction_file": null,
+  "instruction_file": "content/product/instructions/release-notes.md",
   "requires": [
     "git_history"
   ],

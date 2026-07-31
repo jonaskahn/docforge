@@ -30,6 +30,17 @@ def dump_json(value: object) -> str:
     return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
 
 
+def ensure_gitignored_dir(path: Path) -> Path:
+    """Create `path` if needed and drop a `.gitignore` containing '*' inside
+    it so its contents are never committed, in whichever repo Docforge is
+    documenting. Idempotent."""
+    path.mkdir(parents=True, exist_ok=True)
+    gitignore = path / ".gitignore"
+    if not gitignore.is_file():
+        gitignore.write_text("*\n", encoding="utf-8")
+    return gitignore
+
+
 def load_manifest(
     path: Path,
     *,

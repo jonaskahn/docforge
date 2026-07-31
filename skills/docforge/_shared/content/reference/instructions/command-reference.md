@@ -1,5 +1,9 @@
 # Command-reference writing craft
 
+Every entry cites its command definition, help output, or tested invocation and
+records side effects only when observed. Link machine-output semantics to
+`output-exit-contract`; do not present a plausible invocation as runnable.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 of flags is primary, one example block per command.

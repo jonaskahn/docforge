@@ -1,5 +1,9 @@
 # High-level architecture writing craft
 
+Ground every context, boundary, block, and invariant in code-graph or manifest
+evidence. Link implementation technology to `tech-stack`; mark an unproven
+boundary or technology choice as unknown rather than completing the diagram by inference.
+
 Map onto C4's top two levels: "System in context" is the Context diagram (this system as
 one box among the neighbors and services it borders); "Building blocks" is the Container
 diagram (the deployable pieces inside that box). Keep the zoom consistent within each

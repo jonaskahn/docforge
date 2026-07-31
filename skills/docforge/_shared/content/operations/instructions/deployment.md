@@ -1,5 +1,10 @@
 # Deployment writing craft
 
+Ground artifact source, environment commands, rollout behavior, and verification
+in manifests, CI, deployment configuration, or source. For rollout and rollback,
+name the authorized role and approval or escalation boundary; link incident
+diagnosis to its runbook or disaster-recovery owner.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); prose and
 commands per environment, a flowchart only if promotion order across three

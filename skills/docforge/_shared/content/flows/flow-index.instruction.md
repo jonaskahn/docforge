@@ -1,5 +1,9 @@
 # Flow index (`flow-index`) writing craft
 
+Every candidate row includes an evidence locator, confidence basis, and explicit
+priority; sort by that evidenced priority, never by assumed reach. Retain
+unresolved candidates as `placeholder` or `skipped`, not inferred flows.
+
 This is the router for the whole flow layer, not a flow itself: a reader
 scans it to decide which flow to open, or whether a candidate they expected
 even surfaced. Group rows by family (or "Ungrouped") and sort by priority

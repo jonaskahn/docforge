@@ -1,5 +1,10 @@
 # Model-lifecycle writing craft
 
+Ground each stage in dataset, training-run, artifact, and monitoring evidence;
+name the owner of each drift response. State concise, evidenced deployment
+limitations here, link detailed evaluation to `model-card`, and mark unevidenced
+bias or drift claims as unknown.
+
 Trace the full lifecycle in order: dataset lineage, training/evaluation,
 artifact packaging, inference serving, drift monitoring, ownership. For
 dataset lineage, borrow the Datasheets for Datasets discipline (Gebru et

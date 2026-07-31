@@ -1,5 +1,10 @@
 # Observability writing craft
 
+Ground signal names, sources, thresholds, routing, and ownership in
+instrumentation, configuration, or operational evidence. Record absent telemetry
+and unknown thresholds as blind spots; this document owns alert intent and links
+each actionable alert to its runbook and escalation owner.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); a table
 of signal → source → alert intent is primary, prose for what's not covered.

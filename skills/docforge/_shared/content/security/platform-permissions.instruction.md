@@ -1,5 +1,10 @@
 # Platform-permissions writing craft
 
+Pair each manifest or entitlement declaration with source evidence for request
+timing, denial fallback, and revocation recovery. Cite durable paths and relevant
+declarations, not line numbers; a declaration without runtime evidence is a gap,
+not proof of behavior.
+
 **Preferred illustration:** Follow
 [`../../references/illustration.md`](../../references/illustration.md); a table
 per permission is primary, prose only for a denial-flow nuance.

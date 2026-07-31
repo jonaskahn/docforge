@@ -16,6 +16,14 @@ process, tooling) rather than one flat chronological list, and within a group or
 first with status (`accepted` / `superseded by NNNN` / `deprecated`) shown inline, so a
 reader never opens a superseded record by mistake.
 
+Ground every record in a direct decision source or label it `Reconstructed` with
+the history or discussion used, its date, and what may be incomplete. Do not
+promote a later commit's implementation into contemporaneous rationale. The
+index is routing metadata only: number, outcome title, status, date, and link;
+group by topic and order newest first within that group. A portfolio decision
+links the member ADRs that establish it and must not rewrite their local
+rationale as a new shared fact.
+
 ## Illustration
 
 - **Form:** prose, with a table for parallel alternatives and their

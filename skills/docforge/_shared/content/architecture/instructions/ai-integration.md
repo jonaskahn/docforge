@@ -1,5 +1,10 @@
 # Ai-integration writing craft
 
+State safety controls and evaluation evidence for each integration boundary, or
+record them as unknown. Cite provider configuration and call sites; link model
+quality to `model-card` or `model-lifecycle` and data classification to
+`data-handling` rather than duplicating either.
+
 Draw the model/provider boundary first: which calls leave the system,
 to which provider, and what crosses that boundary in each direction —
 this is the trust-boundary discipline threat-model.md applies to any

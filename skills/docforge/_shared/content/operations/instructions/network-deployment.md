@@ -1,5 +1,10 @@
 # Network-deployment writing craft
 
+Ground network identity, RPC/configuration source, deployed artifact and version,
+address, and role assignment in deployment configuration, manifests, or verified
+history. For deploy, upgrade, and rollback, state approving authority and the
+confirmation boundary; never infer account or multisig control.
+
 **Preferred illustration:** Follow
 [`../../../references/illustration.md`](../../../references/illustration.md); this is a
 how-to — numbered steps and a verification command, not a diagram.
