@@ -4,6 +4,14 @@
 
 Cross-repository portfolio layer for multi-repo diligence.
 
+## Purpose
+
+Portfolio documents align multiple repositories for diligence, ownership, system context, operations, and cross-repository decision making.
+
+## How to use this index
+
+Use the entries below to locate a document definition, then resolve it with `query_catalog --route <id>` before writing. The route provides the contract, instruction, template, prerequisites, reader depth, and any model-native rigor. This generated index is navigation only; the record and linked content artifacts remain authoritative.
+
 ## Contents
 
 - `portfolio_readme` — Selected children and one-line purpose → [index.json](index.json)
@@ -16,3 +24,7 @@ Cross-repository portfolio layer for multi-repo diligence.
 - `portfolio_operations` — Cross-repo controls, gaps, shared dependencies, operational coupling → [index.json](index.json)
 - `portfolio_diligence_index` — Evidence map, gaps, confidence, follow-up → [index.json](index.json)
 - `portfolio_glossary` — Cross-repository decision evidence or shared terminology with member links → [index.json](index.json)
+
+## Boundaries
+
+Entries are ordered by catalog write order. Selection rules decide whether a document belongs in a project; this index does not imply that every entry is selected for every repository or tier.

@@ -4,6 +4,14 @@
 
 Security posture, permissions, and threat model.
 
+## Purpose
+
+Security documents identify assets, trust zones, applicable threats, safeguards, and the evidence needed to review residual uncertainty safely.
+
+## How to use this index
+
+Use the entries below to locate a document definition, then resolve it with `query_catalog --route <id>` before writing. The route provides the contract, instruction, template, prerequisites, reader depth, and any model-native rigor. This generated index is navigation only; the record and linked content artifacts remain authoritative.
+
 ## Contents
 
 - `security_root` — Supported scope, reporting path, response expectations, safe harbor → [index.json](index.json)
@@ -14,3 +22,7 @@ Security posture, permissions, and threat model.
 - `api_authentication` — Public surface, inputs/outputs, auth contract, limits, errors, compatibility source → [index.json](index.json)
 - `economic_invariants` — Contracts, storage, authorities, networks, upgrade boundary, economic/security invariants → [index.json](index.json)
 - `platform_permissions` — Requested capability, trigger, user value, denial behavior, settings/recovery, manifest evidence → [index.json](index.json)
+
+## Boundaries
+
+Entries are ordered by catalog write order. Selection rules decide whether a document belongs in a project; this index does not imply that every entry is selected for every repository or tier.

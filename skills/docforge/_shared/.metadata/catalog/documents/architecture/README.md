@@ -4,6 +4,14 @@
 
 System architecture: structure, boundaries, and integration surfaces.
 
+## Purpose
+
+Architecture documents explain stable system boundaries, component responsibilities, data movement, dependency direction, and decisions that shape the system.
+
+## How to use this index
+
+Use the entries below to locate a document definition, then resolve it with `query_catalog --route <id>` before writing. The route provides the contract, instruction, template, prerequisites, reader depth, and any model-native rigor. This generated index is navigation only; the record and linked content artifacts remain authoritative.
+
 ## Contents
 
 - `architecture_index` — Selected children and one-line purpose → [index.json](index.json)
@@ -37,3 +45,7 @@ System architecture: structure, boundaries, and integration surfaces.
 - `pwa_installation` — Installability, cache/update lifecycle, offline boundaries, invalidation, recovery → [index.json](index.json)
 - `web_state` — Lifecycle, boundaries, transitions, failure and recovery behavior → [index.json](index.json)
 - `web_components` — Component responsibilities, composition, tokens/themes, browser matrix, degradation → [index.json](index.json)
+
+## Boundaries
+
+Entries are ordered by catalog write order. Selection rules decide whether a document belongs in a project; this index does not imply that every entry is selected for every repository or tier.

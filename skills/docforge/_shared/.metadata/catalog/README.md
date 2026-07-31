@@ -2,12 +2,18 @@
 
 # Catalog
 
-Machine-readable document catalog. Query it via `runtime/cli/python/query_catalog.py` / `.js` rather than reading these files directly.
+The catalog is Docforge's machine-readable map of document types, selection rules, writing order, ownership boundaries, and generated-content inputs. Query it via `runtime/cli/python/query_catalog.py` or the equivalent Node launcher rather than treating generated indexes as source data.
 
-## Load this when
+## Start here
 
-- Choosing among documents in a group → [documents/README.md](documents/README.md)
-- Resolving one document id → `query_catalog --route <id>`
+- Browse a subject area → [documents/README.md](documents/README.md)
+- Resolve one document and its writing inputs → `query_catalog --route <id>`
+- Check which documents a profile selects → `query_catalog --applicable ...`
+- Validate the split catalog before changing it → `query_catalog --validate`
+
+## Structure
+
+The root index owns tiers, capability names, profile registries, and the list of document records. Each record owns its selection rule, target depth, contract, template, instruction, and audit profile. The generated routers below are readable views over those records, not duplicate configuration.
 
 ## Contents
 
@@ -17,4 +23,4 @@ Machine-readable document catalog. Query it via `runtime/cli/python/query_catalo
 
 ## Boundaries
 
-128 document records across 12 groups. Category indexes are generated views; `index.json` and each record file remain authoritative.
+128 document records across 12 groups. Category indexes are generated views; `index.json` and each record file remain authoritative. Regenerate these README views with `generate_indexes --write`; never edit them directly.

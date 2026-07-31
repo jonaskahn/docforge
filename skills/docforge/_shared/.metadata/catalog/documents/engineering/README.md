@@ -4,6 +4,14 @@
 
 Engineering practices: conventions, testing, and tech debt.
 
+## Purpose
+
+Engineering documents establish local development expectations: setup, conventions, tests, quality checks, publishing, and sustainable maintenance practices.
+
+## How to use this index
+
+Use the entries below to locate a document definition, then resolve it with `query_catalog --route <id>` before writing. The route provides the contract, instruction, template, prerequisites, reader depth, and any model-native rigor. This generated index is navigation only; the record and linked content artifacts remain authoritative.
+
 ## Contents
 
 - `engineering_index` — Selected children and one-line purpose → [index.json](index.json)
@@ -14,3 +22,7 @@ Engineering practices: conventions, testing, and tech debt.
 - `data_quality` — Producers, transformations, contracts, checks, failure/recovery, schema ownership → [index.json](index.json)
 - `web_styling` — Component responsibilities, composition, tokens/themes, browser matrix, degradation → [index.json](index.json)
 - `library_publishing` — Artifacts, version source, build/sign, registry/channel, verification, rollback/deprecation → [index.json](index.json)
+
+## Boundaries
+
+Entries are ordered by catalog write order. Selection rules decide whether a document belongs in a project; this index does not imply that every entry is selected for every repository or tier.

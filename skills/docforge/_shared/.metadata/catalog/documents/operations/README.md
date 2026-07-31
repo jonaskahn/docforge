@@ -4,6 +4,14 @@
 
 Deployment, observability, and operational runbooks.
 
+## Purpose
+
+Operations documents cover deployment, observability, recovery, and the operational boundaries that keep production behavior understandable and safe.
+
+## How to use this index
+
+Use the entries below to locate a document definition, then resolve it with `query_catalog --route <id>` before writing. The route provides the contract, instruction, template, prerequisites, reader depth, and any model-native rigor. This generated index is navigation only; the record and linked content artifacts remain authoritative.
+
 ## Contents
 
 - `operations_index` — Selected children and one-line purpose → [index.json](index.json)
@@ -18,3 +26,7 @@ Deployment, observability, and operational runbooks.
 - `infra_disaster_recovery` — Failure scenarios, recovery order, verification, data-loss boundary → [index.json](index.json)
 - `infra_state` — Plan/apply safety, external state, locking, ownership, resource inventory, drift, recovery → [index.json](index.json)
 - `runbook` — Symptom, safety, diagnosis, remediation, verification, escalation → [index.json](index.json)
+
+## Boundaries
+
+Entries are ordered by catalog write order. Selection rules decide whether a document belongs in a project; this index does not imply that every entry is selected for every repository or tier.

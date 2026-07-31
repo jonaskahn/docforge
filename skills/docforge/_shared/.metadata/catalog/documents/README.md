@@ -2,7 +2,11 @@
 
 # Catalog documents
 
-One folder per large group; small groups stay flat.
+This generated index is the catalog's directory-level navigation layer. It groups document definitions without duplicating their contracts or selection policy.
+
+## How to use it
+
+Choose the subject area below, then use its generated group index to identify a document. Resolve the selected document through `query_catalog --route <id>` before reading a contract or starting work. Small groups remain flat because a separate directory adds navigation cost without helping discovery.
 
 ## Contents
 
@@ -18,3 +22,7 @@ One folder per large group; small groups stay flat.
 - records — Architecture decision records. (2 documents, flat)
 - [portfolio/](portfolio/index.json) — Cross-repository portfolio layer for multi-repo diligence. (10 documents)
 - [agent-context/](agent-context/index.json) — Agent-facing context: AGENTS.md and coding-agent views. (12 documents)
+
+## Boundaries
+
+This page is regenerated from the catalog. It is not a writing plan and does not override profile selection, tier requirements, fact ownership, or document status.

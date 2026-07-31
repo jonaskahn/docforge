@@ -4,6 +4,14 @@
 
 Product surface: overview, quickstart, and audience-specific product views.
 
+## Purpose
+
+Product documents describe audience value, supported journeys, requirements, releases, and the policy behind externally visible behavior.
+
+## How to use this index
+
+Use the entries below to locate a document definition, then resolve it with `query_catalog --route <id>` before writing. The route provides the contract, instruction, template, prerequisites, reader depth, and any model-native rigor. This generated index is navigation only; the record and linked content artifacts remain authoritative.
+
 ## Contents
 
 - `product_index` — Selected children and one-line purpose → [index.json](index.json)
@@ -24,3 +32,7 @@ Product surface: overview, quickstart, and audience-specific product views.
 - `po_metrics` — Outcome, measure, instrumentation state, interpretation, external target token → [index.json](index.json)
 - `po_release_notes` — Released user impact, version/date, compatibility impact, feature links → [index.json](index.json)
 - `backlog_traceability` — Evidenced ticket id, feature, flow/change, release/status link → [index.json](index.json)
+
+## Boundaries
+
+Entries are ordered by catalog write order. Selection rules decide whether a document belongs in a project; this index does not imply that every entry is selected for every repository or tier.

@@ -4,6 +4,14 @@
 
 Reference lookups: APIs, configuration, and glossary.
 
+## Purpose
+
+Reference documents are lookup-oriented contracts for APIs, configuration, compatibility, commands, errors, and vocabulary rather than narrative explanations.
+
+## How to use this index
+
+Use the entries below to locate a document definition, then resolve it with `query_catalog --route <id>` before writing. The route provides the contract, instruction, template, prerequisites, reader depth, and any model-native rigor. This generated index is navigation only; the record and linked content artifacts remain authoritative.
+
 ## Contents
 
 - `reference_index` — Selected children and one-line purpose → [index.json](index.json)
@@ -25,3 +33,7 @@ Reference lookups: APIs, configuration, and glossary.
 - `performance_budgets` — Evidenced CPU/GPU/memory/storage/timing limits, measurement, degradation → [index.json](index.json)
 - `browser_support` — Component responsibilities, composition, tokens/themes, browser matrix, degradation → [index.json](index.json)
 - `infra_access` — Principals, scopes, grant path, review cadence for who/what can change infrastructure → [index.json](index.json)
+
+## Boundaries
+
+Entries are ordered by catalog write order. Selection rules decide whether a document belongs in a project; this index does not imply that every entry is selected for every repository or tier.

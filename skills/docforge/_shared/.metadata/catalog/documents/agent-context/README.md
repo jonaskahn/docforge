@@ -4,6 +4,14 @@
 
 Agent-facing context: AGENTS.md and coding-agent views.
 
+## Purpose
+
+Agent-context documents provide compact, verified operating context for coding agents while linking to the human-facing owners of detailed facts.
+
+## How to use this index
+
+Use the entries below to locate a document definition, then resolve it with `query_catalog --route <id>` before writing. The route provides the contract, instruction, template, prerequisites, reader depth, and any model-native rigor. This generated index is navigation only; the record and linked content artifacts remain authoritative.
+
 ## Contents
 
 - `agents_kernel` — Compact entry points, verified commands, precedence, safe links to owning agent views → [index.json](index.json)
@@ -18,3 +26,7 @@ Agent-facing context: AGENTS.md and coding-agent views.
 - `agents_tech_debt` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [index.json](index.json)
 - `agents_flow` — Compact flow/term lookup grounded in declared flow evidence and linked owners → [index.json](index.json)
 - `agents_glossary` — Compact flow/term lookup grounded in declared flow evidence and linked owners → [index.json](index.json)
+
+## Boundaries
+
+Entries are ordered by catalog write order. Selection rules decide whether a document belongs in a project; this index does not imply that every entry is selected for every repository or tier.
