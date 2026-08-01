@@ -9,6 +9,26 @@
   manifest schema, Python and JavaScript tools, templates, and tests.
 - Kept the complete `PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK` flow
   identical across Claude Code plugin and Agent Skills installs.
+- **Dashboard completion is now a required part of every run.** `/docforge`
+  and `/docforge-revise` must start the dashboard (unless `--plan-only` or
+  `--no-dashboard`) and report its URL in the final response; the contract
+  lives in `rules.md`, both `SKILL.md` entrypoints, `workflows/revision.md`,
+  and `workflows/validation.md` §7.
+- **`AGENTS.md` renders in the dashboard.** Manifest-provenance
+  (`provenance_mode: manifest`) root documents without YAML frontmatter are
+  now included, routed to `/docs/root/<slug>`, and emitted with dashboard-only
+  frontmatter, so `docs/agents` links to `../../AGENTS.md` resolve to
+  `/docs/root/agents` instead of rendering a broken repository-relative link.
+- **HTML comments no longer leak into the generated site.** Management
+  markers such as `<!-- docforge-children:start -->` are stripped during
+  conversion (outside fenced and inline code) while the content between them
+  is kept; markers stay in source Markdown for scaffold re-expansion.
+- **Sidebar labels are meaningful.** The flows section is titled `Flows`
+  (catalog, template, and both flow renderers), and the JavaScript title
+  extractor matches the Python peer by accepting only H1 headings.
+- **Unresolved internal Markdown links fail the dashboard build** (targets
+  normalizing inside `docs/` or to a repository-root `.md`/`.mdx` file);
+  other unresolved targets remain warnings.
 
 ## 2.9.0 - Standalone core and dashboard simplification
 
