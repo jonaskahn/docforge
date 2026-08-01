@@ -21,5 +21,5 @@
   "audit_profile": "router",
   "template_file": "content/flows/flow-index.template.md",
   "title": "Flows",
-  "contract_revision": "2.9.0"
+  "contract_revision": "2.10.0"
 }

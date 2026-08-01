@@ -22,5 +22,5 @@
   "audit_profile": "portfolio",
   "template_file": "content/shared/section-readme.template.md",
   "title": "Portfolio",
-  "contract_revision": "2.9.0"
+  "contract_revision": "2.10.0"
 }

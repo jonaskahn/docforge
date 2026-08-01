@@ -17,7 +17,7 @@ from runtime.catalog.python import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
-CATALOG_VERSION = "2.9.0"
+CATALOG_VERSION = "2.10.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "status", "audit", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report"],
