@@ -52,12 +52,15 @@ a documentation source; the source of truth stays `docs/` Markdown and
 `.docforge/manifest.json`.
 
 | Parameter | Meaning |
-|---|---|
-| *(none)* | `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
+|---|---|---|
+| *(none)* | Scan diagnostics → `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `--force` | Ignore signatures: always regenerate generated output, keeping `node_modules` |
 | `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server |
 | `--auto-accept` | Skip the revise-vs-render prompt and routine pauses; never authorizes npm install of new packages without its own confirmation gate |
 | `--help` | Show this reference and stop |
 
-Subcommands: `start` (build-if-changed → serve → open), `status` (read-only
-state), `stop` (shut down the detached dev server).
+Subcommands: `scan` (read-only diagnostics: missing metadata, incomplete or
+missing documents, stale provenance sources, broken links, untracked `docs/`
+files; exits 1 when anything is found — "you should revise again"), `start`
+(build-if-changed → serve → open), `status` (read-only state), `stop` (shut
+down the detached dev server).

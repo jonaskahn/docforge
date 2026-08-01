@@ -36,9 +36,11 @@ engine first; see
 
 ```sh
 # After locking python3 for this session:
+python3 runtime/cli/python/dashboard.py scan --repo <repo> [--json]
 python3 runtime/cli/python/dashboard.py start --repo <repo> [--force] [--plan-only] [--no-open]
 
 # After locking node instead:
+node runtime/cli/js/dashboard.js scan --repo <repo> [--json]
 node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--no-open]
 ```
 
@@ -52,10 +54,24 @@ node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--
 | `--auto-accept` | Skip the revise-vs-render prompt and routine pauses; never authorizes npm install of new packages without its own confirmation gate (see [`${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md>)) |
 | `--help` | Print this command's purpose and full parameter reference — [`${CLAUDE_SKILL_DIR}/../docforge/_shared/help.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/help.md>) — then stop; run no workflow |
 
-Subcommands: `start` (build-if-changed → serve → open), `status` (read-only
+Subcommands: `scan` (read-only diagnostics: missing metadata, incomplete or
+missing documents, stale provenance sources, broken links, untracked `docs/`
+files), `start` (build-if-changed → serve → open), `status` (read-only
 state), `stop` (shut down the background dev server). See
 [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md>)
 for the full lifecycle and isolation rules.
+
+## Scan first: you should revise again
+
+Every `/docforge-dashboard` run starts with the diagnostic scan (also printed
+by `start` before it builds). If the scan reports problems — missing
+metadata, incomplete or missing documents, stale sources, broken links,
+untracked `docs/` files — do not silently open the dashboard: present the
+full findings and tell the user **you should revise again**, recommending
+`/docforge-revise` (scoped to the failing documents or `all`), and ask
+whether to run the revision now. `--auto-accept` still prints the findings
+and the recommendation before proceeding. A clean scan means the
+documentation is ready to render.
 
 ## Validation failure
 

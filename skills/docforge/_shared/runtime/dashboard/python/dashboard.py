@@ -8,13 +8,16 @@ from the Docforge manifest and the repository's `docs/` Markdown. The dashboard
 directory is self-contained: its own package.json, lockfile, and node_modules;
 it never touches the repository's package files.
 
-Subcommands: start, status, stop. Python and JS peers are equivalent.
+Subcommands: scan, start, status, stop. Python and JS peers are equivalent.
 
-`start` is idempotent: it reconciles metadata, compares working-tree
-signatures, rebuilds generated output only when the render or shell signature
-changed (or `--force`), installs dependencies only when missing, starts (or
-reuses) the localhost dev server, and opens the browser. The dev server runs
-detached; `stop` shuts it down.
+`start` is idempotent: it scans for documentation problems, reconciles
+metadata, compares working-tree signatures, rebuilds generated output only
+when the render or shell signature changed (or `--force`), installs
+dependencies only when missing, starts (or reuses) the localhost dev server,
+and opens the browser. The dev server runs detached; `stop` shuts it down.
+`scan` is the read-only diagnostic pass: missing metadata, incomplete or
+missing documents, stale provenance sources, broken internal links, and
+untracked `docs/` files.
 """
 
 from __future__ import annotations
@@ -394,6 +397,33 @@ def strip_html_comments(body: str) -> str:
     return "".join(out)
 
 
+def resolve_link(target: str, source_path: str, ledger: dict, assets_needed: set[str]) -> str | None:
+    """Resolve a link target written in `source_path` through the route ledger.
+
+    Returns the rewritten URL; `target` unchanged when it is a bare fragment;
+    or None when the target is left untouched (external schemes, or an
+    internal target with no ledger page or asset)."""
+    index = target.find("#")
+    fragment = target[index:] if index >= 0 else ""
+    clean = target[:index] if index >= 0 else target
+    if not clean:
+        return target
+    if clean.startswith(SCHEMES) or clean.startswith("#"):
+        return None
+    base = posixpath.dirname(source_path)
+    repo_rel = clean.lstrip("/") if clean.startswith("/") else posixpath.normpath(posixpath.join(base, clean))
+    repo_rel = repo_rel.rstrip("/")
+    page = ledger["by_path"].get(repo_rel)
+    if page is None and not repo_rel.endswith(".md"):
+        page = ledger["by_path"].get(f"{repo_rel}/README.md")
+    if page is not None:
+        return page["url"] + fragment
+    if repo_rel in ledger["assets"]:
+        assets_needed.add(repo_rel)
+        return f"/docs-assets/{repo_rel}" + fragment
+    return None
+
+
 def convert_body(body: str, source_path: str, ledger: dict, assets_needed: set[str]) -> tuple[str, list[str]]:
     unresolved: list[str] = []
     body = strip_html_comments(body)
@@ -407,34 +437,11 @@ def convert_body(body: str, source_path: str, ledger: dict, assets_needed: set[s
             continue
         lines.append(escape_mdx_text(line) if not in_fence else line)
     converted = "".join(lines)
-    base = posixpath.dirname(source_path)
-
-    def resolve(target: str) -> str | None:
-        index = target.find("#")
-        fragment = target[index:] if index >= 0 else ""
-        clean = target[:index] if index >= 0 else target
-        if not clean:
-            return target
-        if clean.startswith(SCHEMES) or clean.startswith("#"):
-            return None
-        repo_rel = clean.lstrip("/") if clean.startswith("/") else posixpath.normpath(posixpath.join(base, clean))
-        repo_rel = repo_rel.rstrip("/")
-        page = ledger["by_path"].get(repo_rel)
-        if page is None and not repo_rel.endswith(".md"):
-            page = ledger["by_path"].get(f"{repo_rel}/README.md")
-        if page is not None:
-            return page["url"] + fragment
-        if repo_rel in ledger["assets"]:
-            assets_needed.add(repo_rel)
-            return f"/docs-assets/{repo_rel}" + fragment
-        return None
 
     def replace(match: re.Match) -> str:
         inner = match.group(3)
-        rewritten = resolve(inner)
-        if rewritten is None:
-            return match.group(0)
-        if rewritten == inner:
+        rewritten = resolve_link(inner, source_path, ledger, assets_needed)
+        if rewritten is None or rewritten == inner:
             return match.group(0)
         return f"{match.group(1)}({rewritten})"
 
@@ -485,6 +492,81 @@ def collect_asset_map(repo: Path) -> set[str]:
         rel for rel in tree_files(repo)
         if rel.endswith(tuple(ASSET_EXTS))
     }
+
+
+def blob_sha1(content: bytes) -> str:
+    return hashlib.sha1(b"blob %d\0" % len(content) + content).hexdigest()
+
+
+def scan(repo: Path, manifest: dict) -> dict:
+    """Read-only diagnostics over the manifest and `docs/` tree.
+
+    Reports metadata problems (missing / unparseable / non-schema-2.0
+    frontmatter), incomplete or missing documents, provenance source drift,
+    broken internal Markdown links, and untracked `docs/` files. Any finding
+    means the documentation should be revised before the dashboard is
+    trusted; `counts` groups findings by kind."""
+    problems: list[dict] = []
+    report = reconcile_metadata(repo, manifest, dry_run=True)
+    for entry in report["errors"]:
+        problems.append({"kind": "metadata", "doc": entry["doc"], "detail": entry["detail"]})
+    for entry in report["skipped"]:
+        problems.append({"kind": "metadata", "doc": entry["doc"], "detail": entry["detail"]})
+    for doc in manifest.get("documents", []):
+        path = doc.get("path", "")
+        if not (path.endswith(".md") or path.endswith(".mdx")):
+            continue
+        if doc.get("status") not in WRITTEN:
+            problems.append({"kind": "incomplete", "doc": doc.get("id", ""), "detail": f"status {doc.get('status')}"})
+            continue
+        if not (repo / path).is_file():
+            problems.append({"kind": "missing_file", "doc": doc.get("id", ""), "detail": path})
+    for doc in manifest.get("documents", []):
+        provenance = doc.get("provenance")
+        if not isinstance(provenance, dict) or provenance.get("schema") != SCHEMA_VERSION:
+            continue
+        for section in provenance.get("sections", []):
+            for source in section.get("sources", []):
+                source_path = source.get("path")
+                want = source.get("git_blob")
+                if not source_path:
+                    continue
+                target = repo / source_path
+                if not target.is_file():
+                    problems.append({"kind": "drift", "doc": doc.get("id", ""), "detail": f"{source_path} missing"})
+                    continue
+                if want and blob_sha1(target.read_bytes()) != want:
+                    problems.append({"kind": "drift", "doc": doc.get("id", ""), "detail": f"{source_path} changed since provenance"})
+    docs = included_documents(repo, manifest)
+    ledger = build_ledger(docs)
+    ledger["assets"] = collect_asset_map(repo)
+    tracked = {doc.get("path") for doc in manifest.get("documents", []) if doc.get("path")}
+    for rel in tree_files(repo):
+        if rel.endswith((".md", ".mdx")) and rel not in tracked:
+            problems.append({"kind": "untracked", "doc": "", "detail": rel})
+    for doc in docs:
+        text = (repo / doc["path"]).read_text(encoding="utf-8", errors="replace")
+        raw, body, _end = split_frontmatter(text)
+        if raw is None:
+            body = text
+        for match in LINK_RE.finditer(body):
+            inner = match.group(3)
+            if resolve_link(inner, doc["path"], ledger, set()) is not None:
+                continue
+            clean = inner.split("#", 1)[0]
+            if not clean or clean.startswith(SCHEMES) or clean.startswith("#"):
+                continue
+            repo_rel = clean.lstrip("/") if clean.startswith("/") else posixpath.normpath(
+                posixpath.join(posixpath.dirname(doc["path"]), clean)
+            )
+            repo_rel = repo_rel.rstrip("/")
+            if re.search(r"\.mdx?(?:#|$)", repo_rel) and (
+                repo_rel.startswith(DOC_PREFIX) or "/" not in repo_rel
+            ):
+                problems.append({"kind": "broken_link", "doc": doc["id"], "detail": f"{doc['path']}: {inner}"})
+    kinds = ("metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link")
+    counts = {kind: sum(1 for p in problems if p["kind"] == kind) for kind in kinds}
+    return {"problems": problems, "counts": counts}
 
 
 def plan(repo: Path, manifest: dict) -> dict:
@@ -1004,6 +1086,15 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
 
     metadata_report = reconcile_metadata(args.repo, manifest)
     print(f"metadata: {metadata_report['counts']['reconciled']} reconciled, {metadata_report['counts']['unchanged']} unchanged")
+    scan_result = scan(args.repo, manifest)
+    if scan_result["problems"]:
+        print(f"scan: {len(scan_result['problems'])} problems found:")
+        for problem in scan_result["problems"]:
+            who = f"{problem['doc']}: " if problem["doc"] else ""
+            print(f"  [{problem['kind']}] {who}{problem['detail']}")
+        print("you should revise again: run /docforge-revise to fix the documentation before relying on this dashboard")
+    else:
+        print("scan: 0 problems")
     # Reconcile rewrites frontmatter, so the render signature must be computed
     # after it: the stored signature must describe the exact bytes a rebuild
     # would consume.
@@ -1036,6 +1127,22 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
         open_browser(server["url"])
     print("dashboard server running in the background; stop it with `dashboard stop`")
     return 0
+
+
+def cmd_scan(args: argparse.Namespace, manifest: dict) -> int:
+    result = scan(args.repo, manifest)
+    if args.json:
+        print(dump_json(result))
+        return 0 if not result["problems"] else 1
+    if not result["problems"]:
+        print("scan: 0 problems; the documentation is ready to render")
+        return 0
+    print(f"scan: {len(result['problems'])} problems found:")
+    for problem in result["problems"]:
+        who = f"{problem['doc']}: " if problem["doc"] else ""
+        print(f"  [{problem['kind']}] {who}{problem['detail']}")
+    print("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again")
+    return 1
 
 
 def cmd_status(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:
@@ -1085,6 +1192,7 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--dashboard", default=None, help="dashboard directory (default: <repo>/.docforge/dashboard)")
     common.add_argument("--json", action="store_true", help="JSON output (status)")
     sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("scan", parents=[common], help="read-only diagnostics: metadata, missing/incomplete docs, source drift, broken links, untracked docs/ files")
     start = sub.add_parser("start", parents=[common], help="reconcile, rebuild when changed, serve, and open")
     start.add_argument("--force", action="store_true", help="rebuild generated output even when the signature is unchanged")
     start.add_argument("--plan-only", action="store_true", help="reconcile dry-run, signatures, and route plan only; no writes, no server")
@@ -1106,7 +1214,7 @@ def main(argv: list[str] | None = None) -> int:
     args.manifest = manifest_path
     args.dashboard = dashboard
     template_dir = Path(__file__).resolve().parent.parent / "template"
-    if args.command in {"start", "status"}:
+    if args.command in {"start", "status", "scan"}:
         try:
             manifest = load_manifest(manifest_path)
         except ValueError as exc:
@@ -1114,6 +1222,8 @@ def main(argv: list[str] | None = None) -> int:
     else:
         manifest = {}
     try:
+        if args.command == "scan":
+            return cmd_scan(args, manifest)
         if args.command == "start":
             return cmd_start(args, dashboard, manifest, template_dir)
         if args.command == "status":

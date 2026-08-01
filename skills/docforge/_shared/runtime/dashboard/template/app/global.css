@@ -54,6 +54,7 @@
 
 html {
   scrollbar-gutter: stable;
+  zoom: 1.05;
 }
 
 /* Numbers align on the grid: tabular figures in tables (ADRs, runbooks,

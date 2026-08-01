@@ -5,7 +5,7 @@ Implementation behind the public `dashboard` launcher pair in
 under `<repo>/.docforge/dashboard/`.
 
 - `python/dashboard.py` / `js/dashboard.js` — Python and Node peers of the
-  `start` / `status` / `stop` CLI (see
+  `scan` / `start` / `status` / `stop` CLI (see
   [`workflows/dashboard.md`](../../workflows/dashboard.md) for the lifecycle,
   flags, and isolation rules).
 - `template/` — the static Fumadocs application shell (Next.js 16, Fumadocs

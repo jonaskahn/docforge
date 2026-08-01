@@ -527,5 +527,70 @@ class DashboardServerTests(unittest.TestCase):
                     stop_dashboard(runtime, repo)
 
 
+class DashboardScanTests(unittest.TestCase):
+    def test_scan_clean_repo_exits_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                src = repo / "src"
+                src.mkdir()
+                (src / "main.ts").write_bytes(b"evidence")
+                result = run_dashboard(runtime, "scan", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("0 problems", result.stdout)
+                json_result = run_dashboard(runtime, "scan", "--repo", str(repo), "--json")
+                self.assertEqual(json_result.returncode, 0, json_result.stderr)
+                self.assertEqual(json.loads(json_result.stdout)["problems"], [])
+
+    def test_scan_reports_issues_and_suggests_revision(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                manifest = load_manifest(repo)
+                broken = written_doc("architecture_extras", "docs/architecture/extras.md", "# Extras\n", write_order=8)
+                incomplete = written_doc("product_incomplete", "docs/product/incomplete.md", "# Incomplete\n", write_order=20)
+                incomplete["status"] = "in_progress"
+                drift = written_doc("product_drift", "docs/product/drift.md", "# Drift\n", write_order=21)
+                manifest["documents"] += [broken, incomplete, drift]
+                (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                for doc, body in (
+                    (broken, "# Extras\n\nSee [missing](../missing.md).\n"),
+                    (incomplete, "# Incomplete\n"),
+                    (drift, "# Drift\n"),
+                ):
+                    target = repo / doc["path"]
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(markdown_with_provenance(doc["provenance"], body), encoding="utf-8")
+                src = repo / "src"
+                src.mkdir()
+                (src / "main.ts").write_bytes(b"changed after provenance")
+                (repo / "docs" / "product" / "overview.md").write_text("# Overview\n\nNo frontmatter.\n", encoding="utf-8")
+                (repo / "docs" / "product" / "untracked.md").write_text("# Untracked\n", encoding="utf-8")
+                result = run_dashboard(runtime, "scan", "--repo", str(repo))
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("you should revise again", result.stdout)
+                for kind in ("broken_link", "incomplete", "drift", "metadata", "untracked"):
+                    self.assertIn(f"[{kind}]", result.stdout)
+
+    def test_start_reports_scan_findings_before_building(self) -> None:
+        env, _bin = fake_npm_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            (repo / "docs" / "product" / "untracked.md").write_text("# Untracked\n", encoding="utf-8")
+            try:
+                result = run_dashboard("py", "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("you should revise again", result.stdout)
+                self.assertIn("[untracked]", result.stdout)
+                self.assertIn("converted 3 documents", result.stdout)
+            finally:
+                stop_dashboard("py", repo)
+
+
 if __name__ == "__main__":
     unittest.main()

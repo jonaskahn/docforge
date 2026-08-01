@@ -31,6 +31,9 @@ The dashboard directory is fully self-contained:
 ## Command
 
 ```sh
+python3 runtime/cli/python/dashboard.py scan --repo <repo> [--json]
+node runtime/cli/js/dashboard.js scan --repo <repo> [--json]
+
 python3 runtime/cli/python/dashboard.py start --repo <repo> [--force] [--plan-only] [--no-open] [--skip-install] [--port N]
 node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--no-open] [--skip-install] [--port N]
 
@@ -45,7 +48,7 @@ node runtime/cli/js/dashboard.js stop --repo <repo>
 lifecycle:
 
 ```text
-PREFLIGHT -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
+PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 -> INSTALL (if missing) -> SERVE -> OPEN
 ```
 
@@ -53,6 +56,9 @@ PREFLIGHT -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
   session engine is locked (see
   [`workflows/tools.md`](tools.md)); run every `dashboard` call with the same
   engine. Node.js 22+ is required only for install/serve steps.
+- **Scan:** a read-only diagnostic pass over the manifest and tree (see
+  [Scan: you should revise again](#scan-you-should-revise-again) below). `start`
+  prints the findings and the recommendation up front; it does not hide them.
 - **Metadata reconcile:** ensures each written document's public `id` and
   `title` frontmatter match the manifest and that `docforge_provenance.doc_id`
   / `path` agree; bodies are preserved byte-for-byte. Idempotent and always
@@ -96,6 +102,10 @@ exits `1` when the route plan has problems or reconcile would report errors.
 The `render_sig:` / `shell_sig:` lines it prints are the parity-checkable
 signatures.
 
+`scan` is the read-only "should I revise again?" check: it reports every
+finding without building or serving anything, exits `1` when anything is
+found, and `--json` prints the machine-readable report.
+
 `status` reports dashboard existence, whether the current render signature
 matches the stored one, the server state, and the included-document count —
 the read-only way to check whether the dashboard is up to date.
@@ -128,6 +138,38 @@ When `start` fails, the agent must:
 `--auto-accept` does not waive this: a failed build is never opened, and the
 revise request is still asked (like other mandatory safety gates in
 [`flags.md`](flags.md)).
+
+## Scan: you should revise again
+
+`scan` (and the `start` lifecycle) runs a read-only diagnostic pass over the
+manifest and tree before anything is built or served. It reports:
+
+- **metadata** — documents under `docs/` whose frontmatter is missing,
+  unparseable, or not schema 2.0 (reconcile would skip or error);
+- **incomplete** — manifest documents that are not `generated` /
+  `needs_review` / `complete` (planned, `in_progress`, ...), which the
+  dashboard cannot render;
+- **missing_file** — written documents whose file no longer exists;
+- **drift** — provenance sources whose current bytes no longer match the
+  recorded `git_blob` (the document is stale);
+- **broken_link** — internal Markdown links that resolve neither to a ledger
+  page nor to an asset;
+- **untracked** — `.md` / `.mdx` files under `docs/` with no manifest entry.
+
+`scan` exits `1` when anything is found, so it is the read-only answer to
+"should I revise again?" before opening the dashboard.
+
+When `start` (or `scan`) reports problems, the agent must:
+
+1. Present the full list — kind, document, and detail — never a summary that
+   hides a finding.
+2. Tell the user **you should revise again** and recommend
+   [`workflows/revision.md`](revision.md) (`/docforge-revise`, scoped to the
+   failing documents or `all`); ask whether to run the revision now.
+3. Under `--auto-accept`, still print the findings and the recommendation
+   before proceeding — the suggestion is never silent.
+4. Only when the scan is clean is the documentation ready to render; then
+   proceed to serve/open as usual.
 
 ## What the dashboard is not
 

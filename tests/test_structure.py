@@ -169,6 +169,24 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("`/docforge-revise`", thin)
         self.assertIn("`--auto-accept` never skips this", thin)
 
+    def test_dashboard_scan_suggests_revision_before_open(self) -> None:
+        """The dashboard scans for missing metadata, broken links, stale
+        sources, and untracked docs; findings trigger a "you should revise
+        again" recommendation before the dashboard is trusted."""
+        workflow = (SHARED_ROOT / "workflows" / "dashboard.md").read_text(encoding="utf-8")
+        self.assertIn("## Scan: you should revise again", workflow)
+        self.assertIn("**you should revise again**", workflow)
+        self.assertIn("**metadata**", workflow)
+        self.assertIn("**broken_link**", workflow)
+        self.assertIn("`scan` exits `1`", workflow)
+        self.assertIn("never a summary that\n   hides a finding", workflow)
+        thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("## Scan first: you should revise again", thin)
+        self.assertIn("you should revise again", thin)
+        self.assertIn("`/docforge-revise`", thin)
+        help_text = (SHARED_ROOT / "help.md").read_text(encoding="utf-8")
+        self.assertIn("`scan` (read-only diagnostics", help_text)
+
     def test_help_supported_by_all_entrypoints(self) -> None:
         """--help is accepted by all three entrypoints and routes to the
         canonical per-entrypoint reference in _shared/help.md."""

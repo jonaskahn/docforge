@@ -367,6 +367,28 @@ function stripHtmlComments(body) {
   return out;
 }
 
+function resolveLink(target, sourcePath, ledger, assetsNeeded) {
+  const index = target.indexOf("#");
+  const fragment = index >= 0 ? target.slice(index) : "";
+  const clean = index >= 0 ? target.slice(0, index) : target;
+  if (!clean) return target;
+  if (clean.startsWith("#")) return null;
+  if (SCHEMES.some((scheme) => clean.startsWith(scheme))) return null;
+  const base = path.posix.dirname(sourcePath);
+  const repoRel = clean.startsWith("/") ? clean.replace(/^\/+/, "") : path.posix.normalize(path.posix.join(base, clean));
+  const normalized = repoRel.replace(/\/+$/, "");
+  let page = ledger.by_path[normalized];
+  if (!page && !normalized.endsWith(".md")) {
+    page = ledger.by_path[`${normalized}/README.md`];
+  }
+  if (page) return page.url + fragment;
+  if (ledger.assets && ledger.assets.has(normalized)) {
+    assetsNeeded.add(normalized);
+    return `/docs-assets/${normalized}` + fragment;
+  }
+  return null;
+}
+
 function convertBody(body, sourcePath, ledger, assetsNeeded) {
   const unresolved = [];
   body = stripHtmlComments(body);
@@ -382,31 +404,9 @@ function convertBody(body, sourcePath, ledger, assetsNeeded) {
     lines.push(inFence ? line : escapeMdxText(line));
   }
   let converted = lines.join("");
-  const base = path.posix.dirname(sourcePath);
-
-  const resolve = (target) => {
-    const index = target.indexOf("#");
-    const fragment = index >= 0 ? target.slice(index) : "";
-    const clean = index >= 0 ? target.slice(0, index) : target;
-    if (!clean) return target;
-    if (clean.startsWith("#")) return null;
-    if (SCHEMES.some((scheme) => clean.startsWith(scheme))) return null;
-    const repoRel = clean.startsWith("/") ? clean.replace(/^\/+/, "") : path.posix.normalize(path.posix.join(base, clean));
-    const normalized = repoRel.replace(/\/+$/, "");
-    let page = ledger.by_path[normalized];
-    if (!page && !normalized.endsWith(".md")) {
-      page = ledger.by_path[`${normalized}/README.md`];
-    }
-    if (page) return page.url + fragment;
-    if (ledger.assets && ledger.assets.has(normalized)) {
-      assetsNeeded.add(normalized);
-      return `/docs-assets/${normalized}` + fragment;
-    }
-    return null;
-  };
 
   converted = converted.replace(LINK_RE, (whole, label, __, inner) => {
-    const rewritten = resolve(inner);
+    const rewritten = resolveLink(inner, sourcePath, ledger, assetsNeeded);
     if (rewritten == null || rewritten === inner) return whole;
     return `${label}(${rewritten})`;
   });
@@ -450,6 +450,81 @@ function collectAssetMap(repo) {
     if (ASSET_EXTS.some((ext) => rel.endsWith(ext))) result.add(rel);
   }
   return result;
+}
+
+function blobSha1(content) {
+  return crypto.createHash("sha1")
+    .update(Buffer.from(`blob ${content.length}\0`))
+    .update(content)
+    .digest("hex");
+}
+
+function scan(repo, manifest) {
+  const problems = [];
+  const report = reconcileMetadata(repo, manifest, true);
+  for (const entry of report.errors) problems.push({ kind: "metadata", doc: entry.doc, detail: entry.detail });
+  for (const entry of report.skipped) problems.push({ kind: "metadata", doc: entry.doc, detail: entry.detail });
+  for (const doc of manifest.documents || []) {
+    const p = doc.path || "";
+    if (!(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
+    if (!WRITTEN.has(doc.status)) {
+      problems.push({ kind: "incomplete", doc: doc.id || "", detail: `status ${doc.status}` });
+      continue;
+    }
+    if (!fs.existsSync(path.join(repo, p))) {
+      problems.push({ kind: "missing_file", doc: doc.id || "", detail: p });
+    }
+  }
+  for (const doc of manifest.documents || []) {
+    const prov = doc.provenance;
+    if (!prov || typeof prov !== "object" || prov.schema !== pf.SCHEMA_VERSION) continue;
+    for (const section of prov.sections || []) {
+      for (const source of section.sources || []) {
+        const sourcePath = source.path;
+        const want = source.git_blob;
+        if (!sourcePath) continue;
+        const target = path.join(repo, sourcePath);
+        if (!fs.existsSync(target)) {
+          problems.push({ kind: "drift", doc: doc.id || "", detail: `${sourcePath} missing` });
+          continue;
+        }
+        if (want && blobSha1(fs.readFileSync(target)) !== want) {
+          problems.push({ kind: "drift", doc: doc.id || "", detail: `${sourcePath} changed since provenance` });
+        }
+      }
+    }
+  }
+  const docs = includedDocuments(repo, manifest);
+  const ledger = buildLedger(docs);
+  ledger.assets = collectAssetMap(repo);
+  const tracked = new Set((manifest.documents || []).map((d) => d.path).filter(Boolean));
+  for (const rel of treeFiles(repo)) {
+    if ((rel.endsWith(".md") || rel.endsWith(".mdx")) && !tracked.has(rel)) {
+      problems.push({ kind: "untracked", doc: "", detail: rel });
+    }
+  }
+  for (const doc of docs) {
+    const text = fs.readFileSync(path.join(repo, doc.path), "utf8");
+    const { raw, body } = splitFrontmatterRaw(text);
+    const scanBody = raw == null ? text : body;
+    for (const match of scanBody.matchAll(LINK_RE)) {
+      const inner = match[3];
+      if (resolveLink(inner, doc.path, ledger, new Set()) != null) continue;
+      const clean = inner.split("#")[0];
+      if (!clean || clean.startsWith("#") || SCHEMES.some((scheme) => clean.startsWith(scheme))) continue;
+      const repoRel = clean.startsWith("/")
+        ? clean.replace(/^\/+/, "")
+        : path.posix.normalize(path.posix.join(path.posix.dirname(doc.path), clean));
+      const normalized = repoRel.replace(/\/+$/, "");
+      if (/\.mdx?(?:#|$)/.test(normalized) && (normalized.startsWith(DOC_PREFIX) || !normalized.includes("/"))) {
+        problems.push({ kind: "broken_link", doc: doc.id, detail: `${doc.path}: ${inner}` });
+      }
+    }
+  }
+  const kinds = ["metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link"];
+  const counts = {};
+  for (const kind of kinds) counts[kind] = problems.filter((p) => p.kind === kind).length;
+  return { problems, counts };
 }
 
 function plan(repo, manifest) {
@@ -1042,6 +1117,17 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
 
   const metadataReport = reconcileMetadata(args.repo, manifest);
   console.log(`metadata: ${metadataReport.counts.reconciled} reconciled, ${metadataReport.counts.unchanged} unchanged`);
+  const scanResult = scan(args.repo, manifest);
+  if (scanResult.problems.length) {
+    console.log(`scan: ${scanResult.problems.length} problems found:`);
+    for (const problem of scanResult.problems) {
+      const who = problem.doc ? `${problem.doc}: ` : "";
+      console.log(`  [${problem.kind}] ${who}${problem.detail}`);
+    }
+    console.log("you should revise again: run /docforge-revise to fix the documentation before relying on this dashboard");
+  } else {
+    console.log("scan: 0 problems");
+  }
   // Reconcile rewrites frontmatter, so the render signature must be computed
   // after it: the stored signature must describe the exact bytes a rebuild
   // would consume.
@@ -1075,6 +1161,25 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
   if (!args.no_open) openBrowser(server.url);
   console.log("dashboard server running in the background; stop it with `dashboard stop`");
   return 0;
+}
+
+async function cmdScan(args, manifest) {
+  const result = scan(args.repo, manifest);
+  if (args.json) {
+    console.log(dumpJson(result));
+    return result.problems.length ? 1 : 0;
+  }
+  if (result.problems.length === 0) {
+    console.log("scan: 0 problems; the documentation is ready to render");
+    return 0;
+  }
+  console.log(`scan: ${result.problems.length} problems found:`);
+  for (const problem of result.problems) {
+    const who = problem.doc ? `${problem.doc}: ` : "";
+    console.log(`  [${problem.kind}] ${who}${problem.detail}`);
+  }
+  console.log("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again");
+  return 1;
 }
 
 async function cmdStatus(args, dashboard, manifest, templateDir) {
@@ -1165,7 +1270,7 @@ async function main() {
   args.dashboard = dashboard;
   const templateDir = path.join(fs.realpathSync(__dirname), "..", "template");
   let manifest = {};
-  if (args.command === "start" || args.command === "status") {
+  if (args.command === "start" || args.command === "status" || args.command === "scan") {
     try {
       manifest = loadManifest(manifestPath);
     } catch (error) {
@@ -1174,6 +1279,8 @@ async function main() {
   }
   try {
     switch (args.command) {
+      case "scan":
+        return await cmdScan(args, manifest);
       case "start":
         return await cmdStart(args, dashboard, manifest, templateDir);
       case "status":

@@ -90,7 +90,9 @@ from the absolute cartridge root with `query_catalog --validate`,
   matrix; GitNexus input uses deterministic MCP-export JSON.
 - `validate_metadata.{py,js}`: registry/schema/path/version/peer validation,
   including generated-router drift (`generate_indexes --check`).
-- `dashboard.{py,js}`: `start` (reconcile metadata → rebuild generated
+- `dashboard.{py,js}`: `scan` (read-only diagnostics: missing metadata,
+  incomplete/missing docs, source drift, broken links, untracked `docs/`
+  files), `start` (scan → reconcile metadata → rebuild generated
   output when the working-tree signature changed → serve → open), `status`,
   `stop`. The dev server runs detached. See
   [`../workflows/dashboard.md`](../workflows/dashboard.md) for the lifecycle
