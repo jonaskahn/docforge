@@ -36,4 +36,5 @@ Tools run with this directory as the cartridge root. The agent locks one
 session engine; see [`rules.md`](rules.md) and [`workflows/tools.md`](workflows/tools.md).
 
 Entry skills: [`../SKILL.md`](../SKILL.md),
-[`../../docforge-revise/SKILL.md`](../../docforge-revise/SKILL.md).
+[`../../docforge-revise/SKILL.md`](../../docforge-revise/SKILL.md),
+[`../../docforge-dashboard/SKILL.md`](../../docforge-dashboard/SKILL.md).

@@ -1,5 +1,39 @@
 # Changelog
 
+## Dashboard (local Fumadocs site)
+
+- Added `/docforge-dashboard` (`skills/docforge-dashboard/SKILL.md`,
+  `commands/docforge-dashboard.md`, registered in both plugin manifests)
+  backed by the `dashboard` runtime CLI (Python/Node parity) with
+  subcommands `metadata`, `fingerprint`, `plan`, `build`, `validate`,
+  `serve`, `stop`, and `status`.
+- The dashboard runtime is **self-contained under `skills/docforge-dashboard/`**
+  (workflow, launchers, and the Fumadocs app template); the shared cartridge
+  keeps only what all skills consume (rules, flags, retrieval, provenance
+  codec, `_util`). The dashboard declares its own `.docforge/.gitignore`
+  rule (`dashboard/`) instead of extending the shared rule list.
+- The generated site lives in `.docforge/dashboard/` (git-ignored via the
+  new `dashboard/` rule in `DOCFORGE_GITIGNORE_RULES`): its own
+  `package.json`, lockfile, and `node_modules`; every npm command runs with
+  `--prefix`, and the repository's own package files are hashed before and
+  after install and must not change.
+- `dashboard metadata` reconciles each written document's public `id` /
+  `title` frontmatter and `docforge_provenance.doc_id` / `path` against the
+  manifest, preserving the Markdown body byte-for-byte.
+- `dashboard build` scaffolds a pinned Fumadocs shell (Next.js 16, Fumadocs
+  UI/MDX, Tailwind 4, local search, Mermaid), converts `docs/` Markdown to
+  MDX with code-fence-aware escaping and route-ledger link rewriting, writes
+  one `meta.json` per folder, and copies bounded image assets; converted
+  content is staged and swapped atomically.
+- `dashboard validate` gates duplicate URLs, meta coverage, internal links
+  and heading anchors, assets, and the docs index; `dashboard serve` binds
+  a localhost-only dev server, reuses a healthy recorded server, and records
+  PID/port in `.docforge/dashboard/.docforge-dashboard.json`.
+- The fingerprint (HEAD + manifest + flow-index + `docs/` + template + root
+  package hashes) is byte-identical between the Python and JS peers; an
+  unchanged fingerprint performs no content writes and reuses the server.
+- Added `tests/test_dashboard.py` (9 tests, Python/Node parity asserted).
+
 ## Enforced coding-agents kernel lint
 
 - Wired the orphaned `lint_agents_kernel` into the completion gate: the

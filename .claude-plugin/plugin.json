@@ -8,7 +8,8 @@
   },
   "skills": [
     "./skills/docforge",
-    "./skills/docforge-revise"
+    "./skills/docforge-revise",
+    "./skills/docforge-dashboard"
   ],
   "commands": [
     "./commands/"

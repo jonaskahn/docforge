@@ -1,0 +1,25 @@
+import { loader } from 'fumadocs-core/source';
+import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons';
+import { defineDocs } from 'fumadocs-mdx/macro';
+import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
+import { remarkMdxMermaid } from 'fumadocs-core/mdx-plugins';
+import { docsRoute } from './shared';
+
+const docs = defineDocs({
+  dir: 'content/docs',
+  docs: {
+    schema: pageSchema,
+    mdxOptions: {
+      remarkPlugins: [remarkMdxMermaid],
+    },
+  },
+  meta: {
+    schema: metaSchema,
+  },
+});
+
+export const source = loader({
+  baseUrl: docsRoute,
+  source: docs.toFumadocsSource(),
+  plugins: [lucideIconsPlugin()],
+});

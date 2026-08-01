@@ -71,11 +71,13 @@ lists an HTTPS git URL so install does not need `github.com` in
 key (`ssh-keyscan github.com >> ~/.ssh/known_hosts`) or set
 `CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`.
 
-Both install paths load [`skills/docforge`](skills/docforge/SKILL.md) and
-[`skills/docforge-revise`](skills/docforge-revise/SKILL.md). Claude Code
-plugin skills are namespaced (`/docforge:docforge`, `/docforge:docforge-revise`);
-[`commands/`](commands/) also registers the bare `/docforge` and
-`/docforge-revise` slash commands. After updating the marketplace, run
+Both install paths load [`skills/docforge`](skills/docforge/SKILL.md),
+[`skills/docforge-revise`](skills/docforge-revise/SKILL.md), and
+[`skills/docforge-dashboard`](skills/docforge-dashboard/SKILL.md). Claude Code
+plugin skills are namespaced (`/docforge:docforge`, `/docforge:docforge-revise`,
+`/docforge:docforge-dashboard`); [`commands/`](commands/) also registers the
+bare `/docforge`, `/docforge-revise`, and `/docforge-dashboard` slash
+commands. After updating the marketplace, run
 `/plugin marketplace update docforge` then reinstall or `/reload-plugins`.
 
 ## ▓▒░ START GAME ░▒▓
@@ -188,16 +190,21 @@ Invocation order is always **command → scope args → flags** (never flags
 before the command or before a required scope argument):
 
 | Command | Use |
-|---|---|
+|---|---|---|
 | `/docforge` | Fresh start: intake, plan, or write |
 | `/docforge --plan-only` | Plan / dry-run tree only |
 | `/docforge-revise all` | Full-tree structural refresh |
 | `/docforge-revise <area>` | Scoped revise (e.g. architecture) |
 | `/docforge-revise flow` | Full flow harvest → organize → derive → write |
 | `/docforge-revise flow --plan-only` | Revise analysis only (no body writes) |
+| `/docforge-dashboard` | Serve generated docs as a local Fumadocs site (metadata reconcile → MDX convert → validate → serve → open) |
+| `/docforge-dashboard --plan-only` | Preflight, fingerprint, metadata dry-run, and route plan only |
 
 Shared flags on both commands: `--plan-only` (analyze / dry-run tree only),
 `--auto-accept` (skip routine pauses after scope confirm).
+`/docforge-dashboard` shares the same flags plus its own runtime CLI
+subcommands (`dashboard metadata | fingerprint | plan | build | validate |
+serve | stop | status`).
 
 There is no `--resume` or `--status` skill flag. Continue an incomplete run via
 intake or plain language; for a progress report, ask in plain language or run
@@ -213,8 +220,9 @@ The exact flag semantics and composition rules live in the [workflow](skills/doc
 
 ## ▓▒░ INVENTORY ░▒▓
 
-[`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) and
-[`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md) are thin
+[`skills/docforge/SKILL.md`](skills/docforge/SKILL.md),
+[`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md), and
+[`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md) are thin
 command entrypoints. The shared cartridge lives under
 [`skills/docforge/_shared/`](skills/docforge/_shared/README.md):
 [`.metadata/catalog/`](skills/docforge/_shared/.metadata/catalog/) is the canonical
@@ -232,9 +240,19 @@ session — there is no separate runtime-precheck CLI.
 [`.claude-plugin/`](.claude-plugin/) packages the Claude Code marketplace
 path; the marketplace entry installs this GitHub repo as the plugin (root
 `skills/` + `agents/`). Agent Skills install discovers
-[`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) and
-[`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md)
+[`skills/docforge/SKILL.md`](skills/docforge/SKILL.md),
+[`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md), and
+[`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md)
 directly (no root `meta.json`).
+
+### DASHBOARD
+
+`/docforge-dashboard` renders written documentation as a local Fumadocs
+site under `.docforge/dashboard/` — a generated, git-ignored, disposable
+directory with its own `package.json`/`node_modules`. It never touches the
+repository's package files. See
+[`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md)
+and [`skills/docforge-dashboard/README.md`](skills/docforge-dashboard/README.md).
 
 ## ▓▒░ SYSTEM REQUIREMENTS ░▒▓
 
@@ -242,6 +260,7 @@ directly (no root `meta.json`).
 - `git`
 - a supported source of repository evidence
 - **one** tool runtime: Python 3.10+ **or** a JS engine (Node.js 18+, Bun, or Deno)
+- Node.js 22+ and `npm` **only** for `/docforge-dashboard` install/serve steps
 
 The agent picks the session engine from what is installed. Core tools use only
 the selected runtime's standard library or built-ins.

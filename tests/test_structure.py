@@ -125,12 +125,18 @@ class SkillContentTests(unittest.TestCase):
         )
         self.assertTrue((ROOT / "skills" / "docforge" / "SKILL.md").is_file())
         self.assertTrue((ROOT / "skills" / "docforge-revise" / "SKILL.md").is_file())
+        self.assertTrue((ROOT / "skills" / "docforge-dashboard" / "SKILL.md").is_file())
         self.assertTrue((ROOT / "agents" / "docforge-audit.md").is_file())
         self.assertTrue((ROOT / "commands" / "docforge.md").is_file())
         self.assertTrue((ROOT / "commands" / "docforge-revise.md").is_file())
+        self.assertTrue((ROOT / "commands" / "docforge-dashboard.md").is_file())
         self.assertEqual(
             payload.get("skills"),
-            ["./skills/docforge", "./skills/docforge-revise"],
+            [
+                "./skills/docforge",
+                "./skills/docforge-revise",
+                "./skills/docforge-dashboard",
+            ],
         )
 
 
