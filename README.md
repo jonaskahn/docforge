@@ -206,6 +206,10 @@ Shared flags on both commands: `--plan-only` (analyze / dry-run tree only),
 subcommands (`dashboard metadata | fingerprint | plan | build | validate |
 serve | stop | status`).
 
+After a completed `/docforge` or `/docforge-revise` run, the dashboard is
+built and served automatically so the written documentation opens in the
+browser (skipped under `--plan-only`; requires Node.js 22+ / npm).
+
 There is no `--resume` or `--status` skill flag. Continue an incomplete run via
 intake or plain language; for a progress report, ask in plain language or run
 `manage_manifest status`.

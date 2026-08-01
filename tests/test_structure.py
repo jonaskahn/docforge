@@ -99,6 +99,13 @@ class SkillContentTests(unittest.TestCase):
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
         self.assertIn("Never write against an undisplayed manifest\nrevision", planning)
 
+    def test_validation_workflow_auto_serves_dashboard_on_completion(self) -> None:
+        validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
+        self.assertIn("## 7. Dashboard auto-serve", validation)
+        self.assertIn("Never under `--plan-only`", validation)
+        self.assertIn("every completed\n`/docforge` (fresh start) and `/docforge-revise` run", validation)
+        self.assertIn("Node.js 22+ / npm", validation)
+
     def test_flow_derivation_reference_covers_dedup(self) -> None:
         derivation = (SHARED_ROOT / "references" / "graph" / "flow-derivation.md").read_text(encoding="utf-8")
         self.assertIn("near-duplicate candidates", derivation)

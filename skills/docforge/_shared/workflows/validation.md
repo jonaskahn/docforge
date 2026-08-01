@@ -79,6 +79,26 @@ A document is `complete` only with a passing `subagent` or `cold-pass` audit
 record. A run is complete only when every selected document is `complete` or
 explicitly `skipped`, and the whole-tree gate above exits zero.
 
+## 7. Dashboard auto-serve
+
+When the whole-tree gate exits zero, automatically run the dashboard so the
+written documentation is immediately visible — this applies to every completed
+`/docforge` (fresh start) and `/docforge-revise` run:
+
+1. **Never under `--plan-only`** — a dry run builds nothing and serves nothing.
+2. Run the full dashboard lifecycle — preflight, fingerprint, metadata
+   reconcile, route plan, MDX convert, validate, serve, open — via the
+   `/docforge-dashboard` procedure
+   ([`../../../docforge-dashboard/SKILL.md`](../../../docforge-dashboard/SKILL.md)).
+3. The first run takes longer: it scaffolds `.docforge/dashboard/` and runs
+   `npm install`; later runs reuse the healthy recorded server when the
+   fingerprint is unchanged.
+4. When Node.js 22+ / npm is unavailable or preflight fails, state the
+   dashboard requirement and continue — a missing dashboard never blocks
+   completion.
+5. The serve command stays attached to the terminal; stopping it (`Ctrl+C`)
+   does not affect the written documentation or manifest state.
+
 ## Process completion & git state
 
 Docforge maintains persistent records and ephemeral run state under `.docforge/`:
