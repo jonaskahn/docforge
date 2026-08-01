@@ -95,15 +95,32 @@ def git_remote_url(repo: Path) -> str | None:
     return None
 
 
+def _root_doc_has_provenance(repo: Path, path: str) -> bool:
+    text = (repo / path).read_text(encoding="utf-8", errors="replace")
+    raw, _body, _end = split_frontmatter(text)
+    if raw is None:
+        return False
+    try:
+        data = parse_yaml_mapping(raw)
+    except Exception:  # noqa: BLE001 - treated as not docforge-managed
+        return False
+    provenance = data.get("docforge_provenance")
+    return isinstance(provenance, dict) and provenance.get("schema") == SCHEMA_VERSION
+
+
 def included_documents(repo: Path, manifest: dict) -> list[dict]:
     out = []
     for doc in manifest.get("documents", []):
         if doc.get("status") not in WRITTEN:
             continue
         path = doc.get("path", "")
-        if not path.startswith(DOC_PREFIX) or not (path.endswith(".md") or path.endswith(".mdx")):
+        if not (path.endswith(".md") or path.endswith(".mdx")):
+            continue
+        if not (path.startswith(DOC_PREFIX) or "/" not in path):
             continue
         if not (repo / path).is_file():
+            continue
+        if "/" not in path and not _root_doc_has_provenance(repo, path):
             continue
         out.append(doc)
     return sorted(out, key=lambda d: (d["path"], d["id"]))
@@ -111,14 +128,18 @@ def included_documents(repo: Path, manifest: dict) -> list[dict]:
 
 def route_for_doc(doc: dict) -> tuple[str, str]:
     path = doc["path"]
-    rel = path[len(DOC_PREFIX):]
-    if rel == "README.md":
-        return "index.mdx", BASE_URL
-    if rel.endswith("/README.md"):
-        directory = rel[:-len("/README.md")]
-        return f"{directory}/index.mdx", f"{BASE_URL}/{directory}"
-    stem = rel[:-3] if rel.endswith(".md") else rel[:-4]
-    return f"{stem}.mdx", f"{BASE_URL}/{stem}"
+    if path.startswith(DOC_PREFIX):
+        rel = path[len(DOC_PREFIX):]
+        if rel == "README.md":
+            return "index.mdx", BASE_URL
+        if rel.endswith("/README.md"):
+            directory = rel[:-len("/README.md")]
+            return f"{directory}/index.mdx", f"{BASE_URL}/{directory}"
+        stem = rel[:-3] if rel.endswith(".md") else rel[:-4]
+        return f"{stem}.mdx", f"{BASE_URL}/{stem}"
+    stem = path[:-3] if path.endswith(".md") else path[:-4]
+    slug = stem.lower()
+    return f"root/{slug}.mdx", f"{BASE_URL}/root/{slug}"
 
 
 def build_ledger(docs: list[dict]) -> dict:
@@ -175,6 +196,13 @@ def fingerprint(repo: Path, manifest_path: Path, manifest: dict, template_dir: P
         records.append(f"flow-index\x00{sha256_bytes(flow.read_bytes())}")
     for rel in tree_files(repo):
         records.append(f"docs-file\x00{rel}\x00{sha256_bytes((repo / rel).read_bytes())}")
+    for doc in sorted(manifest.get("documents", []), key=lambda d: d.get("path", "")):
+        rel = doc.get("path", "")
+        if not rel or "/" in rel or not rel.endswith((".md", ".mdx")):
+            continue
+        if not (repo / rel).is_file():
+            continue
+        records.append(f"root-doc\x00{rel}\x00{sha256_bytes((repo / rel).read_bytes())}")
     for path in _sorted_template_files(template_dir):
         rel = str(path.relative_to(template_dir)).replace("\\", "/")
         records.append(f"template\x00{rel}\x00{sha256_bytes(path.read_bytes())}")
@@ -186,7 +214,7 @@ def fingerprint(repo: Path, manifest_path: Path, manifest: dict, template_dir: P
         "base_url": BASE_URL,
         "template_version": TEMPLATE_VERSION,
         "generator": TOOL_VERSION,
-        "include": "docs/**",
+        "include": "docs/**, root/*.md",
     }
     records.append(f"settings\x00{json.dumps(settings, sort_keys=True, separators=(',', ':'))}")
     return sha256_bytes("\n".join(records).encode("utf-8"))

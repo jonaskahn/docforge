@@ -217,19 +217,74 @@ class DashboardPlanTests(unittest.TestCase):
                 plan = json.loads(result.stdout)
                 self.assertTrue(any("duplicate url" in problem for problem in plan["problems"]))
 
+    def test_root_level_documents_route_under_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            manifest = load_manifest(repo)
+            manifest["documents"].append(written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5))
+            manifest["documents"].append(written_doc("root_readme", "README.md", "# Root Readme\n", write_order=6))
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / "CHANGELOG.md").write_text(
+                markdown_with_provenance(manifest["documents"][-2]["provenance"], "# Changelog\n"),
+                encoding="utf-8",
+            )
+            (repo / "README.md").write_text(
+                markdown_with_provenance(manifest["documents"][-1]["provenance"], "# Root Readme\n"),
+                encoding="utf-8",
+            )
+            for runtime in ("py", "js"):
+                result = run_dashboard(runtime, "plan", "--repo", str(repo), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                plan = json.loads(result.stdout)
+                by_path = {page["source_path"]: page for page in plan["pages"]}
+                self.assertEqual(by_path["CHANGELOG.md"]["url"], "/docs/root/changelog")
+                self.assertEqual(by_path["CHANGELOG.md"]["output_path"], "root/changelog.mdx")
+                self.assertEqual(by_path["README.md"]["url"], "/docs/root/readme")
+                self.assertEqual(by_path["README.md"]["output_path"], "root/readme.mdx")
+                self.assertEqual(plan["problems"], [])
+
+    def test_root_level_documents_without_provenance_are_excluded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            manifest = load_manifest(repo)
+            local_shim = written_doc("claude_local", "CLAUDE.local.md", "# Local\n", write_order=7)
+            manifest["documents"].append(local_shim)
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / "CLAUDE.local.md").write_text("# Local preferences\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run_dashboard(runtime, "plan", "--repo", str(repo), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                plan = json.loads(result.stdout)
+                by_path = {page["source_path"]: page for page in plan["pages"]}
+                self.assertNotIn("CLAUDE.local.md", by_path)
+                build = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
+                self.assertEqual(build.returncode, 0, build.stderr)
+                self.assertFalse((repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "claude.local.mdx").exists())
+
 
 class DashboardFingerprintTests(unittest.TestCase):
     def test_fingerprint_parity_and_sensitivity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             seed_repo(repo)
+            manifest = load_manifest(repo)
+            changelog = written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5)
+            manifest["documents"].append(changelog)
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / "CHANGELOG.md").write_text(
+                markdown_with_provenance(changelog["provenance"], "# Changelog\n"),
+                encoding="utf-8",
+            )
             py = run_dashboard("py", "fingerprint", "--repo", str(repo)).stdout.strip()
             js = run_dashboard("js", "fingerprint", "--repo", str(repo)).stdout.strip()
             self.assertEqual(py, js)
             before = py
-            manifest = load_manifest(repo)
-            manifest["documents"][0]["write_order"] = 99
-            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / "CHANGELOG.md").write_text(
+                markdown_with_provenance(changelog["provenance"], "# Changelog\n\nNew entry.\n"),
+                encoding="utf-8",
+            )
             py_after = run_dashboard("py", "fingerprint", "--repo", str(repo)).stdout.strip()
             self.assertNotEqual(before, py_after)
 
@@ -326,6 +381,47 @@ class DashboardBuildTests(unittest.TestCase):
                 self.assertIn('title: "Documentation"', index.read_text(encoding="utf-8"))
                 root_meta = json.loads((repo / ".docforge" / "dashboard" / "content" / "docs" / "meta.json").read_text(encoding="utf-8"))
                 self.assertEqual(root_meta["title"], "Documentation")
+                validate = run_dashboard(runtime, "validate", "--repo", str(repo))
+                self.assertEqual(validate.returncode, 0, validate.stdout)
+
+    def test_build_rewrites_links_to_root_level_documents(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            manifest = load_manifest(repo)
+            changelog = written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5)
+            root_readme = written_doc("root_readme", "README.md", "# Root Readme\n", write_order=6)
+            manifest["documents"].extend([changelog, root_readme])
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / "CHANGELOG.md").write_text(
+                markdown_with_provenance(changelog["provenance"], "# Changelog\n\nSee [docs](docs/README.md).\n"),
+                encoding="utf-8",
+            )
+            (repo / "README.md").write_text(
+                markdown_with_provenance(root_readme["provenance"], "# Root Readme\n\n## Documentation\n\nSee [changelog](CHANGELOG.md).\n"),
+                encoding="utf-8",
+            )
+            index = repo / "docs" / "README.md"
+            index.write_text(
+                index.read_text(encoding="utf-8").replace(
+                    "See [architecture/](architecture/README.md) and [product/overview.md](product/overview.md).",
+                    "See [architecture/](architecture/README.md), [CHANGELOG.md](../CHANGELOG.md) and [docs](../README.md#documentation).",
+                ),
+                encoding="utf-8",
+            )
+            for runtime in ("py", "js"):
+                result = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                index_mdx = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
+                text = index_mdx.read_text(encoding="utf-8")
+                self.assertIn("[CHANGELOG.md](/docs/root/changelog)", text)
+                self.assertIn("[docs](/docs/root/readme#documentation)", text)
+                changelog_mdx = repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "changelog.mdx"
+                self.assertTrue(changelog_mdx.is_file())
+                self.assertIn("[docs](/docs)", changelog_mdx.read_text(encoding="utf-8"))
+                readme_mdx = repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "readme.mdx"
+                self.assertTrue(readme_mdx.is_file())
+                self.assertIn("[changelog](/docs/root/changelog)", readme_mdx.read_text(encoding="utf-8"))
                 validate = run_dashboard(runtime, "validate", "--repo", str(repo))
                 self.assertEqual(validate.returncode, 0, validate.stdout)
 

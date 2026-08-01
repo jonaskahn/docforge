@@ -120,15 +120,22 @@ node runtime/cli/js/dashboard.js plan --repo <repo> [--json]
 ```
 
 Included documents: manifest documents with a written status and an existing
-file under `docs/` ending in `.md` / `.mdx`. Everything else (root `README.md`,
-`AGENTS.md`, machine JSON, planned/skipped docs, untracked Markdown) is
-excluded.
+file ending in `.md` / `.mdx` that live under `docs/` **or at the repository
+root** (a path with no `/`). Root-level documents (for example `README.md`,
+`CHANGELOG.md`, `CONTRIBUTING.md`, `AGENTS.md`, `SECURITY.md`) become pages
+under `/docs/root/<slug>` so `docs/` pages can link to them and resolve. Root
+files are only included when they carry docforge provenance (schema 2.0)
+frontmatter — local shims such as a gitignored `CLAUDE.local.md` are excluded.
+Machine JSON, planned/skipped docs, subdirectory-rooted docs outside `docs/`,
+and untracked Markdown are excluded.
 
 | Source | Content output | URL |
 |---|---|---|
 | `docs/README.md` | `content/docs/index.mdx` | `/docs` |
 | `docs/<dir>/README.md` | `content/docs/<dir>/index.mdx` | `/docs/<dir>` |
 | `docs/<dir>/page.md` | `content/docs/<dir>/page.mdx` | `/docs/<dir>/page` |
+| `README.md` (root) | `content/docs/root/readme.mdx` | `/docs/root/readme` |
+| `CHANGELOG.md` (root) | `content/docs/root/changelog.mdx` | `/docs/root/changelog` |
 
 The plan fails (exit 1) when two documents map to the same URL — including
 the `docs/<dir>.md` vs `docs/<dir>/README.md` collision — or when

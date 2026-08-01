@@ -70,27 +70,48 @@ function gitRemoteUrl(repo) {
   return null;
 }
 
+function rootDocHasProvenance(repo, rel) {
+  const { raw } = splitFrontmatterRaw(fs.readFileSync(path.join(repo, rel), "utf8"));
+  if (!raw) return false;
+  let data;
+  try {
+    data = pf.parseYamlMapping(raw);
+  } catch {
+    return false;
+  }
+  const provenance = data.docforge_provenance;
+  return !!(provenance && typeof provenance === "object" && provenance.schema === pf.SCHEMA_VERSION);
+}
+
 function includedDocuments(repo, manifest) {
   const out = [];
   for (const doc of manifest.documents || []) {
     if (!WRITTEN.has(doc.status)) continue;
     const p = doc.path || "";
-    if (!p.startsWith(DOC_PREFIX) || !(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
+    if (!(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
+    if (!p.startsWith(DOC_PREFIX) && p.includes("/")) continue;
     if (!fs.existsSync(path.join(repo, p))) continue;
+    if (!p.startsWith(DOC_PREFIX) && !rootDocHasProvenance(repo, p)) continue;
     out.push(doc);
   }
   return out.sort((a, b) => (a.path === b.path ? (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) : a.path < b.path ? -1 : 1));
 }
 
 function routeForDoc(doc) {
-  const rel = doc.path.slice(DOC_PREFIX.length);
-  if (rel === "README.md") return ["index.mdx", BASE_URL];
-  if (rel.endsWith("/README.md")) {
-    const directory = rel.slice(0, -"/README.md".length);
-    return [`${directory}/index.mdx`, `${BASE_URL}/${directory}`];
+  const p = doc.path || "";
+  if (p.startsWith(DOC_PREFIX)) {
+    const rel = p.slice(DOC_PREFIX.length);
+    if (rel === "README.md") return ["index.mdx", BASE_URL];
+    if (rel.endsWith("/README.md")) {
+      const directory = rel.slice(0, -"/README.md".length);
+      return [`${directory}/index.mdx`, `${BASE_URL}/${directory}`];
+    }
+    const stem = rel.endsWith(".md") ? rel.slice(0, -3) : rel.slice(0, -4);
+    return [`${stem}.mdx`, `${BASE_URL}/${stem}`];
   }
-  const stem = rel.endsWith(".md") ? rel.slice(0, -3) : rel.slice(0, -4);
-  return [`${stem}.mdx`, `${BASE_URL}/${stem}`];
+  const stem = p.endsWith(".md") ? p.slice(0, -3) : p.slice(0, -4);
+  const slug = stem.toLowerCase();
+  return [`root/${slug}.mdx`, `${BASE_URL}/root/${slug}`];
 }
 
 function buildLedger(docs) {
@@ -157,6 +178,13 @@ function fingerprint(repo, manifestPath, manifest, templateDir) {
   for (const rel of treeFiles(repo)) {
     records.push(`docs-file\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
   }
+  const rootDocs = (manifest.documents || [])
+    .map((doc) => doc.path || "")
+    .filter((rel) => rel && !rel.includes("/") && (rel.endsWith(".md") || rel.endsWith(".mdx")) && fs.existsSync(path.join(repo, rel)))
+    .sort();
+  for (const rel of rootDocs) {
+    records.push(`root-doc\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
+  }
   const templateRecords = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir)) {
@@ -180,7 +208,7 @@ function fingerprint(repo, manifestPath, manifest, templateDir) {
   const settings = {
     base_url: BASE_URL,
     generator: TOOL_VERSION,
-    include: "docs/**",
+    include: "docs/**, root/*.md",
     template_version: TEMPLATE_VERSION,
   };
   records.push(`settings\x00${JSON.stringify(settings)}`);
