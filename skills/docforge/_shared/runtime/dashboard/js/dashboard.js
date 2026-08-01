@@ -607,7 +607,7 @@ function validateBuild(repo, manifest, contentDir, assetsDir) {
           errors.push(`broken link in ${page.output_path}: ${target}`);
           continue;
         }
-        if (fragment && !anchors[url].has(fragment.slice(1))) {
+        if (fragment && !/^#L\d+-L\d+$/.test(fragment) && !anchors[url].has(fragment.slice(1))) {
           errors.push(`broken anchor in ${page.output_path}: ${target}`);
         }
       } else if (target.startsWith("/docs-assets/")) {
