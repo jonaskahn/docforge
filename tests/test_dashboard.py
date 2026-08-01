@@ -97,7 +97,7 @@ INDEX_BODY = """# Documentation
 
 ## Introduction
 
-See [architecture/](architecture/README.md) and [product/overview.md](product/overview.md).
+See [constraints](architecture/constraints.md) and [product/overview.md](product/overview.md).
 
 | Section | Description |
 | --- | --- |
@@ -288,6 +288,137 @@ class DashboardBuildTests(unittest.TestCase):
                     self.assertEqual(root_meta["title"], "Documentation")
                 finally:
                     stop_dashboard(runtime, repo)
+
+    def test_start_build_strips_html_comments_but_keeps_content(self) -> None:
+        env, _bin = fake_npm_env()
+        body = (
+            "# Glossary\n\n"
+            "Intro.\n\n"
+            "<!-- docforge-children:start -->\n"
+            "| Term | Meaning |\n"
+            "| --- | --- |\n"
+            "| Foo | Bar |\n"
+            "<!-- docforge-children:end -->\n\n"
+            "A `<!-- inline -->` stays code.\n\n"
+            "```md\n"
+            "<!-- keep me in code -->\n"
+            "raw\n"
+            "```\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                manifest = load_manifest(repo)
+                doc = written_doc("reference_glossary", "docs/reference/glossary.md", body, write_order=25)
+                manifest["documents"].append(doc)
+                (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                target = repo / "docs" / "reference" / "glossary.md"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(markdown_with_provenance(doc["provenance"], body), encoding="utf-8")
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    text = (repo / ".docforge" / "dashboard" / "content" / "docs" / "reference" / "glossary.mdx").read_text(encoding="utf-8")
+                    self.assertIn("| Foo | Bar |", text)
+                    self.assertNotIn("docforge-children", text)
+                    self.assertNotIn("&lt;!--", text)
+                    self.assertIn("`<!-- inline -->`", text)
+                    self.assertIn("<!-- keep me in code -->", text)
+                    self.assertIn("raw", text)
+                finally:
+                    stop_dashboard(runtime, repo)
+
+    def test_start_build_renders_manifest_provenance_agents_and_rewrites_link(self) -> None:
+        env, _bin = fake_npm_env()
+        agents_body = "# Demo Repo\n\nKernel rules.\n"
+        agents_provenance = {
+            "schema": "2.0",
+            "doc_id": "agents_kernel",
+            "path": "AGENTS.md",
+            "generated_at": "2026-08-01T00:00:00Z",
+            "generator": {"name": "docforge", "version": "2.8.0"},
+            "tier": "spine",
+            "target_depth": "orientation",
+            "graph": {"provider": "fixture", "flow": "none"},
+            "sections": [],
+        }
+        agents_doc = {
+            "id": "agents_kernel",
+            "title": "Agent Kernel",
+            "type": "agents-kernel",
+            "path": "AGENTS.md",
+            "group": "agent-context",
+            "selection": {"origins": [{"kind": "static", "id": "agents-kernel"}], "evidence": []},
+            "status": "complete",
+            "requires": ["code_graph", "manifests"],
+            "scaffold_template": "content/agent-context/templates/agents-kernel.md",
+            "target_depth": "orientation",
+            "write_order": 200,
+            "provenance_mode": "manifest",
+            "audit_profile": "agents-kernel",
+            "provenance": agents_provenance,
+            "audit": {"mode": "cold-pass", "verdict": "PASS", "report": ".docforge/audits/agents.md"},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                manifest = load_manifest(repo)
+                agents_index = written_doc("agents_index", "docs/agents/README.md", "# Agents\n", write_order=28)
+                manifest["documents"].append(agents_doc)
+                manifest["documents"].append(agents_index)
+                (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                (repo / "AGENTS.md").write_text(agents_body, encoding="utf-8")
+                readme_path = repo / "docs" / "agents" / "README.md"
+                readme_path.parent.mkdir(parents=True, exist_ok=True)
+                readme_path.write_text(
+                    markdown_with_provenance(
+                        agents_index["provenance"],
+                        "# Agents\n\nKernel lives at [AGENTS.md](../../AGENTS.md).\n",
+                    ),
+                    encoding="utf-8",
+                )
+                try:
+                    plan = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
+                    self.assertEqual(plan.returncode, 0, plan.stderr)
+                    self.assertIn("-> /docs/root/agents", plan.stdout)
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    root_page = repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "agents.mdx"
+                    self.assertTrue(root_page.is_file(), "AGENTS.md must render as a dashboard page")
+                    self.assertIn('title: "Demo Repo"', root_page.read_text(encoding="utf-8"))
+                    agents_index_mdx = repo / ".docforge" / "dashboard" / "content" / "docs" / "agents" / "index.mdx"
+                    text = agents_index_mdx.read_text(encoding="utf-8")
+                    self.assertIn("](/docs/root/agents)", text)
+                    self.assertNotIn("../../AGENTS.md", text)
+                finally:
+                    stop_dashboard(runtime, repo)
+
+    def test_unresolved_internal_markdown_link_fails_validation(self) -> None:
+        env, _bin = fake_npm_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            manifest = load_manifest(repo)
+            doc = written_doc(
+                "architecture_extras", "docs/architecture/extras.md",
+                "# Extras\n\nSee [missing](../missing.md).\n", write_order=8,
+            )
+            manifest["documents"].append(doc)
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / "docs" / "architecture" / "extras.md").write_text(
+                markdown_with_provenance(doc["provenance"], "# Extras\n\nSee [missing](../missing.md).\n"),
+                encoding="utf-8",
+            )
+            try:
+                result = run_dashboard("py", "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("unresolved internal link", result.stdout + result.stderr)
+            finally:
+                stop_dashboard("py", repo)
 
     def test_start_force_rebuilds_even_when_unchanged(self) -> None:
         env, _bin = fake_npm_env()

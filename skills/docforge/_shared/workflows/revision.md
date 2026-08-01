@@ -274,3 +274,13 @@ still `FRESH`.
 Distinct from `/docforge-revise <area>`, which does not re-harvest the flow
 index but still applies the revise meaning (staleness, missing docs, big
 picture, connections) inside that area.
+
+## Completion
+
+After the last document in scope passes its independent audit, run the
+whole-tree gate exactly as a fresh-start run does
+([`validation.md`](validation.md) §7). Unless the invocation included
+`--plan-only` or `--no-dashboard`, start the dashboard (`dashboard start`),
+wait for the healthy server, and report the `dashboard: <url>` line and URL
+in the final response — a revised tree without a started, reported dashboard
+is not a finished revise run.

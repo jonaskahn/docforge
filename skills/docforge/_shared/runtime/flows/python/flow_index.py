@@ -815,7 +815,7 @@ def markdown(index: dict, tier: str = "spine", repo: Path | None = None) -> str:
             }]
     provenance["sections"] = sections
     lines = [
-        "# Flow index",
+        "# Flows",
         "",
         "This index lists every evidence-backed flow candidate and routes readers",
         "to the deep-dive flow documents. **Main** priority **standalone** rows get",

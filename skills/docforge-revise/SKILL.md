@@ -68,6 +68,15 @@ Same flags as `/docforge` (combinable with a scope argument), including
 
 Example: `/docforge-revise flow --plan-only`.
 
+## Completion
+
+A revise run is complete only after the whole-tree gate
+([`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/validation.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/validation.md>))
+passes and — unless the invocation included `--plan-only` or `--no-dashboard`
+— the dashboard has been started and its URL reported in the final response
+(`validation.md` §7 Dashboard auto-serve). Never finish a run with the docs
+revised but the dashboard never started or its URL never shown.
+
 ## Not this command
 
 - Fresh-start documentation plan (no revise scope) → `/docforge`

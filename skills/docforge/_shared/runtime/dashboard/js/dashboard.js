@@ -77,6 +77,11 @@ function rootDocHasProvenance(repo, rel) {
   return !!(provenance && typeof provenance === "object" && provenance.schema === pf.SCHEMA_VERSION);
 }
 
+function manifestProvenance(doc) {
+  if (doc.provenance_mode !== "manifest") return false;
+  return !!(doc.provenance && typeof doc.provenance === "object" && doc.provenance.schema === pf.SCHEMA_VERSION);
+}
+
 function includedDocuments(repo, manifest) {
   const out = [];
   for (const doc of manifest.documents || []) {
@@ -85,7 +90,7 @@ function includedDocuments(repo, manifest) {
     if (!(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
     if (!p.startsWith(DOC_PREFIX) && p.includes("/")) continue;
     if (!fs.existsSync(path.join(repo, p))) continue;
-    if (!p.startsWith(DOC_PREFIX) && !rootDocHasProvenance(repo, p)) continue;
+    if (!p.startsWith(DOC_PREFIX) && !rootDocHasProvenance(repo, p) && !manifestProvenance(doc)) continue;
     out.push(doc);
   }
   return out.sort((a, b) => (a.path === b.path ? (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) : a.path < b.path ? -1 : 1));
@@ -115,6 +120,7 @@ function buildLedger(docs) {
     const page = {
       id: doc.id,
       doc_id: doc.id,
+      doc,
       title: titleFor(doc),
       source_path: doc.path,
       output_path: output,
@@ -308,8 +314,62 @@ function escapeMdxText(line) {
   return out;
 }
 
+function stripHtmlComments(body) {
+  let out = "";
+  let inFence = false;
+  let inComment = false;
+  for (const line of body.split(/(?<=\n)/)) {
+    if (line.trimStart().startsWith("```")) {
+      inFence = !inFence;
+      out += line;
+      continue;
+    }
+    if (inFence) {
+      out += line;
+      continue;
+    }
+    let lineOut = "";
+    let inCode = false;
+    let i = 0;
+    while (i < line.length) {
+      const char = line[i];
+      if (inComment) {
+        const end = line.indexOf("-->", i);
+        if (end < 0) {
+          i = line.length;
+          continue;
+        }
+        inComment = false;
+        i = end + 3;
+        continue;
+      }
+      if (char === "`") {
+        inCode = !inCode;
+        lineOut += char;
+        i += 1;
+        continue;
+      }
+      if (!inCode && line.startsWith("<!--", i)) {
+        const end = line.indexOf("-->", i + 4);
+        if (end < 0) {
+          inComment = true;
+          i = line.length;
+          continue;
+        }
+        i = end + 3;
+        continue;
+      }
+      lineOut += char;
+      i += 1;
+    }
+    out += lineOut;
+  }
+  return out;
+}
+
 function convertBody(body, sourcePath, ledger, assetsNeeded) {
   const unresolved = [];
+  body = stripHtmlComments(body);
   let inFence = false;
   let lines = [];
   for (const line of body.split(/(?<=\n)/)) {
@@ -356,7 +416,7 @@ function convertBody(body, sourcePath, ledger, assetsNeeded) {
 function firstH1Title(body) {
   for (const line of body.split(/\r?\n/)) {
     const match = HEADING_RE.exec(line);
-    if (!match) continue;
+    if (!match || match[1] !== "#") continue;
     let text = match[2];
     text = text.replace(/(\s*\[(?:[!#]|toc)[^\]]*\])+\s*$/, "");
     text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
@@ -513,16 +573,27 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
     const source = path.join(repo, doc.source_path);
     const text = fs.readFileSync(source, "utf8");
     const { raw, body } = splitFrontmatterRaw(text);
-    if (raw == null) throw new Error(`document has no frontmatter: ${doc.source_path}`);
-    let data;
-    try {
-      data = pf.parseYamlMapping(raw);
-    } catch (error) {
-      throw new Error(`unparseable frontmatter: ${doc.source_path}: ${error.message}`);
-    }
-    const provenance = data.docforge_provenance;
-    if (!provenance || typeof provenance !== "object" || provenance.schema !== pf.SCHEMA_VERSION) {
-      throw new Error(`provenance is not schema 2.0: ${doc.source_path}`);
+    let provenance;
+    if (raw == null) {
+      const manifestDoc = doc.doc || {};
+      provenance = manifestDoc.provenance;
+      if (
+        manifestDoc.provenance_mode !== "manifest" ||
+        !provenance || typeof provenance !== "object" || provenance.schema !== pf.SCHEMA_VERSION
+      ) {
+        throw new Error(`document has no frontmatter: ${doc.source_path}`);
+      }
+    } else {
+      let data;
+      try {
+        data = pf.parseYamlMapping(raw);
+      } catch (error) {
+        throw new Error(`unparseable frontmatter: ${doc.source_path}: ${error.message}`);
+      }
+      provenance = data.docforge_provenance;
+      if (!provenance || typeof provenance !== "object" || provenance.schema !== pf.SCHEMA_VERSION) {
+        throw new Error(`provenance is not schema 2.0: ${doc.source_path}`);
+      }
     }
     const [mdxBody] = convertBody(body, doc.source_path, ledger, assetsNeeded);
     const h1Title = firstH1Title(body);
@@ -616,7 +687,15 @@ function validateBuild(repo, manifest, contentDir, assetsDir) {
           errors.push(`missing asset in ${page.output_path}: ${target}`);
         }
       } else {
-        warnings.push(`unresolved target in ${page.output_path}: ${target}`);
+        const targetPath = target.split("#")[0];
+        const normalized = path.posix.normalize(
+          path.posix.join(DOC_PREFIX, path.posix.dirname(page.output_path), targetPath),
+        );
+        if (/\.mdx?(?:#|$)/.test(normalized) && (normalized.startsWith(DOC_PREFIX) || !normalized.includes("/"))) {
+          errors.push(`unresolved internal link in ${page.output_path}: ${target}`);
+        } else {
+          warnings.push(`unresolved target in ${page.output_path}: ${target}`);
+        }
       }
     }
   }

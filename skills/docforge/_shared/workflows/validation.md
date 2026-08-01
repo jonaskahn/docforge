@@ -80,9 +80,11 @@ explicitly `skipped`, and the whole-tree gate above exits zero.
 
 ## 7. Dashboard auto-serve
 
-When the whole-tree gate exits zero, automatically run the dashboard so the
+Starting the dashboard is a **required** part of run completion, not an
+optional nicety: when the whole-tree gate exits zero, run the dashboard so the
 written documentation is immediately visible — this applies to every completed
-`/docforge` (fresh start) and `/docforge-revise` run:
+`/docforge` (fresh start) and `/docforge-revise` run, and the dashboard URL is
+reported in the final response:
 
 1. **Never under `--plan-only`** — a dry run builds nothing and serves nothing.
 2. **Skip when the invocation included `--no-dashboard`** — the run still
@@ -99,7 +101,8 @@ written documentation is immediately visible — this applies to every completed
    healthy recorded server when the signature is unchanged.
 5. When Node.js 22+ / npm is unavailable or preflight fails, state the
    dashboard requirement and continue — a missing dashboard never blocks
-   completion.
+   completion, but a successful run must print the `dashboard: <url>` line
+   and name the URL in the final summary.
 6. The dev server runs detached; `dashboard stop` shuts it down without
    affecting the written documentation or manifest state.
 

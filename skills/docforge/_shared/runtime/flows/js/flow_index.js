@@ -653,7 +653,7 @@ function markdown(index, tier = "spine", repo = null) {
   }
   provenance.sections = sections;
   const lines = [
-    "# Flow index", "",
+    "# Flows", "",
     "This index lists every evidence-backed flow candidate and routes readers",
     "to the deep-dive flow documents. **Main** priority **standalone** rows get",
     "deep-dive documentation; **member** rows are composed into a parent;",

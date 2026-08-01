@@ -47,6 +47,15 @@ then writing. Natural-language **update** / **refresh** of a named document →
 [`${CLAUDE_SKILL_DIR}/_shared/workflows/revision.md`](<${CLAUDE_SKILL_DIR}/_shared/workflows/revision.md>)
 (staleness-first).
 
+## Completion
+
+A run is complete only after the whole-tree gate
+([`${CLAUDE_SKILL_DIR}/_shared/workflows/validation.md`](<${CLAUDE_SKILL_DIR}/_shared/workflows/validation.md>))
+passes and — unless the invocation included `--plan-only` or `--no-dashboard`
+— the dashboard has been started and its URL reported in the final response
+(`validation.md` §7 Dashboard auto-serve). Never finish a run with the docs
+written but the dashboard never started or its URL never shown.
+
 ## Other routes
 
 - Structural revise (`flow` / `<area>` / `all`) → internal workflow

@@ -70,4 +70,8 @@ A document reaches `complete` only after mechanical lint and an independent,
 artifact-only audit pass ([`workflows/writing.md`](workflows/writing.md)),
 and the whole tree passes `scaffold_docs --audit` plus the cross-document
 quality gate ([`workflows/validation.md`](workflows/validation.md),
-[`references/quality-bar.md`](references/quality-bar.md)).
+[`references/quality-bar.md`](references/quality-bar.md)). A **run** is
+complete only when the whole-tree gate passes and — unless the invocation
+included `--plan-only` or `--no-dashboard` — the dashboard has been started
+and its URL reported in the final response
+([`workflows/validation.md`](workflows/validation.md) §7).

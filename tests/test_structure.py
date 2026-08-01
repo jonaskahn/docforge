@@ -134,6 +134,26 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("every completed\n`/docforge` (fresh start) and `/docforge-revise` run", validation)
         self.assertIn("Node.js 22+ / npm", validation)
 
+    def test_completion_requires_dashboard_start_and_reported_url(self) -> None:
+        """A run is complete only when the dashboard was started and its URL
+        reported; both entrypoints carry the completion contract, not just
+        the validation workflow."""
+        rules = (SHARED_ROOT / "rules.md").read_text(encoding="utf-8")
+        self.assertIn("the dashboard has been started\nand its URL reported", rules)
+        self.assertIn("`--plan-only` or `--no-dashboard`", rules)
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        self.assertIn("## Completion", revision)
+        self.assertIn("dashboard: <url>", revision)
+        for skill in (
+            ROOT / "skills" / "docforge" / "SKILL.md",
+            ROOT / "skills" / "docforge-revise" / "SKILL.md",
+        ):
+            text = skill.read_text(encoding="utf-8")
+            self.assertIn("## Completion", text)
+            self.assertIn("dashboard has been started", text)
+            self.assertIn("URL reported in the final response", text)
+            self.assertIn("Never finish a run with the docs", text)
+
     def test_help_supported_by_all_entrypoints(self) -> None:
         """--help is accepted by all three entrypoints and routes to the
         canonical per-entrypoint reference in _shared/help.md."""

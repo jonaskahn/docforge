@@ -378,6 +378,7 @@ class FlowIndexTests(unittest.TestCase):
                 render = run(runtime, "flow_index", "render", "--repo", str(repo))
                 self.assertEqual(render.returncode, 0, render.stderr)
                 matrix = (repo / "docs/flows/README.md").read_text(encoding="utf-8")
+                self.assertIn("# Flows", matrix)
                 self.assertIn("| Role |", matrix)
                 self.assertIn("| placeholder |", matrix)
                 self.assertIn(f"](./{index['flows'][0]['slug']}.md)", matrix)
@@ -511,6 +512,7 @@ class FlowIndexTests(unittest.TestCase):
                 render = run(runtime, "flow_index", "render", "--repo", str(repo))
                 self.assertEqual(render.returncode, 0, render.stderr)
                 matrix = (repo / "docs/flows/README.md").read_text(encoding="utf-8")
+                self.assertIn("# Flows", matrix)
                 self.assertIn("## email", matrix)
                 self.assertIn("scheduled-reports.md", matrix)
 

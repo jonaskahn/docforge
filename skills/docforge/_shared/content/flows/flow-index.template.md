@@ -14,7 +14,7 @@ docforge_provenance:
     flow: "<FLOW_CAPABILITY>"
   sections: []
 ---
-# Flow index
+# Flows
 
 {{One or two sentences introducing the flow layer: what a "flow" is in this
 repository, how flows were discovered, and how this index relates to the flow

@@ -105,6 +105,16 @@ def _root_doc_has_provenance(repo: Path, path: str) -> bool:
     return isinstance(provenance, dict) and provenance.get("schema") == SCHEMA_VERSION
 
 
+def _manifest_provenance(doc: dict) -> bool:
+    """Root documents with `provenance_mode: manifest` (for example
+    `AGENTS.md`) carry no YAML frontmatter; their provenance lives in the
+    manifest instead."""
+    if doc.get("provenance_mode") != "manifest":
+        return False
+    provenance = doc.get("provenance")
+    return isinstance(provenance, dict) and provenance.get("schema") == SCHEMA_VERSION
+
+
 def included_documents(repo: Path, manifest: dict) -> list[dict]:
     out = []
     for doc in manifest.get("documents", []):
@@ -117,7 +127,7 @@ def included_documents(repo: Path, manifest: dict) -> list[dict]:
             continue
         if not (repo / path).is_file():
             continue
-        if "/" not in path and not _root_doc_has_provenance(repo, path):
+        if "/" not in path and not (_root_doc_has_provenance(repo, path) or _manifest_provenance(doc)):
             continue
         out.append(doc)
     return sorted(out, key=lambda d: (d["path"], d["id"]))
@@ -146,6 +156,7 @@ def build_ledger(docs: list[dict]) -> dict:
         page = {
             "id": doc["id"],
             "doc_id": doc["id"],
+            "doc": doc,
             "title": title_for(doc),
             "source_path": doc["path"],
             "output_path": output,
@@ -330,8 +341,62 @@ def escape_mdx_text(line: str) -> str:
     return "".join(out)
 
 
+def strip_html_comments(body: str) -> str:
+    """Remove HTML comments outside fenced and inline code.
+
+    Docforge keeps management markers such as ``<!-- docforge-children:start
+    -->`` in source Markdown so scaffolds can be re-expanded; the dashboard
+    must never render them. Comments (including multiline ones) are dropped
+    while the content between markers is kept, and comment text inside fenced
+    or inline code is preserved verbatim.
+    """
+    out: list[str] = []
+    in_fence = False
+    in_comment = False
+    for line in body.splitlines(keepends=True):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            continue
+        line_out: list[str] = []
+        in_code = False
+        i = 0
+        length = len(line)
+        while i < length:
+            char = line[i]
+            if in_comment:
+                end = line.find("-->", i)
+                if end < 0:
+                    i = length
+                    continue
+                in_comment = False
+                i = end + 3
+                continue
+            if char == "`":
+                in_code = not in_code
+                line_out.append(char)
+                i += 1
+                continue
+            if not in_code and line.startswith("<!--", i):
+                end = line.find("-->", i + 4)
+                if end < 0:
+                    in_comment = True
+                    i = length
+                    continue
+                i = end + 3
+                continue
+            line_out.append(char)
+            i += 1
+        out.append("".join(line_out))
+    return "".join(out)
+
+
 def convert_body(body: str, source_path: str, ledger: dict, assets_needed: set[str]) -> tuple[str, list[str]]:
     unresolved: list[str] = []
+    body = strip_html_comments(body)
     in_fence = False
     lines: list[str] = []
     for line in body.splitlines(keepends=True):
@@ -525,14 +590,22 @@ def convert_documents(repo: Path, manifest: dict, ledger: dict, stage_docs: Path
         text = source.read_text(encoding="utf-8", errors="replace")
         raw, body, _end = split_frontmatter(text)
         if raw is None:
-            raise ValueError(f"document has no frontmatter: {doc['source_path']}")
-        try:
-            data = parse_yaml_mapping(raw)
-        except Exception as exc:  # noqa: BLE001
-            raise ValueError(f"unparseable frontmatter: {doc['source_path']}: {exc}") from exc
-        provenance = data.get("docforge_provenance")
-        if not isinstance(provenance, dict) or provenance.get("schema") != SCHEMA_VERSION:
-            raise ValueError(f"provenance is not schema 2.0: {doc['source_path']}")
+            manifest_doc = doc.get("doc") or {}
+            provenance = manifest_doc.get("provenance")
+            if (
+                manifest_doc.get("provenance_mode") != "manifest"
+                or not isinstance(provenance, dict)
+                or provenance.get("schema") != SCHEMA_VERSION
+            ):
+                raise ValueError(f"document has no frontmatter: {doc['source_path']}")
+        else:
+            try:
+                data = parse_yaml_mapping(raw)
+            except Exception as exc:  # noqa: BLE001
+                raise ValueError(f"unparseable frontmatter: {doc['source_path']}: {exc}") from exc
+            provenance = data.get("docforge_provenance")
+            if not isinstance(provenance, dict) or provenance.get("schema") != SCHEMA_VERSION:
+                raise ValueError(f"provenance is not schema 2.0: {doc['source_path']}")
         mdx_body, unresolved = convert_body(body, doc["source_path"], ledger, assets_needed)
         h1_title = first_h1_title(body)
         if h1_title:
@@ -621,7 +694,16 @@ def validate_build(repo: Path, manifest: dict, content_dir: Path, assets_dir: Pa
                 if not (assets_dir / asset).is_file():
                     errors.append(f"missing asset in {page['output_path']}: {target}")
             else:
-                warnings.append(f"unresolved target in {page['output_path']}: {target}")
+                target_path = target.split("#", 1)[0]
+                normalized = posixpath.normpath(
+                    posixpath.join(DOC_PREFIX, posixpath.dirname(page["output_path"]), target_path)
+                )
+                if re.search(r"\.mdx?(?:#|$)", normalized) and (
+                    normalized.startswith(DOC_PREFIX) or "/" not in normalized
+                ):
+                    errors.append(f"unresolved internal link in {page['output_path']}: {target}")
+                else:
+                    warnings.append(f"unresolved target in {page['output_path']}: {target}")
     meta_paths = sorted((content_dir / "meta.json").parent.rglob("meta.json")) if (content_dir / "meta.json").exists() else []
     for meta_file in meta_paths:
         folder = str(meta_file.parent.relative_to(content_dir)).replace("\\", "/")

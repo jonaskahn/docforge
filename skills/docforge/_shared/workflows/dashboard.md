@@ -128,6 +128,10 @@ short grace period) and clears the PID/port state.
 - Outside code, `<` `>` `{` `}` are escaped to HTML entities so typed
   `<UPPER_SNAKE_CASE>` tokens and literal braces can never be parsed as JSX
   or expressions.
+- HTML comments outside code are removed: management markers such as
+  `<!-- docforge-children:start -->` never reach the rendered site, while the
+  content between the markers (for example the child table) is kept, and
+  comment text inside fenced or inline code is preserved verbatim.
 - GFM stays enabled: the app shell extends the Fumadocs default preset with
   `applyMdxPreset(...)` instead of replacing it, so Markdown tables render.
 - `import` / `export` statements outside code fences are rejected by the
@@ -140,6 +144,10 @@ short grace period) and clears the PID/port state.
   `/docs-assets/<path>`.
 - Anchors are derived from headings (`[#custom-id]` suffixes honored) and
   validated before the staged content is swapped in.
+- Unresolved internal Markdown links — targets that normalize inside `docs/`
+  or to a repository-root `.md` / `.mdx` file with no ledger entry — fail the
+  build; other unresolved targets (external trees such as `docs-portfolio/`)
+  are warnings.
 
 ## Route plan
 
@@ -148,8 +156,10 @@ file ending in `.md` / `.mdx` that live under `docs/` **or at the repository
 root** (a path with no `/`). Root-level documents (for example `README.md`,
 `CHANGELOG.md`, `CONTRIBUTING.md`, `AGENTS.md`, `SECURITY.md`) become pages
 under `/docs/root/<slug>` so `docs/` pages can link to them and resolve. Root
-files are only included when they carry docforge provenance (schema 2.0)
-frontmatter — local shims such as a gitignored `CLAUDE.local.md` are excluded.
+files are only included when they carry docforge provenance (schema 2.0) — in
+file frontmatter for section-provenance documents, or in the manifest for
+`provenance_mode: manifest` documents such as `AGENTS.md` — so local shims
+such as a gitignored `CLAUDE.local.md` are excluded.
 Machine JSON, planned/skipped docs, subdirectory-rooted docs outside `docs/`,
 and untracked Markdown are excluded.
 
