@@ -2,8 +2,64 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
+/* Bauhaus / German minimalist theme — black, white, one red accent.
+   Overrides the neutral preset's color tokens; later in the cascade wins. */
+@theme {
+  --font-sans: "Avenir Next", "Century Gothic", "Futura", "Helvetica Neue",
+    Helvetica, Arial, sans-serif;
+
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+
+  --color-fd-background: #ffffff;
+  --color-fd-foreground: #0a0a0a;
+  --color-fd-muted: #f5f5f0;
+  --color-fd-muted-foreground: #4a4a4a;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #0a0a0a;
+  --color-fd-card: #f5f5f0;
+  --color-fd-card-foreground: #0a0a0a;
+  --color-fd-border: hsla(0, 0%, 4%, 0.14);
+  --color-fd-primary: #e30613;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #f5f5f0;
+  --color-fd-secondary-foreground: #0a0a0a;
+  --color-fd-accent: hsla(355, 94%, 45%, 0.08);
+  --color-fd-accent-foreground: #0a0a0a;
+  --color-fd-ring: #e30613;
+}
+
+.dark {
+  --color-fd-background: #0a0a0a;
+  --color-fd-foreground: #ededed;
+  --color-fd-muted: #141414;
+  --color-fd-muted-foreground: hsla(0, 0%, 70%, 0.75);
+  --color-fd-popover: #141414;
+  --color-fd-popover-foreground: #ededed;
+  --color-fd-card: #141414;
+  --color-fd-card-foreground: #ededed;
+  --color-fd-border: hsla(0, 0%, 100%, 0.14);
+  --color-fd-primary: #ff4d4d;
+  --color-fd-primary-foreground: #0a0a0a;
+  --color-fd-secondary: #141414;
+  --color-fd-secondary-foreground: #ededed;
+  --color-fd-accent: hsla(355, 100%, 60%, 0.12);
+  --color-fd-accent-foreground: #ededed;
+  --color-fd-ring: #ff4d4d;
+}
+
 html {
   scrollbar-gutter: stable;
+}
+
+/* Numbers align on the grid: tabular figures in tables (ADRs, runbooks,
+   status matrices). */
+.prose table {
+  font-variant-numeric: tabular-nums;
 }
 
 html > body[data-scroll-locked] {

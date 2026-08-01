@@ -501,6 +501,20 @@ class DashboardBuildTests(unittest.TestCase):
             self.assertIn("UI by", layout)
             self.assertIn("https://www.fumadocs.dev/", layout)
 
+    def test_bauhaus_theme_applied(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
+            css = (repo / ".docforge" / "dashboard" / "app" / "global.css").read_text(encoding="utf-8")
+            self.assertIn("#e30613", css)
+            self.assertIn("--color-fd-primary: #e30613", css)
+            self.assertIn("--color-fd-background: #0a0a0a", css)
+            self.assertIn("--color-fd-background: #ffffff", css)
+            self.assertIn('"Avenir Next"', css)
+            self.assertIn("--radius-lg: 2px", css)
+            self.assertIn("font-variant-numeric: tabular-nums", css)
+
     def test_build_generates_dashboard_gitignore_rule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
