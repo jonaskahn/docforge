@@ -38,7 +38,7 @@ not flooded with `save-2.md`-style collisions.
 
 After the manifest tree has passed the plan gate and `flows_index` reaches its
 write turn, run `flow_index.py|js render --repo <repo>` to project that machine
-record into `docs/flows/INDEX.md`. Rendering is document writing and never
+record into `docs/flows/README.md`. Rendering is document writing and never
 precedes the plan gate.
 
 For GitNexus, export `Route`, `Process`, and `Community` properties through its

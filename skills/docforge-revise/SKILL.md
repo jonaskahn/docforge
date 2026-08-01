@@ -6,7 +6,7 @@ description: Structural refresh of Docforge documentation — revise all, a docs
 # Docforge Revise
 
 Slash command: `/docforge-revise`. Companion to `/docforge`. Shared cartridge:
-[`../docforge/_shared/`](../docforge/_shared/INDEX.md).
+[`../docforge/_shared/`](../docforge/_shared/README.md).
 
 ## Load order
 

@@ -23,9 +23,9 @@ Mechanical success does not complete a document; the independent audit in
 
 1. **Manifest agreement:** active manifest paths exactly equal the planned
    scaffold paths; every expected file exists and no fake dynamic seed exists.
-2. **Reachability:** every reader document is reachable from `docs/INDEX.md`
+2. **Reachability:** every reader document is reachable from `docs/README.md`
    within two links; portfolio content is reachable from
-   `docs-portfolio/INDEX.md`.
+   `docs-portfolio/README.md`.
 3. **Onboarding:** a competent new contributor can reach a verified local run
    without asking a human.
 4. **Location:** each fact is in the document whose reader question owns it.

@@ -3,7 +3,7 @@
   "type": "portfolio-decisions-index",
   "summary": "Selected children and one-line purpose",
   "contract_file": "content/portfolio/contracts/portfolio-decisions-index.md",
-  "path": "docs-portfolio/decisions/INDEX.md",
+  "path": "docs-portfolio/decisions/README.md",
   "group": "portfolio",
   "selection": {
     "mode": "static",

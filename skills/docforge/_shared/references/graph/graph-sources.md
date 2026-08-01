@@ -154,7 +154,7 @@ Before choosing flow documents, harvest the complete
 are grouped by `entryPointId`; they are candidate path evidence, not one
 document each. Understand Anything native flow nodes are confirmed entries,
 then its knowledge graph is scanned for additional candidates because a domain
-graph may cover only the main flows. The rendered `docs/flows/INDEX.md`
+graph may cover only the main flows. The rendered `docs/flows/README.md`
 matrix retains main and deferred candidates; only main entries become dynamic
 flow documents.
 

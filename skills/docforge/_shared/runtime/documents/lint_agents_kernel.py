@@ -10,12 +10,15 @@ still covers this file's generic checks (scaffold markers, empty headings, dead
 
 Checks, for the single AGENTS.md-shaped file given:
   * line count <= 100                                         (defect; 85-100 is a
-                                                                 non-fatal warning)
+                                                                  non-fatal warning)
   * line 1 is a level-1 heading, line 2 is non-heading prose   (defect)
   * every "## " heading matches "## <n>. <Title>"              (defect)
+  * every section title is 1-4 words, Title Case, and ends
+    with no "?"                                                 (defect)
   * no "### " heading outside section 6 (Absolute Rules)       (defect)
   * a bold "**tagline**" as the first non-blank line of every
     section                                                    (defect)
+  * every tagline is 5-12 words                                 (defect)
   * a "The test: ... ." line in every section except 2
     (Boundaries) and 6 (Absolute Rules)                        (defect)
   * no bare MUST/NEVER/ALWAYS outside section 6                (defect)
@@ -26,6 +29,11 @@ Checks, for the single AGENTS.md-shaped file given:
   * a provenance HTML comment in the first 10 lines            (defect)
   * every "@docs/agents/..." reference resolves to a file on
     disk, relative to --repo                                   (defect)
+  * every tagline carries a negation word ("No", "Not",
+    "Never", ...)                                               (warning)
+  * guidance sections (2, 5, 6) have at least half of their
+    "- " bullets starting with a negation/guard word            (warning)
+  * guidance bullets are 6-14 words                             (warning)
 
 Usage:
     python lint_agents_kernel.py --file AGENTS.md --repo .
@@ -44,6 +52,7 @@ from pathlib import Path
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
 H2_NUMBERED_RE = re.compile(r"^## (\d+)\. [A-Z]")
+H2_TITLE_RE = re.compile(r"^## \d+\.\s+(.*\S)\s*$")
 TAGLINE_RE = re.compile(r"^\*\*.+\*\*$")
 TEST_LINE_RE = re.compile(r"^The test: .+\.$")
 BARE_MODAL_RE = re.compile(r"(?<![\w-])(MUST|NEVER|ALWAYS)(?![\w-])")
@@ -53,6 +62,31 @@ AT_REF_RE = re.compile(r"@([\w./-]+\.md)")
 WEAK_PRONOUN_RE = re.compile(r" (you|we|I) ")
 
 EXEMPT_SECTIONS = ("2", "6")  # Boundaries, Absolute Rules — no "The test:" line required
+GUIDANCE_SECTIONS = ("2", "5", "6")  # Boundaries, Non-Obvious Conventions, Absolute Rules
+NEGATION_WORDS = ("no", "not", "don't", "never", "unless", "without", "except", "instead")
+GUARD_SINGLE_WORDS = {"no", "don't", "never", "if", "unless", "without", "avoid"}
+GUARD_PAIR_WORDS = {"must not", "do not"}
+MIN_TITLE_WORDS, MAX_TITLE_WORDS = 1, 4
+MIN_TAGLINE_WORDS, MAX_TAGLINE_WORDS = 5, 12
+MIN_BULLET_WORDS, MAX_BULLET_WORDS = 6, 14
+MIN_GUARD_RATIO = 0.5
+
+
+def _word_count(text: str) -> int:
+    return sum(1 for token in text.split() if re.search(r"[A-Za-z0-9]", token))
+
+
+def _is_guard_bullet(bullet: str) -> bool:
+    tokens = bullet.split()
+    if not tokens:
+        return False
+    first = tokens[0].strip(":;,.-").lower()
+    if first in GUARD_SINGLE_WORDS:
+        return True
+    if len(tokens) > 1:
+        pair = first + " " + tokens[1].strip(":;,.-").lower()
+        return pair in GUARD_PAIR_WORDS
+    return False
 
 
 def lint_agents_kernel(path: Path, repo: Path) -> dict:
@@ -114,8 +148,49 @@ def lint_agents_kernel(path: Path, repo: Path) -> dict:
         end = h2s[idx + 1][0] if idx + 1 < len(h2s) else n
         body = lines[i + 1:end]
         first_nonblank = next((l for l in body if l.strip()), "")
-        if not TAGLINE_RE.match(first_nonblank.strip()):
+
+        title_m = H2_TITLE_RE.match(lines[i])
+        if numbered and title_m:
+            title = title_m.group(1)
+            words = _word_count(title)
+            if words < MIN_TITLE_WORDS or words > MAX_TITLE_WORDS:
+                defects.append({"kind": "title-shape", "line": i + 1,
+                                "detail": f"{words} words, want {MIN_TITLE_WORDS}-{MAX_TITLE_WORDS}: {lines[i].strip()}"})
+            if title.rstrip().endswith("?"):
+                defects.append({"kind": "title-shape", "line": i + 1,
+                                "detail": f"title ends in '?': {lines[i].strip()}"})
+            if any(w[0].isalpha() and not w[0].isupper() for w in title.split()
+                   if re.search(r"[A-Za-z0-9]", w)):
+                defects.append({"kind": "title-shape", "line": i + 1,
+                                "detail": f"not Title Case: {lines[i].strip()}"})
+
+        first = first_nonblank.strip()
+        if not TAGLINE_RE.match(first):
             defects.append({"kind": "missing-tagline", "line": i + 1, "detail": lines[i].strip()})
+        else:
+            tagline = first[2:-2].strip()
+            words = _word_count(tagline)
+            if words < MIN_TAGLINE_WORDS or words > MAX_TAGLINE_WORDS:
+                defects.append({"kind": "tagline-length", "line": i + 1,
+                                "detail": f"{words} words, want {MIN_TAGLINE_WORDS}-{MAX_TAGLINE_WORDS}: {first}"})
+            low = tagline.lower()
+            if not any(re.search(rf"\b{re.escape(w)}\b", low) for w in NEGATION_WORDS):
+                warnings.append({"kind": "weak-tagline", "line": i + 1,
+                                 "detail": f"no negation word: {first}"})
+
+        if sec_no in GUIDANCE_SECTIONS:
+            bullets = [(i + 2 + bi, b.lstrip()[2:].strip()) for bi, b in enumerate(body) if b.lstrip().startswith("- ")]
+            if bullets:
+                guards = sum(1 for _bl, b in bullets if _is_guard_bullet(b))
+                if guards / len(bullets) < MIN_GUARD_RATIO:
+                    warnings.append({"kind": "low-negation-ratio", "line": i + 1,
+                                     "detail": f"section {sec_no}: {guards}/{len(bullets)} bullets start with a negation/guard"})
+                for bl, b in bullets:
+                    words = _word_count(b)
+                    if words < MIN_BULLET_WORDS or words > MAX_BULLET_WORDS:
+                        warnings.append({"kind": "bullet-length", "line": bl,
+                                         "detail": f"{words} words, want {MIN_BULLET_WORDS}-{MAX_BULLET_WORDS}: {b}"})
+
         if sec_no not in EXEMPT_SECTIONS:
             if not any(TEST_LINE_RE.match(l.strip()) for l in body):
                 defects.append({"kind": "missing-test-line", "line": i + 1, "detail": lines[i].strip()})

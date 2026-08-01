@@ -3,7 +3,7 @@
   "type": "flow-index",
   "summary": "Every evidence-backed candidate, normalized entry reference, area, confidence, reach, priority, and main/deferred/placeholder/documented/skipped status",
   "contract_file": "content/flows/flow-index.contract.md",
-  "path": "docs/flows/INDEX.md",
+  "path": "docs/flows/README.md",
   "group": "flows",
   "selection": {
     "mode": "static",

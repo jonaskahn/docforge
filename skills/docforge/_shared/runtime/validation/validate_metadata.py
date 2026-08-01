@@ -248,7 +248,7 @@ def validate() -> list[str]:
         and not any(part in ignored_dirs for part in path.relative_to(REPO_ROOT).parts)
     )
     if readmes:
-        errors.append(f"nested README.md files are obsolete; use INDEX.md: {', '.join(readmes)}")
+        errors.append(f"nested README.md files are obsolete; use README.md: {', '.join(readmes)}")
     forbidden_files = {
         "document" + "-templates.json",
         "generation" + "-status.json",

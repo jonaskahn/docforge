@@ -3,7 +3,7 @@
   "type": "ba-index",
   "summary": "Selected children and one-line purpose",
   "contract_file": "content/product/contracts/ba-index.md",
-  "path": "docs/product/business-analyst/INDEX.md",
+  "path": "docs/product/business-analyst/README.md",
   "group": "product",
   "selection": {
     "mode": "static",

@@ -107,7 +107,7 @@ class FlowIndexTests(unittest.TestCase):
                 self.assertTrue(all(len(row["evidence"][0]["terminalIds"]) == 3 for row in index["flows"]))
                 render = run(runtime, "flow_index", "render", "--repo", str(repo))
                 self.assertEqual(render.returncode, 0, render.stderr)
-                matrix = (repo / "docs/flows/INDEX.md").read_text()
+                matrix = (repo / "docs/flows/README.md").read_text()
                 self.assertIn("| deferred |", matrix)
                 indexes.append(index["flows"])
             self.assertEqual(indexes[0], indexes[1])
@@ -377,7 +377,7 @@ class FlowIndexTests(unittest.TestCase):
 
                 render = run(runtime, "flow_index", "render", "--repo", str(repo))
                 self.assertEqual(render.returncode, 0, render.stderr)
-                matrix = (repo / "docs/flows/INDEX.md").read_text(encoding="utf-8")
+                matrix = (repo / "docs/flows/README.md").read_text(encoding="utf-8")
                 self.assertIn("| Role |", matrix)
                 self.assertIn("| placeholder |", matrix)
                 self.assertIn(f"](./{index['flows'][0]['slug']}.md)", matrix)
@@ -510,7 +510,7 @@ class FlowIndexTests(unittest.TestCase):
 
                 render = run(runtime, "flow_index", "render", "--repo", str(repo))
                 self.assertEqual(render.returncode, 0, render.stderr)
-                matrix = (repo / "docs/flows/INDEX.md").read_text(encoding="utf-8")
+                matrix = (repo / "docs/flows/README.md").read_text(encoding="utf-8")
                 self.assertIn("## email", matrix)
                 self.assertIn("scheduled-reports.md", matrix)
 

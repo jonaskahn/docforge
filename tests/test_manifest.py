@@ -57,7 +57,7 @@ class ManifestSelectionTests(unittest.TestCase):
                             continue
                         parent = str(Path(selected).parent).replace(os.sep, "/")
                         while parent not in ("docs", "docs-portfolio", "."):
-                            self.assertIn(f"{parent}/INDEX.md", paths, (tier, profile, selected))
+                            self.assertIn(f"{parent}/README.md", paths, (tier, profile, selected))
                             parent = str(Path(parent).parent).replace(os.sep, "/")
 
     def test_every_tier_and_portfolio_layer(self) -> None:
@@ -184,11 +184,11 @@ class ManifestSelectionTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
             self.assertTrue({
-                "docs/product/business-analyst/INDEX.md",
+                "docs/product/business-analyst/README.md",
                 "docs/product/business-analyst/process-flows.md",
                 "docs/product/business-analyst/business-rules.md",
                 "docs/product/business-analyst/requirements-traceability.md",
-                "docs/product/product-owner/INDEX.md",
+                "docs/product/product-owner/README.md",
                 "docs/product/product-owner/feature-catalog.md",
                 "docs/product/product-owner/success-metrics.md",
                 "docs/product/product-owner/release-notes.md",
@@ -247,11 +247,11 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             source = repo / "source.txt"
             source.write_text("one\n", encoding="utf-8")
             content_hash = blob_hash(source.read_bytes())
-            doc = repo / "INDEX.md"
+            doc = repo / "README.md"
             doc.write_text(
                 markdown_with_provenance(
                     provenance(
-                        doc_id="root_readme", path="INDEX.md", tier="spine",
+                        doc_id="root_readme", path="README.md", tier="spine",
                         target_depth="overview", section_id="readme",
                         source_path="source.txt", source_blob=content_hash,
                     ),
@@ -267,10 +267,10 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 }},
                 "discovery": [],
                 "documents": [{
-                    "id": "root_readme", "type": "root-readme", "path": "INDEX.md",
+                    "id": "root_readme", "type": "root-readme", "path": "README.md",
                     "status": "complete", "provenance": {
                         **provenance(
-                            doc_id="root_readme", path="INDEX.md", tier="spine",
+                            doc_id="root_readme", path="README.md", tier="spine",
                             target_depth="overview", section_id="readme",
                             source_path="source.txt", source_blob=content_hash,
                         ),
@@ -763,12 +763,12 @@ Body.
             repo = Path(tmp)
             source = repo / "source.txt"
             source.write_text("flow\n", encoding="utf-8")
-            target = repo / "docs" / "flows" / "checkout" / "INDEX.md"
+            target = repo / "docs" / "flows" / "checkout" / "README.md"
             target.parent.mkdir(parents=True)
             target.write_text(
                 markdown_with_provenance(
                     provenance(
-                        doc_id="checkout", path="docs/flows/checkout/INDEX.md",
+                        doc_id="checkout", path="docs/flows/checkout/README.md",
                         tier="diligence", target_depth="deep-dive",
                         section_id="checkout", source_path="source.txt",
                         source_blob=blob_hash(source.read_bytes()),
@@ -778,7 +778,7 @@ Body.
                 encoding="utf-8",
             )
             document = {
-                "id": "checkout", "type": "flow", "path": "docs/flows/checkout/INDEX.md",
+                "id": "checkout", "type": "flow", "path": "docs/flows/checkout/README.md",
                 "group": "flows", "selection": {"origins": [], "evidence": []},
                 "status": "complete", "requires": ["flow_graph"], "scaffold_template": "generic.md",
                 "instruction_file": "flows.md", "target_depth": "deep-dive", "write_order": 1,
@@ -863,7 +863,7 @@ process.stdout.write(pf.emitYaml(value));
     def test_migrate_schema_less_doc_graph_snapshot_preserves_sections(self) -> None:
         blob = "8eb720c92a52ffc34673bc0e83b6b4d5ea714ee9"
         schema_less = {
-            "doc": "docs/architecture/concepts/INDEX.md",
+            "doc": "docs/architecture/concepts/README.md",
             "generated_at": "2026-07-27T00:00:00Z",
             "graph_snapshot": ".ua/knowledge-graph.json",
             "sections": [{
@@ -879,14 +879,14 @@ process.stdout.write(pf.emitYaml(value));
             "# Concepts\n",
             defaults={
                 "doc_id": "concepts_index",
-                "path": "docs/architecture/concepts/INDEX.md",
+                "path": "docs/architecture/concepts/README.md",
                 "tier": "diligence",
                 "target_depth": "orientation",
             },
         )
         self.assertEqual(migrated["schema"], SCHEMA_VERSION)
         self.assertEqual(migrated["doc_id"], "concepts_index")
-        self.assertEqual(migrated["path"], "docs/architecture/concepts/INDEX.md")
+        self.assertEqual(migrated["path"], "docs/architecture/concepts/README.md")
         self.assertEqual(migrated["generated_at"], "2026-07-27T00:00:00Z")
         self.assertEqual(migrated["tier"], "diligence")
         self.assertEqual(migrated["target_depth"], "orientation")
@@ -921,11 +921,11 @@ process.stdout.write(pf.emitYaml(value));
             concepts.mkdir(parents=True)
             for name in ("auth-rbac.md", "queue-system.md", "search-index.md", "kafka-integration.md"):
                 (concepts / name).write_text(f"# {name}\n", encoding="utf-8")
-            readme = concepts / "INDEX.md"
+            readme = concepts / "README.md"
             readme.write_text(
                 "---\n"
                 "docforge_provenance:\n"
-                "  doc: docs/architecture/concepts/INDEX.md\n"
+                "  doc: docs/architecture/concepts/README.md\n"
                 "  generated_at: 2026-07-27T00:00:00Z\n"
                 "  graph_snapshot: .ua/knowledge-graph.json\n"
                 "  sections:\n"
@@ -958,7 +958,7 @@ process.stdout.write(pf.emitYaml(value));
                 "documents": [{
                     "id": "concepts_index",
                     "type": "folder-index",
-                    "path": "docs/architecture/concepts/INDEX.md",
+                    "path": "docs/architecture/concepts/README.md",
                     "status": "complete",
                     "provenance": {},
                     "provenance_mode": "sections",
@@ -972,7 +972,7 @@ process.stdout.write(pf.emitYaml(value));
                 readme.write_text(
                     "---\n"
                     "docforge_provenance:\n"
-                    "  doc: docs/architecture/concepts/INDEX.md\n"
+                    "  doc: docs/architecture/concepts/README.md\n"
                     "  generated_at: 2026-07-27T00:00:00Z\n"
                     "  graph_snapshot: .ua/knowledge-graph.json\n"
                     "  sections:\n"
@@ -1023,7 +1023,7 @@ process.stdout.write(pf.emitYaml(value));
             legacy_provenance = {
                 "schema": "1.0",
                 "doc_id": "readme",
-                "path": "INDEX.md",
+                "path": "README.md",
                 "generated_at": "2026-07-27T09:12:44Z",
                 "tool_version": "2.0.0",
                 "tier": "spine",
@@ -1035,7 +1035,7 @@ process.stdout.write(pf.emitYaml(value));
                     "unresolved": [],
                 }],
             }
-            readme = repo / "INDEX.md"
+            readme = repo / "README.md"
             readme.write_text(
                 "---\n" + json.dumps({"docforge_provenance": legacy_provenance}, indent=2) + "\n---\n# Readme\n",
                 encoding="utf-8",
@@ -1052,7 +1052,7 @@ process.stdout.write(pf.emitYaml(value));
                 "discovery": [],
                 "documents": [
                     {
-                        "id": "readme", "type": "root-readme", "path": "INDEX.md",
+                        "id": "readme", "type": "root-readme", "path": "README.md",
                         "status": "complete", "provenance": legacy_provenance,
                         "provenance_mode": "sections", "target_depth": "overview",
                     },

@@ -25,6 +25,8 @@ parity directly.
   exit codes, and legacy-mode field-leak guards.
 - `test_cli_parity.py` — same command, same fixture, across Python and Node;
   compares exit code, stdout, and produced files.
+- `test_agents_kernel.py` — `lint_agents_kernel` rubric: clean golden
+  AGENTS.md guard, per-check dirty fixtures, and Python/Node parity.
 - `test_generation.py` — deterministic router generation: `--check` passes on
   current output, repeated `--write` produces identical bytes, manual drift
   is detected without writing, no timestamps leak into generated files.

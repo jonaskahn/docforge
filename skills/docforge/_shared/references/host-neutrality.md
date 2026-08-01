@@ -26,7 +26,7 @@ The commands `git`, `git log`, `git blame`, `git tag`, and semantic version tags
 
 Exactly three places may contain forge-specific detail. Everywhere else stays neutral.
 
-**1. `docs/contributing/INDEX.md`** — one clearly marked section:
+**1. `docs/contributing/README.md`** — one clearly marked section:
 
 ```markdown
 ## Platform specifics
@@ -59,7 +59,7 @@ Platform-specific alert syntaxes (`> [!WARNING]`, `:::danger`, `{% hint %}`) ren
 
 **Anchors.** Heading-derived anchors differ subtly between renderers. For links that must not break, add an explicit anchor (`<a id="stable-name"></a>`) above the heading.
 
-**Badges.** Status badges are host- and vendor-coupled by nature. Keep them to the root `INDEX.md`, where the cost of fixing them after a migration is one file.
+**Badges.** Status badges are host- and vendor-coupled by nature. Keep them to the root `README.md`, where the cost of fixing them after a migration is one file.
 
 ## Auditing for leakage
 

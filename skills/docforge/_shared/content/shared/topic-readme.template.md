@@ -17,7 +17,7 @@ docforge_provenance:
 # {{Topic name — a flow or a subsystem, in business or plain-technical words}}
 
 <!-- This template is used both as a flat file (docs/flows/<flow>.md) and, once a
-     deep-dive subfile is written, as docs/flows/<flow>/INDEX.md. Do not create the
+     deep-dive subfile is written, as docs/flows/<flow>/README.md. Do not create the
      folder or the "Go deeper" links below until the linked subfile is written in
      this same pass — see document-composition.md. -->
 

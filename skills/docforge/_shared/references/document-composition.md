@@ -16,14 +16,14 @@ more than one audience need this exact fact?
 
 | Class | Serves | Structure | Examples |
 |---|---|---|---|
-| **Aligned** — write once, many read | 2+ audiences need the same subject | Flat file by default; promote to a topic folder (shared `INDEX.md` + audience deep-dive subfiles) only in the pass that writes real subfile content | flow documents, architecture concepts, `product/overview.md`, `reference/limitations.md` |
+| **Aligned** — write once, many read | 2+ audiences need the same subject | Flat file by default; promote to a topic folder (shared `README.md` + audience deep-dive subfiles) only in the pass that writes real subfile content | flow documents, architecture concepts, `product/overview.md`, `reference/limitations.md` |
 | **Audience-specific** — one reader | exactly one audience | A plain document in that audience's folder | PO `success-metrics.md`, `release-notes.md`; BA `requirements-traceability.md`; `engineering/setup.md`; `operations/runbooks/`; `security/threat-model.md` |
 | **Shared-fact spine** — single source | everyone, as lookup not narrative | One document, stated once, linked everywhere | `reference/glossary.md`, `architecture/dependencies.md`, `reference/configuration.md` |
 
 **Decision rule (per document and per section):**
 - More than one audience needs this exact fact? **No** → audience-specific. **Yes** → continue.
 - Is it a lookup fact (term, value, code)? **Yes** → shared-fact spine. **No** → aligned.
-- Is it a warning or critical constraint? → the topic `INDEX.md` regardless.
+- Is it a warning or critical constraint? → the topic `README.md` regardless.
 
 BA and PO stay distinct audience-specific packs: BA owns precise business-rule
 logic and requirement traceability; PO owns feature value, sequencing, and
@@ -54,7 +54,7 @@ limitations, or glossary definitions.
 | Feature mechanism | flow's `engineering.md`, once promoted | flow document carries a one-line gist + link |
 | Success metric / KPI target | PO `success-metrics.md` | BA omits; does not cross-link |
 | Roadmap timing | `product/roadmap.md` | PO README links; does not duplicate |
-| Warning / critical constraint | topic `INDEX.md` | subfile may expand it |
+| Warning / critical constraint | topic `README.md` | subfile may expand it |
 | Agent-specific non-obvious convention | `AGENTS.md` or `docs/agents/patterns.md` | nowhere else |
 | What the repository is built with | `reference/tech-stack.md` | architecture and setup link; do not restate |
 | What it depends on operationally and what breaks | `architecture/dependencies.md` (`dependencies-inventory`) | tech-stack omits failure framing |
@@ -63,7 +63,7 @@ limitations, or glossary definitions.
 
 A flow or concept begins as one flat file, scaffolded from
 [`topic-readme.md`](../content/shared/topic-readme.template.md). Promote it to
-`<topic>/INDEX.md` only in the same operation that writes at least one real
+`<topic>/README.md` only in the same operation that writes at least one real
 deep-dive sibling, scaffolded from
 [`audience-deepdive.md`](../content/shared/audience-deepdive.template.md) (its
 comment block shapes the file per audience — business-analyst.md,

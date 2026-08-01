@@ -11,7 +11,7 @@ docs/
 ├── product/
 │   ├── quickstart.md           install to first working use
 │   └── migration/              one guide per major version transition
-│       ├── INDEX.md
+│       ├── README.md
 │       └── v1-to-v2.md
 ├── reference/
 │   ├── api.md                  generated reference + the public/internal rule

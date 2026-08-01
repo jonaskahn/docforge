@@ -10,7 +10,7 @@ control is effective merely because related code exists.
 ```text
 SECURITY.md                                # reporting scope and safe harbor
 docs/security/
-├── INDEX.md
+├── README.md
 ├── threat-model.md
 ├── data-handling.md                       # selected when data handling is evidenced
 └── <surface-specific control document>    # selected by shape and evidence
@@ -23,7 +23,7 @@ coverage of absent surfaces.
 
 ## Content ownership
 
-### `SECURITY.md` and `INDEX.md`
+### `SECURITY.md` and `README.md`
 
 `SECURITY.md` owns supported scope, reporting, response expectations, and safe
 harbor. The security index routes to the review documents that exist. Neither

@@ -1,7 +1,7 @@
 # Runtime
 
 Implementations behind every public CLI launcher under
-[`cli/`](cli/INDEX.md). Business logic lives in the subsystem folders below;
+[`cli/`](cli/README.md). Business logic lives in the subsystem folders below;
 `cli/python/` and `cli/js/` hold only thin re-exports.
 
 ## Load this when
@@ -14,12 +14,12 @@ Implementations behind every public CLI launcher under
 
 ## Contents
 
-- [`cli/`](cli/INDEX.md) — public launchers, split by language.
+- [`cli/`](cli/README.md) — public launchers, split by language.
 - `common/` — shared helpers: `_util`, `manifest_deps`,
   `provenance_frontmatter`.
 - `catalog/` — catalog query and profile detection: `query_catalog`,
   `detect_profiles`, `discovery_gate`.
-- [`graph/`](graph/INDEX.md) — graph-provider adapters, storage, and
+- [`graph/`](graph/README.md) — graph-provider adapters, storage, and
   precondition checks.
 - `flows/` — flow-index harvesting and provisional derivation: `flow_index`,
   `derive_flow_graph`.

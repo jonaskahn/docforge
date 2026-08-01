@@ -13,7 +13,7 @@ CLAUDE.md
 CLAUDE.local.md
 .claude/settings.json
 docs/agents/
-├── INDEX.md
+├── README.md
 ├── architecture.md
 ├── patterns.md
 ├── testing.md
@@ -38,7 +38,7 @@ require `flow_graph`. A missing flow graph delays two views, not the whole profi
 Keep a small root kernel: repository map, verified commands, validation rules,
 critical constraints, and links to deeper context. It is exempt from
 frontmatter, records provenance in the manifest, and must pass the dedicated
-size/content lint.
+`lint_agents_kernel` size/content rubric.
 
 ### Fixed shims and settings
 
@@ -72,3 +72,28 @@ Retrieve the smallest structural context from the code graph, and use flow data 
 `flow.md` and `glossary.md` (see [`graph-sources.md`](../graph/graph-sources.md)). Convert
 raw graph nodes into durable paths, responsibilities, commands, constraints, and links; never
 paste raw graph schemas or volatile line numbers.
+
+### Non-obvious conventions
+
+§5 of the kernel exists only for surprises the graph actually surfaced — omit the
+section (heading included) when nothing qualifies. Mine the *topology*, not the
+names: every bullet must trace to a real graph edge, and each claim is checked
+against the graph before it is written.
+
+Signals to look for, in order of evidence strength:
+
+- **Cross-layer import anomalies** — edges that occur once or twice between
+  layers that otherwise never talk;
+- **Naming deviators within a layer** — files whose names do not match the
+  layer's modal suffix or pattern;
+- **Layer/path disagreements** — a file's location contradicts its graph
+  classification (e.g. a source file parked under `tests/`);
+- **Dependency-direction violations** — upward imports against the layer
+  precedence the module map states;
+- **Recurring return-shape / naming signals** — patterns repeated across
+  non-generic function summaries (e.g. every factory returns a tuple in the
+  same order).
+
+Rank candidates by rarity and traceability, keep only the top few, and cap the
+bullet count to fit the kernel's `lint_agents_kernel` line budget. Never
+restate a convention a human architecture document already owns — link instead.

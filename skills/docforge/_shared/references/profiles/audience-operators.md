@@ -9,11 +9,11 @@ or assumed ownership into facts.
 
 ```text
 docs/operations/
-├── INDEX.md
+├── README.md
 ├── deployment.md                         # selected when deployment evidence exists
 ├── observability.md                      # selected when signals or alerts exist
 ├── runbooks/
-│   ├── INDEX.md
+│   ├── README.md
 │   └── {incident-or-task}.md             # dynamic; evidenced scenarios only
 └── <shape-specific operations documents> # selected by catalog conditions
 ```
@@ -25,7 +25,7 @@ evidence; an empty operational taxonomy is not a useful deliverable.
 
 ## Content ownership
 
-### `INDEX.md`
+### `README.md`
 
 Route an operator from routine delivery to observability and scenario-specific
 runbooks. State the system boundary and link to the security posture for access

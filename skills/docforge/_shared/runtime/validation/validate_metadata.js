@@ -267,7 +267,7 @@ function validate() {
     }
   }
   const readmes = []; collectReadmes(REPO_ROOT, readmes);
-  if (readmes.length) errors.push(`nested README.md files are obsolete; use INDEX.md: ${readmes.sort().join(", ")}`);
+  if (readmes.length) errors.push(`nested README.md files are obsolete; use README.md: ${readmes.sort().join(", ")}`);
   const forbidden = new Set(["document" + "-templates.json", "generation" + "-status.json", "status" + "-schema.json", "template" + "-schema.json"]);
   const present = fs.readdirSync(metadata).filter((name) => forbidden.has(name)).sort();
   if (present.length) errors.push(`obsolete metadata files remain: ${present.join(", ")}`);

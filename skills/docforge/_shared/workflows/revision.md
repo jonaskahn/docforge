@@ -24,8 +24,8 @@ apply in scope:
    documents, collect their catalog `selection.audiences` and prompt via [`intake.md`](intake.md)
    (Output audience) before writing; do not silent-add audiences.
 4. **Update the big picture** — refresh owning indexes and overview docs
-   affected by adds or rewires (for example `docs/INDEX.md`, area READMEs,
-   `docs/flows/INDEX.md`, `system-overview` when selected) so the tree and
+   affected by adds or rewires (for example `docs/README.md`, area READMEs,
+   `docs/flows/README.md`, `system-overview` when selected) so the tree and
    navigation stay coherent.
 5. **Add connections** — update cross-links, flow-index composition /
    families, and related-document pointers so new or reorganized flows and
@@ -115,7 +115,7 @@ directly with `scaffold_docs --dry-run --revise`.
 | Flag | Effect on revise |
 |---|---|
 | `--plan-only` | Run migrate, staleness sync, detect/catalog, suitable-missing-audiences prompt, and show the structure update / dry-run tree; stop before writing or re-grounding document bodies |
-| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, manifest initialization, root `INDEX.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](flags.md)) |
+| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, manifest initialization, root `README.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](flags.md)) |
 
 Flags combine with a scope argument, e.g.
 `/docforge-revise flow --plan-only`.
@@ -207,7 +207,7 @@ still `FRESH`.
      rework to `PARTIAL` / `UNTRACKED` sections, but still update connection,
      composition, and cross-link sections when the flow index or neighbors
      changed, even if blobs are `FRESH`.
-7. Refresh the big picture: render `docs/flows/INDEX.md`, and update any
+7. Refresh the big picture: render `docs/flows/README.md`, and update any
    selected overview / index docs whose flow counts or links changed
    (for example `system-overview` when selected).
 8. Add any other missing flow-related dynamic documents required by the

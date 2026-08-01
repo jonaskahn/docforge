@@ -276,7 +276,7 @@ def add_ancestor_indexes(catalog: dict, selected: list[dict]) -> None:
             path = PurePosixPath(child["path"])
             parent = path.parent
             while str(parent) not in (".", ""):
-                candidate = str(parent / "INDEX.md")
+                candidate = str(parent / "README.md")
                 definition = definitions.get(candidate)
                 if definition and candidate not in selected_paths:
                     selected.append(make_document(

@@ -3,7 +3,7 @@
   "type": "po-index",
   "summary": "Selected children and one-line purpose",
   "contract_file": "content/product/contracts/po-index.md",
-  "path": "docs/product/product-owner/INDEX.md",
+  "path": "docs/product/product-owner/README.md",
   "group": "product",
   "selection": {
     "mode": "static",

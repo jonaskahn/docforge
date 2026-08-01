@@ -17,4 +17,4 @@ Root-level entrypoints: README, SKILL.md, and package descriptors.
 
 ## Boundaries
 
-Owns contracts, instructions, and templates used exclusively by `root` documents. Artifacts used by more than one group live in [`../shared/`](../shared/INDEX.md) instead.
+Owns contracts, instructions, and templates used exclusively by `root` documents. Artifacts used by more than one group live in [`../shared/`](../shared/README.md) instead.

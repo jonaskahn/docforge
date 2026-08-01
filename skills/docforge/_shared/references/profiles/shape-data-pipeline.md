@@ -11,7 +11,7 @@ docs/
 ├── architecture/
 │   ├── data-flow.md            the stage map — sources through to destinations
 │   └── contracts/              one file per input source and output dataset
-│       ├── INDEX.md
+│       ├── README.md
 │       └── <dataset-name>.md
 ├── engineering/
 │   └── data-quality.md         validation, tests, what a failure blocks

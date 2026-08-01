@@ -70,6 +70,9 @@ For the next document in `write_order`:
    sources and leave FRESH sections' provenance rows unchanged.
 5. Set it `generated`.
 6. Run the document linter and any audit-profile-specific mechanical checks.
+   For the `agents-kernel` output (`AGENTS.md`, a `SPECIAL_DOC_OUTPUTS` member
+   that `lint_document` skips), the mechanical gate is
+   `lint_agents_kernel --file <path> --repo <root>` in place of `lint_document`.
 7. Independently audit it (below).
 8. Record the result:
 
@@ -100,9 +103,11 @@ passing `subagent` or `cold-pass` audit record.
 
 When supported, dispatch the `docforge-audit` fresh artifact-only subagent.
 Give it the artifact, its catalog contract, target depth, relevant quality
-checks, and cited sources—no writer reasoning. When subagents are unavailable,
-perform a separate cold, artifact-only pass and record `mode: cold-pass`.
-Mechanical checks alone never produce a completion verdict. Full audit procedure:
+checks, and cited sources—no writer reasoning. For the `agents-kernel` output,
+its mechanical gate is `lint_agents_kernel`, not `lint_document`. When
+subagents are unavailable, perform a separate cold, artifact-only pass and
+record `mode: cold-pass`. Mechanical checks alone never produce a completion
+verdict. Full audit procedure:
 [`../references/document-audit.md`](../references/document-audit.md).
 
 Independent artifact-only audits may run concurrently, but their manifest

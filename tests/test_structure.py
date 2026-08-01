@@ -2,7 +2,7 @@
 
 Coverage grows phase by phase per the context-bounded refactor: budget/router/
 link checks are added once SKILL.md and the catalog routers actually exist in
-their target shape (see tests/INDEX.md).
+their target shape (see tests/README.md).
 """
 
 from __future__ import annotations

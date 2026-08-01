@@ -41,7 +41,7 @@ Actual cross-repository decisions are dynamic documents under
 --type epic`) when a reviewer names an initiative and the repos it spans —
 automatic inference across siblings is deferred.
 
-- `INDEX.md` is the platform one-pager and routes to every portfolio artifact.
+- `README.md` is the platform one-pager and routes to every portfolio artifact.
 - `repo-inventory.md` records every mechanically discovered member, membership
   evidence, baseline status, and review disposition.
 - `system-context.md` shows the platform boundary, deployable members, shared

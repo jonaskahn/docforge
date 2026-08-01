@@ -85,11 +85,11 @@ rename must not falsify this. Link the generated schema if one exists.}}
 ## Significant subsystems
 
 The ones worth a full deep-dive get their own folder under
-[concepts/](concepts/INDEX.md):
+[concepts/](concepts/README.md):
 
 | Subsystem | Deep-dive |
 |---|---|
-| {{name}} | [concepts/{{slug}}/](concepts/{{slug}}/INDEX.md) |
+| {{name}} | [concepts/{{slug}}/](concepts/{{slug}}/README.md) |
 
 ## Cross-cutting concerns
 

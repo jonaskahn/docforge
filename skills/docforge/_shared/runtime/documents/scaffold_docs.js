@@ -81,7 +81,7 @@ function scaffoldProvenance(doc, manifest) {
 function isDirectChild(directory, candidate) {
   const relative = path.posix.relative(directory, candidate.path);
   const parts = relative.split("/");
-  return !relative.startsWith("..") && (parts.length === 1 || (parts.length === 2 && parts[1] === "INDEX.md"));
+  return !relative.startsWith("..") && (parts.length === 1 || (parts.length === 2 && parts[1] === "README.md"));
 }
 function indexBody(doc, manifest) {
   const directory = posixDirname(doc.path);
@@ -159,7 +159,7 @@ function requiredIndexes(doc, manifest) {
   const ancestors = [];
   let parent = posixDirname(doc.path);
   while (parent && parent !== ".") {
-    ancestors.push(`${parent}/INDEX.md`);
+    ancestors.push(`${parent}/README.md`);
     parent = posixDirname(parent);
   }
   const byPath = Object.fromEntries(activeDocuments(manifest).map((item) => [item.path, item]));
@@ -351,8 +351,8 @@ function audit(repo, manifest) {
     const folders = new Set([...expected].filter((value) => value.startsWith(prefix)).map(posixDirname));
     for (const folder of [...folders].sort()) {
       if (folder === prefix.replace(/\/$/, "")) continue;
-      if (expected.has(`${folder}/INDEX.md`)) {
-        const children = [...expected].filter((value) => posixDirname(value) === folder && !value.endsWith("/INDEX.md"));
+      if (expected.has(`${folder}/README.md`)) {
+        const children = [...expected].filter((value) => posixDirname(value) === folder && !value.endsWith("/README.md"));
         if (!children.length) findings["folder-only promotion"].push(folder);
       }
     }

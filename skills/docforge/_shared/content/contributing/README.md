@@ -15,4 +15,4 @@ Contribution guidelines and root-level contributor docs.
 
 ## Boundaries
 
-Owns contracts, instructions, and templates used exclusively by `contributing` documents. Artifacts used by more than one group live in [`../shared/`](../shared/INDEX.md) instead.
+Owns contracts, instructions, and templates used exclusively by `contributing` documents. Artifacts used by more than one group live in [`../shared/`](../shared/README.md) instead.

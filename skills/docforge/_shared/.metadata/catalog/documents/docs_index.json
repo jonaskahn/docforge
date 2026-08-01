@@ -3,7 +3,7 @@
   "type": "docs-index",
   "summary": "Selected children and one-line purpose",
   "contract_file": "content/root/docs-index.contract.md",
-  "path": "docs/INDEX.md",
+  "path": "docs/README.md",
   "group": "root",
   "selection": {
     "mode": "static",

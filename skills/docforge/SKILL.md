@@ -6,7 +6,7 @@ description: Catalog-driven repository documentation with bounded repository-evi
 # Docforge
 
 Slash command: `/docforge`. Fresh-start documentation mode: plan and write new
-documentation from repository evidence. Shared cartridge: [`./_shared/`](./_shared/INDEX.md).
+documentation from repository evidence. Shared cartridge: [`./_shared/`](./_shared/README.md).
 
 ## Load order
 
@@ -17,7 +17,7 @@ documentation from repository evidence. Shared cartridge: [`./_shared/`](./_shar
 3. [`./_shared/retrieval.md`](./_shared/retrieval.md) — catalog retrieval
    protocol.
 4. Select a workflow from
-   [`./_shared/workflows/INDEX.md`](./_shared/workflows/INDEX.md).
+   [`./_shared/workflows/README.md`](./_shared/workflows/README.md).
 5. Load [`./_shared/ownership.md`](./_shared/ownership.md) when resolving
    which file owns a rule.
 

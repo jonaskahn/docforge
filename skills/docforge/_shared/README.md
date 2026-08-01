@@ -25,11 +25,11 @@ inline fallback in each workflow.
 
 | Path | Owns |
 |---|---|
-| [`workflows/`](workflows/INDEX.md) | Step-by-step procedure by invocation |
-| [`references/`](references/INDEX.md) | Owned policy prose |
-| [`content/`](content/INDEX.md) | Contracts, instructions, templates |
-| [`runtime/cli/`](runtime/cli/INDEX.md) | Public Python/Node launchers |
-| [`runtime/`](runtime/INDEX.md) | Implementation behind launchers |
+| [`workflows/`](workflows/README.md) | Step-by-step procedure by invocation |
+| [`references/`](references/README.md) | Owned policy prose |
+| [`content/`](content/README.md) | Contracts, instructions, templates |
+| [`runtime/cli/`](runtime/cli/README.md) | Public Python/Node launchers |
+| [`runtime/`](runtime/README.md) | Implementation behind launchers |
 | [`.metadata/`](.metadata/) | Catalog, schemas, profiles |
 
 Tools run with this directory as the cartridge root. The agent locks one

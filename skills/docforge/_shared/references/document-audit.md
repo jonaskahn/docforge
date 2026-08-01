@@ -36,3 +36,8 @@ Record the result with `manage_manifest audit`. A failure puts the document in
 `needs_review`. `manage_manifest set --status complete` rejects a document
 without a passing `subagent` or `cold-pass` audit record. Mechanical lint alone
 cannot produce PASS.
+
+AGENTS.md-shaped outputs (`AGENTS.md`, a `SPECIAL_DOC_OUTPUTS` member that
+`lint_document` skips) are linted by `lint_agents_kernel` instead; its defects
+are mechanical failures that block `PASS`. Fixed shims are emitted literally
+and carry no rubric lint.

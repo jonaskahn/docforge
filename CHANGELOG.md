@@ -1,5 +1,23 @@
 # Changelog
 
+## Enforced coding-agents kernel lint
+
+- Wired the orphaned `lint_agents_kernel` into the completion gate: the
+  `docforge-audit` mechanical gate now runs it in place of `lint_document` for
+  AGENTS.md-shaped outputs, documented end to end in `docforge-audit`,
+  `document-audit`, `ownership`, the coding-agents audience profile, and
+  `writing.md`; fixed shims remain literal and unlinted by design.
+- Strengthened `lint_agents_kernel` (Python/Node parity) with hard rubric
+  defects `title-shape` (1–4 words, Title Case, no trailing `?`) and
+  `tagline-length` (5–12 words), plus advisory warnings `weak-tagline`,
+  `low-negation-ratio`, and `bullet-length` scoped to guidance sections
+  2/5/6 — the shipped kernel template stays clean.
+- Added a topology-derived "Non-obvious conventions" evidence recipe to the
+  coding-agents audience profile (§5 no longer a vibe: every bullet traces to
+  a graph edge, linked instead of restated when a human doc owns it).
+- Added `tests/test_agents_kernel.py` (clean golden fixture + per-check dirty
+  fixtures, Python/Node parity asserted).
+
 ## Two-mode fluency and de-duplication pass
 
 - Standardized mode terminology to canonical "fresh start" for `/docforge` vs "revise" for `/docforge-revise`.
@@ -17,7 +35,7 @@
   GitNexus, and CodeGraph are equally trusted for `code_graph`. Native
   `flow_graph` remains UA/GitNexus only; CodeGraph-only runs schedule
   Docforge-derived flows.
-- Existing root `INDEX.md` requires explicit migrate / skip / rewrite —
+- Existing root `README.md` requires explicit migrate / skip / rewrite —
   no silent overwrite with the `root_readme` template.
 - Keep a single tree for Agent Skills and Claude Code: root [`skills/`](skills/)
   and [`agents/`](agents/). Marketplace entry uses an HTTPS git URL plugin
@@ -70,8 +88,8 @@ move.
   `manifest`, `documents`, `portfolio`, `validation`, `migrations`).
   `scripts/*.py`/`*.js` are now thin launchers that import and delegate to
   the runtime implementation — never business logic.
-- Generated routers (`.metadata/catalog/INDEX.md`,
-  `documents/INDEX.md`, and category `index.json`/`INDEX.md` pairs) are
+- Generated routers (`.metadata/catalog/README.md`,
+  `documents/README.md`, and category `index.json`/`README.md` pairs) are
   produced deterministically by the new `scripts/generate_indexes.py`/`.js`.
 
 ### Stable public interfaces (unchanged)

@@ -115,7 +115,7 @@ def index_body(doc: dict, manifest: dict) -> str:
             relative = candidate_path.relative_to(directory)
         except ValueError:
             continue
-        if len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "INDEX.md"):
+        if len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md"):
             children.append(candidate)
     lines = [
         f"# {title_for(doc)}",
@@ -198,7 +198,7 @@ def required_indexes(doc: dict, manifest: dict) -> list[dict]:
     ancestors = []
     parent = doc_path.parent
     while str(parent) not in ("", "."):
-        ancestors.append((parent / "INDEX.md").as_posix())
+        ancestors.append((parent / "README.md").as_posix())
         parent = parent.parent
     by_path = {item["path"]: item for item in active_documents(manifest)}
     indexes = [by_path[path] for path in reversed(ancestors) if path in by_path and path != doc["path"]]
@@ -407,10 +407,10 @@ def audit(repo: Path, manifest: dict) -> int:
         for folder in sorted(folders):
             if folder == prefix.rstrip("/"):
                 continue
-            if f"{folder}/INDEX.md" in expected:
+            if f"{folder}/README.md" in expected:
                 children = [
                     path for path in expected
-                    if str(PurePosixPath(path).parent) == folder and not path.endswith("/INDEX.md")
+                    if str(PurePosixPath(path).parent) == folder and not path.endswith("/README.md")
                 ]
                 if not children:
                     findings["folder-only promotion"].append(folder)

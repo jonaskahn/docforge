@@ -13,9 +13,12 @@
  *                                                                  non-fatal warning)
  *   * line 1 is a level-1 heading, line 2 is non-heading prose   (defect)
  *   * every "## " heading matches "## <n>. <Title>"              (defect)
+ *   * every section title is 1-4 words, Title Case, and ends
+ *     with no "?"                                                 (defect)
  *   * no "### " heading outside section 6 (Absolute Rules)       (defect)
  *   * a bold "**tagline**" as the first non-blank line of every
  *     section                                                    (defect)
+ *   * every tagline is 5-12 words                                 (defect)
  *   * a "The test: ... ." line in every section except 2
  *     (Boundaries) and 6 (Absolute Rules)                        (defect)
  *   * no bare MUST/NEVER/ALWAYS outside section 6                (defect)
@@ -26,6 +29,11 @@
  *   * a provenance HTML comment in the first 10 lines            (defect)
  *   * every "@docs/agents/..." reference resolves to a file on
  *     disk, relative to --repo                                   (defect)
+ *   * every tagline carries a negation word ("No", "Not",
+ *     "Never", ...)                                               (warning)
+ *   * guidance sections (2, 5, 6) have at least half of their
+ *     "- " bullets starting with a negation/guard word            (warning)
+ *   * guidance bullets are 6-14 words                             (warning)
  *
  * Usage:
  *   node lint_agents_kernel.js --file AGENTS.md --repo .
@@ -39,6 +47,7 @@ const path = require("path");
 
 const HEADING_RE = /^(#{1,6})\s+(.*\S)\s*$/;
 const H2_NUMBERED_RE = /^## (\d+)\. [A-Z]/;
+const H2_TITLE_RE = /^## \d+\.\s+(.*\S)\s*$/;
 const TAGLINE_RE = /^\*\*.+\*\*$/;
 const TEST_LINE_RE = /^The test: .+\.$/;
 const BARE_MODAL_RE = /(?<![\w-])(MUST|NEVER|ALWAYS)(?![\w-])/;
@@ -48,6 +57,34 @@ const AT_REF_RE = /@([\w./-]+\.md)/g;
 const WEAK_PRONOUN_RE = / (you|we|I) /;
 
 const EXEMPT_SECTIONS = ["2", "6"]; // Boundaries, Absolute Rules — no "The test:" line required
+const GUIDANCE_SECTIONS = ["2", "5", "6"]; // Boundaries, Non-Obvious Conventions, Absolute Rules
+const NEGATION_WORDS = ["no", "not", "don't", "never", "unless", "without", "except", "instead"];
+const GUARD_SINGLE_WORDS = new Set(["no", "don't", "never", "if", "unless", "without", "avoid"]);
+const GUARD_PAIR_WORDS = new Set(["must not", "do not"]);
+const MIN_TITLE_WORDS = 1, MAX_TITLE_WORDS = 4;
+const MIN_TAGLINE_WORDS = 5, MAX_TAGLINE_WORDS = 12;
+const MIN_BULLET_WORDS = 6, MAX_BULLET_WORDS = 14;
+const MIN_GUARD_RATIO = 0.5;
+
+function wordCount(text) {
+  let count = 0;
+  for (const token of text.split(/\s+/)) {
+    if (/[A-Za-z0-9]/.test(token)) count++;
+  }
+  return count;
+}
+
+function isGuardBullet(bullet) {
+  const tokens = bullet.split(/\s+/).filter(Boolean);
+  if (!tokens.length) return false;
+  const first = tokens[0].replace(/^[:;,.-]+|[:;,.-]+$/g, "").toLowerCase();
+  if (GUARD_SINGLE_WORDS.has(first)) return true;
+  if (tokens.length > 1) {
+    const pair = first + " " + tokens[1].replace(/^[:;,.-]+|[:;,.-]+$/g, "").toLowerCase();
+    return GUARD_PAIR_WORDS.has(pair);
+  }
+  return false;
+}
 
 function checkAgentsKernel(filePath, repoDir) {
   const text = fs.readFileSync(filePath, "utf8");
@@ -120,9 +157,58 @@ function checkAgentsKernel(filePath, repoDir) {
     const end = idx + 1 < h2s.length ? h2s[idx + 1].index : n;
     const body = lines.slice(i + 1, end);
     const firstNonblank = body.find((l) => l.trim()) || "";
-    if (!TAGLINE_RE.test(firstNonblank.trim())) {
-      defects.push({ kind: "missing-tagline", line: i + 1, detail: lines[i].trim() });
+
+    const titleM = lines[i].match(H2_TITLE_RE);
+    if (numbered && titleM) {
+      const title = titleM[1];
+      const words = wordCount(title);
+      if (words < MIN_TITLE_WORDS || words > MAX_TITLE_WORDS) {
+        defects.push({ kind: "title-shape", line: i + 1, detail: `${words} words, want ${MIN_TITLE_WORDS}-${MAX_TITLE_WORDS}: ${lines[i].trim()}` });
+      }
+      if (title.trimEnd().endsWith("?")) {
+        defects.push({ kind: "title-shape", line: i + 1, detail: `title ends in '?': ${lines[i].trim()}` });
+      }
+      if (title.split(/\s+/).some((w) => /[A-Za-z0-9]/.test(w) && /[A-Za-z]/.test(w[0]) && w[0] !== w[0].toUpperCase())) {
+        defects.push({ kind: "title-shape", line: i + 1, detail: `not Title Case: ${lines[i].trim()}` });
+      }
     }
+
+    const first = firstNonblank.trim();
+    if (!TAGLINE_RE.test(first)) {
+      defects.push({ kind: "missing-tagline", line: i + 1, detail: lines[i].trim() });
+    } else {
+      const tagline = first.slice(2, -2).trim();
+      const words = wordCount(tagline);
+      if (words < MIN_TAGLINE_WORDS || words > MAX_TAGLINE_WORDS) {
+        defects.push({ kind: "tagline-length", line: i + 1, detail: `${words} words, want ${MIN_TAGLINE_WORDS}-${MAX_TAGLINE_WORDS}: ${first}` });
+      }
+      const low = tagline.toLowerCase();
+      if (!NEGATION_WORDS.some((w) => new RegExp(`\\b${w}\\b`).test(low))) {
+        warnings.push({ kind: "weak-tagline", line: i + 1, detail: `no negation word: ${first}` });
+      }
+    }
+
+    if (GUIDANCE_SECTIONS.includes(secNo)) {
+      const bullets = [];
+      for (let bi = 0; bi < body.length; bi++) {
+        if (body[bi].trimStart().startsWith("- ")) {
+          bullets.push({ line: i + 2 + bi, text: body[bi].trimStart().slice(2).trim() });
+        }
+      }
+      if (bullets.length) {
+        const guards = bullets.filter((b) => isGuardBullet(b.text)).length;
+        if (guards / bullets.length < MIN_GUARD_RATIO) {
+          warnings.push({ kind: "low-negation-ratio", line: i + 1, detail: `section ${secNo}: ${guards}/${bullets.length} bullets start with a negation/guard` });
+        }
+        for (const b of bullets) {
+          const words = wordCount(b.text);
+          if (words < MIN_BULLET_WORDS || words > MAX_BULLET_WORDS) {
+            warnings.push({ kind: "bullet-length", line: b.line, detail: `${words} words, want ${MIN_BULLET_WORDS}-${MAX_BULLET_WORDS}: ${b.text}` });
+          }
+        }
+      }
+    }
+
     if (!EXEMPT_SECTIONS.includes(secNo)) {
       if (!body.some((l) => TEST_LINE_RE.test(l.trim()))) {
         defects.push({ kind: "missing-test-line", line: i + 1, detail: lines[i].trim() });

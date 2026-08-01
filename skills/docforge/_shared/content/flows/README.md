@@ -15,4 +15,4 @@ End-to-end flow documentation derived from the flow index.
 
 ## Boundaries
 
-Owns contracts, instructions, and templates used exclusively by `flows` documents. Artifacts used by more than one group live in [`../shared/`](../shared/INDEX.md) instead.
+Owns contracts, instructions, and templates used exclusively by `flows` documents. Artifacts used by more than one group live in [`../shared/`](../shared/README.md) instead.

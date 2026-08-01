@@ -40,7 +40,7 @@ flowchart LR
 
 The major parts and what each is responsible for. One or two sentences each — behaviour,
 not code. Deep mechanism lives in [low-level.md](low-level.md) and
-[concepts/](concepts/INDEX.md).
+[concepts/](concepts/README.md).
 
 | Block | Responsibility | Technology | External interface | Boundary it owns |
 |---|---|---|---|---|
@@ -65,5 +65,5 @@ routine refactor, it is written too close to the code — move that detail to lo
 
 ## Why it is like this
 
-Rationale lives in [decisions/](decisions/INDEX.md). Known shortcuts live in
+Rationale lives in [decisions/](decisions/README.md). Known shortcuts live in
 [tech-debt.md](tech-debt.md). Hard limits live in [constraints.md](constraints.md).

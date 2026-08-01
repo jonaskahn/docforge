@@ -35,7 +35,7 @@ Full instructions: [docs/engineering/setup.md](docs/engineering/setup.md)
 
 ## Documentation
 
-Everything lives in [`docs/`](docs/INDEX.md). Start where you fit:
+Everything lives in [`docs/`](docs/README.md). Start where you fit:
 
 <!-- Prune any row pointing at a document this repo does not have. -->
 
@@ -44,7 +44,7 @@ Everything lives in [`docs/`](docs/INDEX.md). Start where you fit:
 | New to the project | [docs/product/overview.md](docs/product/overview.md) |
 | A new engineer | [docs/architecture/high-level.md](docs/architecture/high-level.md) |
 | Using this as a consumer | [docs/product/quickstart.md](docs/product/quickstart.md) |
-| Reviewing risk or security | [docs/security/](docs/security/INDEX.md) · [docs/architecture/dependencies.md](docs/architecture/dependencies.md) |
+| Reviewing risk or security | [docs/security/](docs/security/README.md) · [docs/architecture/dependencies.md](docs/architecture/dependencies.md) |
 
 ## Known limitations
 

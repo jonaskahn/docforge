@@ -139,13 +139,13 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 
 Docforge writes behavior and boundaries, not prose tied to private symbols or line numbers. Derivable facts must be completed; only truly external values may remain as typed tokens such as `<SECURITY_CONTACT>`.
 
-Read the full [workflow](skills/docforge/_shared/workflows/INDEX.md), [document contracts](skills/docforge/_shared/content/INDEX.md), [audit gate](skills/docforge/_shared/references/document-audit.md), and [provenance model](skills/docforge/_shared/references/provenance-tracking.md).
+Read the full [workflow](skills/docforge/_shared/workflows/README.md), [document contracts](skills/docforge/_shared/content/README.md), [audit gate](skills/docforge/_shared/references/document-audit.md), and [provenance model](skills/docforge/_shared/references/provenance-tracking.md).
 
 ## ▓▒░ EVIDENCE AND FLOWS ░▒▓
 
 Docforge grounds documents in the repository evidence available to the current
 session. It writes evidence-backed flow candidates to `.docforge/flow-index.json`
-and renders the resulting flow matrix in `docs/flows/INDEX.md`. Main flows are
+and renders the resulting flow matrix in `docs/flows/README.md`. Main flows are
 documented in depth; lower-confidence or deferred candidates remain visible as
 clearly labeled placeholders until their evidence improves.
 
@@ -209,14 +209,14 @@ authorize installation, global configuration, evidence tooling changes,
 archive/delete actions, or other separately approved side effects; it also
 does not skip grounding, plan display, audits, or final checks.
 
-The exact flag semantics and composition rules live in the [workflow](skills/docforge/_shared/workflows/INDEX.md) and [shared flags](skills/docforge/_shared/flags.md).
+The exact flag semantics and composition rules live in the [workflow](skills/docforge/_shared/workflows/README.md) and [shared flags](skills/docforge/_shared/flags.md).
 
 ## ▓▒░ INVENTORY ░▒▓
 
 [`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) and
 [`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md) are thin
 command entrypoints. The shared cartridge lives under
-[`skills/docforge/_shared/`](skills/docforge/_shared/INDEX.md):
+[`skills/docforge/_shared/`](skills/docforge/_shared/README.md):
 [`.metadata/catalog/`](skills/docforge/_shared/.metadata/catalog/) is the canonical
 registry; [`workflows/`](skills/docforge/_shared/workflows/) holds the step-by-step
 procedure; [`references/`](skills/docforge/_shared/references/) holds owned policy

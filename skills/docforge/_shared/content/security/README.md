@@ -8,8 +8,8 @@ Security posture, permissions, and threat model.
 
 ## Contents
 
-- [contracts/](contracts/INDEX.md) — 6 contracts
-- [templates/](templates/INDEX.md) — 6 templates
+- [contracts/](contracts/README.md) — 6 contracts
+- [templates/](templates/README.md) — 6 templates
 - `api-authentication.instruction.md` — Public surface, inputs/outputs, auth contract, limits, errors, compatibility source → [api-authentication.instruction.md](api-authentication.instruction.md)
 - `data-handling.instruction.md` — Data classes, lifecycle, access, retention, deletion → [data-handling.instruction.md](data-handling.instruction.md)
 - `platform-permissions.instruction.md` — Requested capability, trigger, user value, denial behavior, settings/recovery, manifest evidence → [platform-permissions.instruction.md](platform-permissions.instruction.md)
@@ -18,4 +18,4 @@ Security posture, permissions, and threat model.
 
 ## Boundaries
 
-Owns contracts, instructions, and templates used exclusively by `security` documents. Artifacts used by more than one group live in [`../shared/`](../shared/INDEX.md) instead.
+Owns contracts, instructions, and templates used exclusively by `security` documents. Artifacts used by more than one group live in [`../shared/`](../shared/README.md) instead.

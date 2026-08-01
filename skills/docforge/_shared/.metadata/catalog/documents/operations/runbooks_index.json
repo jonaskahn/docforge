@@ -3,7 +3,7 @@
   "type": "folder-index",
   "summary": "Selected children and one-line purpose",
   "contract_file": "content/shared/folder-index.contract.md",
-  "path": "docs/operations/runbooks/INDEX.md",
+  "path": "docs/operations/runbooks/README.md",
   "group": "operations",
   "selection": {
     "mode": "static",

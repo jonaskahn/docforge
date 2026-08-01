@@ -208,7 +208,7 @@ function addAncestorIndexes(catalog, selected) {
     for (const child of [...selected]) {
       let parent = path.posix.dirname(child.path);
       while (parent !== ".") {
-        const candidate = path.posix.join(parent, "INDEX.md");
+        const candidate = path.posix.join(parent, "README.md");
         const definition = definitions.get(candidate);
         if (definition && !selectedPaths.has(candidate)) {
           selected.push(makeDocument(definition, [{ kind: "ancestor", id: child.id }]));
