@@ -7,9 +7,14 @@ model: inherit
 
 # Docforge flow proposal
 
+Cartridge root: `${CLAUDE_PLUGIN_ROOT}/skills/docforge/_shared` (substituted at
+load; if you see the literal placeholder, ask the orchestrator for the absolute
+cartridge root). Resolve every path inside loaded cartridge files against it,
+never the working directory.
+
 Perform the harvest, rank, organization, and provisional-derivation analysis
 defined by the canonical
-[`flow indexing and derivation`](../skills/docforge/_shared/references/graph/flow-derivation.md)
+[`flow indexing and derivation`](<${CLAUDE_PLUGIN_ROOT}/skills/docforge/_shared/references/graph/flow-derivation.md>)
 procedure. Work only in a temporary or provisional workspace: never write the
 target repository's committed flow index, documentation tree, manifest, or
 configuration.

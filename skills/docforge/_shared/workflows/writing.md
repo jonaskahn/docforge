@@ -50,7 +50,9 @@ For the next document in `write_order`:
 
 4. Set it `in_progress`, re-ground every required claim, replace all scaffold
    markers and provenance tokens, and stamp complete provenance 2.0. For a
-   large repository, the writer may dispatch `docforge-ground` to gather
+   large repository, the writer may dispatch `docforge:docforge-ground` (bare
+   `docforge-ground` from `.claude/agents/`), passing it the absolute cartridge
+   root, to gather
    candidate `path` / `role` / `git_blob` evidence off-thread; it must verify
    every candidate and stamp provenance itself. The default is inline writer
    grounding:
@@ -101,9 +103,11 @@ passing `subagent` or `cold-pass` audit record.
 
 ## 5. Independent audit
 
-When supported, dispatch the `docforge-audit` fresh artifact-only subagent.
+When supported, dispatch the `docforge:docforge-audit` fresh artifact-only
+subagent (bare `docforge-audit` from `.claude/agents/`).
 Give it the artifact, its catalog contract, target depth, relevant quality
-checks, and cited sources—no writer reasoning. For the `agents-kernel` output,
+checks, cited sources, and the absolute cartridge root—no writer reasoning. For
+the `agents-kernel` output,
 its mechanical gate is `lint_agents_kernel`, not `lint_document`. When
 subagents are unavailable, perform a separate cold, artifact-only pass and
 record `mode: cold-pass`. Mechanical checks alone never produce a completion

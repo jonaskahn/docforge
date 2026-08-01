@@ -22,7 +22,7 @@ from _support import (
     run,
     write_flow_index,
 )
-from runtime.common.provenance_frontmatter import (
+from runtime.common.python.provenance_frontmatter import (
     SCHEMA_VERSION,
     emit_yaml,
     migrate_v1_to_v2,
@@ -836,7 +836,7 @@ process.stdout.write(pf.emitYaml(value));
         self.assertIn("# Wrapped\n", wrapped)
 
     def test_rejected_yaml_constructs(self) -> None:
-        from runtime.common.provenance_frontmatter import YamlCodecError, parse_yaml_mapping
+        from runtime.common.python.provenance_frontmatter import YamlCodecError, parse_yaml_mapping
 
         for raw in ['a: &id 1\n', 'a: *id\n', 'a: |\n  x\n', 'a: [1, 2]\n']:
             with self.assertRaises(YamlCodecError):

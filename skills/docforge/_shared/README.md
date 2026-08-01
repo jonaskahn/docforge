@@ -31,9 +31,33 @@ inline fallback in each workflow.
 | [`runtime/cli/`](runtime/cli/README.md) | Public Python/Node launchers |
 | [`runtime/`](runtime/README.md) | Implementation behind launchers (incl. [`runtime/dashboard/`](runtime/dashboard/README.md) — the dashboard build/serve runtime and its Fumadocs template) |
 | [`.metadata/`](.metadata/) | Catalog, schemas, profiles |
+| [`help.md`](help.md) | Canonical `--help` reference per entrypoint (purpose + every parameter) |
 
 Tools run with this directory as the cartridge root. The agent locks one
 session engine; see [`rules.md`](rules.md) and [`workflows/tools.md`](workflows/tools.md).
+
+### Linking contract
+
+Every entrypoint that hands out this cartridge resolves it to an **absolute
+path at load time**, never a working-directory-relative one:
+
+- Plugin agents (`agents/*.md`) use `${CLAUDE_PLUGIN_ROOT}/skills/docforge/_shared/…`
+  in link destinations — Claude Code substitutes the absolute plugin dir.
+- Skill content (`skills/*/SKILL.md`) uses `${CLAUDE_SKILL_DIR}/_shared/…`
+  (`docforge`) or `${CLAUDE_SKILL_DIR}/../docforge/_shared/…` (the thin
+  entrypoints) — the absolute skill dir, for both plugin and Agent Skills
+  installs.
+- Workflow dispatch sites name the plugin-scoped subagents
+  (`docforge:docforge-audit`, `docforge:docforge-ground`, …) and hand the
+  subagent the absolute cartridge root it already knows.
+- `rules.md`'s always-loaded path-anchoring rule makes every `./`/`../`
+  reference inside cartridge files resolve against the given absolute root.
+
+All entrypoints carry the fallback: if the literal `${CLAUDE_…}` placeholder
+survives (older host), ask the orchestrator (agents) or the user (skills) for
+the absolute cartridge root before following any cartridge link. Tests in
+`tests/test_structure.py` enforce the contract (placeholder targets resolve,
+no CWD-relative cartridge links in `agents/` or `skills/*/SKILL.md`).
 
 Entry skills: [`../SKILL.md`](../SKILL.md),
 [`../../docforge-revise/SKILL.md`](../../docforge-revise/SKILL.md),

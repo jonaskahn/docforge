@@ -8,6 +8,7 @@ their target shape (see tests/README.md).
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -17,13 +18,15 @@ from _support import ROOT
 SKILL_ROOT = ROOT / "skills" / "docforge"
 SHARED_ROOT = ROOT / "skills" / "docforge" / "_shared"
 
+PLACEHOLDER_LINK = re.compile(r"\[[^\]]*\]\(<(\$\{CLAUDE_(?:PLUGIN_ROOT|SKILL_DIR)\}[^>]+)>\)")
+
 
 class SkillContentTests(unittest.TestCase):
     def test_skill_md_routes_to_intake_workflow(self) -> None:
         """SKILL.md stays compact; the intake procedure itself lives in workflows/intake.md."""
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("./_shared/workflows/intake.md", skill)
-        self.assertIn("./_shared/rules.md", skill)
+        self.assertIn("${CLAUDE_SKILL_DIR}/_shared/workflows/intake.md", skill)
+        self.assertIn("${CLAUDE_SKILL_DIR}/_shared/rules.md", skill)
         self.assertNotIn("Ask exactly one applicable question at a time", skill)
         self.assertNotIn("[1] Starter", skill)
         self.assertNotIn("Reply with, for example: `2 R`", skill)
@@ -127,8 +130,44 @@ class SkillContentTests(unittest.TestCase):
         validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
         self.assertIn("## 7. Dashboard auto-serve", validation)
         self.assertIn("Never under `--plan-only`", validation)
+        self.assertIn("`--no-dashboard`", validation)
         self.assertIn("every completed\n`/docforge` (fresh start) and `/docforge-revise` run", validation)
         self.assertIn("Node.js 22+ / npm", validation)
+
+    def test_help_supported_by_all_entrypoints(self) -> None:
+        """--help is accepted by all three entrypoints and routes to the
+        canonical per-entrypoint reference in _shared/help.md."""
+        help_text = (SHARED_ROOT / "help.md").read_text(encoding="utf-8")
+        for section in ("## `/docforge`", "## `/docforge-revise`", "## `/docforge-dashboard`"):
+            self.assertIn(section, help_text)
+        for flag in ("--plan-only", "--auto-accept", "--no-dashboard", "--force"):
+            self.assertIn(flag, help_text)
+        flags = (SHARED_ROOT / "flags.md").read_text(encoding="utf-8")
+        self.assertIn("--no-dashboard", flags)
+        self.assertIn("| `--help` |", flags)
+        for path in sorted((ROOT / "commands").glob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("--help", text)
+            self.assertIn("_shared/help.md", text)
+        for skill_dir in (
+            SKILL_ROOT,
+            ROOT / "skills" / "docforge-revise",
+            ROOT / "skills" / "docforge-dashboard",
+        ):
+            self.assertIn("--help", (skill_dir / "SKILL.md").read_text(encoding="utf-8"))
+
+    def test_revision_scope_order_is_flow_area_all(self) -> None:
+        """The revise scope question presents flow, then <area>, then all."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        scope_line = next(
+            line for line in revision.splitlines() if line.strip().startswith("1. **Scope**")
+        )
+        self.assertLess(scope_line.index("flow"), scope_line.index("<area>"))
+        self.assertLess(scope_line.index("<area>"), scope_line.index("all"))
+        revise = (ROOT / "skills" / "docforge-revise" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Ask which scope: `flow`, `<area>`, or `all`", revise)
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn("`/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`", intake)
 
     def test_flow_derivation_reference_covers_dedup(self) -> None:
         derivation = (SHARED_ROOT / "references" / "graph" / "flow-derivation.md").read_text(encoding="utf-8")
@@ -184,8 +223,8 @@ class SkillContentTests(unittest.TestCase):
         docforge can still render documentation."""
         core = ROOT / "skills" / "docforge"
         self.assertTrue((core / "_shared" / "workflows" / "dashboard.md").is_file())
-        self.assertTrue((core / "_shared" / "runtime" / "dashboard" / "dashboard.py").is_file())
-        self.assertTrue((core / "_shared" / "runtime" / "dashboard" / "dashboard.js").is_file())
+        self.assertTrue((core / "_shared" / "runtime" / "dashboard" / "python" / "dashboard.py").is_file())
+        self.assertTrue((core / "_shared" / "runtime" / "dashboard" / "js" / "dashboard.js").is_file())
         self.assertTrue((core / "_shared" / "runtime" / "dashboard" / "template" / "package.json").is_file())
         self.assertTrue((core / "_shared" / "runtime" / "cli" / "python" / "dashboard.py").is_file())
         self.assertTrue((core / "_shared" / "runtime" / "cli" / "js" / "dashboard.js").is_file())
@@ -212,7 +251,10 @@ class SkillContentTests(unittest.TestCase):
                 continue
             if rel.startswith(("_shared/references/", "_shared/content/")):
                 continue
-            if rel.startswith("_shared/runtime/validation/validate_metadata."):
+            if rel in {
+                "_shared/runtime/validation/python/validate_metadata.py",
+                "_shared/runtime/validation/js/validate_metadata.js",
+            }:
                 continue  # release-time repo check, not a skill runtime path
             if path.suffix not in {".md", ".py", ".js"}:
                 continue
@@ -230,6 +272,61 @@ class SkillContentTests(unittest.TestCase):
         for skill in (revise, dashboard):
             self.assertIn("../docforge/_shared", skill)
             self.assertIn("requires the `docforge`", skill)
+
+    def test_plugin_agents_resolve_cartridge_via_plugin_root(self) -> None:
+        """Plugin subagent bodies link the canonical cartridge through
+        ${CLAUDE_PLUGIN_ROOT} (substituted at load with the absolute plugin
+        dir), carry the cartridge-root anchor and fallback, and never use
+        CWD-relative cartridge links."""
+        agents = sorted((ROOT / "agents").glob("*.md"))
+        self.assertGreaterEqual(len(agents), 6)
+        for path in agents:
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("${CLAUDE_PLUGIN_ROOT}", text)
+            self.assertIn("ask the orchestrator", text)
+            self.assertNotIn("../skills/", text)
+            for link in PLACEHOLDER_LINK.findall(text):
+                self.assertTrue(
+                    link.startswith("${CLAUDE_PLUGIN_ROOT}/"),
+                    f"{path.name}: unexpected placeholder {link}",
+                )
+                target = (ROOT / link.removeprefix("${CLAUDE_PLUGIN_ROOT}/")).resolve()
+                self.assertTrue(target.is_file(), f"{path.name}: unresolved link {link}")
+
+    def test_skill_md_links_resolve_via_skill_dir(self) -> None:
+        """Every cartridge link in the shipped SKILL.md files resolves against
+        ${CLAUDE_SKILL_DIR} (absolute skill dir), never against the session
+        working directory."""
+        for skill_dir in sorted((ROOT / "skills").glob("*")):
+            skill = skill_dir / "SKILL.md"
+            if not skill.is_file():
+                continue
+            text = skill.read_text(encoding="utf-8")
+            self.assertIn("${CLAUDE_SKILL_DIR}", text)
+            self.assertIn("ask the user for the absolute", text)
+            self.assertNotIn("](./", text)
+            self.assertNotIn("](../", text)
+            for link in PLACEHOLDER_LINK.findall(text):
+                self.assertTrue(
+                    link.startswith("${CLAUDE_SKILL_DIR}/"),
+                    f"{skill_dir.name}: unexpected placeholder {link}",
+                )
+                target = (skill_dir / link.removeprefix("${CLAUDE_SKILL_DIR}/")).resolve()
+                self.assertTrue(target.is_file(), f"{skill_dir.name}: unresolved link {link}")
+
+    def test_commands_resolve_via_plugin_root(self) -> None:
+        """Slash commands reference skills and cartridge through
+        ${CLAUDE_PLUGIN_ROOT}, and every referenced path exists."""
+        for path in sorted((ROOT / "commands").glob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("${CLAUDE_PLUGIN_ROOT}", text)
+            for match in re.finditer(
+                r"\$\{CLAUDE_PLUGIN_ROOT\}(/[a-zA-Z0-9_./-]+)", text
+            ):
+                target = (ROOT / match.group(1).lstrip("/")).resolve()
+                self.assertTrue(
+                    target.exists(), f"{path.name}: unresolved reference {match.group(0)}"
+                )
 
 
 if __name__ == "__main__":

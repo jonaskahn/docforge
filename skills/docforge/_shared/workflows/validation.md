@@ -16,7 +16,9 @@ node runtime/cli/js/scaffold_docs.js \
 ```
 
 The command exits nonzero for any defect. When available, dispatch
-`docforge-tree-review` for a cold cross-document pass; otherwise apply the
+`docforge:docforge-tree-review` (bare `docforge-tree-review` from
+`.claude/agents/`) for a cold cross-document pass, passing it the absolute
+cartridge root; otherwise apply the
 cross-document checks inline. The checks owned by
 [`../references/quality-bar.md`](../references/quality-bar.md) cover
 reachability, onboarding, location, reviewer, stranger, duplication, and host
@@ -86,19 +88,22 @@ written documentation is immediately visible — this applies to every completed
 `/docforge` (fresh start) and `/docforge-revise` run:
 
 1. **Never under `--plan-only`** — a dry run builds nothing and serves nothing.
-2. Run the dashboard lifecycle — preflight, metadata reconcile, signature,
+2. **Skip when the invocation included `--no-dashboard`** — the run still
+   completes; the user renders later with `/docforge-dashboard` or the
+   internal `dashboard start`.
+3. Run the dashboard lifecycle — preflight, metadata reconcile, signature,
    build (when changed), serve, open — via
    [`./dashboard.md`](dashboard.md) (internal to this cartridge; the optional
    `/docforge-dashboard` skill is only a thin entrypoint into it):
    `python3 runtime/cli/python/dashboard.py start --repo <repo>` (or the
    locked JS peer).
-3. The first run takes longer: it scaffolds `.docforge/dashboard/`, runs
+4. The first run takes longer: it scaffolds `.docforge/dashboard/`, runs
    `npm install`, and starts the detached dev server; later runs reuse the
    healthy recorded server when the signature is unchanged.
-4. When Node.js 22+ / npm is unavailable or preflight fails, state the
+5. When Node.js 22+ / npm is unavailable or preflight fails, state the
    dashboard requirement and continue — a missing dashboard never blocks
    completion.
-5. The dev server runs detached; `dashboard stop` shuts it down without
+6. The dev server runs detached; `dashboard stop` shuts it down without
    affecting the written documentation or manifest state.
 
 ## Process completion & git state

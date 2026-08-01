@@ -1,7 +1,7 @@
 # Revision
 
-Owns: `/docforge-revise` (`all` | `<area>` | `flow`), its flags
-(`--plan-only`, `--auto-accept`), flow-index organization, provisional flow
+Owns: `/docforge-revise` (`flow` | `<area>` | `all`), its flags
+(`--plan-only`, `--auto-accept`, `--no-dashboard`), flow-index organization, provisional flow
 derivation, and single-document update / refresh.
 
 ## What revise means
@@ -86,7 +86,7 @@ Revise always **stops and asks first**, using the interactive question pack owne
 [`intake.md`](intake.md) — never proceed on silent defaults. Before migration, detection, or writing,
 revise presents a discovery brief and one combined question set ([`intake.md`](intake.md)):
 
-1. **Scope** — `all`, `<area>`, or `flow` (pre-checked from invocation).
+1. **Scope** — `flow`, `<area>`, or `all` (pre-checked from invocation).
 2. **Tier** — display the manifest tier and offer only `Change to <tier>` alternatives.
 3. **Profiles** — shape, platform, framework, concern: display each current
    selection and offer `Add` / `Remove` actions; fresh detections are recommended
@@ -228,8 +228,10 @@ flow docs and big-picture surfaces even when their cited `git_blob` values are
 still `FRESH`.
 
 1. Run `migrate_metadata` when needed, then precheck `--need flow`.
-2. When available, dispatch `docforge-flow` for its read-only harvest, rank,
-   organization, and provisional-derivation proposal. It must use only a
+2. When available, dispatch `docforge:docforge-flow` (bare `docforge-flow` from
+   `.claude/agents/`) for its read-only harvest, rank,
+   organization, and provisional-derivation proposal, passing it the absolute
+   cartridge root. It must use only a
    temporary/provisional workspace and return an advisory result; otherwise run
    the same stages inline. Use that result to show the structure update and
    honor the execution-mode tree checkpoint before changing the repository.

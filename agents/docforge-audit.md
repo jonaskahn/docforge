@@ -7,10 +7,15 @@ model: inherit
 
 # Docforge artifact audit
 
+Cartridge root: `${CLAUDE_PLUGIN_ROOT}/skills/docforge/_shared` (substituted at
+load; if you see the literal placeholder, ask the orchestrator for the absolute
+cartridge root). Resolve every path inside loaded cartridge files against it,
+never the working directory.
+
 Audit one finished document without writer context. Resolve its contract with
 `query_catalog --route <id>`, run the mechanical gate, and assess the artifact,
 target depth, and cited sources using the canonical
-[`document audit`](../skills/docforge/_shared/references/document-audit.md) procedure.
+[`document audit`](<${CLAUDE_PLUGIN_ROOT}/skills/docforge/_shared/references/document-audit.md>) procedure.
 
 The mechanical gate is `lint_document` except when the resolved artifact is an
 `agents-kernel` output (`AGENTS.md`, a `SPECIAL_DOC_OUTPUTS` member that

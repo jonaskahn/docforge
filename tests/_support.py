@@ -144,7 +144,7 @@ def provenance(
 
 
 def markdown_with_provenance(value: dict, body: str) -> str:
-    from runtime.common.provenance_frontmatter import emit_yaml
+    from runtime.common.python.provenance_frontmatter import emit_yaml
     return emit_yaml(value) + (body if body.endswith("\n") or not body else body + "\n")
 
 

@@ -9,11 +9,45 @@
   [![Version](https://img.shields.io/badge/version-2.9.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
+
+  <p><code>► PRESS START</code></p>
 </div>
 
 ---
 
-Created by [Jonas Kahn](https://github.com/jonaskahn), Docforge is a source-grounded documentation cartridge for AI coding agents. It ships as an Agent Skill and a Claude Code plugin: instructions, references, templates, schemas, and paired Python/Node tools—not a Markdown generator library.
+## ▓▒░ INSERT COIN ░▒▓
+
+Welcome to Docforge, the source-grounded documentation cartridge for AI
+coding agents. Created by [Jonas Kahn](https://github.com/jonaskahn), it is
+not a Markdown generator library — it is a whole arcade cabinet: instructions,
+references, templates, schemas, and paired Python/Node tools that make an
+agent design, write, audit, and maintain repository documentation that
+**actually matches the code**.
+
+The rules are simple:
+
+- **No invented lore.** Every claim is derived from a code graph, source,
+  manifest, git history, or user-provided evidence — never from the model's
+  imagination. Typed tokens like `<SECURITY_CONTACT>` are reserved for truly
+  external values, nothing else.
+- **The catalog is the game master.** Docforge is catalog-driven: the
+  canonical registry decides what documents exist, in what order they are
+  written, and what each one must contain.
+- **Audit before you claim victory.** A document only reaches `complete`
+  after mechanical lint **and** an independent, artifact-only audit pass.
+- **Blob-stamped provenance.** Every section cites the repository-relative
+  paths and `git hash-object` blobs it was grounded in, so the next run only
+  rewrites what actually drifted.
+
+The core loop is a classic 6-stage game:
+
+```text
+PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
+```
+
+Spine, Diligence, or Portfolio tier. Five typed profile dimensions. Seven
+audiences. A local Fumadocs dashboard that renders your docs at the end —
+because what good is a high score if nobody can see it?
 
 ## ▓▒░ WORLD MAP ░▒▓
 
@@ -22,6 +56,7 @@ Created by [Jonas Kahn](https://github.com/jonaskahn), Docforge is a source-grou
 - [Core loop](#-core-loop-)
 - [Evidence and flows](#-evidence-and-flows-)
 - [Stage select](#-stage-select-)
+- [Boss gauntlet](#-boss-gauntlet-)
 - [Controller mapping](#-controller-mapping-)
 - [Inventory](#-inventory-)
 - [System requirements](#-system-requirements-)
@@ -65,7 +100,7 @@ If a prior add left a broken cache entry, remove and re-add first:
 /plugin install docforge@docforge
 ```
 
-Claude Code’s GitHub shorthand clones over SSH by default. This marketplace
+Claude Code's GitHub shorthand clones over SSH by default. This marketplace
 lists an HTTPS git URL so install does not need `github.com` in
 `~/.ssh/known_hosts`. If you still prefer SSH elsewhere, either add the host
 key (`ssh-keyscan github.com >> ~/.ssh/known_hosts`) or set
@@ -86,7 +121,7 @@ commands. After updating the marketplace, run
 
 ## ▓▒░ START GAME ░▒▓
 
-Describe the documentation quest in plain language:
+Describe the documentation quest in plain language — no cheat codes needed:
 
 ```text
 Document this repository from scratch.
@@ -155,6 +190,9 @@ and renders the resulting flow matrix in `docs/flows/README.md`. Main flows are
 documented in depth; lower-confidence or deferred candidates remain visible as
 clearly labeled placeholders until their evidence improves.
 
+Think of it as a map that only reveals rooms you have actually visited — no
+phantom corridors.
+
 ## ▓▒░ STAGE SELECT ░▒▓
 
 Choose **Spine** for a repository baseline, **Diligence** for external scrutiny,
@@ -188,13 +226,35 @@ and token-budgeted `docs/agents/` views.
 
 The tier rules, profile signals, and complete level layout live in the [canonical docs tree](skills/docforge/_shared/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
 
+## ▓▒░ BOSS GAUNTLET ░▒▓
+
+Every documentation project has its final bosses. Docforge exists to take
+them down:
+
+- **GHOST LORE** — invented facts that look like documentation. Defeated by
+  the no-invented-lore rule: every claim must cite a source, a blob hash, or a
+  typed external token.
+- **STALE ZOMBIES** — docs that drifted from the code long ago. Defeated by
+  blob-stamped provenance and staleness checks that re-ground only what
+  changed.
+- **ORPHAN FLOWS** — features and processes wired to nothing. Defeated by the
+  flow index: harvest, rank, organize, and derive until every path is mapped.
+- **UNINVENTORIED TREES** — nobody knows what documentation exists or who owns
+  it. Defeated by the manifest and the whole-tree gate: every selected
+  document audited, every README covering its children.
+- **VANITY WIKIS** — pretty prose with no evidence behind it. Defeated by the
+  independent artifact-only audit: mechanical lint is necessary but never
+  sufficient.
+
+Continue? Insert the next repository.
+
 ## ▓▒░ CONTROLLER MAPPING ░▒▓
 
 Invocation order is always **command → scope args → flags** (never flags
 before the command or before a required scope argument):
 
 | Command | Use |
-|---|---|---|
+|---|---|
 | `/docforge` | Fresh start: intake, plan, or write |
 | `/docforge --plan-only` | Plan / dry-run tree only |
 | `/docforge-revise all` | Full-tree structural refresh |
@@ -204,16 +264,24 @@ before the command or before a required scope argument):
 | `/docforge-dashboard` | `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `/docforge-dashboard --plan-only` | Preflight, metadata dry-run, signatures, and route plan only |
 
+### CHEAT CODES (FLAGS)
+
 Shared flags on both commands: `--plan-only` (analyze / dry-run tree only),
-`--auto-accept` (skip routine pauses after scope confirm).
+`--auto-accept` (skip routine pauses after scope confirm),
+`--no-dashboard` (skip the automatic dashboard build/serve at completion).
 `/docforge-dashboard` shares the same flags plus its own runtime CLI
 subcommands (`dashboard start | status | stop`).
 
+`--help` on any of the three commands prints that command's purpose and full
+parameter reference (canonical text in
+[`skills/docforge/_shared/help.md`](skills/docforge/_shared/help.md)) and stops
+without running a workflow.
+
 After a completed `/docforge` or `/docforge-revise` run, the dashboard is
 built (only when its render signature changed) and served automatically so
-the written documentation opens in the browser (skipped under `--plan-only`;
-requires Node.js 22+ / npm). The dev server runs detached; `dashboard stop`
-shuts it down.
+the written documentation opens in the browser (skipped under `--plan-only`
+or when `--no-dashboard` was given; requires Node.js 22+ / npm). The dev
+server runs detached; `dashboard stop` shuts it down.
 
 There is no `--resume` or `--status` skill flag. Continue an incomplete run via
 intake or plain language; for a progress report, ask in plain language or run
@@ -299,3 +367,5 @@ To contribute, edit the relevant workflow, reference, template, schema, and Pyth
 ## ▓▒░ CREDITS ░▒▓
 
 SPDX-License-Identifier: MIT — [LICENSE](LICENSE)
+
+<code>GAME OVER? NO. CONTINUE. →</code>

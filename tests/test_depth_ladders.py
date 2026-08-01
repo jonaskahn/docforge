@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 
 from _support import CLI_JS, ROOT, initialize, load_manifest, run, write_flow_index
-from runtime.common.illustration_metrics import illustration_defects
-from runtime.common.prov_projection import project_core
+from runtime.common.python.illustration_metrics import illustration_defects
+from runtime.common.python.prov_projection import project_core
 
 
 class DepthLadderTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class DepthLadderTests(unittest.TestCase):
         self.assertEqual(len(projected), 7)
         self.assertEqual(projected[3]["object"], f"source:a.py@{'a' * 40}")
         node = subprocess.run(
-            ["node", "-e", "const p=require(process.argv[1]); console.log(JSON.stringify(p.projectCore(JSON.parse(process.argv[2]))));", str(CLI_JS.parent.parent / "common" / "prov_projection.js"), json.dumps(provenance)],
+            ["node", "-e", "const p=require(process.argv[1]); console.log(JSON.stringify(p.projectCore(JSON.parse(process.argv[2]))));", str(CLI_JS.parent.parent / "common" / "js" / "prov_projection.js"), json.dumps(provenance)],
             text=True, capture_output=True, check=True,
         )
         self.assertEqual(projected, json.loads(node.stdout))

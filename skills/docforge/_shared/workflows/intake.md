@@ -12,8 +12,10 @@ manifest, scaffold a file, build/refresh a graph, install a provider, change
 configuration, or archive/delete anything.
 
 First perform only safe discovery: identify the repository root, check whether
-`.docforge/manifest.json` exists, and dispatch `docforge-graph-precheck` when
-available. Otherwise, run the read-only code-graph precheck and
+`.docforge/manifest.json` exists, and dispatch `docforge:docforge-graph-precheck`
+(plugin install; bare `docforge-graph-precheck` from `.claude/agents/`) when
+available, passing it the absolute cartridge root. Otherwise, run the read-only
+code-graph precheck and
 `detect_profiles` inline to identify candidate shapes, platforms, frameworks,
 and concerns. `detect_profiles` recognizes frameworks and shapes by reading
 *declared dependencies* structurally from project-definition manifests
@@ -94,8 +96,8 @@ Ask only what remains unresolved, in this order:
    [`writing.md`](writing.md); no `--resume` flag), checking status or
    staleness (read-only; no `--status` flag — use plain language or
    `manage_manifest status`), updating or refreshing a named document,
-   revising via `/docforge-revise` (`all` / `<area>` / `flow`, with the same
-   `--plan-only` / `--auto-accept` flags), or replacing the plan. Briefly
+   revising via `/docforge-revise` (`flow` / `<area>` / `all`, with the same
+   `--plan-only` / `--auto-accept` / `--no-dashboard` flags), or replacing the plan. Briefly
    distinguish inspection, planning, writing, and read-only reporting.
    Natural-language **update** / **refresh** of a named document routes to
    [`revision.md`](revision.md) (staleness-first), not a full rewrite.
@@ -179,7 +181,7 @@ Collect the applicable answers as one response. If the user supplied one or
 more choices in the original request, retain them and include only unresolved
 questions in the intake. For Resume or Status, omit tier, audience, and shape
 questions that the existing manifest already resolves. For
-`/docforge-revise all`, `/docforge-revise <area>`, `/docforge-revise flow`, or
+`/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`, or
 any revise that rediscovers docs, always stop and present the full question
 pack owned by `intake.md` exactly like a fresh start — Scope, Tier, Profiles
 (shape / platform / framework / concern), Output audience, and Execution mode

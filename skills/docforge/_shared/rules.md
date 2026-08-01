@@ -3,6 +3,18 @@
 Always load with either skill entrypoint. Procedural detail lives under
 [`workflows/`](workflows/README.md); this file is the always-on contract.
 
+## Path anchoring
+
+The skill entrypoint hands this cartridge's absolute root to the session
+(`${CLAUDE_SKILL_DIR}/_shared` for `docforge`,
+`${CLAUDE_SKILL_DIR}/../docforge/_shared` for the thin entrypoints; plugin
+agents receive `${CLAUDE_PLUGIN_ROOT}/skills/docforge/_shared`). Resolve every
+`./` and `../` reference inside cartridge files against that root, never the
+session working directory — the target repository does not contain the
+cartridge unless it is self-hosting it. If no absolute root was given, locate
+the cartridge (repo-local `skills/docforge/_shared`, the plugin install, or a
+global skill dir) before following any cartridge link, or ask the user.
+
 ## Session tool runtime
 
 There is no runtime-precheck CLI. Once per Docforge session, the agent
