@@ -52,7 +52,7 @@ a documentation source; the source of truth stays `docs/` Markdown and
 `.docforge/manifest.json`.
 
 | Parameter | Meaning |
-|---|---|---|
+|---|---|
 | *(none)* | Scan diagnostics → `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `--force` | Ignore signatures: always regenerate generated output, keeping `node_modules` |
 | `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server |
@@ -64,3 +64,9 @@ missing documents, stale provenance sources, broken links, untracked `docs/`
 files; exits 1 when anything is found — "you should revise again"), `start`
 (build-if-changed → serve → open), `status` (read-only state), `stop` (shut
 down the detached dev server).
+
+A legacy manifest (any pre-3.0 version — 1.1 `project_context` /
+`document_groups`, 2.0 flat `documents` with overlays, or another shape)
+fails preflight with a three-option gate — revise all, update metadata only
+(`migrate_metadata` re-registers it as 3.1 for any legacy version), or stop;
+see `workflows/dashboard.md`.

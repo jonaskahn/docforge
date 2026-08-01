@@ -30,7 +30,13 @@ again ([`writing.md`](writing.md)).
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
 Its schema version is `3.1`; there is no secondary runtime state file.
 Manifest 3.0 and provenance 1.0 are migrated by `migrate_metadata` before
-resume, revision, or provenance synchronization. Older or malformed metadata
+resume, revision, or provenance synchronization. A legacy manifest of any
+pre-3.0 version (1.1 `project_context` / `document_groups`, 2.0 flat
+`documents` with overlays, or another shape) is re-registered by the same
+command: written documents are adopted as `generated` with provenance 2.0,
+bodies and source hashes preserved, and plan entries kept; adopted documents
+are never `complete` (no independent audit survived) and still need the
+revision path to re-ground, lint, and audit them. Older or malformed metadata
 requires re-grounding rather than a silent rewrite. When migration reports
 `FAILED` for a document, the agent must regenerate that document's provenance
 (status is already `in_progress`): re-ground claims, stamp concrete

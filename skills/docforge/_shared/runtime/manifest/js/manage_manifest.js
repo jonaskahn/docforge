@@ -32,7 +32,7 @@ function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00");
 }
 const MANIFEST_HINT =
-  "run migrate_metadata.js for 3.0, or replace unsupported older manifests";
+  "run migrate_metadata.js to re-register legacy manifests";
 
 function loadCatalog() {
   return queryCatalog.asLegacyCatalog();

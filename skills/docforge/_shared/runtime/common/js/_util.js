@@ -103,7 +103,7 @@ function loadManifest(target, options = {}) {
   const allowedVersions = options.allowedVersions || ["3.1"];
   const requireDocuments = Boolean(options.requireDocuments);
   const unsupportedHint =
-    options.unsupportedHint || "run migrate_metadata.js for 3.0 manifests";
+    options.unsupportedHint || "run migrate_metadata.js to re-register legacy manifests";
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
     throw new Error(`manifest not found: ${target}`);
   }

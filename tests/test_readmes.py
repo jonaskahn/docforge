@@ -206,7 +206,7 @@ class ReadmeContractRevisionTests(unittest.TestCase):
                 doc = next(item for item in after["documents"] if item["id"] == "docs_index")
                 self.assertEqual(doc["status"], "in_progress")
                 self.assertIsNone(doc["audit"])
-                self.assertEqual(doc["contract_revision"], "2.10.0")
+                self.assertEqual(doc["contract_revision"], "2.11.0")
                 self.assertTrue(doc["scaffold_template"].startswith("content/"))
 
     def test_reconcile_is_idempotent_once_revision_current(self) -> None:
@@ -232,7 +232,7 @@ class ReadmeContractRevisionTests(unittest.TestCase):
             if revision is not None:
                 self.assertRegex(revision, r"^\d+\.\d+\.\d+$")
             if doc_id == "docs_index":
-                self.assertEqual(revision, "2.10.0")
+                self.assertEqual(revision, "2.11.0")
 
     def test_legacy_modes_do_not_leak_contract_revision(self) -> None:
         for runtime in ("py", "js"):
@@ -258,7 +258,7 @@ class ReadmeFlowIndexTests(unittest.TestCase):
                 self.assertIn(".docforge/flow-index.json", frontmatter)
                 self.assertIn("git_blob:", frontmatter)
                 payload = json.loads(run(runtime, "query_catalog", "--route", "flows_index").stdout)
-                self.assertEqual(payload["contract_revision"], "2.10.0")
+                self.assertEqual(payload["contract_revision"], "2.11.0")
 
 
 if __name__ == "__main__":

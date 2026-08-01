@@ -25,5 +25,5 @@
   "audit_profile": "router",
   "template_file": "content/product/templates/po-readme.md",
   "title": "Product Owner documentation",
-  "contract_revision": "2.10.0"
+  "contract_revision": "2.11.0"
 }

@@ -28,6 +28,41 @@ The dashboard directory is fully self-contained:
   added by the runtime's own `ensure_dashboard_ignored` (which also keeps the
   shared Docforge ignore rules via the cartridge's `ensure_docforge_gitignore`).
 
+## Legacy manifest gate
+
+`scan` and `start` require a manifest 3.1 (or 3.0, which `migrate_metadata`
+upgrades in place). When the preflight fails because
+`.docforge/manifest.json` carries an **older legacy manifest version** (1.1
+`project_context` / `document_groups`, 2.0 flat `documents` with overlays, or
+any other pre-3.0 shape), stop and present exactly these options before any
+write:
+
+1. **Revise all (recommended)** — run `/docforge-revise all`. Its
+   `migrate_metadata` step re-registers the legacy manifest as 3.1 (adopting
+   written documents as `generated` with provenance 2.0, bodies preserved),
+   then the revision re-grounds, lints, and audits the tree per
+   [`workflows/revision.md`](revision.md). Run `dashboard start` again after
+   the whole-tree gate passes.
+2. **Update metadata only** — run
+   `migrate_metadata --repo <repo> --report` to re-register the manifest
+   without revising content, then re-run `dashboard scan` (or `start`). This
+   path exists for **any** legacy version — nothing is hard-coded to one
+   shape. The dashboard opens only if the migrated tree passes the route
+   plan and validation; otherwise present every remaining finding and offer
+   the revision path again.
+3. **Stop** — make no changes; the dashboard is not opened and no previous
+   build is presented as current.
+
+`--plan-only` runs `migrate_metadata --dry-run` and shows the migration
+preview instead of writing. `--auto-accept` never bypasses this gate: the
+manifest rewrite and frontmatter adoption are side effects with their own
+approval, like every other safety gate in [`flags.md`](../flags.md).
+
+A migrated tree is a **baseline**, not a certification: adopted documents
+carry provenance 2.0 but were never independently audited, so `scan`'s
+staleness checks and the `you should revise again` recommendation still
+apply.
+
 ## Command
 
 ```sh
@@ -52,7 +87,10 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 -> INSTALL (if missing) -> SERVE -> OPEN
 ```
 
-- **Preflight:** repository, manifest 3.1, and a readable `docs/` tree. The
+- **Preflight:** repository, manifest 3.1 (or 3.0), and a readable `docs/` tree.
+  When the manifest is a legacy pre-3.0 version (or any other unsupported
+  version), apply the [Legacy manifest gate](#legacy-manifest-gate)
+  before continuing. The
   session engine is locked (see
   [`workflows/tools.md`](tools.md)); run every `dashboard` call with the same
   engine. Node.js 22+ is required only for install/serve steps.
@@ -292,7 +330,9 @@ The Fumadocs application shell is copied from the cartridge template
 Same flags as `/docforge` (see [`flags.md`](flags.md)):
 
 - `--plan-only`: preflight, metadata dry-run, signatures, and route plan
-  only; no conversion, no install, no server.
+  only; no conversion, no install, no server. On a legacy manifest, the
+  metadata dry-run is the `migrate_metadata --dry-run` preview (see the
+  [Legacy manifest gate](#legacy-manifest-gate)).
 - `--auto-accept`: skips the revise-vs-render prompt (renders current
   documentation) and routine pauses; never authorizes installing Node.js,
   changing package files, or deleting the dashboard directory.

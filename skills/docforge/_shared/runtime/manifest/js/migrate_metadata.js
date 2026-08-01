@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 "use strict";
-/* Migrate Docforge manifest 3.0 / provenance 1.0 metadata to 3.1 / 2.0 YAML.
+/* Migrate Docforge manifest metadata to 3.1 / provenance 2.0 YAML.
  *
- * Converts schema 1.0 and schema-less legacy frontmatter (including pre-schema
- * `doc` / `graph_snapshot` shapes) while preserving section evidence. When a
+ * Upgrades manifest 3.0 / provenance 1.0 (converting schema 1.0 and
+ * schema-less legacy frontmatter, including pre-schema `doc` /
+ * `graph_snapshot` shapes, while preserving section evidence), and
+ * re-registers any older legacy manifest — 1.1 (`project_context` /
+ * `document_groups`), 2.0 (flat `documents` with overlay profiles), or any
+ * other pre-3.0 shape — as 3.1: written documents are adopted as `generated`
+ * with provenance 2.0, bodies preserved, and plan entries kept. When a
  * document cannot be converted to complete provenance 2.0 (missing or
  * unparseable frontmatter, conversion failure, or incomplete result for a
  * written document), write a best-effort scaffold, mark the document
@@ -12,9 +17,10 @@
 
 const fs = require("fs");
 const path = require("path");
-const { fail, loadManifest } = require("../../common/js/_util.js");
+const { dumpJson, fail, loadManifest } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
+const queryCatalog = require("../../catalog/js/query_catalog.js");
 
 const MANIFEST_CURRENT = "3.1";
 const MANIFEST_LEGACY = "3.0";
@@ -23,8 +29,24 @@ const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
 const MANIFEST_LOAD = {
   allowedVersions: [MANIFEST_CURRENT, MANIFEST_LEGACY],
-  unsupportedHint: "older manifests are unsupported",
+  unsupportedHint: "legacy manifests are re-registered by this command",
 };
+const LEGACY_TIER_MAP = { core: "spine", standard: "diligence", extended: "portfolio" };
+const LEGACY_OVERLAY_MAP = {
+  "business-analyst": ["audiences", "business-analysts"],
+  "product-owner": ["audiences", "product-owners"],
+  "agent-context": ["audiences", "coding-agents"],
+  api: ["shapes", "api-service"],
+  web: ["shapes", "web-app"],
+  library: ["shapes", "library-sdk"],
+  infrastructure: ["shapes", "infrastructure-platform"],
+  "data-pipeline": ["shapes", "data-pipeline"],
+};
+const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
+const STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"];
+const ORIGIN_KINDS = new Set([
+  "tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor",
+]);
 
 function needsProvenanceMigration(provenance) {
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) return false;
@@ -356,6 +378,13 @@ function migrateManifestObject(manifest, demoteIncomplete = false) {
 }
 
 function migrate(repo, manifestPath, dryRun) {
+  const raw = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`manifest must be a JSON object: ${manifestPath}`);
+  }
+  if (raw.version !== MANIFEST_CURRENT && raw.version !== MANIFEST_LEGACY) {
+    return migrateLegacy(repo, manifestPath, raw, dryRun);
+  }
   const manifest = loadManifest(manifestPath, MANIFEST_LOAD);
   const reports = [];
   const requireComplete = {};
@@ -391,6 +420,386 @@ function migrate(repo, manifestPath, dryRun) {
 function ensureMigrated(repo, manifestPath) {
   migrate(repo, manifestPath, false);
   return loadManifest(manifestPath, MANIFEST_LOAD);
+}
+
+// ---------------------------------------------------------------------------
+// Legacy manifest re-registration (any pre-3.0 version)
+// ---------------------------------------------------------------------------
+
+function legacyProfiles(overlays) {
+  const profiles = {};
+  for (const dimension of PROFILE_DIMENSIONS) profiles[dimension] = [];
+  for (const overlay of overlays) {
+    const mapping = LEGACY_OVERLAY_MAP[overlay];
+    if (mapping) {
+      const [dimension, profileId] = mapping;
+      if (!profiles[dimension].includes(profileId)) profiles[dimension].push(profileId);
+    }
+  }
+  if (profiles.audiences.length === 0) profiles.audiences = ["engineers", "beginners"];
+  return profiles;
+}
+
+function legacyProject(manifest, repo) {
+  const ctx = manifest.project_context;
+  const proj = manifest.project;
+  const base = ctx && typeof ctx === "object" && !Array.isArray(ctx)
+    ? ctx
+    : proj && typeof proj === "object" && !Array.isArray(proj)
+      ? proj
+      : {};
+  let tier = base.tier;
+  if (LEGACY_TIER_MAP[tier]) tier = LEGACY_TIER_MAP[tier];
+  if (!["spine", "diligence", "portfolio"].includes(tier)) tier = "spine";
+  let overlays = base.overlays;
+  if (!Array.isArray(overlays)) overlays = [];
+  let profiles = legacyProfiles(overlays);
+  if (proj && typeof proj === "object" && proj.profiles && typeof proj.profiles === "object") {
+    const merged = {};
+    for (const dimension of PROFILE_DIMENSIONS) {
+      merged[dimension] = Array.isArray(proj.profiles[dimension])
+        ? proj.profiles[dimension].map(String)
+        : [];
+    }
+    if (merged.audiences.length === 0) merged.audiences = profiles.audiences;
+    profiles = merged;
+  }
+  let name = ctx && typeof ctx === "object" ? ctx.repo_name || "" : "";
+  name = name || (proj && typeof proj === "object" ? proj.name : null) || path.basename(repo);
+  return { tier, profiles, name, root: repo };
+}
+
+function legacyDocuments(manifest) {
+  const out = [];
+  const groups = manifest.document_groups;
+  if (Array.isArray(groups)) {
+    for (const groupObj of groups) {
+      const group = groupObj && typeof groupObj === "object" ? groupObj.group : null;
+      const docs = groupObj && typeof groupObj === "object" ? groupObj.documents : null;
+      for (const doc of docs || []) {
+        if (doc && typeof doc === "object" && !Array.isArray(doc)) {
+          out.push([doc, group || "reference"]);
+        }
+      }
+    }
+    return out;
+  }
+  const docs = manifest.documents;
+  if (Array.isArray(docs)) {
+    for (const doc of docs) {
+      if (doc && typeof doc === "object" && !Array.isArray(doc)) {
+        out.push([doc, doc.group || "reference"]);
+      }
+    }
+  }
+  return out;
+}
+
+function legacySections(doc) {
+  if (Array.isArray(doc.sections)) return doc.sections;
+  const provenance = doc.provenance;
+  if (provenance && typeof provenance === "object" && !Array.isArray(provenance)) {
+    if (Array.isArray(provenance.sections)) return provenance.sections;
+  }
+  return [];
+}
+
+function legacyEmbeddedProvenance(doc) {
+  const provenance = doc.provenance;
+  if (
+    provenance && typeof provenance === "object" && !Array.isArray(provenance)
+    && provenance.schema === pf.SCHEMA_VERSION && typeof provenance.doc_id === "string"
+  ) {
+    return provenance;
+  }
+  return null;
+}
+
+function normalizeLegacyOrigins(origins) {
+  const out = [];
+  for (const origin of origins || []) {
+    if (!origin || typeof origin !== "object" || Array.isArray(origin)) continue;
+    const kind = origin.kind;
+    const originId = origin.id;
+    if (kind === "overlay") {
+      const mapping = LEGACY_OVERLAY_MAP[originId];
+      if (!mapping) continue;
+      const [dimension, profileId] = mapping;
+      out.push({ kind: dimension === "shapes" ? "shape" : "audience", id: profileId });
+      continue;
+    }
+    if (ORIGIN_KINDS.has(kind) && typeof originId === "string") {
+      out.push({ kind, id: originId });
+    }
+  }
+  return out;
+}
+
+function loadCatalogMaps() {
+  const byId = {};
+  const byType = {};
+  const byPath = {};
+  for (const row of queryCatalog.loadIndex().document_types) {
+    const detail = queryCatalog.loadType(row.id);
+    byId[detail.id] = detail;
+    (byType[detail.type] = byType[detail.type] || []).push(detail);
+    if (detail.path) byPath[detail.path] = detail;
+  }
+  return { byId, byType, byPath };
+}
+
+function matchDefinition(maps, docId, legacyType, docPath) {
+  if (maps.byId[docId]) return maps.byId[docId];
+  const candidates = maps.byType[legacyType] || [];
+  if (candidates.length === 1) return candidates[0];
+  return maps.byPath[docPath] || null;
+}
+
+function probeCodeGraph(repo) {
+  if (fs.existsSync(path.join(repo, ".ua")) && fs.statSync(path.join(repo, ".ua")).isDirectory()) {
+    return { provider: "understand-anything", flow: "native" };
+  }
+  if (fs.existsSync(path.join(repo, ".gitnexus")) && fs.statSync(path.join(repo, ".gitnexus")).isDirectory()) {
+    return { provider: "gitnexus", flow: "native" };
+  }
+  if (fs.existsSync(path.join(repo, ".codegraph")) && fs.statSync(path.join(repo, ".codegraph")).isDirectory()) {
+    return { provider: "codegraph", flow: "none" };
+  }
+  return { provider: "none", flow: "none" };
+}
+
+function provenanceFromLegacySections(sections, docId, docPath, generatedAt, tier, graph, targetDepth, version) {
+  const normalized = pf.normalizeSections(
+    sections
+      .filter((section) => section && typeof section === "object" && !Array.isArray(section))
+      .map((section) => ({ id: section.id, sources: section.sources })),
+  );
+  return {
+    schema: pf.SCHEMA_VERSION,
+    doc_id: docId,
+    path: docPath,
+    generated_at: generatedAt,
+    generator: { name: pf.GENERATOR_NAME, version },
+    tier,
+    target_depth: targetDepth,
+    graph: { provider: graph.provider, flow: graph.flow },
+    sections: normalized,
+  };
+}
+
+function normalizeEmbedded(embedded) {
+  return { ...embedded, sections: pf.normalizeSections(embedded.sections) };
+}
+
+function provenanceForLegacyFile(repo, docId, docPath, sections, graph, generatedAt, tier, targetDepth, version, embedded) {
+  const target = path.join(repo, docPath);
+  const text = fs.readFileSync(target, "utf8");
+  const parsed = pf.parseFrontmatter(text);
+  const defaults = { doc_id: docId, path: docPath, generated_at: generatedAt, tier, target_depth: targetDepth };
+  if (parsed.state === "ok" && parsed.provenance && typeof parsed.provenance === "object") {
+    return { provenance: parsed.provenance, detail: "already schema 2.0", needsRewrite: false };
+  }
+  if ((parsed.state === "legacy" || parsed.state === "obsolete") && parsed.provenance) {
+    try {
+      const migrated = pf.migrateV1ToV2(parsed.provenance, bodyForRewrite(text), defaults);
+      return { provenance: migrated, detail: "frontmatter migrated to schema 2.0", needsRewrite: true };
+    } catch (error) {
+      return {
+        provenance: embedded ? normalizeEmbedded(embedded) : provenanceFromLegacySections(
+          sections, docId, docPath, generatedAt, tier, graph, targetDepth, version,
+        ),
+        detail: `frontmatter conversion failed (${error.message}); provenance from manifest`,
+        needsRewrite: true,
+      };
+    }
+  }
+  if (parsed.state === "unparseable") {
+    return {
+      provenance: embedded ? normalizeEmbedded(embedded) : provenanceFromLegacySections(
+        sections, docId, docPath, generatedAt, tier, graph, targetDepth, version,
+      ),
+      detail: "frontmatter unparseable; provenance from manifest",
+      needsRewrite: true,
+    };
+  }
+  if (embedded) {
+    return { provenance: normalizeEmbedded(embedded), detail: "provenance 2.0 carried from manifest", needsRewrite: true };
+  }
+  if (Array.isArray(sections) && sections.length) {
+    return {
+      provenance: provenanceFromLegacySections(sections, docId, docPath, generatedAt, tier, graph, targetDepth, version),
+      detail: "provenance from manifest sections",
+      needsRewrite: true,
+    };
+  }
+  return {
+    provenance: pf.scaffoldProvenance(docId, docPath, {
+      tier,
+      target_depth: targetDepth,
+      provider: graph.provider,
+      flow: graph.flow,
+      generated_at: generatedAt,
+    }),
+    detail: "no provenance evidence; scaffolded",
+    needsRewrite: true,
+  };
+}
+
+function buildLegacyEntry(definition, legacyDoc, docPath, group, status, provenance, generatedAt, tier, writeOrder, version) {
+  const id = String(legacyDoc.id || "");
+  let provenanceMode = legacyDoc.provenance_mode;
+  if (provenanceMode !== "sections" && provenanceMode !== "manifest") {
+    provenanceMode = MARKDOWN_EXCEPTIONS.has(path.basename(docPath)) ? "manifest" : "sections";
+  }
+  const targetDepth = legacyDoc.target_depth || (definition && definition.target_depth) || "orientation";
+  let selection = legacyDoc.selection;
+  if (!selection || typeof selection !== "object" || Array.isArray(selection)) selection = {};
+  let origins = normalizeLegacyOrigins(selection.origins);
+  if (origins.length === 0) origins = [{ kind: "dynamic", id: `legacy-v${version}` }];
+  const evidence = Array.isArray(selection.evidence) ? selection.evidence : [];
+  let requires = legacyDoc.requires;
+  if (!Array.isArray(requires)) requires = [...((definition && definition.requires) || [])];
+  let writeOrderValue = legacyDoc.write_order;
+  if (typeof writeOrderValue !== "number") {
+    writeOrderValue = (definition && definition.write_order) || writeOrder;
+  }
+  const base = {
+    id,
+    title: legacyDoc.title || (definition && definition.title)
+      || id.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    path: docPath,
+    group,
+    selection: { origins, evidence },
+    status,
+    requires,
+    scaffold_template: legacyDoc.scaffold_template || legacyDoc.template
+      || (definition && definition.template_file) || "generic.md",
+    instruction_file: Object.prototype.hasOwnProperty.call(legacyDoc, "instruction_file")
+      ? legacyDoc.instruction_file
+      : (definition && definition.instruction_file) || null,
+    target_depth: targetDepth,
+    write_order: writeOrderValue,
+    provenance_mode: provenanceMode,
+    audit_profile: legacyDoc.audit_profile || (definition && definition.audit_profile) || "standard",
+    provenance: provenance || pf.scaffoldProvenance(id, docPath, {
+      tier,
+      target_depth: targetDepth,
+      generated_at: generatedAt,
+    }),
+    audit: null,
+  };
+  if (legacyDoc.type) {
+    base.type = legacyDoc.type;
+  } else if (definition) {
+    base.type = definition.type || "generic";
+  } else {
+    base.type = "generic";
+  }
+  const contractRevision = legacyDoc.contract_revision || (definition && definition.contract_revision);
+  if (contractRevision) base.contract_revision = contractRevision;
+  return base;
+}
+
+function migrateLegacy(repo, manifestPath, manifest, dryRun) {
+  const version = String(manifest.version || "unknown");
+  const reports = [];
+  const maps = loadCatalogMaps();
+  const project = legacyProject(manifest, repo);
+  const generatedAt = manifest.generated_at || new Date().toISOString();
+  const graph = probeCodeGraph(repo);
+  const newManifest = {
+    version: MANIFEST_CURRENT,
+    generated_at: generatedAt,
+    project: {
+      name: project.name,
+      root: project.root,
+      tier: project.tier,
+      profiles: project.profiles,
+    },
+    discovery: [],
+    discovery_gate: null,
+    documents: [],
+    metadata: {},
+  };
+  let adopted = 0;
+  let keptPlanned = 0;
+  let skipped = 0;
+  let failed = 0;
+  let fallback = 0;
+  let writeOrder = 1000;
+  for (const [legacyDoc, group] of legacyDocuments(manifest)) {
+    const docId = String(legacyDoc.id || "");
+    const docPath = String(legacyDoc.path || "");
+    let legacyStatus = legacyDoc.status || "planned";
+    if (!STATUSES.includes(legacyStatus)) legacyStatus = "planned";
+    const sections = legacySections(legacyDoc);
+    const embedded = legacyEmbeddedProvenance(legacyDoc);
+    const definition = matchDefinition(maps, docId, legacyDoc.type, docPath);
+    writeOrder += 1;
+    if (legacyStatus === "skipped") {
+      newManifest.documents.push(
+        buildLegacyEntry(definition, legacyDoc, docPath, group, "skipped", null, generatedAt, project.tier, writeOrder, version),
+      );
+      skipped += 1;
+      reports.push({ doc: docPath, action: "skip", detail: "kept skipped" });
+      continue;
+    }
+    if (!docPath || !fs.existsSync(path.join(repo, docPath)) || !fs.statSync(path.join(repo, docPath)).isFile()) {
+      if (WRITTEN.has(legacyStatus)) {
+        failed += 1;
+        reports.push({ doc: docPath, action: "failed", detail: "file absent; agent must regenerate" });
+      }
+      newManifest.documents.push(
+        buildLegacyEntry(definition, legacyDoc, docPath, group, "planned", null, generatedAt, project.tier, writeOrder, version),
+      );
+      keptPlanned += 1;
+      continue;
+    }
+    if (!WRITTEN.has(legacyStatus)) {
+      newManifest.documents.push(
+        buildLegacyEntry(definition, legacyDoc, docPath, group, legacyStatus, null, generatedAt, project.tier, writeOrder, version),
+      );
+      keptPlanned += 1;
+      reports.push({ doc: docPath, action: "migrate", detail: `kept ${legacyStatus}` });
+      continue;
+    }
+    const targetDepth = legacyDoc.target_depth || (definition && definition.target_depth) || "orientation";
+    const { provenance, detail, needsRewrite } = provenanceForLegacyFile(
+      repo, docId, docPath, sections, graph, generatedAt, project.tier, targetDepth, version, embedded,
+    );
+    let status = legacyStatus === "complete" ? "generated" : legacyStatus;
+    if (!WRITTEN.has(status)) status = "generated";
+    if (!definition) fallback += 1;
+    newManifest.documents.push(
+      buildLegacyEntry(definition, legacyDoc, docPath, group, status, provenance, generatedAt, project.tier, writeOrder, version),
+    );
+    adopted += 1;
+    const entryDetail = definition
+      ? `adopted as ${status} (${detail})`
+      : `adopted as ${status} without catalog match (${detail})`;
+    reports.push({ doc: docPath, action: "migrate", detail: entryDetail });
+    if (needsRewrite && WRITTEN.has(status) && docPath.endsWith(".md") && !MARKDOWN_EXCEPTIONS.has(path.basename(docPath)) && !dryRun) {
+      const target = path.join(repo, docPath);
+      const text = fs.readFileSync(target, "utf8");
+      fs.writeFileSync(target, pf.emitYaml(provenance) + bodyForRewrite(text).replace(/^\n+/, ""), "utf8");
+    }
+  }
+  if (!dryRun) {
+    fs.writeFileSync(manifestPath, dumpJson(newManifest), "utf8");
+  }
+  let manifestLabel;
+  try {
+    manifestLabel = path.relative(repo, manifestPath);
+  } catch {
+    manifestLabel = manifestPath;
+  }
+  reports.unshift({
+    doc: manifestLabel,
+    action: "migrate",
+    detail: `manifest version -> ${MANIFEST_CURRENT}; re-registered from ${version} ` +
+      `(${adopted} adopted, ${keptPlanned} planned/in-progress, ${skipped} skipped, ${failed} failed, ${fallback} generic)`,
+  });
+  return { reports, changed: Boolean(adopted || keptPlanned || failed) };
 }
 
 function main(argv) {

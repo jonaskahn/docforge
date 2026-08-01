@@ -175,6 +175,14 @@ directly with `scaffold_docs --dry-run --revise`.
 Flags combine with a scope argument, e.g.
 `/docforge-revise flow --plan-only`.
 
+`migrate_metadata` also re-registers legacy manifests (any pre-3.0 version —
+1.1 `project_context` / `document_groups`, 2.0 flat `documents` with
+overlays, or any other shape) as 3.1: written documents are adopted as
+`generated` with provenance 2.0 (bodies preserved) and plan entries are
+kept, so a revise run over an old manifest re-grounds and audits the adopted
+documents like any other written tree (steps 1 / 1a / 1b above). Adopted
+documents are never `complete` — they have no independent audit.
+
 ```sh
 python runtime/cli/python/check_staleness.py \
 node runtime/cli/js/check_staleness.js \

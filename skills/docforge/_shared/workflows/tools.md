@@ -83,6 +83,10 @@ from the absolute cartridge root with `query_catalog --validate`,
 - `check_staleness.{py,js}`: `--document <id|path>`, `--section`, JSON output,
   and provenance sync.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade;
+  upgrades manifest 3.0 / provenance 1.0 to 3.1 / 2.0 YAML and re-registers
+  any legacy pre-3.0 manifest (1.1, 2.0, or another shape) as 3.1 (written
+  documents adopted as `generated` with provenance 2.0, bodies preserved,
+  plan entries kept);
   incomplete or unconvertible written documents are reported as `FAILED` and
   demoted to `in_progress` for agent regeneration.
 - `flow_index.{py,js}`: harvest, revise (label/candidate dedup, compact

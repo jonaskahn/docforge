@@ -187,6 +187,27 @@ class SkillContentTests(unittest.TestCase):
         help_text = (SHARED_ROOT / "help.md").read_text(encoding="utf-8")
         self.assertIn("`scan` (read-only diagnostics", help_text)
 
+    def test_dashboard_legacy_manifest_gate(self) -> None:
+        """A legacy manifest (any pre-3.0 version) stops the dashboard with a
+        three-option gate: revise all, update metadata only
+        (migrate_metadata), or stop."""
+        workflow = (SHARED_ROOT / "workflows" / "dashboard.md").read_text(encoding="utf-8")
+        self.assertIn("## Legacy manifest gate", workflow)
+        self.assertIn("**Revise all (recommended)**", workflow)
+        self.assertIn("**Update metadata only**", workflow)
+        self.assertIn("**Stop**", workflow)
+        self.assertIn("`--auto-accept` never bypasses this gate", workflow)
+        self.assertIn("`migrate_metadata --dry-run`", workflow)
+        self.assertIn("for **any** legacy version", workflow)
+        self.assertNotIn("Legacy manifest gate (v1.1)", workflow)
+        thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("## Legacy manifest gate", thin)
+        self.assertIn("**Revise all (recommended)**", thin)
+        self.assertIn("**Update metadata only**", thin)
+        self.assertIn("**Stop**", thin)
+        self.assertIn("any** legacy version", thin)
+        self.assertNotIn("Legacy manifest gate (v1.1)", thin)
+
     def test_help_supported_by_all_entrypoints(self) -> None:
         """--help is accepted by all three entrypoints and routes to the
         canonical per-entrypoint reference in _shared/help.md."""

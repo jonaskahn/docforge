@@ -23,5 +23,5 @@
   "audit_profile": "router",
   "template_file": "content/shared/section-readme.template.md",
   "title": "Coding-agent views",
-  "contract_revision": "2.10.0"
+  "contract_revision": "2.11.0"
 }

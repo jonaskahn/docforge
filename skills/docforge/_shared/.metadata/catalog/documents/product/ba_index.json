@@ -25,5 +25,5 @@
   "audit_profile": "router",
   "template_file": "content/product/templates/ba-readme.md",
   "title": "Business Analyst documentation",
-  "contract_revision": "2.10.0"
+  "contract_revision": "2.11.0"
 }

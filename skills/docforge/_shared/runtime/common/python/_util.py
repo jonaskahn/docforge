@@ -110,7 +110,7 @@ def load_manifest(
     *,
     allowed_versions: Sequence[str] = ("3.1",),
     require_documents: bool = False,
-    unsupported_hint: str = "run migrate_metadata.py for 3.0 manifests",
+    unsupported_hint: str = "run migrate_metadata.py to re-register legacy manifests",
 ) -> dict:
     if not path.is_file():
         raise ValueError(f"manifest not found: {path}")

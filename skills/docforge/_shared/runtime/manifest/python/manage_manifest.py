@@ -48,7 +48,7 @@ def now_iso() -> str:
 
 
 MANIFEST_HINT = (
-    "run migrate_metadata.py for 3.0, or replace unsupported older manifests"
+    "run migrate_metadata.py to re-register legacy manifests"
 )
 
 

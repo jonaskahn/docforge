@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Migrate Docforge manifest 3.0 / provenance 1.0 metadata to 3.1 / 2.0 YAML.
+"""Migrate Docforge manifest metadata to 3.1 / provenance 2.0 YAML.
 
-Converts schema 1.0 and schema-less legacy frontmatter (including pre-schema
-`doc` / `graph_snapshot` shapes) while preserving section evidence. When a
-document cannot be converted to complete provenance 2.0 (missing or
-unparseable frontmatter, conversion failure, or incomplete result for a
-written document), write a best-effort scaffold, mark the document
-`in_progress` for agent regeneration, and report `failed`.
+Upgrades manifest 3.0 / provenance 1.0 (converting schema 1.0 and schema-less
+legacy frontmatter, including pre-schema `doc` / `graph_snapshot` shapes,
+while preserving section evidence), and re-registers any older legacy
+manifest — 1.1 (`project_context` / `document_groups`), 2.0 (flat
+`documents` with overlay profiles), or any other pre-3.0 shape — as 3.1:
+written documents are adopted as `generated` with provenance 2.0, bodies
+preserved, and plan entries kept. When a document cannot be converted to
+complete provenance 2.0 (missing or unparseable frontmatter, conversion
+failure, or incomplete result for a written document), write a best-effort
+scaffold, mark the document `in_progress` for agent regeneration, and report
+`failed`.
 """
 
 from __future__ import annotations
@@ -14,17 +19,20 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-from runtime.common.python._util import fail, load_manifest
+from runtime.common.python._util import dump_json, fail, load_manifest
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.provenance_frontmatter import (
     FLOW_VALUES,
+    GENERATOR_NAME,
     LEGACY_SCHEMA,
     SCAFFOLD_TOKEN,
     SCHEMA_VERSION,
     emit_yaml,
     migrate_v1_to_v2,
+    normalize_sections,
     parse_frontmatter,
     rewrite_frontmatter,
     scaffold_provenance,
@@ -38,8 +46,22 @@ WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
 MANIFEST_LOAD = {
     "allowed_versions": (MANIFEST_CURRENT, MANIFEST_LEGACY),
-    "unsupported_hint": "older manifests are unsupported",
+    "unsupported_hint": "legacy manifests are re-registered by this command",
 }
+LEGACY_TIER_MAP = {"core": "spine", "standard": "diligence", "extended": "portfolio"}
+LEGACY_OVERLAY_MAP = {
+    "business-analyst": ("audiences", "business-analysts"),
+    "product-owner": ("audiences", "product-owners"),
+    "agent-context": ("audiences", "coding-agents"),
+    "api": ("shapes", "api-service"),
+    "web": ("shapes", "web-app"),
+    "library": ("shapes", "library-sdk"),
+    "infrastructure": ("shapes", "infrastructure-platform"),
+    "data-pipeline": ("shapes", "data-pipeline"),
+}
+PROFILE_DIMENSIONS = ("shapes", "platforms", "frameworks", "concerns", "audiences")
+ORIGIN_KINDS = {"tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor"}
+STATUSES = {"planned", "in_progress", "generated", "needs_review", "complete", "skipped"}
 
 
 def needs_provenance_migration(provenance: dict | None) -> bool:
@@ -383,6 +405,12 @@ def migrate_manifest_object(manifest: dict, *, demote_incomplete: bool = False) 
 
 
 def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict], bool]:
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"manifest must be a JSON object: {manifest_path}")
+    version = data.get("version")
+    if version not in {MANIFEST_CURRENT, MANIFEST_LEGACY}:
+        return migrate_legacy(repo, manifest_path, data, dry_run)
     manifest = load_manifest(manifest_path, **MANIFEST_LOAD)
     reports: list[dict] = []
     # Snapshot written status before any demotion so file conversion can still
@@ -435,6 +463,544 @@ def ensure_migrated(repo: Path, manifest_path: Path) -> dict:
     """Migrate in place and return the loaded current manifest."""
     migrate(repo, manifest_path, dry_run=False)
     return load_manifest(manifest_path, **MANIFEST_LOAD)
+
+
+# ---------------------------------------------------------------------------
+# Legacy manifest re-registration (any pre-3.0 version)
+# ---------------------------------------------------------------------------
+
+
+def legacy_profiles(overlays: list[str]) -> dict[str, list[str]]:
+    """Map legacy overlays onto the typed profile dimensions.
+
+    A legacy manifest with no audience-mapping overlay keeps the 3.x init
+    default audience (engineers + beginners)."""
+    profiles = {dimension: [] for dimension in PROFILE_DIMENSIONS}
+    for overlay in overlays:
+        mapping = LEGACY_OVERLAY_MAP.get(overlay)
+        if mapping is not None:
+            dimension, profile_id = mapping
+            if profile_id not in profiles[dimension]:
+                profiles[dimension].append(profile_id)
+    if not profiles["audiences"]:
+        profiles["audiences"] = ["engineers", "beginners"]
+    return profiles
+
+
+def legacy_project(manifest: dict, repo: Path) -> dict:
+    """Best-effort 3.1 project block from any legacy manifest shape.
+
+    Reads either `project_context` (1.x) or `project` (2.x), maps legacy
+    tiers (`core` / `standard` / `extended`) and overlays, and accepts a
+    pre-existing `project.profiles` when present."""
+    ctx = manifest.get("project_context")
+    proj = manifest.get("project")
+    base = ctx if isinstance(ctx, dict) else (proj if isinstance(proj, dict) else {})
+    tier = base.get("tier")
+    if tier in LEGACY_TIER_MAP:
+        tier = LEGACY_TIER_MAP[tier]
+    if tier not in {"spine", "diligence", "portfolio"}:
+        tier = "spine"
+    overlays = base.get("overlays")
+    if not isinstance(overlays, list):
+        overlays = []
+    profiles = legacy_profiles(overlays)
+    if isinstance(proj, dict) and isinstance(proj.get("profiles"), dict):
+        existing = proj["profiles"]
+        merged = {
+            dimension: [str(value) for value in existing.get(dimension) or []]
+            for dimension in PROFILE_DIMENSIONS
+        }
+        if not merged["audiences"]:
+            merged["audiences"] = profiles["audiences"]
+        profiles = merged
+    name = ""
+    if isinstance(ctx, dict):
+        name = ctx.get("repo_name") or ""
+    name = name or (proj.get("name") if isinstance(proj, dict) else None) or repo.name
+    return {
+        "tier": tier,
+        "profiles": profiles,
+        "name": name,
+        "root": str(repo.resolve()),
+    }
+
+
+def legacy_documents(manifest: dict) -> list[tuple[dict, str]]:
+    """Flatten any legacy manifest shape into (doc, group) records.
+
+    Handles the 1.x `document_groups` container and the 2.x+ flat
+    `documents` array; anything else yields no documents."""
+    out: list[tuple[dict, str]] = []
+    groups = manifest.get("document_groups")
+    if isinstance(groups, list):
+        for group_obj in groups:
+            group = group_obj.get("group") if isinstance(group_obj, dict) else None
+            docs = group_obj.get("documents") if isinstance(group_obj, dict) else None
+            for doc in docs or []:
+                if isinstance(doc, dict):
+                    out.append((doc, group or "reference"))
+        return out
+    docs = manifest.get("documents")
+    if isinstance(docs, list):
+        for doc in docs:
+            if isinstance(doc, dict):
+                out.append((doc, doc.get("group") or "reference"))
+    return out
+
+
+def legacy_sections(doc: dict) -> list:
+    """Section evidence from either the 1.x `doc.sections` or the 2.x
+    `doc.provenance.sections` shape."""
+    sections = doc.get("sections")
+    if isinstance(sections, list):
+        return sections
+    provenance = doc.get("provenance")
+    if isinstance(provenance, dict):
+        nested = provenance.get("sections")
+        if isinstance(nested, list):
+            return nested
+    return []
+
+
+def legacy_embedded_provenance(doc: dict) -> dict | None:
+    """A manifest-embedded provenance that is already schema 2.0 (2.x-era
+    manifests with a provenance object carrying a schema)."""
+    provenance = doc.get("provenance")
+    if (
+        isinstance(provenance, dict)
+        and provenance.get("schema") == SCHEMA_VERSION
+        and isinstance(provenance.get("doc_id"), str)
+    ):
+        return provenance
+    return None
+
+
+def normalize_legacy_origins(origins: list) -> list[dict]:
+    """Normalize legacy selection origins to the 3.1 origin kinds.
+
+    2.x-era `overlay` origins map through the overlay table to their profile
+    dimension; unknown origins are dropped so the migrated manifest stays
+    schema-valid."""
+    out: list[dict] = []
+    for origin in origins or []:
+        if not isinstance(origin, dict):
+            continue
+        kind = origin.get("kind")
+        origin_id = origin.get("id")
+        if kind == "overlay":
+            mapping = LEGACY_OVERLAY_MAP.get(origin_id)
+            if mapping is None:
+                continue
+            dimension, profile_id = mapping
+            out.append({"kind": "shape" if dimension == "shapes" else "audience", "id": profile_id})
+            continue
+        if kind in ORIGIN_KINDS and isinstance(origin_id, str):
+            out.append({"kind": kind, "id": origin_id})
+    return out
+
+
+def load_catalog_maps() -> tuple[dict, dict, dict]:
+    from runtime.catalog.python import query_catalog
+
+    by_id: dict[str, dict] = {}
+    by_type: dict[str, list[dict]] = {}
+    by_path: dict[str, dict] = {}
+    for row in query_catalog.load_index()["document_types"]:
+        detail = query_catalog.load_type(row["id"])
+        by_id[detail["id"]] = detail
+        by_type.setdefault(detail.get("type"), []).append(detail)
+        if detail.get("path"):
+            by_path[detail["path"]] = detail
+    return by_id, by_type, by_path
+
+
+def match_definition(
+    by_id: dict,
+    by_type: dict,
+    by_path: dict,
+    doc_id: str,
+    legacy_type: str | None,
+    path: str,
+) -> dict | None:
+    """Match a legacy document to a current catalog definition: by id, then by
+    a unique type, then by an exact catalog path. Returns None for removed or
+    renamed types so the document is adopted generically."""
+    if doc_id in by_id:
+        return by_id[doc_id]
+    candidates = by_type.get(legacy_type) or []
+    if len(candidates) == 1:
+        return candidates[0]
+    return by_path.get(path)
+
+
+def probe_code_graph(repo: Path) -> dict[str, str]:
+    """Read-only detection of a ready code-graph artifact, so adopted written
+    documents get a concrete graph provider (schema 2.0 requires one)."""
+    if (repo / ".ua").is_dir() or (repo / ".ua" / "knowledge-graph.json").is_file():
+        return {"provider": "understand-anything", "flow": "native"}
+    if (repo / ".gitnexus").is_dir():
+        return {"provider": "gitnexus", "flow": "native"}
+    if (repo / ".codegraph").is_dir():
+        return {"provider": "codegraph", "flow": "none"}
+    return {"provider": "none", "flow": "none"}
+
+
+def provenance_from_legacy_sections(
+    sections: list,
+    doc_id: str,
+    path: str,
+    generated_at: str,
+    tier: str,
+    graph: dict[str, str],
+    target_depth: str,
+    version: str,
+) -> dict:
+    normalized = normalize_sections(
+        [
+            {"id": section.get("id"), "sources": section.get("sources")}
+            for section in sections
+            if isinstance(section, dict)
+        ]
+    )
+    return {
+        "schema": SCHEMA_VERSION,
+        "doc_id": doc_id,
+        "path": path,
+        "generated_at": generated_at,
+        "generator": {"name": GENERATOR_NAME, "version": version},
+        "tier": tier,
+        "target_depth": target_depth,
+        "graph": {"provider": graph["provider"], "flow": graph["flow"]},
+        "sections": normalized,
+    }
+
+
+def provenance_for_legacy_file(
+    repo: Path,
+    doc_id: str,
+    path: str,
+    sections: list,
+    graph: dict[str, str],
+    generated_at: str,
+    tier: str,
+    target_depth: str,
+    version: str,
+    embedded: dict | None = None,
+) -> tuple[dict, str, bool]:
+    """Best provenance 2.0 for a written legacy document.
+
+    Returns (provenance, detail, needs_rewrite): the file's own frontmatter
+    wins when present; otherwise an already-schema-2.0 manifest provenance;
+    otherwise the manifest's aggregated sections are converted; otherwise a
+    scaffold is emitted (detail names the reason)."""
+    text = (repo / path).read_text(encoding="utf-8", errors="replace")
+    state, embedded_file, _end = parse_frontmatter(text)
+    defaults = {
+        "doc_id": doc_id,
+        "path": path,
+        "generated_at": generated_at,
+        "tier": tier,
+        "target_depth": target_depth,
+    }
+    if state == "ok" and isinstance(embedded_file, dict):
+        return embedded_file, "already schema 2.0", False
+    if state in {"legacy", "obsolete"} and isinstance(embedded_file, dict):
+        try:
+            migrated = migrate_v1_to_v2(embedded_file, body_for_rewrite(text), defaults=defaults)
+            return migrated, "frontmatter migrated to schema 2.0", True
+        except Exception as exc:  # noqa: BLE001 - best-effort conversion
+            fallback = provenance_from_legacy_sections(
+                sections, doc_id, path, generated_at, tier, graph, target_depth, version
+            )
+            return (
+                dict(embedded, sections=normalize_sections(embedded.get("sections")))
+                if embedded is not None
+                else fallback,
+                f"frontmatter conversion failed ({exc}); provenance from manifest",
+                True,
+            )
+    if state == "unparseable":
+        return (
+            dict(embedded, sections=normalize_sections(embedded.get("sections")))
+            if embedded is not None
+            else provenance_from_legacy_sections(
+                sections, doc_id, path, generated_at, tier, graph, target_depth, version
+            ),
+            "frontmatter unparseable; provenance from manifest",
+            True,
+        )
+    if embedded is not None:
+        return (
+            dict(embedded, sections=normalize_sections(embedded.get("sections"))),
+            "provenance 2.0 carried from manifest",
+            True,
+        )
+    if sections:
+        return (
+            provenance_from_legacy_sections(
+                sections, doc_id, path, generated_at, tier, graph, target_depth, version
+            ),
+            "provenance from manifest sections",
+            True,
+        )
+    return (
+        scaffold_provenance(
+            doc_id,
+            path,
+            tier=tier,
+            target_depth=target_depth,
+            provider=graph["provider"],
+            flow=graph["flow"],
+            generated_at=generated_at,
+        ),
+        "no provenance evidence; scaffolded",
+        True,
+    )
+
+
+def build_legacy_entry(
+    definition: dict | None,
+    legacy_doc: dict,
+    path: str,
+    group: str,
+    status: str,
+    provenance: dict | None,
+    generated_at: str,
+    tier: str,
+    write_order: int,
+    version: str,
+) -> dict:
+    """Build a 3.1 document entry from a legacy document.
+
+    The legacy document's own 3.x-compatible fields are preserved when
+    present; missing fields fall back to the catalog definition, then to
+    defaults, so 2.x-era manifests keep their metadata while 1.x-era entries
+    gain catalog-owned structure."""
+    id_value = str(legacy_doc.get("id") or "")
+    provenance_mode = legacy_doc.get("provenance_mode")
+    if provenance_mode not in {"sections", "manifest"}:
+        provenance_mode = "manifest" if path in MARKDOWN_EXCEPTIONS else "sections"
+    target_depth = (
+        legacy_doc.get("target_depth")
+        or (definition or {}).get("target_depth")
+        or "orientation"
+    )
+    selection = legacy_doc.get("selection")
+    if not isinstance(selection, dict):
+        selection = {}
+    origins = normalize_legacy_origins(selection.get("origins"))
+    if not origins:
+        origins = [{"kind": "dynamic", "id": f"legacy-v{version}"}]
+    evidence = selection.get("evidence")
+    requires = legacy_doc.get("requires")
+    if not isinstance(requires, list):
+        requires = list((definition or {}).get("requires") or [])
+    write_order_value = legacy_doc.get("write_order")
+    if not isinstance(write_order_value, int):
+        write_order_value = (definition or {}).get("write_order") or write_order
+    base = {
+        "id": id_value,
+        "title": (
+            legacy_doc.get("title")
+            or (definition or {}).get("title")
+            or id_value.replace("_", " ").replace("-", " ").title()
+        ),
+        "path": path,
+        "group": group,
+        "selection": {"origins": origins, "evidence": evidence if isinstance(evidence, list) else []},
+        "status": status,
+        "requires": requires,
+        "scaffold_template": (
+            legacy_doc.get("scaffold_template")
+            or legacy_doc.get("template")
+            or (definition or {}).get("template_file")
+            or "generic.md"
+        ),
+        "instruction_file": (
+            legacy_doc["instruction_file"]
+            if "instruction_file" in legacy_doc
+            else (definition or {}).get("instruction_file")
+        ),
+        "target_depth": target_depth,
+        "write_order": write_order_value,
+        "provenance_mode": provenance_mode,
+        "audit_profile": (
+            legacy_doc.get("audit_profile")
+            or (definition or {}).get("audit_profile")
+            or "standard"
+        ),
+        "provenance": provenance
+        or scaffold_provenance(
+            id_value,
+            path,
+            tier=tier,
+            target_depth=target_depth,
+            generated_at=generated_at,
+        ),
+        "audit": None,
+    }
+    if "type" in legacy_doc and legacy_doc.get("type"):
+        base["type"] = legacy_doc["type"]
+    elif definition is not None:
+        base["type"] = definition.get("type") or "generic"
+    else:
+        base["type"] = "generic"
+    contract_revision = legacy_doc.get("contract_revision") or (
+        (definition or {}).get("contract_revision")
+    )
+    if contract_revision:
+        base["contract_revision"] = contract_revision
+    return base
+
+
+def migrate_legacy(
+    repo: Path,
+    manifest_path: Path,
+    manifest: dict,
+    dry_run: bool,
+) -> tuple[list[dict], bool]:
+    """Re-register any pre-3.0 legacy manifest as 3.1.
+
+    The manifest's own version drives the generator stamp and origin label —
+    nothing is hard-coded to one legacy version. Written documents whose
+    files exist are adopted as `generated` (never `complete` — no
+    independent audit survived) with provenance 2.0; bodies and source
+    hashes are preserved, and legacy frontmatter is migrated to schema 2.0.
+    Unmatched types are adopted generically. Skipped documents stay skipped;
+    written documents with a missing file are reported failed and demoted to
+    `planned` for regeneration."""
+    version = str(manifest.get("version") or "unknown")
+    reports: list[dict] = []
+    by_id, by_type, by_path = load_catalog_maps()
+    project = legacy_project(manifest, repo)
+    generated_at = manifest.get("generated_at") or datetime.now(timezone.utc).isoformat()
+    graph = probe_code_graph(repo)
+    new_manifest = {
+        "version": MANIFEST_CURRENT,
+        "generated_at": generated_at,
+        "project": {
+            "name": project["name"],
+            "root": project["root"],
+            "tier": project["tier"],
+            "profiles": project["profiles"],
+        },
+        "discovery": [],
+        "discovery_gate": None,
+        "documents": [],
+        "metadata": {},
+    }
+    adopted = 0
+    kept_planned = 0
+    skipped = 0
+    failed = 0
+    fallback = 0
+    write_order = 1000
+    for legacy_doc, group in legacy_documents(manifest):
+        doc_id = str(legacy_doc.get("id") or "")
+        path = str(legacy_doc.get("path") or "")
+        legacy_status = legacy_doc.get("status") or "planned"
+        if legacy_status not in STATUSES:
+            legacy_status = "planned"
+        sections = legacy_sections(legacy_doc)
+        embedded = legacy_embedded_provenance(legacy_doc)
+        definition = match_definition(
+            by_id, by_type, by_path, doc_id, legacy_doc.get("type"), path
+        )
+        write_order += 1
+        if legacy_status == "skipped":
+            new_manifest["documents"].append(
+                build_legacy_entry(
+                    definition, legacy_doc, path, group, "skipped",
+                    None, generated_at, project["tier"], write_order, version,
+                )
+            )
+            skipped += 1
+            reports.append({"doc": path, "action": "skip", "detail": "kept skipped"})
+            continue
+        if not path or not (repo / path).is_file():
+            if legacy_status in WRITTEN:
+                failed += 1
+                reports.append(
+                    {"doc": path, "action": "failed", "detail": "file absent; agent must regenerate"}
+                )
+            new_manifest["documents"].append(
+                build_legacy_entry(
+                    definition, legacy_doc, path, group, "planned",
+                    None, generated_at, project["tier"], write_order, version,
+                )
+            )
+            kept_planned += 1
+            continue
+        if legacy_status not in WRITTEN:
+            new_manifest["documents"].append(
+                build_legacy_entry(
+                    definition, legacy_doc, path, group, legacy_status,
+                    None, generated_at, project["tier"], write_order, version,
+                )
+            )
+            kept_planned += 1
+            reports.append({"doc": path, "action": "migrate", "detail": f"kept {legacy_status}"})
+            continue
+        target_depth = (
+            legacy_doc.get("target_depth")
+            or (definition or {}).get("target_depth")
+            or "orientation"
+        )
+        provenance, detail, needs_rewrite = provenance_for_legacy_file(
+            repo, doc_id, path, sections, graph, generated_at,
+            project["tier"], target_depth, version, embedded=embedded,
+        )
+        status = "generated" if legacy_status == "complete" else legacy_status
+        if status not in WRITTEN:
+            status = "generated"
+        if definition is None:
+            fallback += 1
+        new_manifest["documents"].append(
+            build_legacy_entry(
+                definition, legacy_doc, path, group, status,
+                provenance, generated_at, project["tier"], write_order, version,
+            )
+        )
+        adopted += 1
+        entry_detail = (
+            f"adopted as {status} ({detail})"
+            if definition is not None
+            else f"adopted as {status} without catalog match ({detail})"
+        )
+        reports.append({"doc": path, "action": "migrate", "detail": entry_detail})
+        if (
+            needs_rewrite
+            and status in WRITTEN
+            and path.endswith(".md")
+            and (repo / path).name not in MARKDOWN_EXCEPTIONS
+            and not dry_run
+        ):
+            target = repo / path
+            text = target.read_text(encoding="utf-8", errors="replace")
+            target.write_text(
+                emit_yaml(provenance) + body_for_rewrite(text).lstrip("\n"),
+                encoding="utf-8",
+            )
+    if not dry_run:
+        manifest_path.write_text(dump_json(new_manifest), encoding="utf-8")
+    try:
+        manifest_label = str(manifest_path.relative_to(repo))
+    except ValueError:
+        manifest_label = str(manifest_path)
+    reports.insert(
+        0,
+        {
+            "doc": manifest_label,
+            "action": "migrate",
+            "detail": (
+                f"manifest version -> {MANIFEST_CURRENT}; re-registered from {version} "
+                f"({adopted} adopted, {kept_planned} planned/in-progress, "
+                f"{skipped} skipped, {failed} failed, {fallback} generic)"
+            ),
+        },
+    )
+    return reports, bool(adopted or kept_planned or failed)
 
 
 def main() -> int:

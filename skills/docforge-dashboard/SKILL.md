@@ -50,7 +50,7 @@ node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--
 |---|---|
 | *(none)* | `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `--force` | Ignore signatures: always regenerate generated output (`content/docs`, assets, navigation, app shell), keeping `node_modules` |
-| `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server |
+| `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server. On a legacy manifest, the metadata dry-run is the `migrate_metadata --dry-run` preview |
 | `--auto-accept` | Skip the revise-vs-render prompt and routine pauses; never authorizes npm install of new packages without its own confirmation gate (see [`${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md>)) |
 | `--help` | Print this command's purpose and full parameter reference — [`${CLAUDE_SKILL_DIR}/../docforge/_shared/help.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/help.md>) — then stop; run no workflow |
 
@@ -60,6 +60,28 @@ files), `start` (build-if-changed → serve → open), `status` (read-only
 state), `stop` (shut down the background dev server). See
 [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md>)
 for the full lifecycle and isolation rules.
+
+## Legacy manifest gate
+
+When the preflight fails because `.docforge/manifest.json` carries an older
+legacy manifest version (1.1 `project_context` / `document_groups`, 2.0 flat
+`documents` with overlays, or any other pre-3.0 shape), stop and present
+exactly these options before any write:
+
+1. **Revise all (recommended)** — run `/docforge-revise all`; its
+   `migrate_metadata` step re-registers the manifest as 3.1 and the revision
+   re-grounds and audits the tree, then `dashboard start` again.
+2. **Update metadata only** — run
+   `migrate_metadata --repo <repo> --report` to re-register the manifest
+   without revising content, then re-run `dashboard scan` / `start`. This
+   path works for **any** legacy version — nothing is hard-coded to one
+   shape.
+3. **Stop** — make no changes; the dashboard is not opened and no previous
+   build is presented as current.
+
+`--plan-only` runs the `migrate_metadata --dry-run` preview instead of
+writing. `--auto-accept` never bypasses this gate. Full detail:
+[`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md>).
 
 ## Scan first: you should revise again
 

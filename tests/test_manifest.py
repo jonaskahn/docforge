@@ -1171,5 +1171,403 @@ process.stdout.write(pf.emitYaml(value));
             self.assertTrue(gitignore.is_file())
 
 
+def seed_v1_1_repo(repo: Path) -> None:
+    """A legacy 1.1 repository: `project_context` / `document_groups`, no
+    per-document provenance, schema-less or absent frontmatter."""
+    blob = "8eb720c92a52ffc34673bc0e83b6b4d5ea714ee9"
+    for rel in ("docs/architecture", "docs/product", "docs/flows", ".docforge"):
+        (repo / rel).mkdir(parents=True, exist_ok=True)
+    (repo / "docs/architecture/high-level.md").write_text(
+        "---\n"
+        "docforge_provenance:\n"
+        "  doc: docs/architecture/high-level.md\n"
+        "  generated_at: 2026-07-28T00:00:00Z\n"
+        "  graph_snapshot: .ua/knowledge-graph.json\n"
+        "  sections:\n"
+        "    - id: system-in-context\n"
+        "      sources:\n"
+        "        - path: src/main.ts\n"
+        f"          git_blob: {blob}\n"
+        "---\n"
+        "# High-level\n\nContent.\n",
+        encoding="utf-8",
+    )
+    (repo / "docs/product/overview.md").write_text("# Overview\n\nBody.\n", encoding="utf-8")
+    (repo / "docs/README.md").write_text("# Documentation\n", encoding="utf-8")
+    (repo / "docs/flows/checkout.md").write_text("# Checkout\n\nSteps.\n", encoding="utf-8")
+    (repo / "AGENTS.md").write_text("# Legacy Repo\n\nKernel.\n", encoding="utf-8")
+    manifest = {
+        "version": "1.1",
+        "generated_at": "2026-07-28T00:00:00Z",
+        "project_context": {
+            "repo_name": "legacy",
+            "repo_path": str(repo),
+            "tier": "core",
+            "overlays": ["agent-context"],
+        },
+        "document_groups": [
+            {"group": "architecture", "documents": [
+                {
+                    "id": "arch_high_level", "type": "architecture-high-level",
+                    "path": "docs/architecture/high-level.md", "status": "complete",
+                    "template": "architecture-high-level.md",
+                    "requires_domain_graph": False, "requires_knowledge_graph": True,
+                    "sections": [],
+                },
+                {
+                    "id": "arch_low_level", "type": "architecture-low-level",
+                    "path": "docs/architecture/low-level.md", "status": "planned",
+                    "template": "architecture-low-level.md",
+                    "requires_domain_graph": False, "requires_knowledge_graph": True,
+                    "sections": [],
+                },
+            ]},
+            {"group": "product", "documents": [
+                {
+                    "id": "docs_index", "type": "docs-index",
+                    "path": "docs/README.md", "status": "complete",
+                    "sections": [{"id": "introduction", "sources": [
+                        {"path": "README.md", "git_blob": blob},
+                    ]}],
+                },
+                {
+                    "id": "product_overview", "type": "product-overview",
+                    "path": "docs/product/overview.md", "status": "generated",
+                    "sections": [{"id": "overview", "sources": [
+                        {"path": "package.json", "git_blob": blob},
+                    ]}],
+                },
+            ]},
+            {"group": "reference", "documents": [
+                {
+                    "id": "legacy_skip", "type": "limitations-register",
+                    "path": "docs/reference/limitations.md", "status": "skipped",
+                    "sections": [],
+                },
+            ]},
+            {"group": "flows", "documents": [
+                {
+                    "id": "flow_checkout", "type": "flows",
+                    "path": "docs/flows/checkout.md", "status": "complete",
+                    "sections": [{"id": "checkout", "sources": [
+                        {"path": "src/checkout.py", "git_blob": blob},
+                    ]}],
+                },
+            ]},
+            {"group": "agent-context", "documents": [
+                {
+                    "id": "agents_kernel", "type": "agents-kernel",
+                    "path": "AGENTS.md", "status": "complete",
+                    "sections": [{"id": "kernel", "sources": [
+                        {"path": "AGENTS.md", "git_blob": blob},
+                    ]}],
+                },
+            ]},
+        ],
+        "metadata": {},
+    }
+    (repo / ".docforge" / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+class ManifestV11MigrationTests(unittest.TestCase):
+    def test_v1_1_re_registers_manifest_and_adopts_written_docs(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    seed_v1_1_repo(repo)
+                    result = run(runtime, "migrate_metadata", "--repo", str(repo))
+                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                    manifest = load_manifest(repo)
+                    self.assertEqual(manifest["version"], "3.1")
+                    self.assertEqual(manifest["project"]["tier"], "spine")
+                    self.assertEqual(manifest["project"]["profiles"]["audiences"], ["coding-agents"])
+                    docs = {doc["id"]: doc for doc in manifest["documents"]}
+
+                    high = docs["arch_high_level"]
+                    self.assertEqual(high["status"], "generated")
+                    self.assertEqual(high["type"], "architecture-high-level")
+                    self.assertEqual(high["provenance"]["schema"], "2.0")
+                    self.assertEqual(high["provenance"]["doc_id"], "arch_high_level")
+                    self.assertEqual(high["provenance"]["graph"], {"provider": "understand-anything", "flow": "native"})
+                    source = high["provenance"]["sections"][0]["sources"][0]
+                    self.assertEqual(source["path"], "src/main.ts")
+                    self.assertEqual(source["role"], "code")
+                    high_text = (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8")
+                    self.assertTrue(high_text.startswith('---\ndocforge_provenance:\n  schema: "2.0"\n'))
+                    self.assertIn("# High-level\n\nContent.\n", high_text)
+
+                    overview = docs["product_overview"]
+                    self.assertEqual(overview["status"], "generated")
+                    self.assertEqual(overview["provenance"]["schema"], "2.0")
+                    self.assertEqual(overview["provenance"]["sections"][0]["sources"][0]["path"], "package.json")
+                    self.assertEqual(overview["provenance"]["sections"][0]["sources"][0]["role"], "manifest")
+                    overview_text = (repo / "docs/product/overview.md").read_text(encoding="utf-8")
+                    self.assertTrue(overview_text.startswith('---\ndocforge_provenance:\n  schema: "2.0"\n'))
+                    self.assertIn("# Overview\n\nBody.\n", overview_text)
+
+                    self.assertEqual(docs["arch_low_level"]["status"], "planned")
+                    self.assertEqual(docs["legacy_skip"]["status"], "skipped")
+
+                    flow = docs["flow_checkout"]
+                    self.assertEqual(flow["status"], "generated")
+                    self.assertEqual(flow["type"], "flows")
+                    self.assertEqual(flow["provenance"]["sections"][0]["sources"][0]["path"], "src/checkout.py")
+
+                    agents = docs["agents_kernel"]
+                    self.assertEqual(agents["status"], "generated")
+                    self.assertEqual(agents["provenance_mode"], "manifest")
+                    self.assertEqual(agents["provenance"]["doc_id"], "agents_kernel")
+                    agents_text = (repo / "AGENTS.md").read_text(encoding="utf-8")
+                    self.assertTrue(agents_text.startswith("# Legacy Repo"))
+                    self.assertNotIn("docforge_provenance", agents_text)
+
+                    self.assertFalse(any(doc["status"] == "complete" for doc in manifest["documents"]))
+
+                    # Rerun is idempotent for written documents. The standard
+                    # 3.x pass reports planned/skipped entries without files
+                    # as MISSING (pre-existing behavior), so the exit code is
+                    # 1 while the migrated state stays put.
+                    again = run(runtime, "migrate_metadata", "--repo", str(repo))
+                    self.assertEqual(again.returncode, 1)
+                    self.assertIn("MISSING  docs/architecture/low-level.md", again.stdout)
+                    self.assertEqual(
+                        {doc["id"]: doc["status"] for doc in load_manifest(repo)["documents"]},
+                        {doc["id"]: doc["status"] for doc in manifest["documents"]},
+                    )
+                    self.assertEqual(
+                        (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8"),
+                        high_text,
+                    )
+
+    def test_v1_1_migration_dry_run_writes_nothing(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    seed_v1_1_repo(repo)
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    before_manifest = manifest_path.read_text(encoding="utf-8")
+                    before_file = (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8")
+                    result = run(runtime, "migrate_metadata", "--repo", str(repo), "--dry-run")
+                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                    self.assertEqual(manifest_path.read_text(encoding="utf-8"), before_manifest)
+                    self.assertEqual(
+                        (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8"),
+                        before_file,
+                    )
+
+    def test_v1_1_missing_written_file_is_failed_and_planned(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    seed_v1_1_repo(repo)
+                    (repo / "docs/product/overview.md").unlink()
+                    result = run(runtime, "migrate_metadata", "--repo", str(repo), "--report")
+                    self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+                    report = json.loads(result.stdout)
+                    failed = [item for item in report["results"] if item["action"] == "failed"]
+                    self.assertEqual(
+                        [item["doc"] for item in failed],
+                        ["docs/product/overview.md"],
+                    )
+                    self.assertIn("file absent", failed[0]["detail"])
+                    docs = {doc["id"]: doc for doc in load_manifest(repo)["documents"]}
+                    self.assertEqual(docs["product_overview"]["status"], "planned")
+
+    def test_v1_1_migration_parity_and_dashboard_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repos = {}
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_v1_1_repo(repo)
+                result = run(runtime, "migrate_metadata", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                repos[runtime] = repo
+            py_manifest = load_manifest(repos["py"])
+            js_manifest = load_manifest(repos["js"])
+            py_manifest["project"]["root"] = js_manifest["project"]["root"]
+            self.assertEqual(py_manifest, js_manifest)
+            self.assertEqual(
+                (repos["py"] / "docs/architecture/high-level.md").read_text(encoding="utf-8"),
+                (repos["js"] / "docs/architecture/high-level.md").read_text(encoding="utf-8"),
+            )
+            plan = run("py", "dashboard", "start", "--repo", str(repos["py"]), "--plan-only")
+            self.assertEqual(plan.returncode, 0, plan.stderr + plan.stdout)
+            self.assertIn("0 problems", plan.stdout)
+            self.assertIn("-> /docs", plan.stdout)
+            self.assertIn("-> /docs/architecture/high-level", plan.stdout)
+            self.assertIn("-> /docs/flows/checkout", plan.stdout)
+
+
+def seed_v2_0_repo(repo: Path) -> None:
+    """A 2.0-era repository: flat `documents`, `project.overlays`, no
+    per-document frontmatter, manifest-only section provenance."""
+    blob = "8eb720c92a52ffc34673bc0e83b6b4d5ea714ee9"
+    for rel in ("docs/architecture", "docs/product/product-owner", "docs/engineering", ".docforge"):
+        (repo / rel).mkdir(parents=True, exist_ok=True)
+    (repo / "docs/architecture/high-level.md").write_text("# High-level\n\nContent.\n", encoding="utf-8")
+    (repo / "docs/product/overview.md").write_text("# Overview\n\nBody.\n", encoding="utf-8")
+    (repo / "docs/product/product-owner/release-notes.md").write_text("# Release Notes\n\nBody.\n", encoding="utf-8")
+    manifest = {
+        "version": "2.0",
+        "generated_at": "2026-07-28T00:00:00Z",
+        "project": {
+            "name": "legacy2",
+            "root": str(repo),
+            "tier": "diligence",
+            "overlays": ["api", "business-analyst"],
+        },
+        "documents": [
+            {
+                "id": "arch_high_level", "type": "architecture-high-level",
+                "path": "docs/architecture/high-level.md", "group": "architecture",
+                "selection": {"origins": [{"kind": "tier", "id": "spine"}], "evidence": []},
+                "status": "complete", "requires": ["code_graph"],
+                "scaffold_template": "architecture-high-level.md", "instruction_file": None,
+                "target_depth": "orientation", "write_order": 10,
+                "provenance_mode": "sections", "audit_profile": "architecture",
+                "provenance": {"sections": [{"id": "system-in-context", "sources": [
+                    {"path": "src/main.ts", "git_blob": blob},
+                ]}]},
+                "audit": {"mode": "cold-pass", "verdict": "PASS",
+                          "timestamp": "2026-07-28T00:00:00Z", "report_path": ".docforge/audits/arch.md"},
+            },
+            {
+                "id": "product_overview", "type": "product-overview",
+                "path": "docs/product/overview.md", "group": "product",
+                "selection": {"origins": [{"kind": "tier", "id": "spine"}], "evidence": []},
+                "status": "generated", "requires": ["code_graph"],
+                "scaffold_template": "product-overview.md", "instruction_file": None,
+                "target_depth": "orientation", "write_order": 20,
+                "provenance_mode": "sections", "audit_profile": "standard",
+                "provenance": {"sections": [{"id": "overview", "sources": [
+                    {"path": "package.json", "git_blob": blob},
+                ]}]},
+                "audit": None,
+            },
+            {
+                "id": "po_release_notes", "type": "release-notes",
+                "path": "docs/product/product-owner/release-notes.md", "group": "product",
+                "selection": {"origins": [{"kind": "overlay", "id": "product-owner"}], "evidence": []},
+                "status": "complete", "requires": [],
+                "scaffold_template": "release-notes.md", "instruction_file": None,
+                "target_depth": "orientation", "write_order": 30,
+                "provenance_mode": "sections", "audit_profile": "standard",
+                "provenance": {"sections": [{"id": "release", "sources": [
+                    {"path": "CHANGELOG.md", "git_blob": blob},
+                ]}]},
+                "audit": None,
+            },
+            {
+                "id": "setup_guide", "type": "setup-guide",
+                "path": "docs/engineering/setup.md", "group": "engineering",
+                "selection": {"origins": [{"kind": "tier", "id": "spine"}], "evidence": []},
+                "status": "planned", "requires": ["manifests"],
+                "scaffold_template": "setup.md", "instruction_file": None,
+                "target_depth": "orientation", "write_order": 40,
+                "provenance_mode": "sections", "audit_profile": "standard",
+                "provenance": {"sections": []},
+                "audit": None,
+            },
+        ],
+        "metadata": {},
+    }
+    (repo / ".docforge" / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+class ManifestV20MigrationTests(unittest.TestCase):
+    def test_v2_0_re_registers_overlays_and_preserves_metadata(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    seed_v2_0_repo(repo)
+                    result = run(runtime, "migrate_metadata", "--repo", str(repo))
+                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                    manifest = load_manifest(repo)
+                    self.assertEqual(manifest["version"], "3.1")
+                    self.assertEqual(manifest["project"]["tier"], "diligence")
+                    self.assertEqual(manifest["project"]["name"], "legacy2")
+                    self.assertEqual(manifest["project"]["profiles"]["shapes"], ["api-service"])
+                    self.assertEqual(manifest["project"]["profiles"]["audiences"], ["business-analysts"])
+                    docs = {doc["id"]: doc for doc in manifest["documents"]}
+
+                    high = docs["arch_high_level"]
+                    self.assertEqual(high["status"], "generated")
+                    self.assertEqual(high["target_depth"], "orientation")
+                    self.assertEqual(high["write_order"], 10)
+                    self.assertEqual(high["requires"], ["code_graph"])
+                    self.assertEqual(high["selection"]["origins"], [{"kind": "tier", "id": "spine"}])
+                    self.assertIsNone(high["audit"])
+                    self.assertEqual(high["provenance"]["schema"], "2.0")
+                    self.assertEqual(high["provenance"]["generator"]["version"], "2.0")
+                    self.assertEqual(high["provenance"]["sections"][0]["sources"][0]["role"], "code")
+                    high_text = (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8")
+                    self.assertTrue(high_text.startswith('---\ndocforge_provenance:\n  schema: "2.0"\n'))
+                    self.assertIn("# High-level\n\nContent.\n", high_text)
+
+                    notes = docs["po_release_notes"]
+                    self.assertEqual(notes["type"], "release-notes")
+                    self.assertEqual(notes["status"], "generated")
+                    self.assertEqual(
+                        notes["selection"]["origins"],
+                        [{"kind": "audience", "id": "product-owners"}],
+                    )
+                    self.assertEqual(notes["provenance"]["generator"]["version"], "2.0")
+
+                    self.assertEqual(docs["setup_guide"]["status"], "planned")
+                    self.assertEqual(docs["setup_guide"]["requires"], ["manifests"])
+
+    def test_unknown_legacy_version_is_re_registered_not_hard_coded(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    seed_v1_1_repo(repo)
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    manifest["version"] = "0.9"
+                    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                    result = run(runtime, "migrate_metadata", "--repo", str(repo), "--report")
+                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                    report = json.loads(result.stdout)
+                    self.assertIn("re-registered from 0.9", report["results"][0]["detail"])
+                    out = load_manifest(repo)
+                    self.assertEqual(out["version"], "3.1")
+                    overview = next(doc for doc in out["documents"] if doc["id"] == "product_overview")
+                    self.assertEqual(
+                        overview["selection"]["origins"],
+                        [{"kind": "dynamic", "id": "legacy-v0.9"}],
+                    )
+                    self.assertEqual(overview["provenance"]["generator"]["version"], "0.9")
+
+    def test_v2_0_migration_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repos = {}
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_v2_0_repo(repo)
+                result = run(runtime, "migrate_metadata", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                repos[runtime] = repo
+            py_manifest = load_manifest(repos["py"])
+            js_manifest = load_manifest(repos["js"])
+            py_manifest["project"]["root"] = js_manifest["project"]["root"]
+            self.assertEqual(py_manifest, js_manifest)
+
+
 if __name__ == "__main__":
     unittest.main()

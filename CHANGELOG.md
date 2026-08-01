@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.11.0 - Legacy manifest re-registration
+
+- `migrate_metadata` now re-registers **any** pre-3.0 legacy manifest (1.1
+  `project_context` / `document_groups`, 2.0 flat `documents` with overlays,
+  or any other shape) as 3.1: written documents are adopted as `generated`
+  with provenance 2.0, bodies preserved, plan entries kept, never `complete`.
+- `/docforge-dashboard` gained a three-option legacy-manifest gate — revise
+  all, update metadata only (`migrate_metadata`), or stop; `--plan-only`
+  previews the migration and `--auto-accept` never bypasses the choice.
+- Python and Node peers stay equivalent; added adoption, dry-run,
+  idempotency, and parity tests.
+
 ## 2.10.0 - Inline workflow execution
 
 - Removed the optional Claude Code wrapper files and their dispatch paths.
