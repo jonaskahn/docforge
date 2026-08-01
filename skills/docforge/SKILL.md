@@ -21,10 +21,9 @@ documentation from repository evidence. Shared cartridge: [`./_shared/`](./_shar
 5. Load [`./_shared/ownership.md`](./_shared/ownership.md) when resolving
    which file owns a rule.
 
-Run tools from the cartridge root (`./_shared/`). The cartridge resolves
-from a global skill dir or a repo-local `skills/docforge/_shared` checkout;
-`docforge install --local` links `runtime/` into a repo so the documented
-paths work verbatim. Lock one session engine first; see
+Run tools from the cartridge root (`./_shared/`), whether it lives in a
+global skill dir or a repo-local `skills/docforge/_shared` checkout. Lock
+one session engine first; see
 [`./_shared/workflows/tools.md`](./_shared/workflows/tools.md) for execution rules and CLI syntax.
 
 ## `/docforge`

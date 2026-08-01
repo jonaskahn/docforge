@@ -11,22 +11,20 @@ under [`../runtime/cli/`](../runtime/cli/README.md); implementations under
 
 The cartridge may live in a **global** skill dir (`~/.agents/skills/docforge/_shared`,
 `~/.claude/skills/docforge/_shared`, or `~/.config/opencode/skills/docforge/_shared`)
-or be checked out **inside the repo** (`<repo>/skills/docforge/_shared`). Both resolve
-automatically:
+or be checked out **inside the repo** (`<repo>/skills/docforge/_shared`). Tools run
+with the cartridge root as the working directory.
 
-- `docforge which` (from `_shared/bin/docforge`) prints the resolved cartridge —
-  `$DOCFORGE_SHARED` / `$DOCFORGE_SKILL` win, then the script's own location,
-  then a walk up from the cwd, then the global dirs.
-- `docforge python <tool> …` / `docforge js <tool> …` / `docforge run <tool> …`
-  run the tool from any directory; `run` honors `DOCFORGE_ENGINE`
-  (`python3|python|node|bun|deno`), otherwise it auto-picks per the session
-  rules below.
-- `docforge install --local [--repo <path>]` symlinks `<repo>/runtime` → the
-  cartridge `runtime/`, so the plain documented invocations below work
-  verbatim from the repo root (a symlinked runtime resolves its own real
-  path, so catalog and provenance lookups stay correct).
-- `docforge install --global` symlinks the whole skill dir into
-  `~/.agents/skills/docforge` (or `--dest <dir>`).
+To make the plain documented invocations below work from the repo root
+without the cartridge checked out in-repo, link the runtime once (user-run,
+commit the link only if it points at a location shared by the team):
+
+```sh
+ln -s <cartridge>/runtime <repo>/runtime
+```
+
+A symlinked runtime resolves its own real path, so catalog and provenance
+lookups stay correct. Always resolve the cartridge explicitly; never guess
+from `PATH` or an ambient environment variable.
 
 Every public command has a standard-library Python peer and a built-in-only
 JS peer with the same flags, messages, JSON shapes, filesystem effects, and
