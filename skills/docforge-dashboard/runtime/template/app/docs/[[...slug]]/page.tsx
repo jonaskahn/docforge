@@ -34,6 +34,15 @@ export default async function Page({ params }: { params: Promise<{ slug?: string
           >
             Docforge
           </a>
+          {' · '}UI by{' '}
+          <a
+            href="https://www.fumadocs.dev/"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-fd-foreground underline underline-offset-4"
+          >
+            Fumadocs
+          </a>
           .
         </p>
       </footer>
