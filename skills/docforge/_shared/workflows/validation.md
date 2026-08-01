@@ -8,7 +8,7 @@ the cross-document quality gate, and completion criteria.
 After all selected documents pass individually:
 
 ```sh
-python runtime/cli/python/scaffold_docs.py \
+python3 runtime/cli/python/scaffold_docs.py \
 node runtime/cli/js/scaffold_docs.js \
 # bun  runtime/cli/js/scaffold_docs.js \
 # deno run -A runtime/cli/js/scaffold_docs.js \
@@ -39,20 +39,20 @@ provenance 2.0, lint, and audit before completion. See
 Check staleness with:
 
 ```sh
-python runtime/cli/python/check_staleness.py \
+python3 runtime/cli/python/check_staleness.py \
 node runtime/cli/js/check_staleness.js \
 # bun  runtime/cli/js/check_staleness.js \
 # deno run -A runtime/cli/js/check_staleness.js \
   --manifest <repo>/.docforge/manifest.json
 
-python runtime/cli/python/check_staleness.py \
+python3 runtime/cli/python/check_staleness.py \
 node runtime/cli/js/check_staleness.js \
 # bun  runtime/cli/js/check_staleness.js \
 # deno run -A runtime/cli/js/check_staleness.js \
   --manifest <repo>/.docforge/manifest.json \
   --document docs/architecture/constraints.md --sync-provenance --json
 
-python runtime/cli/python/check_staleness.py \
+python3 runtime/cli/python/check_staleness.py \
 node runtime/cli/js/check_staleness.js \
 # bun  runtime/cli/js/check_staleness.js \
 # deno run -A runtime/cli/js/check_staleness.js \

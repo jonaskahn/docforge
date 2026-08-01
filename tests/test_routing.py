@@ -47,6 +47,8 @@ class RoutingTests(unittest.TestCase):
                     self.assertTrue((SKILL_ROOT / payload["template"]).is_file())
                     if payload["instruction"] is not None:
                         self.assertTrue((SKILL_ROOT / payload["instruction"]).is_file())
+                    if doc_id == "concept":
+                        self.assertEqual(payload["instruction"], "content/architecture/instructions/concept.md")
                     self.assertTrue((SKILL_ROOT / payload["definition"]).is_file())
                     self.assertLess(len(result.stdout.encode("utf-8")), 4096)
                     for value in (payload["definition"], payload["contract"], payload["template"]):

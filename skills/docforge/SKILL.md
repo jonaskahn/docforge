@@ -22,16 +22,7 @@ evidence. Shared cartridge: [`./_shared/`](./_shared/INDEX.md).
    which file owns a rule.
 
 Run tools from the cartridge root (`./_shared/`). Lock one session engine
-first (see [`./_shared/rules.md`](./_shared/rules.md)); always put
-subcommands before flags:
-
-```sh
-# Example after locking python3 for this session:
-python3 runtime/cli/python/query_catalog.py --route <document-id>
-
-# Example after locking node instead:
-node runtime/cli/js/query_catalog.js --route <document-id>
-```
+first; see [`./_shared/workflows/tools.md`](./_shared/workflows/tools.md) for execution rules and CLI syntax.
 
 ## `/docforge`
 

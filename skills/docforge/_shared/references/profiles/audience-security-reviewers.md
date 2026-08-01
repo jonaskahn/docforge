@@ -45,12 +45,9 @@ recovery constraints to their operations owner instead of restating procedures.
 
 ## Evidence recipe
 
-1. Use the selected code graph to identify public interfaces, privileged paths,
-   data stores, trust-boundary crossings, dependencies, and enforcement points.
-2. Confirm control behavior with source, configuration, tests, and manifests;
-   capture the limiting condition when evidence only proves partial coverage.
-3. Use history and existing security records for rationale or accepted-risk
-   evidence, never as proof that current controls still operate.
-4. Treat threat likelihood, severity, risk ownership, compliance status, secret
-   inventory, and external test results as external evidence unless recorded.
-   State uncertainty and link to its authoritative record when available.
+Follow the evidence loop in [`source-analysis.md`](../source-analysis.md):
+
+1. Use the selected code graph to identify public interfaces, privileged paths, data stores, trust-boundary crossings, dependencies, and enforcement points.
+2. Confirm control behavior with source, configuration, tests, and manifests.
+3. Use history and existing security records for rationale or accepted-risk evidence.
+4. Treat threat likelihood, severity, risk ownership, compliance status, secret inventory, and external test results as external evidence unless recorded.

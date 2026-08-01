@@ -220,7 +220,7 @@ mention absent Understand Anything or GitNexus. The all-provider output of
 Explicit requests such as "create diligence API documentation" skip answered
 questions; present any materially missing scope questions together. The final
 intake confirmation and all side-effect approvals remain mandatory under
-`--auto-accept`.
+`--auto-accept` (see [`../flags.md`](../flags.md)).
 
 ## Invocation flags relevant to intake
 
@@ -233,9 +233,8 @@ Shared flag definitions:
   and show the structure update / dry-run tree; do not write or re-ground
   document bodies.
 - `--auto-accept`: display each plan and result but continue without
-  conversational confirmation pauses. It never authorizes installation, global
-  configuration, graph construction or refresh, archive/delete actions, or any
-  other separately approved side effect.
+  conversational confirmation pauses; see [`../flags.md`](../flags.md) for the
+  explicit list of excluded side effects.
 
 Structural revise uses `/docforge-revise` (not `/docforge --revise`). There is
 no `--resume` or `--status` skill flag.

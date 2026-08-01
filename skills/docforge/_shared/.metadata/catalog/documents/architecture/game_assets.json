@@ -15,7 +15,7 @@
     },
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/gameplay-systems.md",
+  "instruction_file": "content/architecture/instructions/assets-and-scenes.md",
   "requires": [
     "code_graph",
     "manifests"

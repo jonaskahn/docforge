@@ -44,8 +44,7 @@ npx skills add jonaskahn/docforge -g -y
 ```
 
 These commands come from the [Agent Skills](https://agentskills.io) CLI and
-install whatever `skills/*/SKILL.md` trees the repo ships. They require
-external network access and were not executed during this README update.
+install whatever `skills/*/SKILL.md` trees the repo ships.
 
 ### CLAUDE CODE CARTRIDGE
 
@@ -78,8 +77,6 @@ plugin skills are namespaced (`/docforge:docforge`, `/docforge:docforge-revise`)
 [`commands/`](commands/) also registers the bare `/docforge` and
 `/docforge-revise` slash commands. After updating the marketplace, run
 `/plugin marketplace update docforge` then reinstall or `/reload-plugins`.
-These package-declared plugin commands were not executed during this README
-update.
 
 ## ▓▒░ START GAME ░▒▓
 

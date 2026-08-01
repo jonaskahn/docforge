@@ -58,8 +58,7 @@ A data contract is a promise to downstream consumers. Write one per dataset that
 - **Owner:** <team or role>
 - **Location:** <table, topic, bucket path, collection>
 - **Update cadence:** <schedule> — **freshness SLA:** <target>
-- **Grain:** one row per <entity per period>. The grain statement prevents more
-  downstream errors than the schema does.
+- **Grain:** state the exact entity per period (for example, one record per active user per day). The grain statement prevents more downstream errors than the schema does.
 
 ## Schema
 | Column | Type | Nullable | Description | PII |

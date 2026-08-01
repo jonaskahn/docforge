@@ -45,7 +45,7 @@ Exactly three places may contain forge-specific detail. Everywhere else stays ne
 
 ## Portable content choices
 
-**Diagrams.** Mermaid in fenced code blocks renders natively on most modern forges and degrades to readable text where it does not. Always precede a diagram with one or two sentences stating what it shows, so the document survives a renderer that displays raw source. Commit generated SVGs beside the source for anything complex enough that the fallback text is inadequate.
+**Diagrams.** Mermaid illustrations follow [`illustration.md`](illustration.md) for complexity budgets, rendering, and fallback rules. Always precede a diagram with one or two sentences stating what it shows.
 
 **Links.** Relative paths (`../architecture/high-level.md`) work when browsing the forge, in most editors, and in generated static sites. Absolute URLs to the current host break on migration and on forks. Never link to a line number in another file; link to the file by path and describe the location in prose — never anchor to a private symbol a rename would break (durability rule R1 in `document-composition.md`).
 

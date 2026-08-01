@@ -15,7 +15,7 @@
     },
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/hardware-map.md",
+  "instruction_file": "content/architecture/instructions/firmware-lifecycle.md",
   "requires": [
     "code_graph",
     "manifests",

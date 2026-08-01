@@ -5,18 +5,22 @@ The catalog's target depth is a minimum contract: deepen a section only when
 evidence changes a reader decision, implementation, diagnosis, review, or risk
 judgment.
 
-- **Orientation:** purpose, audience, boundary, selection condition, and next
+- **Orientation (`orientation`):** purpose, audience, boundary, selection condition, and next
   links. It routes a reader; it does not summarize a child document.
 - **Working depth:** ordered behavior, important rules, inputs/outputs, common
   failures, and a success or verification condition. Include only the minimum
-  mechanism needed to execute or maintain the work safely.
-- **Deep dive:** mechanism, invariants, edge cases, failure containment,
+  mechanism needed to execute or maintain the work safely. (Catalog machine values
+  are `orientation`, `deep-dive`, `reference`, and `router`; working depth describes
+  the content budget applied across standard documents.)
+- **Deep dive (`deep-dive`):** mechanism, invariants, edge cases, failure containment,
   observability, adjacent dependencies, and the evidence or uncertainty behind
   material claims. Name the boundary at which recovery, escalation, or another
   document takes over.
-- **Reference:** exhaustive, stable lookup fields with provenance, value
+- **Reference (`reference`):** exhaustive, stable lookup fields with provenance, value
   semantics, valid ranges or states, compatibility boundaries, and an explicit
   source of truth for volatile values.
+- **Router (`router`):** purpose, audience, and structured index routing readers to child
+  documents without summarizing them.
 
 Promote rather than pad: move from orientation when a reader must act; from
 working depth when they must diagnose, review, or change a non-obvious boundary;

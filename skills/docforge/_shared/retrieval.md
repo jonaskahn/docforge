@@ -5,7 +5,7 @@
 2. Select the applicable workflow from
    [`workflows/INDEX.md`](workflows/INDEX.md).
 3. For a document task, resolve it in one call (from this cartridge root):
-   `python runtime/cli/python/query_catalog.py --route <document-id>`
+   `python3 runtime/cli/python/query_catalog.py --route <document-id>`
    (or `node` / `bun` / `deno run -A` against
    `runtime/cli/js/query_catalog.js`).
 4. Read only what that call returns: the named workflow, the document

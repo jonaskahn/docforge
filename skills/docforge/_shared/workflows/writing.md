@@ -27,7 +27,7 @@ For the next document in `write_order`:
 2. Resolve its route in one call:
 
    ```sh
-   python runtime/cli/python/query_catalog.py --route <id>
+   python3 runtime/cli/python/query_catalog.py --route <id>
    node runtime/cli/js/query_catalog.js --route <id>
    # bun  runtime/cli/js/query_catalog.js --route <id>
    # deno run -A runtime/cli/js/query_catalog.js --route <id>
@@ -39,7 +39,7 @@ For the next document in `write_order`:
 3. Materialize that document and selected ancestor indexes:
 
    ```sh
-   python runtime/cli/python/scaffold_docs.py \
+   python3 runtime/cli/python/scaffold_docs.py \
      --repo <repo> --manifest <repo>/.docforge/manifest.json \
      --document <id>
    node runtime/cli/js/scaffold_docs.js \
@@ -74,7 +74,7 @@ For the next document in `write_order`:
 8. Record the result:
 
    ```sh
-   python runtime/cli/python/manage_manifest.py audit \
+   python3 runtime/cli/python/manage_manifest.py audit \
      --repo <repo> --id <id> --mode subagent \
      --verdict PASS --report .docforge/audits/<id>.md
    node runtime/cli/js/manage_manifest.js audit \

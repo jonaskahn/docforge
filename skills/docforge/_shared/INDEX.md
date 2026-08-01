@@ -33,16 +33,7 @@ inline fallback in each workflow.
 | [`.metadata/`](.metadata/) | Catalog, schemas, profiles |
 
 Tools run with this directory as the cartridge root. The agent locks one
-session engine (see [`rules.md`](rules.md)), then invokes with **subcommand
-before flags**:
-
-```sh
-# After locking python3:
-python3 runtime/cli/python/query_catalog.py --route <document-id>
-
-# After locking node:
-node runtime/cli/js/query_catalog.js --route <document-id>
-```
+session engine; see [`rules.md`](rules.md) and [`workflows/tools.md`](workflows/tools.md).
 
 Entry skills: [`../SKILL.md`](../SKILL.md),
 [`../../docforge-revise/SKILL.md`](../../docforge-revise/SKILL.md).

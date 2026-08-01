@@ -56,15 +56,11 @@ wording; never invent a ticket.
 
 ## Evidence recipe
 
-1. Query native provider flows first (Understand Anything domain flows or
-   GitNexus Process nodes). If unavailable, use Docforge’s explicitly
-   provisional derivation from the selected code graph.
-2. Confirm actors, branches, rules, exceptions, and outcomes in the narrow
-   source paths returned by the graph.
-3. Inspect tests for executable verification.
-4. Use existing requirements/tickets only when they are present or connected
-   by the user.
-5. Add provenance per process/rule/requirement section.
+Follow the evidence loop in [`source-analysis.md`](../source-analysis.md):
 
-If flow evidence is not ready, the plan still remains visible, but these three
-documents wait at `planned`; Docforge does not block code-graph-only documents.
+1. Query native provider flows first (Understand Anything domain flows or
+   GitNexus Process nodes); if unavailable, use Docforge’s provisional derivation from the selected code graph.
+2. Confirm actors, branches, rules, exceptions, and outcomes in narrow source paths returned by the graph.
+3. Inspect tests for executable verification.
+4. Use existing requirements/tickets only when present in source or connected by the user.
+5. Add provenance per section; if flow evidence is not ready, these three documents wait at `planned`.

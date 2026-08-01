@@ -86,7 +86,7 @@ Never seed an example artifact to stand in for discovery.
 ## 3. Initialize and preview
 
 ```sh
-python runtime/cli/python/manage_manifest.py init \
+python3 runtime/cli/python/manage_manifest.py init \
 node runtime/cli/js/manage_manifest.js init \
 # bun  runtime/cli/js/manage_manifest.js init \
 # deno run -A runtime/cli/js/manage_manifest.js init \
@@ -97,14 +97,14 @@ node runtime/cli/js/manage_manifest.js init \
   --concern accessibility \
   --audience coding-agents
 
-python runtime/cli/python/manage_manifest.py add \
+python3 runtime/cli/python/manage_manifest.py add \
 node runtime/cli/js/manage_manifest.js add \
 # bun  runtime/cli/js/manage_manifest.js add \
 # deno run -A runtime/cli/js/manage_manifest.js add \
   --repo <repo> --type flow \
   --id flow-checkout --path docs/flows/checkout.md
 
-python runtime/cli/python/scaffold_docs.py \
+python3 runtime/cli/python/scaffold_docs.py \
 node runtime/cli/js/scaffold_docs.js \
 # bun  runtime/cli/js/scaffold_docs.js \
 # deno run -A runtime/cli/js/scaffold_docs.js \

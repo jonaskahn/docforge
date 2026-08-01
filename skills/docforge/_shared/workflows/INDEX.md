@@ -20,12 +20,13 @@ loaded; every procedural detail lives here.
 
 `/docforge` and `/docforge-revise` share flags: see
 [`../flags.md`](../flags.md) (`--plan-only`, `--auto-accept`).
-There is no `--resume` or `--status` skill flag — continue via intake/plain
-language; status via plain language or `manage_manifest status`.
+There is no `--resume` or `--status` skill flag — see [`../flags.md`](../flags.md).
 
 ## Contents
 
-- [intake.md](intake.md) — bare `/docforge` invocation, discovery gate, discovery brief, scope questions, confirmation gate, graph-provider choice.
+Canonical workflow responsibility is owned by [`../ownership.md`](../ownership.md):
+
+- [intake.md](intake.md) — bare `/docforge` invocation, discovery gate, brief, scope questions, confirmation gate, graph provider choice.
 - [planning.md](planning.md) — inspection, tier/profile selection, dynamic discovery, manifest init, dry-run tree, plan checkpoint.
 - [writing.md](writing.md) — per-document execution card, evidence, scaffolding, provenance, status transitions, independent audit; continue incomplete runs.
 - [revision.md](revision.md) — `/docforge-revise` (incl. shared flags), single-document update/refresh, flow-index organization.
@@ -34,6 +35,5 @@ language; status via plain language or `manage_manifest status`.
 
 ## Boundaries
 
-Procedure only. Policy that a procedure depends on (graph provider detail,
-audience/shape guidance, quality bar, provenance format) is owned in
-`../references/` and linked from here, not restated.
+Procedure only. Policy that a procedure depends on is owned in
+`../references/` and canonical file ownership in [`../ownership.md`](../ownership.md); linked from here, not restated.

@@ -20,15 +20,9 @@ apply in scope:
    or contract that now requires a file and has no manifest entry is planned
    and written (via [`writing.md`](writing.md)). New craft instructions that
    demand additional files are in scope.
-3a. **Suitable missing audiences** — when step 2 or 3 finds missing, new, or
-   updated documents, collect their catalog `selection.audiences` that are not
-   already on the manifest. Before writing, prompt via
-   [`intake.md`](intake.md) Output audience: show all seven catalog audiences,
-   pre-check current ∪ suitable missing (with a one-line reason per suitable
-   missing, e.g. which `ba_*` / `po_*` / `agents_*` docs they unlock), and let
-   the user confirm or **add more**. Apply for `/docforge-revise all`,
-   `/docforge-revise <area>`, `/docforge-revise flow`, and any natural-language
-   revise that rediscovers docs. Do not silent-add audiences.
+3a. **Suitable missing audiences** — when step 2 or 3 finds missing, new, or updated
+   documents, collect their catalog `selection.audiences` and prompt via [`intake.md`](intake.md)
+   (Output audience) before writing; do not silent-add audiences.
 4. **Update the big picture** — refresh owning indexes and overview docs
    affected by adds or rewires (for example `docs/INDEX.md`, area READMEs,
    `docs/flows/INDEX.md`, `system-overview` when selected) so the tree and
@@ -48,38 +42,17 @@ no rediscovery, unless that document is untracked.
 
 ## Questions revise asks
 
-Revise always **stops and asks first**, using the same interactive question
-pack as a fresh start — never silent defaults, never "only if not derivable".
-Before any migration, detection, or writing, revise presents a discovery brief,
-then one combined question set exactly like [`intake.md`](intake.md) describes
-("Present all applicable unresolved questions together", native multi-select
-when the host provides it, each choice with a short consequence). The goal is
-fixed (structural refresh), so the pack is:
+Revise always **stops and asks first**, using the interactive question pack owned by
+[`intake.md`](intake.md) — never silent defaults. Before migration, detection, or writing,
+revise presents a discovery brief and one combined question set ([`intake.md`](intake.md)):
 
-1. **Scope** — `all`, `<area>`, or `flow` (pre-checked from the invocation).
-2. **Tier** — keep the manifest's current tier or change it repo-wide
-   (e.g. `spine` → `diligence` to unlock low-level, threat-model, and other
-   diligence documents). This is the supported way to raise a tier without
-   `init --force`. Always shown; the manifest value is the pre-checked default.
-3. **Profiles** — the five typed dimensions (shape, platform, framework,
-   concern, audience) as one multi-select, with the manifest's current values
-   pre-checked and fresh detection shown as proposed additions.
-4. **Output audience** — part of the same pack: current audiences pre-checked,
-   suitable missing audiences pre-checked with a one-line reason each
-   (e.g. which `ba_*` / `po_*` / `agents_*` docs they unlock), and **add more**
-   available (see [`intake.md`](intake.md) Output audience). If the manifest
-   has no audiences, nothing is pre-checked.
-5. **Execution mode** — review or Auto-accept, one choice in the pack; never
-   defaulted silently.
+1. **Scope** — `all`, `<area>`, or `flow` (pre-checked from invocation).
+2. **Tier** — keep current tier or change repo-wide (manifest value pre-checked).
+3. **Profiles** — shape, platform, framework, concern, audience (current pre-checked + fresh detected proposed).
+4. **Output audience** — suitable missing pre-checked with unlock reasons (see [`intake.md`](intake.md)).
+5. **Execution mode** — review or Auto-accept.
 
-Collect the answers as one response, then display one confirmation summary
-(action, tier, every profile dimension, every audience, evidence provider, and
-execution mode) and **wait for explicit confirmation** before continuing — the
-same confirmation gate a fresh start uses. If the reply leaves a material
-choice missing or ambiguous, ask one concise follow-up containing only those
-unresolved choices. Do not proceed past the question pack until the user has
-answered and confirmed. Graph source stays internal; it appears only in the
-summary, not as a question.
+Display one confirmation summary ([`intake.md`](intake.md)) and wait for explicit confirmation before continuing.
 
 ### Applying the answers to the manifest
 

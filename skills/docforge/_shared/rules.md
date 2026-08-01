@@ -41,9 +41,9 @@ unless both were READY and the user chose a primary. Detail:
 1. Do not invent. Derive every fact from a graph, source, manifest, history,
    existing documentation, or user-provided evidence. Reserve typed
    `<UPPER_SNAKE_CASE>` tokens for atomic external values only.
-2. Build and show the plan before writing. `--auto-accept` skips
-   conversational pauses, never planning, evidence checks, linting, audit,
-   or safety approvals.
+2. Build and show the plan before writing. `--auto-accept` waives routine
+   conversational pauses; see [`flags.md`](flags.md) for the explicit list of
+   excluded side effects and mandatory safety gates.
 3. Write one document at a time, in catalog `write_order`.
 4. Stamp provenance while writing (YAML provenance 2.0, byte one). Replace
    every scaffold token with concrete write metadata and source blobs.

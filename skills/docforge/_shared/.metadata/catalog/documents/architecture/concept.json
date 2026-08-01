@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": "discovered_concept"
   },
-  "instruction_file": "content/architecture/instructions/architecture-low-level.md",
+  "instruction_file": "content/architecture/instructions/concept.md",
   "requires": [
     "code_graph"
   ],

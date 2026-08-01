@@ -66,11 +66,10 @@ result is no manifest entry and no file.
 
 ## Evidence recipe
 
-1. Use the code graph to discover externally reachable capabilities and their
-   owning paths.
+Follow the evidence loop in [`source-analysis.md`](../source-analysis.md):
+
+1. Use the code graph to discover externally reachable capabilities and their owning paths.
 2. Use manifests and configuration for availability and instrumentation.
 3. Use git history/tags for delivery chronology and release impact.
-4. Use flow evidence only for links when it exists; the PO profile itself does
-   not globally require `flow_graph`.
-5. Treat stakeholder intent, target values, owners, dates, and roadmap state as
-   external evidence—not facts to infer from code.
+4. Use flow evidence only for links when it exists (PO does not globally require `flow_graph`).
+5. Treat stakeholder intent, target values, owners, dates, and roadmap state as external evidence.

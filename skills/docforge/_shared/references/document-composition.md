@@ -4,8 +4,10 @@ This file owns topic ownership, promotion, durability, and no-duplication.
 Depth per reader is owned by [`depth-and-audience.md`](depth-and-audience.md);
 audience-specific packs by
 [Business Analysts](profiles/audience-business-analysts.md),
-[Product Owners](profiles/audience-product-owners.md), and
-[coding agents](profiles/audience-coding-agents.md).
+[Product Owners](profiles/audience-product-owners.md),
+[coding agents](profiles/audience-coding-agents.md),
+[operators](profiles/audience-operators.md), and
+[security reviewers](profiles/audience-security-reviewers.md).
 
 ## Three document classes
 

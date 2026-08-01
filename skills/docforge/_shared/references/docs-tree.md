@@ -69,14 +69,15 @@ docs-portfolio/
   repo-inventory.md
   system-context.md
   decisions/INDEX.md
+  epics/INDEX.md
   security-posture.md
   operations.md
   diligence-index.md
   glossary.md
 ```
 
-Actual cross-repository decisions are dynamic entries under
-`docs-portfolio/decisions/`. Collection procedure and cross-repository writing
+Actual cross-repository decisions and epics are dynamic entries under
+`docs-portfolio/decisions/` and `docs-portfolio/epics/`. Collection procedure and cross-repository writing
 specifics live in [`portfolio.md`](portfolio.md).
 
 ## Typed profiles
@@ -150,12 +151,17 @@ API/service, library/SDK, data-pipeline, and infrastructure-platform paths are
 the existing canonical packs under product, architecture, engineering,
 operations, reference, and security. Platform-specific packaging, signing,
 permissions, lifecycle, compatibility, and distribution details are sections
-inside their owning documents rather than one file per framework.
+inside their owning documents rather than one file per framework. Additional catalog
+layout groups (`worker-serverless`, `plugin-extension`, `ml-system`) define path structure
+without separate profile guides.
 
-Detailed composition notes are available for the
+Detailed composition notes are available for 11 repository shapes:
 [API-service](profiles/shape-api-service.md), [web-app](profiles/shape-web-app.md),
 [library/SDK](profiles/shape-library-sdk.md), [data-pipeline](profiles/shape-data-pipeline.md),
-and [infrastructure-platform](profiles/shape-infrastructure-platform.md) shapes.
+[infrastructure-platform](profiles/shape-infrastructure-platform.md),
+[mobile-app](profiles/shape-mobile-app.md), [desktop-app](profiles/shape-desktop-app.md),
+[cli-tui](profiles/shape-cli-tui.md), [game](profiles/shape-game.md),
+[embedded-iot](profiles/shape-embedded-iot.md), and [smart-contract](profiles/shape-smart-contract.md).
 
 Audience-profile roots are intentionally visible in the plan:
 
@@ -195,8 +201,10 @@ they do not globally hard-gate on flow data.
 
 Audience-specific composition notes live in
 [Business Analysts](profiles/audience-business-analysts.md),
-[Product Owners](profiles/audience-product-owners.md), and
-[coding agents](profiles/audience-coding-agents.md).
+[Product Owners](profiles/audience-product-owners.md),
+[coding agents](profiles/audience-coding-agents.md),
+[operators](profiles/audience-operators.md), and
+[security reviewers](profiles/audience-security-reviewers.md).
 
 ## Existing documentation
 

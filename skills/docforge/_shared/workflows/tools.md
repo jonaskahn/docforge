@@ -51,7 +51,7 @@ isolated read-only way to run the catalog integrity checks.
 - `generate_indexes.{py,js}`: regenerate catalog routers (`--write`,
   `--check`). `--check` exits `1` without writing when generated output is
   stale.
-- `manage_manifest.{py,js}`: `init`, `add`, `set`, `status`, and `audit`.
+- `manage_manifest.{py,js}`: `init`, `add`, `set`, `audit`, `status`, and `reconcile`.
 - `detect_profiles.{py,js}`: read-only shape/platform/framework/concern
   recommendations with strong/weak match strength, cue bags, and
   `confirmed|candidate` confidence; `--emit-gate-pack` for agent intake.

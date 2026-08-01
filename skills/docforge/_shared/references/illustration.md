@@ -25,7 +25,7 @@ work, choose the one that answers the reader's question with fewer elements.
 
 The depth vocabulary is defined in
 [`depth-and-audience.md`](depth-and-audience.md): Orientation, Working depth,
-Deep dive, and Reference. Catalog machine values include `orientation`,
+Deep dive, Reference, and Router. Catalog machine values include `orientation`,
 `deep-dive`, `reference`, and `router`; do not invent `target_depth: working`.
 Apply the Working depth budget to content whose purpose is ordered behavior,
 important rules, inputs/outputs, and common failures.

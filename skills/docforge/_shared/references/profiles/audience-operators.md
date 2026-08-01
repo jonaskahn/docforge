@@ -48,12 +48,9 @@ name or exception string alone.
 
 ## Evidence recipe
 
-1. Use the selected code graph to locate deployable units, entry points,
-   configuration reads, operational dependencies, and tests.
-2. Confirm artifacts, environments, commands, signals, and recovery behavior in
-   configuration, automation, source, and executable verification.
-3. Use history only to explain an evidenced operational decision or incident
-   response; distinguish it from current behavior when it has drifted.
-4. Treat account roles, dashboards, on-call rotations, service objectives, and
-   production procedures as external evidence unless the repository records
-   them. Preserve the gap rather than inventing access or ownership.
+Follow the evidence loop in [`source-analysis.md`](../source-analysis.md):
+
+1. Use the selected code graph to locate deployable units, entry points, configuration reads, operational dependencies, and tests.
+2. Confirm artifacts, environments, commands, signals, and recovery behavior in configuration, automation, source, and executable verification.
+3. Use history only to explain an evidenced operational decision or incident response.
+4. Treat account roles, dashboards, on-call rotations, service objectives, and production procedures as external evidence unless recorded in the repo.

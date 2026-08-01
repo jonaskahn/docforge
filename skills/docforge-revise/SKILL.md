@@ -23,16 +23,7 @@ Slash command: `/docforge-revise`. Companion to `/docforge`. Shared cartridge:
    [`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md).
 
 Run tools from the cartridge root (`../docforge/_shared/`). Lock one session engine
-first (see [`../docforge/_shared/rules.md`](../docforge/_shared/rules.md)); always put
-subcommands before flags:
-
-```sh
-# Example after locking python3 for this session:
-python3 runtime/cli/python/query_catalog.py --route <document-id>
-
-# Example after locking node instead:
-node runtime/cli/js/query_catalog.js --route <document-id>
-```
+first; see [`../docforge/_shared/workflows/tools.md`](../docforge/_shared/workflows/tools.md) for execution rules and CLI syntax.
 
 ## Arguments
 
