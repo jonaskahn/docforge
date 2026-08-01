@@ -203,7 +203,8 @@ class SkillContentTests(unittest.TestCase):
         self.assertTrue((ROOT / "skills" / "docforge" / "SKILL.md").is_file())
         self.assertTrue((ROOT / "skills" / "docforge-revise" / "SKILL.md").is_file())
         self.assertTrue((ROOT / "skills" / "docforge-dashboard" / "SKILL.md").is_file())
-        self.assertTrue((ROOT / "agents" / "docforge-audit.md").is_file())
+        self.assertFalse((ROOT / "agents").exists())
+        self.assertFalse((ROOT / "skills" / "docforge" / "agents").exists())
         self.assertTrue((ROOT / "commands" / "docforge.md").is_file())
         self.assertTrue((ROOT / "commands" / "docforge-revise.md").is_file())
         self.assertTrue((ROOT / "commands" / "docforge-dashboard.md").is_file())
@@ -272,26 +273,6 @@ class SkillContentTests(unittest.TestCase):
         for skill in (revise, dashboard):
             self.assertIn("../docforge/_shared", skill)
             self.assertIn("requires the `docforge`", skill)
-
-    def test_plugin_agents_resolve_cartridge_via_plugin_root(self) -> None:
-        """Plugin subagent bodies link the canonical cartridge through
-        ${CLAUDE_PLUGIN_ROOT} (substituted at load with the absolute plugin
-        dir), carry the cartridge-root anchor and fallback, and never use
-        CWD-relative cartridge links."""
-        agents = sorted((ROOT / "agents").glob("*.md"))
-        self.assertGreaterEqual(len(agents), 6)
-        for path in agents:
-            text = path.read_text(encoding="utf-8")
-            self.assertIn("${CLAUDE_PLUGIN_ROOT}", text)
-            self.assertIn("ask the orchestrator", text)
-            self.assertNotIn("../skills/", text)
-            for link in PLACEHOLDER_LINK.findall(text):
-                self.assertTrue(
-                    link.startswith("${CLAUDE_PLUGIN_ROOT}/"),
-                    f"{path.name}: unexpected placeholder {link}",
-                )
-                target = (ROOT / link.removeprefix("${CLAUDE_PLUGIN_ROOT}/")).resolve()
-                self.assertTrue(target.is_file(), f"{path.name}: unresolved link {link}")
 
     def test_skill_md_links_resolve_via_skill_dir(self) -> None:
         """Every cartridge link in the shipped SKILL.md files resolves against

@@ -232,12 +232,12 @@ class ManifestSelectionTests(unittest.TestCase):
                              "--id", "arch_high_level", "--status", "complete")
             self.assertEqual(stale_pass.returncode, 2)
             repassed = run("py", "manage_manifest", "audit", "--repo", str(repo),
-                           "--id", "arch_high_level", "--mode", "subagent",
+                            "--id", "arch_high_level", "--mode", "cold-pass",
                            "--verdict", "PASS",
                            "--report", ".docforge/audits/arch_high_level.md")
             self.assertEqual(repassed.returncode, 0, repassed.stderr)
             doc = next(item for item in load_manifest(repo)["documents"] if item["id"] == "arch_high_level")
-            self.assertEqual(doc["audit"]["mode"], "subagent")
+            self.assertEqual(doc["audit"]["mode"], "cold-pass")
 
 
 class ProvenanceAndAuditTests(unittest.TestCase):

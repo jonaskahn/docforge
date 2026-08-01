@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-2.9.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
+  [![Version](https://img.shields.io/badge/version-2.10.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 
@@ -84,8 +84,8 @@ install whatever `skills/*/SKILL.md` trees the repo ships.
 ### CLAUDE CODE CARTRIDGE
 
 Docforge also ships a native [Claude Code marketplace manifest](.claude-plugin/marketplace.json).
-The marketplace lists the GitHub repo as the plugin source, so root `skills/` and
-`agents/` stay the single tree (shared with Agent Skills — no mirrored package):
+The marketplace lists the GitHub repo as the plugin source and loads the same
+root `skills/` tree used by Agent Skills, with no mirrored package:
 
 ```text
 /plugin marketplace add jonaskahn/docforge
@@ -175,7 +175,7 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 3. **PLAN** — choose a named tier and typed profiles, harvest a complete ranked
    flow index, initialize manifest 3.1, then preview its exact tree.
 4. **WRITE** — generate one document at a time in dependency order.
-5. **AUDIT** — use a fresh artifact-only reviewer when supported, otherwise a recorded cold artifact-only pass; derivable gaps force a rewrite.
+5. **AUDIT** — run a recorded cold artifact-only pass; derivable gaps force a rewrite.
 6. **TRACK** — stamp section-level source paths and git blob hashes so later runs update only what drifted.
 
 Docforge writes behavior and boundaries, not prose tied to private symbols or line numbers. Derivable facts must be completed; only truly external values may remain as typed tokens such as `<SECURITY_CONTACT>`.
@@ -320,8 +320,8 @@ dashboard build/serve runtime and its Fumadocs app template. The agent
 detects `python3` / `python` / `node` / `bun` / `deno` once and locks one
 engine for the session — there is no separate runtime-precheck CLI.
 [`.claude-plugin/`](.claude-plugin/) packages the Claude Code marketplace
-path; the marketplace entry installs this GitHub repo as the plugin (root
-`skills/` + `agents/`). Agent Skills install discovers
+path; the marketplace entry loads the root `skills/` tree and `commands/` from
+this GitHub repo. Agent Skills install discovers
 [`skills/docforge/SKILL.md`](skills/docforge/SKILL.md),
 [`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md), and
 [`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md)
@@ -362,7 +362,9 @@ the selected runtime's standard library or built-ins.
 
 Found a bug or missing rule? [Open an issue](https://github.com/jonaskahn/docforge/issues) with the request, actual output, and expected output.
 
-To contribute, edit the relevant workflow, reference, template, schema, and Python/Node pair together under `skills/` (and agent wrappers under `agents/`), then [open a pull request](https://github.com/jonaskahn/docforge/pulls).
+To contribute, edit the relevant workflow, reference, template, schema, and
+Python/Node pair together under `skills/`, then
+[open a pull request](https://github.com/jonaskahn/docforge/pulls).
 
 ## ▓▒░ CREDITS ░▒▓
 

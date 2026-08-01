@@ -4,8 +4,7 @@ This file owns the completion gate.
 
 ## Independence
 
-Prefer a fresh artifact-only subagent that did not write the document. Give it
-only:
+Start a separate cold artifact-only pass after writing. Review only:
 
 - the finished artifact;
 - its catalog content contract and audit profile;
@@ -14,8 +13,7 @@ only:
 - sources cited by validated provenance 2.0, after the mechanical gate has
   confirmed concrete metadata, source blobs, and heading-matched sections.
 
-Do not include writer reasoning or draft conversation. If fresh subagents are
-unavailable, start a separate cold artifact-only pass and record
+Do not include writer reasoning or draft conversation. Record
 `mode: cold-pass`.
 
 ## Verdict
@@ -34,7 +32,7 @@ derivable gap may not be waived to a human.
 
 Record the result with `manage_manifest audit`. A failure puts the document in
 `needs_review`. `manage_manifest set --status complete` rejects a document
-without a passing `subagent` or `cold-pass` audit record. Mechanical lint alone
+without a passing `cold-pass` audit record. Mechanical lint alone
 cannot produce PASS.
 
 AGENTS.md-shaped outputs (`AGENTS.md`, a `SPECIAL_DOC_OUTPUTS` member that

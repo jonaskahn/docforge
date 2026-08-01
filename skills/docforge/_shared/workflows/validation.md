@@ -15,11 +15,8 @@ node runtime/cli/js/scaffold_docs.js \
   --repo <repo> --manifest <repo>/.docforge/manifest.json --audit
 ```
 
-The command exits nonzero for any defect. When available, dispatch
-`docforge:docforge-tree-review` (bare `docforge-tree-review` from
-`.claude/agents/`) for a cold cross-document pass, passing it the absolute
-cartridge root; otherwise apply the
-cross-document checks inline. The checks owned by
+The command exits nonzero for any defect. Apply the cold cross-document checks
+inline. The checks owned by
 [`../references/quality-bar.md`](../references/quality-bar.md) cover
 reachability, onboarding, location, reviewer, stranger, duplication, and host
 neutrality, plus README-specific checks: every section README links each
@@ -77,7 +74,7 @@ and changes only each document's provenance section.
 
 ## Completion criteria
 
-A document is `complete` only with a passing `subagent` or `cold-pass` audit
+A document is `complete` only with a passing `cold-pass` audit
 record. A run is complete only when every selected document is `complete` or
 explicitly `skipped`, and the whole-tree gate above exits zero.
 

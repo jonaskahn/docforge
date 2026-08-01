@@ -228,13 +228,10 @@ flow docs and big-picture surfaces even when their cited `git_blob` values are
 still `FRESH`.
 
 1. Run `migrate_metadata` when needed, then precheck `--need flow`.
-2. When available, dispatch `docforge:docforge-flow` (bare `docforge-flow` from
-   `.claude/agents/`) for its read-only harvest, rank,
-   organization, and provisional-derivation proposal, passing it the absolute
-   cartridge root. It must use only a
-   temporary/provisional workspace and return an advisory result; otherwise run
-   the same stages inline. Use that result to show the structure update and
-   honor the execution-mode tree checkpoint before changing the repository.
+2. Run the read-only harvest, rank, organization, and provisional-derivation
+   stages inline in a temporary/provisional workspace. Use the advisory result
+   to show the structure update and honor the execution-mode tree checkpoint
+   before changing the repository.
 3. After that checkpoint, run `flow_index revise` to re-harvest candidates (with community-label and
    near-candidate dedup), upsert every row into `.docforge/flow-index.json`
    (schema 1.1), set non-documented/non-skipped rows to `placeholder`, create

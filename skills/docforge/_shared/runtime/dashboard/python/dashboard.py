@@ -614,7 +614,7 @@ def validate_build(repo: Path, manifest: dict, content_dir: Path, assets_dir: Pa
                 if url not in url_to_page:
                     errors.append(f"broken link in {page['output_path']}: {target}")
                     continue
-                if fragment and not re.fullmatch(r"#L\d+-L\d+", fragment) and fragment.lstrip("#") not in anchors.get(url, set()):
+                if fragment and fragment.lstrip("#") not in anchors.get(url, set()):
                     errors.append(f"broken anchor in {page['output_path']}: {target}")
             elif target.startswith("/docs-assets/"):
                 asset = target[len("/docs-assets/"):].split("#", 1)[0]

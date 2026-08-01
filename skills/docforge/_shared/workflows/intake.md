@@ -12,10 +12,7 @@ manifest, scaffold a file, build/refresh a graph, install a provider, change
 configuration, or archive/delete anything.
 
 First perform only safe discovery: identify the repository root, check whether
-`.docforge/manifest.json` exists, and dispatch `docforge:docforge-graph-precheck`
-(plugin install; bare `docforge-graph-precheck` from `.claude/agents/`) when
-available, passing it the absolute cartridge root. Otherwise, run the read-only
-code-graph precheck and
+`.docforge/manifest.json` exists, run the read-only code-graph precheck, and run
 `detect_profiles` inline to identify candidate shapes, platforms, frameworks,
 and concerns. `detect_profiles` recognizes frameworks and shapes by reading
 *declared dependencies* structurally from project-definition manifests

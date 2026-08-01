@@ -195,7 +195,7 @@ class ReadmeContractRevisionTests(unittest.TestCase):
                 doc = next(item for item in manifest["documents"] if item["id"] == "docs_index")
                 doc["status"] = "complete"
                 doc["contract_revision"] = "1.0.0"
-                doc["audit"] = {"mode": "subagent", "verdict": "PASS", "timestamp": "x", "report_path": ".docforge/audits/docs_index.md"}
+                doc["audit"] = {"mode": "cold-pass", "verdict": "PASS", "timestamp": "x", "report_path": ".docforge/audits/docs_index.md"}
                 manifest_path = repo / ".docforge" / "manifest.json"
                 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 

@@ -709,7 +709,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit = sub.add_parser("audit")
     add_repo(audit)
     audit.add_argument("--id", required=True)
-    audit.add_argument("--mode", required=True, choices=["subagent", "cold-pass"])
+    audit.add_argument("--mode", required=True, choices=["cold-pass"])
     audit.add_argument("--verdict", required=True, choices=["PASS", "FAIL"])
     audit.add_argument("--report", required=True)
     audit.set_defaults(func=cmd_audit)

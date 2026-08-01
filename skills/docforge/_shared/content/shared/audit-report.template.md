@@ -16,7 +16,7 @@ docforge_provenance:
 ---
 # Audit — {{document path}}
 
-_Audited: {{YYYY-MM-DD}} · Mode: {{subagent | cold-pass}} · Type: {{document type}} · Target depth: {{target depth}}_
+_Audited: {{YYYY-MM-DD}} · Mode: cold-pass · Type: {{document type}} · Target depth: {{target depth}}_
 
 ## Verdict: {{PASS | FAIL}}
 

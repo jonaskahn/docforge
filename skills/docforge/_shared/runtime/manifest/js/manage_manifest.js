@@ -524,7 +524,7 @@ function cmdSet(args) {
 }
 function cmdAudit(args) {
   required(args, ["repo", "id", "mode", "verdict", "report"]);
-  if (!["subagent", "cold-pass"].includes(args.mode)) return fail(`invalid audit mode: ${args.mode}`, 2);
+  if (args.mode !== "cold-pass") return fail(`invalid audit mode: ${args.mode}`, 2);
   if (!["PASS", "FAIL"].includes(args.verdict)) return fail(`invalid audit verdict: ${args.verdict}`, 2);
   try {
     const manifest = loadManifest(manifestPath(args.repo), {
@@ -580,7 +580,7 @@ function cmdFinish(args) {
   return 0;
 }
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <subagent|cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | finish --repo <path> [--keep-tmp]");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;

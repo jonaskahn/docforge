@@ -49,13 +49,9 @@ For the next document in `write_order`:
    ```
 
 4. Set it `in_progress`, re-ground every required claim, replace all scaffold
-   markers and provenance tokens, and stamp complete provenance 2.0. For a
-   large repository, the writer may dispatch `docforge:docforge-ground` (bare
-   `docforge-ground` from `.claude/agents/`), passing it the absolute cartridge
-   root, to gather
-   candidate `path` / `role` / `git_blob` evidence off-thread; it must verify
-   every candidate and stamp provenance itself. The default is inline writer
-   grounding:
+   markers and provenance tokens, and stamp complete provenance 2.0. The writer
+   gathers, verifies, and stamps all candidate `path` / `role` / `git_blob`
+   evidence inline:
 
    - One provenance `sections[]` entry per Markdown heading that makes claims;
      `id` is that heading's anchor.
@@ -80,10 +76,10 @@ For the next document in `write_order`:
 
    ```sh
    python3 runtime/cli/python/manage_manifest.py audit \
-     --repo <repo> --id <id> --mode subagent \
+      --repo <repo> --id <id> --mode cold-pass \
      --verdict PASS --report .docforge/audits/<id>.md
    node runtime/cli/js/manage_manifest.js audit \
-     --repo <repo> --id <id> --mode subagent \
+      --repo <repo> --id <id> --mode cold-pass \
      --verdict PASS --report .docforge/audits/<id>.md
    # bun / deno run -A against runtime/cli/js/manage_manifest.js with the same args
    ```
@@ -99,19 +95,16 @@ planned → in_progress → generated → complete
 ```
 
 `skipped` is explicit. `complete` is rejected unless the manifest contains a
-passing `subagent` or `cold-pass` audit record.
+passing `cold-pass` audit record.
 
 ## 5. Independent audit
 
-When supported, dispatch the `docforge:docforge-audit` fresh artifact-only
-subagent (bare `docforge-audit` from `.claude/agents/`).
-Give it the artifact, its catalog contract, target depth, relevant quality
-checks, cited sources, and the absolute cartridge root—no writer reasoning. For
-the `agents-kernel` output,
-its mechanical gate is `lint_agents_kernel`, not `lint_document`. When
-subagents are unavailable, perform a separate cold, artifact-only pass and
-record `mode: cold-pass`. Mechanical checks alone never produce a completion
-verdict. Full audit procedure:
+After writing, start a separate cold, artifact-only pass with only the artifact,
+its catalog contract, target depth, relevant quality checks, and cited sources;
+do not carry over writer reasoning. For the `agents-kernel` output, its
+mechanical gate is `lint_agents_kernel`, not `lint_document`. Record
+`mode: cold-pass`. Mechanical checks alone never produce a completion verdict.
+Full audit procedure:
 [`../references/document-audit.md`](../references/document-audit.md).
 
 Independent artifact-only audits may run concurrently, but their manifest

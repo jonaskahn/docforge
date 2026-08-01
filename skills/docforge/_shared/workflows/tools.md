@@ -60,10 +60,9 @@ deno run -A runtime/cli/js/<name>.js <subcommand?> --flag …
 
 ## Public commands
 
-When maintaining `_shared/.metadata`, `docforge:docforge-catalog-validator`
-(bare `docforge-catalog-validator` from `.claude/agents/`) is the
-isolated read-only way to run the catalog integrity checks, with the absolute
-cartridge root passed to it.
+When maintaining `_shared/.metadata`, run the catalog integrity checks inline
+from the absolute cartridge root with `query_catalog --validate`,
+`generate_indexes --check`, and `validate_metadata`.
 
 - `query_catalog.{py,js}`: read the catalog (`--tier`, `--id`, `--ids`,
   `--profile`, `--applicable`, `--validate`, `--category <group>`,

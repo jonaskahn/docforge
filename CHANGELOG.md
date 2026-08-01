@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.10.0 - Inline workflow execution
+
+- Removed the optional Claude Code wrapper files and their dispatch paths.
+  Precheck, grounding, flow analysis, document audit, and whole-tree review now
+  always run through the existing inline workflow procedures.
+- Simplified audit provenance to the single `cold-pass` mode across the
+  manifest schema, Python and JavaScript tools, templates, and tests.
+- Kept the complete `PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK` flow
+  identical across Claude Code plugin and Agent Skills installs.
+
 ## 2.9.0 - Standalone core and dashboard simplification
 
 - **`docforge` is now the required core bundle.** The dashboard capability
@@ -92,10 +102,10 @@
 ## Enforced coding-agents kernel lint
 
 - Wired the orphaned `lint_agents_kernel` into the completion gate: the
-  `docforge-audit` mechanical gate now runs it in place of `lint_document` for
-  AGENTS.md-shaped outputs, documented end to end in `docforge-audit`,
-  `document-audit`, `ownership`, the coding-agents audience profile, and
-  `writing.md`; fixed shims remain literal and unlinted by design.
+  document-audit mechanical gate now runs it in place of `lint_document` for
+  AGENTS.md-shaped outputs, documented end to end in `document-audit`,
+  `ownership`, the coding-agents audience profile, and `writing.md`; fixed
+  shims remain literal and unlinted by design.
 - Strengthened `lint_agents_kernel` (Python/Node parity) with hard rubric
   defects `title-shape` (1–4 words, Title Case, no trailing `?`) and
   `tagline-length` (5–12 words), plus advisory warnings `weak-tagline`,
