@@ -49,6 +49,14 @@ suitable-missing-audiences confirm/add-more prompt, and execution mode when
 needed. It displays an annotated plan tree (`add` / `update` / `rewrite` /
 `unchanged` / `skip`) before writing, including the `Flows:` mapping.
 
+**Always stop and ask first — same popup as `/docforge`.** Before any
+migration, detection, or writing, present the discovery brief and the full
+question pack in one response: Scope, Tier (keep manifest tier or change),
+the five profile dimensions, Output audience, and Execution mode — with the
+manifest's current values pre-checked and fresh detection shown as proposed
+additions. Then show the confirmation summary and wait for explicit
+confirmation before continuing. Never proceed on silent defaults.
+
 ## Flags
 
 Same flags as `/docforge` (combinable with a scope argument). Detail:

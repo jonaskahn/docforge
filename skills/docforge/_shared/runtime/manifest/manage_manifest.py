@@ -454,6 +454,73 @@ def cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reconcile(args: argparse.Namespace) -> int:
+    """Apply the revise question pack answers to an existing manifest.
+
+    Updates tier and the five profile dimensions from the user's selection,
+    re-runs static selection, adds newly applicable documents as planned,
+    removes planned documents that are no longer applicable, and preserves
+    written, skipped, and dynamic documents. An explicit `none` value clears a
+    dimension; an omitted dimension keeps its current manifest value.
+    """
+    try:
+        manifest = load_manifest(
+            manifest_path(args.repo),
+            unsupported_hint=MANIFEST_HINT,
+        )
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    catalog = load_catalog()
+    new_tier = args.tier or manifest["project"]["tier"]
+    raw: dict[str, list[str]] = {}
+    for dimension in PROFILE_DIMENSIONS:
+        singular = "audience" if dimension == "audiences" else dimension[:-1]
+        values = list(getattr(args, singular, []) or [])
+        if values == ["none"]:
+            values = []
+        raw[dimension] = values or manifest["project"]["profiles"].get(dimension, [])
+    try:
+        profiles = normalize_profiles(catalog, raw)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    selected = selected_static_documents(catalog, args.repo, new_tier, profiles)
+    selected_ids = {doc["id"] for doc in selected}
+    kept: list[dict] = []
+    removed: list[str] = []
+    kept_ids: set[str] = set()
+    for doc in manifest["documents"]:
+        origins = doc.get("selection", {}).get("origins", [])
+        is_dynamic = any(origin.get("kind") == "dynamic" for origin in origins)
+        if doc["id"] in selected_ids:
+            kept.append(doc)
+            kept_ids.add(doc["id"])
+        elif is_dynamic or doc.get("status") != "planned":
+            kept.append(doc)
+            kept_ids.add(doc["id"])
+        else:
+            removed.append(doc["id"])
+    added = [doc for doc in selected if doc["id"] not in kept_ids]
+    old_tier = manifest["project"]["tier"]
+    manifest["documents"] = kept + added
+    manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
+    manifest["project"]["tier"] = new_tier
+    manifest["project"]["profiles"] = profiles
+    save_manifest(args.repo, manifest)
+    print(f"Reconcile {args.repo}:")
+    print(f"  tier: {old_tier} -> {new_tier}")
+    for dimension in PROFILE_DIMENSIONS:
+        print(f"  {dimension}: {', '.join(profiles[dimension]) or '(none)'}")
+    if added:
+        print(f"  added: {', '.join(doc['id'] for doc in sorted(added, key=lambda d: d['id']))}")
+    if removed:
+        print(f"  removed-planned: {', '.join(sorted(removed))}")
+    print(f"  kept: {len(kept)} documents")
+    print()
+    for line in plan_lines(args.repo, manifest, args.repo / ".docforge" / "flow-index.json", revise=True):
+        print(line)
+    return 0
+
+
 def find_document(manifest: dict, doc_id: str) -> dict:
     for doc in manifest["documents"]:
         if doc["id"] == doc_id:
@@ -588,6 +655,16 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status")
     add_repo(status)
     status.set_defaults(func=cmd_status)
+
+    reconcile = sub.add_parser("reconcile")
+    add_repo(reconcile)
+    reconcile.add_argument("--tier", choices=["spine", "diligence", "portfolio"])
+    reconcile.add_argument("--shape", action="append", default=[])
+    reconcile.add_argument("--platform", action="append", default=[])
+    reconcile.add_argument("--framework", action="append", default=[])
+    reconcile.add_argument("--concern", action="append", default=[])
+    reconcile.add_argument("--audience", action="append", default=[])
+    reconcile.set_defaults(func=cmd_reconcile)
     return parser
 
 

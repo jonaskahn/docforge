@@ -243,7 +243,7 @@ function selectedStaticDocuments(catalog, repo, tier, profiles) {
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "add", "set", "audit", "status"]);
+  const knownCommands = new Set(["init", "add", "set", "audit", "status", "reconcile"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence"]);
   const boolean = new Set(["force"]);
@@ -253,6 +253,7 @@ function parseArgs(argv) {
     set: new Set(["repo", "id", "status"]),
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
+    reconcile: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience"]),
   }[command];
   const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [], evidence: [] };
   for (let i = 1; i < argv.length; i++) {
@@ -379,6 +380,67 @@ function cmdAdd(args) {
     return fail(error.message, 2);
   }
 }
+function cmdReconcile(args) {
+  let manifest;
+  try {
+    manifest = loadManifest(manifestPath(args.repo), { unsupportedHint: MANIFEST_HINT });
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  const catalog = loadCatalog();
+  const newTier = args.tier || manifest.project.tier;
+  const raw = {};
+  for (const dimension of PROFILE_DIMENSIONS) {
+    const singular = dimension === "audiences" ? "audience" : dimension.slice(0, -1);
+    let values = [...(args[singular] || [])];
+    if (values.length === 1 && values[0] === "none") values = [];
+    raw[dimension] = values.length ? values : (manifest.project.profiles[dimension] || []);
+  }
+  let profiles;
+  try {
+    profiles = normalizeProfiles(catalog, raw);
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  const selected = selectedStaticDocuments(catalog, args.repo, newTier, profiles);
+  const selectedIds = new Set(selected.map((doc) => doc.id));
+  const kept = [];
+  const removed = [];
+  const keptIds = new Set();
+  for (const doc of manifest.documents) {
+    const origins = ((doc.selection || {}).origins) || [];
+    const isDynamic = origins.some((origin) => origin.kind === "dynamic");
+    if (selectedIds.has(doc.id)) {
+      kept.push(doc);
+      keptIds.add(doc.id);
+    } else if (isDynamic || doc.status !== "planned") {
+      kept.push(doc);
+      keptIds.add(doc.id);
+    } else {
+      removed.push(doc.id);
+    }
+  }
+  const added = selected.filter((doc) => !keptIds.has(doc.id));
+  const oldTier = manifest.project.tier;
+  manifest.documents = [...kept, ...added];
+  manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
+  manifest.project.tier = newTier;
+  manifest.project.profiles = profiles;
+  saveManifest(args.repo, manifest);
+  console.log(`Reconcile ${args.repo}:`);
+  console.log(`  tier: ${oldTier} -> ${newTier}`);
+  for (const dimension of PROFILE_DIMENSIONS) {
+    console.log(`  ${dimension}: ${profiles[dimension].join(", ") || "(none)"}`);
+  }
+  if (added.length) console.log(`  added: ${added.map((doc) => doc.id).sort().join(", ")}`);
+  if (removed.length) console.log(`  removed-planned: ${removed.sort().join(", ")}`);
+  console.log(`  kept: ${kept.length} documents`);
+  console.log("");
+  for (const line of planLines(args.repo, manifest, path.join(args.repo, ".docforge", "flow-index.json"), true)) {
+    console.log(line);
+  }
+  return 0;
+}
 function findDocument(manifest, id) {
   const doc = manifest.documents.find((item) => item.id === id);
   if (!doc) throw new Error(`document id not found: ${id}`);
@@ -468,7 +530,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, add: cmdAdd, set: cmdSet, audit: cmdAudit, status: cmdStatus }[args.command](args);
+    return { init: cmdInit, add: cmdAdd, set: cmdSet, audit: cmdAudit, status: cmdStatus, reconcile: cmdReconcile }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

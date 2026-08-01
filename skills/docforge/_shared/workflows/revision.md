@@ -48,29 +48,67 @@ no rediscovery, unless that document is untracked.
 
 ## Questions revise asks
 
-Revise is not a fresh intake. It re-asks only what the manifest cannot resolve:
+Revise always **stops and asks first**, using the same interactive question
+pack as a fresh start — never silent defaults, never "only if not derivable".
+Before any migration, detection, or writing, revise presents a discovery brief,
+then one combined question set exactly like [`intake.md`](intake.md) describes
+("Present all applicable unresolved questions together", native multi-select
+when the host provides it, each choice with a short consequence). The goal is
+fixed (structural refresh), so the pack is:
 
-1. **Scope** — `all`, `<area>`, or `flow`. Asked only on a bare
-   `/docforge-revise` invocation with no scope argument.
-2. **Tier** — asked whenever the invocation did not make the tier explicit.
-   Revise asks whether to keep the manifest's current tier or change it
-   (repo-wide, e.g. `spine` → `diligence` to unlock low-level, threat-model,
-   and other diligence documents). This is the supported way to raise a tier
-   without `init --force`.
-3. **Output audience confirm/add-more** — asked only when rediscovery finds
-   missing, new, or updated documents whose catalog `selection.audiences` are
-   not already on the manifest. Pre-check the suitable missing audiences (one
-   line each, e.g. which `ba_*` / `po_*` / `agents_*` docs they unlock), let the
-   user confirm or **add more** (see [`intake.md`](intake.md) Output audience).
-   If the manifest has no audiences, run the full audience multi-select.
-4. **Execution mode** — asked only when the action will plan or write and the
-   reply did not make it derivable; one mode-only follow-up.
+1. **Scope** — `all`, `<area>`, or `flow` (pre-checked from the invocation).
+2. **Tier** — keep the manifest's current tier or change it repo-wide
+   (e.g. `spine` → `diligence` to unlock low-level, threat-model, and other
+   diligence documents). This is the supported way to raise a tier without
+   `init --force`. Always shown; the manifest value is the pre-checked default.
+3. **Profiles** — the five typed dimensions (shape, platform, framework,
+   concern, audience) as one multi-select, with the manifest's current values
+   pre-checked and fresh detection shown as proposed additions.
+4. **Output audience** — part of the same pack: current audiences pre-checked,
+   suitable missing audiences pre-checked with a one-line reason each
+   (e.g. which `ba_*` / `po_*` / `agents_*` docs they unlock), and **add more**
+   available (see [`intake.md`](intake.md) Output audience). If the manifest
+   has no audiences, nothing is pre-checked.
+5. **Execution mode** — review or Auto-accept, one choice in the pack; never
+   defaulted silently.
 
-Never re-ask: goal/action (revise has a fixed meaning), shape/platform/framework/
-concern dimensions (re-detected and shown as a delta), or graph source (internal;
-shown in the summary only). The final confirmation summary shows action, tier,
-every profile dimension, audiences, evidence provider, and execution mode before
-anything is written.
+Collect the answers as one response, then display one confirmation summary
+(action, tier, every profile dimension, every audience, evidence provider, and
+execution mode) and **wait for explicit confirmation** before continuing — the
+same confirmation gate a fresh start uses. If the reply leaves a material
+choice missing or ambiguous, ask one concise follow-up containing only those
+unresolved choices. Do not proceed past the question pack until the user has
+answered and confirmed. Graph source stays internal; it appears only in the
+summary, not as a question.
+
+### Applying the answers to the manifest
+
+The first-time answers are stored in manifest metadata (`project.tier`,
+`project.profiles`); revise always lets the user add or remove selections, and
+anything missing or newly applicable is generated into the pack. Apply the
+confirmed answers mechanically with `manage_manifest reconcile`:
+
+```sh
+python runtime/cli/python/manage_manifest.py reconcile --repo <repo> \
+  [--tier <spine|diligence|portfolio>] \
+  [--shape <id> ...] [--platform <id> ...] [--framework <id> ...] \
+  [--concern <id> ...] [--audience <id> ...]
+```
+
+Rules:
+
+- Omitted dimension flags keep the manifest's current values.
+- Pass `--audience none` (or the matching dimension flag with `none`) to clear
+  that dimension entirely.
+- Newly applicable documents are added as `planned` in write order.
+- Planned documents that are no longer applicable are removed from the plan
+  (`removed-planned` in the report).
+- Written, skipped, and dynamic documents are always preserved — reconcile
+  never deletes content or dynamic instances.
+- Ancestor indexes are recomputed with the new selection.
+- The command prints the delta (tier, profiles, added, removed-planned, kept)
+  and the annotated plan tree; then continue with `scaffold_docs --dry-run
+  --revise` and the writing workflow.
 
 ## Annotated plan tree
 

@@ -162,11 +162,13 @@ more choices in the original request, retain them and include only unresolved
  questions in the intake. For Resume or Status, omit tier, audience, and shape
  questions that the existing manifest already resolves. For
  `/docforge-revise all`, `/docforge-revise <area>`, `/docforge-revise flow`, or
- any revise that rediscovers docs, omit shape questions the manifest already
- resolves, but still ask tier when the invocation did not make it explicit
- (keep the manifest tier or change it repo-wide), and still run the Output
- audience confirm/add-more prompt
- (with suitable missing audiences pre-checked) above. If the reply leaves a
+ any revise that rediscovers docs, always stop and present the full question
+ pack exactly like a fresh start — scope, tier (keep the manifest tier or
+ change it repo-wide), the five profile dimensions, Output audience, and
+ Execution mode — with the manifest's current values pre-checked as defaults
+ and fresh detection shown as proposed additions. Do not proceed on silent
+ defaults; collect the answers in one response, show the confirmation summary,
+ and wait for explicit confirmation before continuing. If the reply leaves a
 material choice missing or ambiguous — including Output audience or Execution
 mode when required — ask one concise follow-up containing only those
 unresolved choices.
