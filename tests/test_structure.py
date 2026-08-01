@@ -57,7 +57,12 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("audience-only follow-up", intake)
         self.assertIn("add more", intake)
         self.assertIn("suitable missing", intake)
-        self.assertIn("confirm/add-more prompt", intake)
+        self.assertIn("## Revise selection changes", intake)
+        self.assertIn("Do not present a `Keep`\nchoice", intake)
+        self.assertIn("`Change to <other tier>`", intake)
+        self.assertIn("`Add <value>`", intake)
+        self.assertIn("`Remove <value>`", intake)
+        self.assertIn("explicit confirmation before reconciling", intake)
         self.assertIn("Business analysts (BA)", intake)
         self.assertIn("Product owners (PO)", intake)
         self.assertIn("Coding agents", intake)
@@ -87,6 +92,8 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("flow-analysis.json", revision)
         self.assertIn("main-priority", revision)
         self.assertIn("agent/LLM analyzes", revision)
+        self.assertIn("offer only `Change to <tier>` alternatives", revision)
+        self.assertIn("offer `Add` / `Remove` actions", revision)
 
     def test_planning_workflow_never_writes_against_stale_tree(self) -> None:
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")

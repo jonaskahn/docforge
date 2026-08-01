@@ -37,12 +37,14 @@ first; see [`../docforge/_shared/workflows/tools.md`](../docforge/_shared/workfl
 Before any migration, detection, or writing, revise always stops and asks first,
 using the question pack owned by
 [`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md).
-Present the discovery brief and question set in one response: Scope, Tier (keep
-manifest tier or change), Profiles (shape / platform / framework / concern),
-Output audience, and Execution mode — with manifest values pre-checked as
-defaults and fresh detection shown as proposed additions. Show the confirmation
-summary and wait for explicit confirmation before continuing; never proceed on
-silent defaults.
+Present the discovery brief and question set in one response: Scope, Tier,
+Profiles (shape / platform / framework / concern), Output audience, and
+Execution mode. For every persisted manifest choice, display the current value
+or values as the baseline. Offer `Change to <tier>` alternatives for tier, and
+only `Add <value>` / `Remove <value>` actions for profiles and audiences; never
+offer a `Keep` option or require re-selecting current values. Fresh detection
+is a recommended `Add` action. Show the confirmation summary and wait for
+explicit confirmation before continuing; never proceed on silent defaults.
 
 Before writing, revise displays an annotated plan tree (`add` / `update` /
 `rewrite` / `unchanged` / `skip`), including the `Flows:` mapping.

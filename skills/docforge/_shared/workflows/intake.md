@@ -68,6 +68,24 @@ when the host provides them; otherwise use a concise numbered question set with
 lettered options. Do not prescribe an exact screen or require a particular
 combined answer syntax.
 
+### Revise selection changes
+
+For a revise that re-asks persisted manifest choices, show the current manifest
+value or values above each control as the baseline. Do not present a `Keep`
+choice, and do not make the user re-select values that are already selected.
+Instead, controls represent only requested changes:
+
+- **Tier:** show `Current tier: <tier>` and offer `Change to <other tier>` for
+  each alternative tier.
+- **Profiles and output audiences:** show `Currently selected: <values>` and
+  offer `Add <value>` for unselected values and `Remove <value>` for selected
+  values. Freshly detected profiles and suitable missing audiences are
+  recommended `Add` actions with their evidence or unlock reason.
+
+An empty set of changes preserves the displayed manifest values, but it is not
+silent acceptance: include those unchanged values in the final confirmation and
+wait for the user's explicit confirmation before reconciling the manifest.
+
 Ask only what remains unresolved, in this order:
 
 1. **Goal or action.** For a repository without a manifest, offer creating a
@@ -124,14 +142,14 @@ Ask only what remains unresolved, in this order:
      compute **suitable missing audiences** — catalog `selection.audiences`
      required by newly selected, missing, or updated documents that are not
      already in the manifest.
-     Auto-detect = current manifest audiences ∪ suitable missing ∪ any
-     discovery-brief evidenced audiences. Pre-check that union; mark suitable
-     missing as recommended with a one-line reason (which new/missing doc
-     types they unlock, e.g. BA → `ba_*`, PO → `po_*`, Coding agents →
-     `agents_*`). Still show **all seven** options so the user can confirm or
-     **add more**. If the manifest has no audiences, use the new/plan-only
-     path above. Never keep defaults silently without that full multi-select
-     confirm/add-more prompt.
+      Show the current manifest audiences separately as the baseline. Mark
+      suitable missing and discovery-brief evidenced audiences as recommended
+      `Add` actions with a one-line reason (which new/missing doc types they
+      unlock, e.g. BA → `ba_*`, PO → `po_*`, Coding agents → `agents_*`). Show
+      **all seven** actions: `Remove` for current audiences and `Add` for every
+      other audience. If the manifest has no audiences, use the new/plan-only
+      path above. Never keep defaults silently; preserve an unchanged audience
+      set only after the full delta control and explicit confirmation.
    - **Resume or Status**: omit audience when the manifest already resolves
      it; otherwise use the new/plan-only path. Single-document update/refresh
      does not re-prompt audience unless the named document's catalog
@@ -163,15 +181,17 @@ questions in the intake. For Resume or Status, omit tier, audience, and shape
 questions that the existing manifest already resolves. For
 `/docforge-revise all`, `/docforge-revise <area>`, `/docforge-revise flow`, or
 any revise that rediscovers docs, always stop and present the full question
-pack owned by `intake.md` exactly like a fresh start — Scope, Tier (keep the
-manifest tier or change it repo-wide), Profiles (shape / platform / framework /
-concern), Output audience, and Execution mode — with the manifest's current
-values pre-checked as defaults and fresh detection shown as proposed additions.
-Never proceed on silent defaults; collect the answers in one response, show the
-confirmation summary, and wait for explicit confirmation before continuing. If the reply
-leaves a material choice missing or ambiguous — including Output audience or Execution
-mode when required — ask one concise follow-up containing only those
-unresolved choices.
+pack owned by `intake.md` exactly like a fresh start — Scope, Tier, Profiles
+(shape / platform / framework / concern), Output audience, and Execution mode
+— with the manifest's current values displayed as the baseline. Use the
+change-only controls in **Revise selection changes**: `Change to` for tier and
+`Add` / `Remove` for every profile dimension and output audience; show fresh
+detection as recommended `Add` actions. Never proceed on silent defaults;
+collect the requested changes in one response, show the confirmation summary,
+and wait for explicit confirmation before continuing. If the reply leaves a
+material choice missing or ambiguous — including Output audience or Execution
+mode when required — ask one concise follow-up containing only those unresolved
+choices.
 
 After resolving the answers, display one confirmation summary containing the
 action, tier, every selected profile dimension, every selected audience,

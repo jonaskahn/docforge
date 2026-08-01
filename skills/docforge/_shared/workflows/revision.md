@@ -47,9 +47,13 @@ Revise always **stops and asks first**, using the interactive question pack owne
 revise presents a discovery brief and one combined question set ([`intake.md`](intake.md)):
 
 1. **Scope** — `all`, `<area>`, or `flow` (pre-checked from invocation).
-2. **Tier** — keep current tier or change repo-wide (manifest value pre-checked).
-3. **Profiles** — shape, platform, framework, concern (current pre-checked + fresh detected proposed).
-4. **Output audience** — suitable missing pre-checked with unlock reasons (see [`intake.md`](intake.md)).
+2. **Tier** — display the manifest tier and offer only `Change to <tier>` alternatives.
+3. **Profiles** — shape, platform, framework, concern: display each current
+   selection and offer `Add` / `Remove` actions; fresh detections are recommended
+   `Add` actions.
+4. **Output audience** — display current audiences and offer `Add` / `Remove`
+   actions; suitable missing audiences are recommended `Add` actions with unlock
+   reasons (see [`intake.md`](intake.md)).
 5. **Execution mode** — review or Auto-accept.
 
 Display one confirmation summary ([`intake.md`](intake.md)) and wait for explicit confirmation before continuing.
@@ -57,9 +61,11 @@ Display one confirmation summary ([`intake.md`](intake.md)) and wait for explici
 ### Applying the answers to the manifest
 
 The first-time answers are stored in manifest metadata (`project.tier`,
-`project.profiles`); revise always lets the user add or remove selections, and
-anything missing or newly applicable is generated into the pack. Apply the
-confirmed answers mechanically with `manage_manifest reconcile`:
+`project.profiles`); revise displays those current values separately and lets
+the user request only changes: change tier, add selections, or remove
+selections. Anything missing or newly applicable is generated as a recommended
+add action. Apply the explicitly confirmed result mechanically with
+`manage_manifest reconcile`:
 
 ```sh
 python runtime/cli/python/manage_manifest.py reconcile --repo <repo> \
