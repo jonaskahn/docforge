@@ -5,7 +5,9 @@ description: Structural refresh of Docforge documentation — revise all, a docs
 
 # Docforge Revise
 
-Slash command: `/docforge-revise`. Companion to `/docforge`. Shared cartridge:
+Slash command: `/docforge-revise`. Thin entrypoint into the `docforge`
+skill — this skill has no runtime of its own. It requires the `docforge`
+skill to be installed and loads its shared cartridge:
 [`../docforge/_shared/`](../docforge/_shared/README.md).
 
 ## Load order

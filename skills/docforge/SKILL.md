@@ -40,9 +40,12 @@ then writing. Natural-language **update** / **refresh** of a named document →
 
 ## Other routes
 
-- Structural revise (`all` / `<area>` / `flow`) → structural refresh of an
-  existing plan/tree in sibling skill
-  [`../docforge-revise/SKILL.md`](../docforge-revise/SKILL.md).
+- Structural revise (`all` / `<area>` / `flow`) → internal workflow
+  [`./_shared/workflows/revision.md`](./_shared/workflows/revision.md)
+  (the sibling skill `docforge-revise` is only a thin entrypoint into it).
+- Local dashboard (render written docs as a Fumadocs site) → internal
+  workflow [`./_shared/workflows/dashboard.md`](./_shared/workflows/dashboard.md)
+  (the sibling skill `docforge-dashboard` is only a thin entrypoint into it).
 - Staleness, migration, or a whole-tree/cross-document check →
   [`./_shared/workflows/validation.md`](./_shared/workflows/validation.md).
 - Read-only progress → plain language or

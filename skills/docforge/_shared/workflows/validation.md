@@ -86,18 +86,20 @@ written documentation is immediately visible — this applies to every completed
 `/docforge` (fresh start) and `/docforge-revise` run:
 
 1. **Never under `--plan-only`** — a dry run builds nothing and serves nothing.
-2. Run the full dashboard lifecycle — preflight, fingerprint, metadata
-   reconcile, route plan, MDX convert, validate, serve, open — via the
-   `/docforge-dashboard` procedure
-   ([`../../../docforge-dashboard/SKILL.md`](../../../docforge-dashboard/SKILL.md)).
-3. The first run takes longer: it scaffolds `.docforge/dashboard/` and runs
-   `npm install`; later runs reuse the healthy recorded server when the
-   fingerprint is unchanged.
+2. Run the dashboard lifecycle — preflight, metadata reconcile, signature,
+   build (when changed), serve, open — via
+   [`./dashboard.md`](dashboard.md) (internal to this cartridge; the optional
+   `/docforge-dashboard` skill is only a thin entrypoint into it):
+   `python3 runtime/cli/python/dashboard.py start --repo <repo>` (or the
+   locked JS peer).
+3. The first run takes longer: it scaffolds `.docforge/dashboard/`, runs
+   `npm install`, and starts the detached dev server; later runs reuse the
+   healthy recorded server when the signature is unchanged.
 4. When Node.js 22+ / npm is unavailable or preflight fails, state the
    dashboard requirement and continue — a missing dashboard never blocks
    completion.
-5. The serve command stays attached to the terminal; stopping it (`Ctrl+C`)
-   does not affect the written documentation or manifest state.
+5. The dev server runs detached; `dashboard stop` shuts it down without
+   affecting the written documentation or manifest state.
 
 ## Process completion & git state
 

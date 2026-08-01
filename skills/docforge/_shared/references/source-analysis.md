@@ -59,3 +59,8 @@ evidence card. A ready index that is never queried does not ground a plan.
 Treat graph output as evidence to synthesize, not prose to paste. If evidence
 cannot establish an external value, use one typed token. If evidence should
 establish a fact but does not, query or inspect further; do not punt it.
+
+Synthesize every source mention into a human-readable link, never a raw
+path, `file:line` string, or symbol dump: `[<readable label> (<repo-relative
+path>)](<repo-relative path>)` (see the source-references rule in
+[`host-neutrality.md`](host-neutrality.md)).

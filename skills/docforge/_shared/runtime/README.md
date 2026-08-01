@@ -27,6 +27,8 @@ Implementations behind every public CLI launcher under
   `migrate_metadata`, `check_staleness`.
 - `documents/` — scaffolding and linting: `scaffold_docs`, `lint_document`,
   `lint_agents_kernel`.
+- `dashboard/` — local Fumadocs site build and serve: `dashboard` (see
+  [`dashboard/README.md`](dashboard/README.md)).
 - `portfolio/` — cross-repository discovery: `discover_child_repos`.
 - `validation/` — registry and router validation: `validate_metadata`,
   `generate_indexes`.

@@ -14,12 +14,27 @@ apply in scope:
    values; re-ground `PARTIAL` / `UNTRACKED` sections (see Update one
    document for the per-doc mechanics).
 1a. **Upgrade contract-drifted documents** — a document whose catalog
-   `contract_revision` changed is set `in_progress` with its audit cleared by
-   reconcile, even when its source provenance is `FRESH`. Re-ground the
-   affected sections (for section READMEs: introduction, at-a-glance, scope,
-   start-here, child map, empty state), preserve valid prose, lint, audit, and
-   complete it. A second revise is idempotent once the current revision is
-   complete.
+    `contract_revision` changed is set `in_progress` with its audit cleared by
+    reconcile, even when its source provenance is `FRESH`. Re-ground the
+    affected sections (for section READMEs: introduction, at-a-glance, scope,
+    start-here, child map, empty state), preserve valid prose, lint, audit, and
+    complete it. A second revise is idempotent once the current revision is
+    complete.
+1b. **Enforce current template conformance** — for every in-scope written
+    document, the **newest template is the authority**. Fetch the document's
+    current contract, instruction, and template via `query_catalog --route`
+    (`contract`, `instruction`, `template_file`), then compare the written
+    document against the newest template's structure, format, and content
+    requirements — required headings and their order, section granularity,
+    tables and code blocks, typed-token vs concrete-value discipline, and the
+    contract's keep-out boundaries. Whenever the document is old — its
+    structure deviates from the newest template, the template itself changed
+    (with or without a `contract_revision` bump), or a required section is
+    missing — the document is planned `rewrite` to the current
+    template, even when its source blobs are `FRESH`. Never preserve an old
+    structure and only patch stale content: the current template is the
+    structure the document must have, not a suggestion. Applied before source
+    rework so a rewritten document is re-grounded once, not twice.
 2. **Add documents from detect / catalog** — re-run profile detection and
    condition evidence when needed; select newly evidenced static and dynamic
    types; add them to the manifest in `write_order`.
@@ -45,7 +60,25 @@ apply in scope:
    documentation graph is still correct.
 
 **Update / refresh of one named document** is the cheap exception: blob-first,
-no rediscovery, unless that document is untracked.
+no rediscovery, unless that document is untracked or deviates from the current
+template (step 1b).
+
+### Template rewrite mechanics
+
+A template rewrite runs in one pass per document:
+
+1. Scaffold the **newest** template for the document
+   (`scaffold_docs --document <id>`), never the old one.
+2. Migrate still-valid prose into the matching new sections; drop obsolete
+   sections and outdated formats; adopt every new required section.
+3. Re-ground the rewritten document from evidence (one section per claim
+   heading), replace scaffold markers and typed tokens, then run the
+   mechanical gate (`lint_document` with the contract's required-heading set),
+   the independent audit, and complete it.
+
+The newest template decides the result. A rewritten document that still
+carries the old structure, format, or content has not been rewritten — fix it
+before moving on.
 
 ## Questions revise asks
 
@@ -109,8 +142,11 @@ with a per-document action comment, so the user sees exactly what will happen:
 
 - `add` — not planned yet, or planned with no file (will be scaffolded).
 - `update` — file exists; changed sections will be re-grounded.
-- `rewrite` — full re-ground (provenance missing/unparseable, or status is
-  `in_progress` / `needs_review`).
+- `rewrite` — full re-ground (provenance missing/unparseable, status is
+  `in_progress` / `needs_review`, or structure / format / content deviates
+  from the current template per step 1b). A template rewrite is annotated
+  `rewrite (template)` in the tree so the user sees which documents are
+  being moved to the newest template rather than patched.
 - `unchanged` — fresh with valid provenance; re-checked only when a structural
   change touches it.
 - `skip` — explicitly skipped.
@@ -170,7 +206,9 @@ path — not full revise rediscovery.
 
 3. Branch on the result:
    - all `FRESH` → report that recorded sources are unchanged; do not rewrite
-     unless the user also asked for wording edits unrelated to source drift.
+     unless the user also asked for wording edits unrelated to source drift,
+     or the document's structure / format / content deviates from the current
+     template (step 1b) — then rewrite to the template.
    - `PARTIAL` → open only the listed section ids and their source files;
      re-ground those sections; keep every `FRESH` section verbatim; restamp
      provenance for changed sections (see [`writing.md`](writing.md) stamp
@@ -225,7 +263,9 @@ still `FRESH`.
      connection changes; use `check_staleness --document` to limit *source*
      rework to `PARTIAL` / `UNTRACKED` sections, but still update connection,
      composition, and cross-link sections when the flow index or neighbors
-     changed, even if blobs are `FRESH`.
+     changed, even if blobs are `FRESH`. Enforce current template conformance
+     (step 1b): an old flow-document shape is rewritten to the current `flow`
+     template, never preserved.
 7. Refresh the big picture: render `docs/flows/README.md`, and update any
    selected overview / index docs whose flow counts or links changed
    (for example `system-overview` when selected).

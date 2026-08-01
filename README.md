@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-2.8.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
+  [![Version](https://img.shields.io/badge/version-2.9.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -71,10 +71,14 @@ lists an HTTPS git URL so install does not need `github.com` in
 key (`ssh-keyscan github.com >> ~/.ssh/known_hosts`) or set
 `CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`.
 
-Both install paths load [`skills/docforge`](skills/docforge/SKILL.md),
-[`skills/docforge-revise`](skills/docforge-revise/SKILL.md), and
-[`skills/docforge-dashboard`](skills/docforge-dashboard/SKILL.md). Claude Code
-plugin skills are namespaced (`/docforge:docforge`, `/docforge:docforge-revise`,
+Both install paths load [`skills/docforge`](skills/docforge/SKILL.md) — the
+**required core bundle** that contains the whole shared cartridge, including
+the dashboard capability (workflow, runtime, and Fumadocs template).
+[`skills/docforge-revise`](skills/docforge-revise/SKILL.md) and
+[`skills/docforge-dashboard`](skills/docforge-dashboard/SKILL.md) are thin
+optional entrypoints that require `docforge`; installing only those is not
+supported. Claude Code plugin skills are namespaced
+(`/docforge:docforge`, `/docforge:docforge-revise`,
 `/docforge:docforge-dashboard`); [`commands/`](commands/) also registers the
 bare `/docforge`, `/docforge-revise`, and `/docforge-dashboard` slash
 commands. After updating the marketplace, run
@@ -197,18 +201,19 @@ before the command or before a required scope argument):
 | `/docforge-revise <area>` | Scoped revise (e.g. architecture) |
 | `/docforge-revise flow` | Full flow harvest → organize → derive → write |
 | `/docforge-revise flow --plan-only` | Revise analysis only (no body writes) |
-| `/docforge-dashboard` | Serve generated docs as a local Fumadocs site (metadata reconcile → MDX convert → validate → serve → open) |
-| `/docforge-dashboard --plan-only` | Preflight, fingerprint, metadata dry-run, and route plan only |
+| `/docforge-dashboard` | `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
+| `/docforge-dashboard --plan-only` | Preflight, metadata dry-run, signatures, and route plan only |
 
 Shared flags on both commands: `--plan-only` (analyze / dry-run tree only),
 `--auto-accept` (skip routine pauses after scope confirm).
 `/docforge-dashboard` shares the same flags plus its own runtime CLI
-subcommands (`dashboard metadata | fingerprint | plan | build | validate |
-serve | stop | status`).
+subcommands (`dashboard start | status | stop`).
 
 After a completed `/docforge` or `/docforge-revise` run, the dashboard is
-built and served automatically so the written documentation opens in the
-browser (skipped under `--plan-only`; requires Node.js 22+ / npm).
+built (only when its render signature changed) and served automatically so
+the written documentation opens in the browser (skipped under `--plan-only`;
+requires Node.js 22+ / npm). The dev server runs detached; `dashboard stop`
+shuts it down.
 
 There is no `--resume` or `--status` skill flag. Continue an incomplete run via
 intake or plain language; for a progress report, ask in plain language or run
@@ -224,23 +229,28 @@ The exact flag semantics and composition rules live in the [workflow](skills/doc
 
 ## ▓▒░ INVENTORY ░▒▓
 
-[`skills/docforge/SKILL.md`](skills/docforge/SKILL.md),
-[`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md), and
-[`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md) are thin
-command entrypoints. The shared cartridge lives under
-[`skills/docforge/_shared/`](skills/docforge/_shared/README.md):
+[`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) is the **required
+core bundle**: it carries the shared cartridge and the full dashboard
+capability, so a partial install of only `docforge` can plan, write, revise,
+and render documentation. [`skills/docforge-revise/SKILL.md`](skills/docforge-revise/SKILL.md)
+and [`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md)
+are thin optional entrypoints into that cartridge. The shared cartridge lives
+under [`skills/docforge/_shared/`](skills/docforge/_shared/README.md):
 [`.metadata/catalog/`](skills/docforge/_shared/.metadata/catalog/) is the canonical
 registry; [`workflows/`](skills/docforge/_shared/workflows/) holds the step-by-step
-procedure; [`references/`](skills/docforge/_shared/references/) holds owned policy
+procedure (including [`workflows/dashboard.md`](skills/docforge/_shared/workflows/dashboard.md));
+[`references/`](skills/docforge/_shared/references/) holds owned policy
 prose; and [`content/`](skills/docforge/_shared/content/) holds each document group's
 contracts, writing-craft instructions, and output-scaffold templates.
 
 [`runtime/cli/`](skills/docforge/_shared/runtime/cli/) holds the stable public
 launchers split by language (`python/`, `js/`). Each launcher is a thin
 re-export of its paired implementation under the subsystem folders in
-[`runtime/`](skills/docforge/_shared/runtime/). The agent detects `python3` /
-`python` / `node` / `bun` / `deno` once and locks one engine for the
-session — there is no separate runtime-precheck CLI.
+[`runtime/`](skills/docforge/_shared/runtime/) — including
+[`runtime/dashboard/`](skills/docforge/_shared/runtime/dashboard/), the
+dashboard build/serve runtime and its Fumadocs app template. The agent
+detects `python3` / `python` / `node` / `bun` / `deno` once and locks one
+engine for the session — there is no separate runtime-precheck CLI.
 [`.claude-plugin/`](.claude-plugin/) packages the Claude Code marketplace
 path; the marketplace entry installs this GitHub repo as the plugin (root
 `skills/` + `agents/`). Agent Skills install discovers
@@ -251,12 +261,23 @@ directly (no root `meta.json`).
 
 ### DASHBOARD
 
-`/docforge-dashboard` renders written documentation as a local Fumadocs
-site under `.docforge/dashboard/` — a generated, git-ignored, disposable
-directory with its own `package.json`/`node_modules`. It never touches the
-repository's package files. See
-[`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md)
-and [`skills/docforge-dashboard/README.md`](skills/docforge-dashboard/README.md).
+The dashboard renders written documentation as a local Fumadocs site under
+`.docforge/dashboard/` — a generated, git-ignored, disposable directory with
+its own `package.json`/`node_modules`. It never touches the repository's
+package files. One command, idempotent:
+
+```sh
+dashboard start   # reconcile metadata, rebuild when the signature changed, serve, open
+dashboard status  # read-only: signature match, server state, document count
+dashboard stop    # stop the detached dev server
+```
+
+`start --force` regenerates the generated output (`content/docs`, assets,
+navigation, app shell) regardless of signatures but keeps `node_modules`.
+See
+[`skills/docforge/_shared/workflows/dashboard.md`](skills/docforge/_shared/workflows/dashboard.md)
+and the thin entrypoint
+[`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md).
 
 ## ▓▒░ SYSTEM REQUIREMENTS ░▒▓
 

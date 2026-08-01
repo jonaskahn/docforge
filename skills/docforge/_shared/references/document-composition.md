@@ -81,6 +81,8 @@ Write at the slowest-changing useful layer:
 
 - behavior and boundaries instead of private symbols;
 - file/module paths instead of line numbers;
+- source mentions rendered as human-readable links to the repository file,
+  never bare `path:line` references (see `host-neutrality.md`);
 - observable contracts instead of implementation trivia;
 - decision rationale in append-only records;
 - volatile values in reference documents.

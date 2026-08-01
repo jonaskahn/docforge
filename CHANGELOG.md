@@ -1,5 +1,47 @@
 # Changelog
 
+## 2.9.0 - Standalone core and dashboard simplification
+
+- **`docforge` is now the required core bundle.** The dashboard capability
+  (workflow, Python/Node runtime, and the Fumadocs app template) moved from
+  `skills/docforge-dashboard/` into the shared cartridge
+  (`skills/docforge/_shared/workflows/dashboard.md`,
+  `runtime/dashboard/`, and the `dashboard` launcher pair under
+  `runtime/cli/`). Installing only `docforge` is enough to plan, write,
+  revise, and render documentation; `docforge-revise` and
+  `docforge-dashboard` are thin optional entrypoints that declare the core
+  dependency. Core files no longer dereference sibling skill directories.
+- **Dashboard CLI simplified to three subcommands:** `start`, `status`,
+  `stop`. The previous public `fingerprint`, `metadata`, `plan`, `build`,
+  `validate`, and `serve` subcommands became internal stages of `start`.
+- **`start` is one idempotent command:** reconcile metadata → compare two
+  working-tree signatures → rebuild generated output when changed (or
+  `--force`) → install dependencies only when missing → start (or reuse) the
+  detached dev server → open the browser → exit.
+- **Two signatures replace the old fingerprint.** `render_sig` hashes
+  `docs/` file bytes, included root-document bytes, and the manifest
+  projection that affects rendering (`id`, `title`, `path`, `status`,
+  `write_order`); `shell_sig` hashes the app template, project name, and
+  repository URL. Git `HEAD`, the flow index, and repository package files
+  no longer trigger rebuilds. Both are working-tree hashes, so dirty or
+  freshly generated docs invalidate immediately.
+- **`start --force` regenerates generated output only** (`content/docs`,
+  `public/docs-assets`, navigation, app shell, `.next`) and keeps
+  `node_modules`; it does not reinstall dependencies.
+- **Staged, validated swaps.** Conversion and navigation are written under
+  `content/.staging/`, validated against the staged output (links, anchors,
+  coverage, assets), and then swapped in atomically; a failed conversion or
+  validation leaves the previous dashboard untouched.
+- **Detached dev server.** `start` exits after the server is healthy; the
+  server keeps running in the background until `dashboard stop` (which stops
+  the whole process group). The attached-serve signal handling is gone.
+- Updated tests: `tests/test_dashboard.py` covers start idempotency,
+  plan-only routing and duplicate detection, conversion, `--force`,
+  failure-preserves-previous-build, signature parity/sensitivity, and the
+  detached serve/stop lifecycle; `tests/test_structure.py` asserts the core
+  bundle carries the dashboard capability with no sibling runtime
+  dependencies and that the entry skills declare the core dependency.
+
 ## 2.8.0 - Revise re-ask deltas and attached dashboard serve
 
 - Revise re-asks persisted manifest choices as changes only: current tier,

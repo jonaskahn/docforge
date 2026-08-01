@@ -17,7 +17,7 @@ from runtime.catalog import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
-CATALOG_VERSION = "2.8.0"
+CATALOG_VERSION = "2.9.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "status", "audit", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report"],
@@ -29,6 +29,7 @@ PUBLIC_CONTRACTS = {
     "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
     "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route"],
     "generate_indexes": ["--write", "--check"],
+    "dashboard": ["start", "status", "stop", "--force", "--plan-only", "--no-open", "--skip-install", "--port"],
 }
 
 
@@ -246,6 +247,7 @@ def validate() -> list[str]:
         for path in REPO_ROOT.rglob("README.md")
         if path != REPO_ROOT / "README.md"
         and not any(part in ignored_dirs for part in path.relative_to(REPO_ROOT).parts)
+        and "runtime/dashboard/template" not in path.relative_to(REPO_ROOT).as_posix()
     )
     if readmes:
         errors.append(f"nested README.md files are obsolete; use README.md: {', '.join(readmes)}")

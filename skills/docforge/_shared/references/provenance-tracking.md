@@ -161,5 +161,7 @@ and `--section <id>` to filter sections. Single-document update / refresh
 follows the staleness-first path in
 [`../workflows/revision.md`](../workflows/revision.md): preserve `FRESH`
 sections, re-ground only `PARTIAL` ones, and fully rewrite only when the
-document is `UNTRACKED`. A missing source remains a review signal because the
-behavior may have moved; do not delete the documented claim automatically.
+document is `UNTRACKED` **or its structure / format / content deviates from
+the current template** (revise's template-conformance rule). A missing source
+remains a review signal because the behavior may have moved; do not delete
+the documented claim automatically.

@@ -25,11 +25,11 @@ inline fallback in each workflow.
 
 | Path | Owns |
 |---|---|
-| [`workflows/`](workflows/README.md) | Step-by-step procedure by invocation |
+| [`workflows/`](workflows/README.md) | Step-by-step procedure by invocation (incl. [`workflows/dashboard.md`](workflows/dashboard.md)) |
 | [`references/`](references/README.md) | Owned policy prose |
 | [`content/`](content/README.md) | Contracts, instructions, templates |
 | [`runtime/cli/`](runtime/cli/README.md) | Public Python/Node launchers |
-| [`runtime/`](runtime/README.md) | Implementation behind launchers |
+| [`runtime/`](runtime/README.md) | Implementation behind launchers (incl. [`runtime/dashboard/`](runtime/dashboard/README.md) — the dashboard build/serve runtime and its Fumadocs template) |
 | [`.metadata/`](.metadata/) | Catalog, schemas, profiles |
 
 Tools run with this directory as the cartridge root. The agent locks one

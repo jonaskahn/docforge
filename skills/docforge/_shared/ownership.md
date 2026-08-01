@@ -34,6 +34,7 @@ link.
 | `workflows/writing.md` | Per-document execution card, evidence, scaffolding, provenance, status transitions, independent audit; continue incomplete runs |
 | `workflows/revision.md` | `/docforge-revise` (incl. shared flags), single-document update/refresh, flow-index organization |
 | `workflows/validation.md` | Staleness, migration, whole-tree audit, cross-document quality gate |
+| `workflows/dashboard.md` | `dashboard start`/`status`/`stop`: metadata reconcile, signatures, build-if-changed, serve, open |
 | `workflows/tools.md` | Every public script: Python/Node invocation, inputs, outputs, exit codes |
 
 See [`workflows/README.md`](workflows/README.md) to route an unfamiliar

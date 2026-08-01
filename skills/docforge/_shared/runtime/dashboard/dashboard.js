@@ -3,24 +3,26 @@
 /**
  * Docforge dashboard runtime (JS peer of dashboard.py).
  *
- * Backs the `/docforge-dashboard` skill. Builds and serves a local Fumadocs
- * application under `<repo>/.docforge/dashboard/` from the Docforge manifest
- * and the repository's `docs/` Markdown. The dashboard directory is
- * self-contained: its own package.json, lockfile, and node_modules; it never
- * touches the repository's package files.
+ * Backs the dashboard capability of the `docforge` skill (the optional
+ * `/docforge-dashboard` skill is only a thin entrypoint into this cartridge).
+ * Builds and serves a local Fumadocs application under `<repo>/.docforge/dashboard/`
+ * from the Docforge manifest and the repository's `docs/` Markdown. The
+ * dashboard directory is self-contained: its own package.json, lockfile, and
+ * node_modules; it never touches the repository's package files.
+ *
+ * Subcommands: start, status, stop. Python and JS peers are equivalent.
  */
 
 const { execFileSync, spawn, spawnSync } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
 const net = require("net");
-const os = require("os");
 const path = require("path");
 
-const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../../docforge/_shared/runtime/common/_util.js");
-const pf = require("../../docforge/_shared/runtime/common/provenance_frontmatter.js");
+const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../common/_util.js");
+const pf = require("../common/provenance_frontmatter.js");
 
-const TOOL_VERSION = "2.8.0";
+const TOOL_VERSION = "2.9.0";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";
@@ -50,23 +52,15 @@ function titleFor(doc) {
   return doc.title || doc.id.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function runGit(repo, args) {
-  const result = spawnSync("git", ["-C", repo, ...args], { encoding: "utf8", timeout: 10000 });
-  return result.status === 0 ? result.stdout.trim() : "";
-}
-
-function gitHead(repo) {
-  return runGit(repo, ["rev-parse", "HEAD"]);
-}
-
 function gitRemoteUrl(repo) {
-  const value = runGit(repo, ["config", "--get", "remote.origin.url"]);
+  const result = spawnSync("git", ["-C", repo, "config", "--get", "remote.origin.url"], { encoding: "utf8", timeout: 10000 });
+  const value = result.status === 0 ? result.stdout.trim() : "";
   if (!value) return null;
-  let result = value.endsWith(".git") ? value.slice(0, -4) : value;
-  if (result.startsWith("git@")) {
-    result = result.replace(":", "/", 1).replace("git@", "https://", 1);
+  let out = value.endsWith(".git") ? value.slice(0, -4) : value;
+  if (out.startsWith("git@")) {
+    out = out.replace(":", "/", 1).replace("git@", "https://", 1);
   }
-  if (result.startsWith("http://") || result.startsWith("https://")) return result;
+  if (out.startsWith("http://") || out.startsWith("https://")) return out;
   return null;
 }
 
@@ -150,68 +144,68 @@ function treeFiles(repo) {
   return out.sort();
 }
 
-function templateSha(templateDir) {
-  const records = [];
+function sortedTemplateFiles(templateDir) {
+  const out = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir)) {
       const full = path.join(dir, entry);
       const stat = fs.statSync(full);
-      if (stat.isFile()) {
-        const rel = path.relative(templateDir, full).split(path.sep).join("/");
-        records.push(`${rel}\x00${sha256Bytes(fs.readFileSync(full))}`);
-      } else if (stat.isDirectory()) {
-        walk(full);
-      }
+      if (stat.isFile()) out.push(full);
+      else if (stat.isDirectory()) walk(full);
     }
   };
   walk(templateDir);
-  records.sort();
-  return sha256Bytes(Buffer.from(records.join("\n")));
+  return out.sort((a, b) => (path.relative(templateDir, a) < path.relative(templateDir, b) ? -1 : 1));
 }
 
-function fingerprint(repo, manifestPath, manifest, templateDir) {
+function manifestProjection(manifest) {
+  return (manifest.documents || [])
+    .slice()
+    .sort((a, b) => ((a.path || "") < (b.path || "") ? -1 : 1))
+    .map((doc) => ({
+      id: doc.id || "",
+      path: doc.path || "",
+      status: doc.status || "",
+      title: titleFor(doc),
+      write_order: doc.write_order || 0,
+    }));
+}
+
+function renderSignature(repo, manifest) {
   const records = [];
-  records.push(`head\x00${gitHead(repo)}`);
-  records.push(`manifest\x00${sha256Bytes(fs.readFileSync(manifestPath))}`);
-  const flow = path.join(repo, ".docforge", "flow-index.json");
-  if (fs.existsSync(flow)) records.push(`flow-index\x00${sha256Bytes(fs.readFileSync(flow))}`);
+  for (const doc of manifestProjection(manifest)) {
+    records.push(`doc\x00${JSON.stringify(doc)}`);
+  }
   for (const rel of treeFiles(repo)) {
-    records.push(`docs-file\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
+    records.push(`file\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
   }
-  const rootDocs = (manifest.documents || [])
-    .map((doc) => doc.path || "")
-    .filter((rel) => rel && !rel.includes("/") && (rel.endsWith(".md") || rel.endsWith(".mdx")) && fs.existsSync(path.join(repo, rel)))
-    .sort();
-  for (const rel of rootDocs) {
-    records.push(`root-doc\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
-  }
-  const templateRecords = [];
-  const walk = (dir) => {
-    for (const entry of fs.readdirSync(dir)) {
-      const full = path.join(dir, entry);
-      const stat = fs.statSync(full);
-      if (stat.isFile()) {
-        const rel = path.relative(templateDir, full).split(path.sep).join("/");
-        templateRecords.push(`template\x00${rel}\x00${sha256Bytes(fs.readFileSync(full))}`);
-      } else if (stat.isDirectory()) {
-        walk(full);
-      }
-    }
-  };
-  walk(templateDir);
-  templateRecords.sort();
-  records.push(...templateRecords);
-  for (const name of ["package.json", "package-lock.json"]) {
-    const rootFile = path.join(repo, name);
-    if (fs.existsSync(rootFile)) records.push(`root-${name}\x00${sha256Bytes(fs.readFileSync(rootFile))}`);
+  for (const doc of manifestProjection(manifest)) {
+    const rel = doc.path;
+    if (!rel || rel.includes("/") || !(rel.endsWith(".md") || rel.endsWith(".mdx"))) continue;
+    const target = path.join(repo, rel);
+    if (fs.existsSync(target)) records.push(`root\x00${rel}\x00${sha256Bytes(fs.readFileSync(target))}`);
   }
   const settings = {
     base_url: BASE_URL,
     generator: TOOL_VERSION,
     include: "docs/**, root/*.md",
-    template_version: TEMPLATE_VERSION,
   };
   records.push(`settings\x00${JSON.stringify(settings)}`);
+  return sha256Bytes(Buffer.from(records.join("\n")));
+}
+
+function shellSignature(templateDir, repo, manifest) {
+  const records = [];
+  for (const full of sortedTemplateFiles(templateDir)) {
+    const rel = path.relative(templateDir, full).split(path.sep).join("/");
+    records.push(`template\x00${rel}\x00${sha256Bytes(fs.readFileSync(full))}`);
+  }
+  const project = {
+    git_url: gitRemoteUrl(repo) || "",
+    name: (manifest.project && manifest.project.name) || path.basename(repo),
+  };
+  records.push(`project\x00${JSON.stringify(project)}`);
+  records.push(`template_version\x00${TEMPLATE_VERSION}`);
   return sha256Bytes(Buffer.from(records.join("\n")));
 }
 
@@ -543,13 +537,13 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
   return { converted, assets_needed: [...assetsNeeded].sort(), anchors };
 }
 
-function copyAssets(repo, dashboard, assets) {
+function copyAssets(repo, targetAssetsDir, assets) {
   const copied = [];
   for (const rel of assets) {
     const source = path.join(repo, rel);
     if (!fs.existsSync(source) || !ASSET_EXTS.some((ext) => rel.endsWith(ext))) continue;
     if (fs.statSync(source).size > ASSET_MAX_BYTES) continue;
-    const target = path.join(dashboard, "public", "docs-assets", rel);
+    const target = path.join(targetAssetsDir, rel);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.copyFileSync(source, target);
     copied.push(rel);
@@ -557,23 +551,23 @@ function copyAssets(repo, dashboard, assets) {
   return copied;
 }
 
-function swapStage(dashboard, stageDocs, stageMeta) {
-  const target = path.join(dashboard, "content", "docs");
-  fs.rmSync(target, { recursive: true, force: true });
-  fs.renameSync(stageDocs, target);
-  for (const [folder, meta] of Object.entries(stageMeta)) {
-    const metaPath = path.join(dashboard, "content", "docs", meta.path);
-    fs.mkdirSync(path.dirname(metaPath), { recursive: true });
-    fs.writeFileSync(metaPath, dumpJson({ title: meta.title, pages: meta.pages }), "utf8");
+function swapStage(dashboard, stageDocs, stageAssets) {
+  const contentTarget = path.join(dashboard, "content", "docs");
+  fs.rmSync(contentTarget, { recursive: true, force: true });
+  fs.renameSync(stageDocs, contentTarget);
+  const assetsTarget = path.join(dashboard, "public", "docs-assets");
+  fs.rmSync(assetsTarget, { recursive: true, force: true });
+  if (fs.existsSync(stageAssets)) {
+    fs.mkdirSync(path.dirname(assetsTarget), { recursive: true });
+    fs.renameSync(stageAssets, assetsTarget);
   }
 }
 
-function validateBuild(repo, manifest, dashboard) {
+function validateBuild(repo, manifest, contentDir, assetsDir) {
   const docs = includedDocuments(repo, manifest);
   const ledger = buildLedger(docs);
   const errors = [];
   const warnings = [];
-  const contentDir = path.join(dashboard, "content", "docs");
   const folded = {};
   for (const page of ledger.pages) {
     const key = page.url.toLowerCase();
@@ -618,7 +612,7 @@ function validateBuild(repo, manifest, dashboard) {
         }
       } else if (target.startsWith("/docs-assets/")) {
         const asset = target.slice("/docs-assets/".length).split("#")[0];
-        if (!fs.existsSync(path.join(dashboard, "public", "docs-assets", asset))) {
+        if (!fs.existsSync(path.join(assetsDir, asset))) {
           errors.push(`missing asset in ${page.output_path}: ${target}`);
         }
       } else {
@@ -690,8 +684,8 @@ function ensureDashboardIgnored(dashboard) {
 
 function scaffoldApp(dashboard, templateDir, repo, manifest, force = false) {
   const current = loadState(dashboard);
-  const sha = templateSha(templateDir);
-  if (!force && current.template_sha === sha && fs.existsSync(path.join(dashboard, "lib", "shared.ts"))) {
+  const sha = shellSignature(templateDir, repo, manifest);
+  if (!force && current.shell_sig === sha && fs.existsSync(path.join(dashboard, "lib", "shared.ts"))) {
     return false;
   }
   for (const name of ["app", "components", "lib", "next.config.mjs", "tsconfig.json", "postcss.config.mjs", "package.json", ".gitignore", "README.md"]) {
@@ -786,20 +780,11 @@ async function serverUp(port) {
   }
 }
 
-class ServeInterrupted extends Error {
-  constructor(signal) {
-    super(`dashboard serve interrupted by ${signal}`);
-    this.signal = signal;
-  }
-}
-
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-async function waitForServer(port, logPath, timeout = 180, interrupted = () => null) {
+async function waitForServer(port, logPath, timeout = 180) {
   const deadline = Date.now() + timeout * 1000;
   while (Date.now() < deadline) {
-    const signal = interrupted();
-    if (signal) throw new ServeInterrupted(signal);
     if (await serverUp(port)) return;
     await delay(250);
   }
@@ -811,11 +796,9 @@ async function waitForServer(port, logPath, timeout = 180, interrupted = () => n
   throw new Error(`dashboard server did not start within ${timeout}s; last log lines:\n${tail}`);
 }
 
-async function ensureServer(dashboard, requestedPort, interrupted = () => null) {
+async function ensureServer(dashboard, requestedPort) {
   const state = loadState(dashboard);
   const logPath = path.join(dashboard, "dev.log");
-  const pendingSignal = interrupted();
-  if (pendingSignal) throw new ServeInterrupted(pendingSignal);
   if (state.pid && state.dashboard === path.resolve(dashboard)) {
     if (typeof state.pid === "number" && pidAlive(state.pid) && typeof state.port === "number") {
       if (await serverUp(state.port)) {
@@ -848,7 +831,7 @@ async function ensureServer(dashboard, requestedPort, interrupted = () => null) 
   };
   saveState(dashboard, newState);
   try {
-    await waitForServer(port, logPath, 180, interrupted);
+    await waitForServer(port, logPath);
   } catch (error) {
     await stopServer(dashboard);
     throw error;
@@ -901,30 +884,133 @@ async function stopServer(dashboard) {
   return { stopped, forced };
 }
 
-async function superviseServer(pid, interrupted) {
-  while (processGroupAlive(pid)) {
-    const signal = interrupted();
-    if (signal) return signal;
-    await delay(250);
+function openBrowser(url) {
+  let command = process.platform === "darwin" ? "open" : "xdg-open";
+  if (process.platform === "win32") {
+    command = "start";
+    const proc = spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" });
+    proc.unref();
+    return;
   }
-  return null;
+  try {
+    const proc = spawn(command, [url], { detached: true, stdio: "ignore" });
+    proc.unref();
+  } catch {
+    /* browser opening must never fail the run */
+  }
+}
+
+function stageBuild(dashboard, repo, manifest, templateDir, force) {
+  const state = loadState(dashboard);
+  const shellSig = shellSignature(templateDir, repo, manifest);
+  scaffoldApp(dashboard, templateDir, repo, manifest, force || state.shell_sig !== shellSig);
+  const routePlan = plan(repo, manifest);
+  if (routePlan.problems.length) {
+    for (const problem of routePlan.problems) console.log(`problem: ${problem}`);
+    console.log("route plan has errors; fix the manifest or document tree before starting");
+    throw new Error("route plan has errors");
+  }
+  const contentDir = path.join(dashboard, "content");
+  const staging = path.join(contentDir, ".staging");
+  const stageDocs = path.join(staging, "docs");
+  const stageAssets = path.join(staging, "public", "docs-assets");
+  fs.rmSync(staging, { recursive: true, force: true });
+  fs.mkdirSync(stageDocs, { recursive: true });
+  try {
+    const ledger = buildLedger(includedDocuments(repo, manifest));
+    ledger.assets = collectAssetMap(repo);
+    const converted = convertDocuments(repo, manifest, ledger, stageDocs);
+    const meta = metaPlans(ledger, manifest);
+    for (const [folder, item] of Object.entries(meta)) {
+      const metaPath = path.join(stageDocs, item.path);
+      fs.mkdirSync(path.dirname(metaPath), { recursive: true });
+      fs.writeFileSync(metaPath, dumpJson({ title: item.title, pages: item.pages }), "utf8");
+    }
+    const copied = copyAssets(repo, stageAssets, converted.assets_needed);
+    const validation = validateBuild(repo, manifest, stageDocs, stageAssets);
+    for (const warning of validation.warnings) console.log(`  warning: ${warning}`);
+    if (!validation.ok) {
+      for (const error of validation.errors) console.log(`  error: ${error}`);
+      throw new Error("dashboard validation failed; previous dashboard left in place");
+    }
+    swapStage(dashboard, stageDocs, stageAssets);
+    fs.rmSync(staging, { recursive: true, force: true });
+    return { converted: converted.converted, copied, validation };
+  } catch (error) {
+    fs.rmSync(staging, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+async function cmdStart(args, dashboard, manifest, templateDir) {
+  const shellSig = shellSignature(templateDir, args.repo, manifest);
+  let renderSig = renderSignature(args.repo, manifest);
+  if (args.plan_only) {
+    const metadataReport = reconcileMetadata(args.repo, manifest, true);
+    const routePlan = plan(args.repo, manifest);
+    console.log(`metadata (dry-run): ${metadataReport.counts.reconciled} to reconcile, ${metadataReport.counts.unchanged} unchanged, ${metadataReport.counts.errors} errors`);
+    for (const page of routePlan.pages) {
+      console.log(`  ${page.doc_id.padEnd(32)} ${page.source_path.padEnd(48)} -> ${page.url}`);
+    }
+    console.log(`${routePlan.pages.length} pages in ${routePlan.folder_count} folders; ${routePlan.problems.length} problems`);
+    for (const problem of routePlan.problems) console.log(`  problem: ${problem}`);
+    console.log(`render_sig: ${renderSig}`);
+    console.log(`shell_sig: ${shellSig}`);
+    const ok = routePlan.problems.length === 0 && metadataReport.counts.errors === 0;
+    return ok ? 0 : 1;
+  }
+
+  const metadataReport = reconcileMetadata(args.repo, manifest);
+  console.log(`metadata: ${metadataReport.counts.reconciled} reconciled, ${metadataReport.counts.unchanged} unchanged`);
+  // Reconcile rewrites frontmatter, so the render signature must be computed
+  // after it: the stored signature must describe the exact bytes a rebuild
+  // would consume.
+  renderSig = renderSignature(args.repo, manifest);
+
+  const state = loadState(dashboard);
+  const built = fs.existsSync(path.join(dashboard, "content", "docs", "index.mdx"));
+  const needsRender = args.force || state.render_sig !== renderSig || !built;
+  if (needsRender) {
+    const result = stageBuild(dashboard, args.repo, manifest, templateDir, args.force);
+    const newState = {
+      ...state,
+      schema: STATE_SCHEMA,
+      dashboard: path.resolve(dashboard),
+      render_sig: renderSig,
+      shell_sig: shellSig,
+      built_at: nowIso(),
+    };
+    saveState(dashboard, newState);
+    console.log(`converted ${result.converted.length} documents; copied ${result.copied.length} assets`);
+  } else {
+    console.log("signature unchanged: dashboard is up to date");
+  }
+
+  if (!args.skip_install && !fs.existsSync(path.join(dashboard, "node_modules"))) {
+    ensureDependencies(dashboard, args.repo);
+  }
+
+  const server = await ensureServer(dashboard, args.port);
+  console.log(`dashboard: ${server.url} (reused=${server.reused})`);
+  if (!args.no_open) openBrowser(server.url);
+  console.log("dashboard server running in the background; stop it with `dashboard stop`");
+  return 0;
 }
 
 async function cmdStatus(args, dashboard, manifest, templateDir) {
   const docs = includedDocuments(args.repo, manifest);
   const state = loadState(dashboard);
-  const currentFp = fingerprint(args.repo, args.manifest, manifest, templateDir);
+  const renderSig = renderSignature(args.repo, manifest);
   const running = Boolean(
     state.pid && typeof state.port === "number" && pidAlive(state.pid) && (await serverUp(state.port)),
   );
   const result = {
     dashboard,
     exists: fs.existsSync(dashboard),
-    template_sha: state.template_sha || null,
-    fingerprint: {
-      current: currentFp,
-      stored: state.fingerprint || null,
-      match: state.fingerprint === currentFp,
+    render_sig: {
+      current: renderSig,
+      stored: state.render_sig || null,
+      match: state.render_sig === renderSig,
     },
     server: {
       running,
@@ -937,145 +1023,16 @@ async function cmdStatus(args, dashboard, manifest, templateDir) {
   if (args.json) console.log(dumpJson(result));
   else {
     console.log(`dashboard: ${result.dashboard}`);
-    console.log(`exists: ${result.exists}  fingerprint match: ${result.fingerprint.match}`);
+    console.log(`exists: ${result.exists}  render signature match: ${result.render_sig.match}`);
     console.log(`server: ${result.server.running ? `running on ${result.server.url}` : "not running"}`);
     console.log(`included documents: ${result.counts.included_docs}`);
   }
   return 0;
 }
 
-function cmdFingerprint(args, manifest, templateDir) {
-  const value = fingerprint(args.repo, args.manifest, manifest, templateDir);
-  if (args.json) console.log(dumpJson({ fingerprint: value }));
-  else console.log(value);
-  return 0;
-}
-
-function cmdMetadata(args, manifest) {
-  const report = reconcileMetadata(args.repo, manifest, args.dry_run);
-  if (args.json) console.log(dumpJson(report));
-  else {
-    console.log(`reconciled: ${report.counts.reconciled}  unchanged: ${report.counts.unchanged}  errors: ${report.counts.errors}`);
-    for (const entry of report.reconciled) console.log(`  ${entry.doc}: fixed ${entry.fixed.join(", ")}`);
-    for (const entry of report.errors) console.log(`  error ${entry.doc}: ${entry.detail}`);
-  }
-  return report.counts.errors ? 1 : 0;
-}
-
-function cmdPlan(args, manifest) {
-  const result = plan(args.repo, manifest);
-  if (args.json) console.log(dumpJson(result));
-  else {
-    for (const page of result.pages) {
-      console.log(`  ${page.doc_id.padEnd(32)} ${page.source_path.padEnd(48)} -> ${page.url}`);
-    }
-    console.log(`${result.pages.length} pages in ${result.folder_count} folders; ${result.problems.length} problems`);
-    for (const problem of result.problems) console.log(`  problem: ${problem}`);
-  }
-  return result.problems.length ? 1 : 0;
-}
-
-function cmdBuild(args, dashboard, manifest, templateDir) {
-  if (!args.no_metadata) {
-    const metadataReport = reconcileMetadata(args.repo, manifest);
-    console.log(`metadata: ${metadataReport.counts.reconciled} reconciled, ${metadataReport.counts.unchanged} unchanged`);
-  }
-  const currentFp = fingerprint(args.repo, args.manifest, manifest, templateDir);
-  const state = loadState(dashboard);
-  if (!args.force && state.fingerprint === currentFp && fs.existsSync(path.join(dashboard, "content", "docs", "index.mdx"))) {
-    console.log("fingerprint unchanged: no conversion needed");
-    if (!fs.existsSync(path.join(dashboard, "node_modules")) && !args.skip_install) {
-      ensureDependencies(dashboard, args.repo);
-    }
-    return 0;
-  }
-  scaffoldApp(dashboard, templateDir, args.repo, manifest);
-  const docs = includedDocuments(args.repo, manifest);
-  const ledger = buildLedger(docs);
-  const routePlan = plan(args.repo, manifest);
-  if (routePlan.problems.length) {
-    for (const problem of routePlan.problems) console.log(`problem: ${problem}`);
-    console.log("route plan has errors; fix the manifest or document tree before building");
-    return 1;
-  }
-  const contentDir = path.join(dashboard, "content");
-  const staging = path.join(contentDir, ".staging");
-  const stageDocs = path.join(staging, "docs");
-  fs.rmSync(stageDocs, { recursive: true, force: true });
-  fs.mkdirSync(stageDocs, { recursive: true });
-  try {
-    ledger.assets = collectAssetMap(args.repo);
-    const converted = convertDocuments(args.repo, manifest, ledger, stageDocs);
-    const meta = metaPlans(ledger, manifest);
-    swapStage(dashboard, stageDocs, meta);
-    fs.rmSync(staging, { recursive: true, force: true });
-    const copied = copyAssets(args.repo, dashboard, converted.assets_needed);
-    const newState = {
-      ...state,
-      schema: STATE_SCHEMA,
-      dashboard: path.resolve(dashboard),
-      template_sha: templateSha(templateDir),
-      fingerprint: currentFp,
-      built_at: nowIso(),
-    };
-    saveState(dashboard, newState);
-    console.log(`converted ${converted.converted.length} documents; copied ${copied.length} assets`);
-  } catch (error) {
-    fs.rmSync(staging, { recursive: true, force: true });
-    throw error;
-  }
-  if (!args.skip_install) ensureDependencies(dashboard, args.repo);
-  console.log("build complete");
-  return 0;
-}
-
-function cmdValidate(args, dashboard, manifest) {
-  const result = validateBuild(args.repo, manifest, dashboard);
-  if (args.json) console.log(dumpJson(result));
-  else {
-    console.log(`pages: ${result.counts.pages}  meta files: ${result.counts.meta_files}  ok: ${result.ok}`);
-    for (const error of result.errors) console.log(`  error: ${error}`);
-    for (const warning of result.warnings) console.log(`  warning: ${warning}`);
-  }
-  return result.ok ? 0 : 1;
-}
-
-async function cmdServe(args, dashboard) {
-  let stopSignal = null;
-  const signals = ["SIGINT", "SIGTERM", "SIGHUP", "SIGTSTP"];
-  const handlers = new Map();
-  for (const signal of signals) {
-    const handler = () => {
-      if (!stopSignal) stopSignal = signal;
-    };
-    handlers.set(signal, handler);
-    process.on(signal, handler);
-  }
-
-  try {
-    const result = await ensureServer(dashboard, args.port, () => stopSignal);
-    console.log(`dashboard: ${result.url} (reused=${result.reused})`);
-    console.log("server attached; press Ctrl+C or Ctrl+Z to stop");
-    stopSignal = await superviseServer(result.pid, () => stopSignal);
-  } catch (error) {
-    if (error instanceof ServeInterrupted) stopSignal = error.signal;
-    else throw error;
-  } finally {
-    for (const [signal, handler] of handlers) process.off(signal, handler);
-    await stopServer(dashboard);
-  }
-
-  if (stopSignal) {
-    console.log("dashboard server stopped");
-    return 128 + (os.constants.signals[stopSignal] || 0);
-  }
-  console.log("dashboard server exited unexpectedly");
-  return 1;
-}
-
 async function cmdStop(args, dashboard) {
   const result = await stopServer(dashboard);
-  console.log(`stopped: ${result.stopped}`);
+  console.log(`stopped: ${result.stopped ? "True" : "False"}`);
   return 0;
 }
 
@@ -1086,10 +1043,10 @@ function parseArgs(argv) {
     dashboard: null,
     json: false,
     command: null,
-    dry_run: false,
     force: false,
+    plan_only: false,
+    no_open: false,
     skip_install: false,
-    no_metadata: false,
     port: 0,
   };
   const positional = [];
@@ -1099,15 +1056,15 @@ function parseArgs(argv) {
     else if (arg === "--manifest") args.manifest = argv[++i];
     else if (arg === "--dashboard") args.dashboard = argv[++i];
     else if (arg === "--json") args.json = true;
-    else if (arg === "--dry-run") args.dry_run = true;
     else if (arg === "--force") args.force = true;
+    else if (arg === "--plan-only") args.plan_only = true;
+    else if (arg === "--no-open") args.no_open = true;
     else if (arg === "--skip-install") args.skip_install = true;
-    else if (arg === "--no-metadata") args.no_metadata = true;
     else if (arg === "--port") args.port = parseInt(argv[++i], 10) || 0;
     else if (arg.startsWith("-")) throw new Error(`unknown flag: ${arg}`);
     else positional.push(arg);
   }
-  if (positional.length !== 1) throw new Error("expected exactly one subcommand: status, fingerprint, metadata, plan, build, validate, serve, stop");
+  if (positional.length !== 1) throw new Error("expected exactly one subcommand: start, status, stop");
   args.command = positional[0];
   return args;
 }
@@ -1128,7 +1085,7 @@ async function main() {
   args.dashboard = dashboard;
   const templateDir = path.join(__dirname, "template");
   let manifest = {};
-  if (["status", "fingerprint", "metadata", "plan", "build", "validate"].includes(args.command)) {
+  if (args.command === "start" || args.command === "status") {
     try {
       manifest = loadManifest(manifestPath);
     } catch (error) {
@@ -1137,20 +1094,10 @@ async function main() {
   }
   try {
     switch (args.command) {
+      case "start":
+        return await cmdStart(args, dashboard, manifest, templateDir);
       case "status":
         return await cmdStatus(args, dashboard, manifest, templateDir);
-      case "fingerprint":
-        return cmdFingerprint(args, manifest, templateDir);
-      case "metadata":
-        return cmdMetadata(args, manifest);
-      case "plan":
-        return cmdPlan(args, manifest);
-      case "build":
-        return cmdBuild(args, dashboard, manifest, templateDir);
-      case "validate":
-        return cmdValidate(args, dashboard, manifest);
-      case "serve":
-        return await cmdServe(args, dashboard);
       case "stop":
         return await cmdStop(args, dashboard);
       default:
@@ -1163,7 +1110,8 @@ async function main() {
 
 module.exports = {
   main,
-  fingerprint,
+  renderSignature,
+  shellSignature,
   plan,
   includedDocuments,
   buildLedger,
@@ -1172,9 +1120,7 @@ module.exports = {
   metaPlans,
   reconcileMetadata,
   validateBuild,
-  templateSha,
   treeFiles,
-  gitHead,
   gitRemoteUrl,
   titleFor,
   sha256Bytes,

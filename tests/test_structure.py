@@ -99,6 +99,30 @@ class SkillContentTests(unittest.TestCase):
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
         self.assertIn("Never write against an undisplayed manifest\nrevision", planning)
 
+    def test_revision_workflow_enforces_current_template(self) -> None:
+        """Revise rewrites documents whose structure/format/content deviates
+        from the current template instead of preserving the old structure."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        self.assertIn("Enforce current template conformance", revision)
+        self.assertIn("the **newest template is the authority**", revision)
+        self.assertIn("is planned `rewrite` to the current\n    template", revision)
+        self.assertIn("Never preserve an old\n    structure", revision)
+        self.assertIn("even when its source blobs are `FRESH`", revision)
+        self.assertIn("### Template rewrite mechanics", revision)
+        self.assertIn("Scaffold the **newest** template", revision)
+        self.assertIn("`rewrite (template)`", revision)
+
+    def test_source_references_are_human_readable_links(self) -> None:
+        """Document bodies mention source files as human-readable links, never
+        bare paths or file:line strings."""
+        host = (SHARED_ROOT / "references" / "host-neutrality.md").read_text(encoding="utf-8")
+        self.assertIn("**Source references.**", host)
+        self.assertIn("human-readable label", host)
+        self.assertIn("never a bare path or a `path:line` string", host)
+        source = (SHARED_ROOT / "references" / "source-analysis.md").read_text(encoding="utf-8")
+        self.assertIn("human-readable link", source)
+        self.assertIn("host-neutrality.md", source)
+
     def test_validation_workflow_auto_serves_dashboard_on_completion(self) -> None:
         validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
         self.assertIn("## 7. Dashboard auto-serve", validation)
@@ -152,6 +176,60 @@ class SkillContentTests(unittest.TestCase):
                 "./skills/docforge-dashboard",
             ],
         )
+
+
+    def test_docforge_core_contains_dashboard_capability(self) -> None:
+        """The docforge skill is the required bundle: it carries the dashboard
+        workflow, runtime, template, and launchers, so installing only
+        docforge can still render documentation."""
+        core = ROOT / "skills" / "docforge"
+        self.assertTrue((core / "_shared" / "workflows" / "dashboard.md").is_file())
+        self.assertTrue((core / "_shared" / "runtime" / "dashboard" / "dashboard.py").is_file())
+        self.assertTrue((core / "_shared" / "runtime" / "dashboard" / "dashboard.js").is_file())
+        self.assertTrue((core / "_shared" / "runtime" / "dashboard" / "template" / "package.json").is_file())
+        self.assertTrue((core / "_shared" / "runtime" / "cli" / "python" / "dashboard.py").is_file())
+        self.assertTrue((core / "_shared" / "runtime" / "cli" / "js" / "dashboard.js").is_file())
+
+    def test_docforge_core_has_no_sibling_runtime_dependencies(self) -> None:
+        """A standalone docforge install must not dereference sibling skill
+        directories; docforge-revise and docforge-dashboard are thin
+        entrypoints into the core, never the reverse."""
+        core = ROOT / "skills" / "docforge"
+        needles = (
+            "../docforge-revise",
+            "../docforge-dashboard",
+            "docforge-revise/SKILL.md",
+            "docforge-dashboard/SKILL.md",
+            "skills/docforge-revise",
+            "skills/docforge-dashboard",
+        )
+        offenders: list[str] = []
+        for path in core.rglob("*"):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(core).as_posix()
+            if path.name == "README.md":
+                continue
+            if rel.startswith(("_shared/references/", "_shared/content/")):
+                continue
+            if rel.startswith("_shared/runtime/validation/validate_metadata."):
+                continue  # release-time repo check, not a skill runtime path
+            if path.suffix not in {".md", ".py", ".js"}:
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for needle in needles:
+                if needle in text:
+                    offenders.append(f"{path.relative_to(ROOT)}: {needle}")
+        self.assertEqual(offenders, [])
+
+    def test_entry_skills_declare_core_dependency(self) -> None:
+        """revise/dashboard must not pretend to be standalone; they require
+        the docforge core skill."""
+        revise = (ROOT / "skills" / "docforge-revise" / "SKILL.md").read_text(encoding="utf-8")
+        dashboard = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
+        for skill in (revise, dashboard):
+            self.assertIn("../docforge/_shared", skill)
+            self.assertIn("requires the `docforge`", skill)
 
 
 if __name__ == "__main__":

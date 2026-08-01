@@ -61,6 +61,7 @@ Always put the command/subcommand before flags (e.g.
 | `lint_document` | Mechanical document lint |
 | `lint_agents_kernel` | AGENTS.md / agent-kernel lint |
 | `discover_child_repos` | Portfolio child-repository discovery |
+| `dashboard` | `start` / `status` / `stop` for the local Fumadocs site |
 | `graph_source_*` | Per-provider adapters and offline readers |
 | `graph_source_registry` | Provider registry |
 | `graph_storage` | Graph artifact paths/helpers |

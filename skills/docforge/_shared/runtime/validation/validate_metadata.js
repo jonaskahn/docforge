@@ -13,7 +13,7 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(__dirname, "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.8.0";
+const CATALOG_VERSION = "2.9.0";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "status", "audit", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
@@ -24,6 +24,7 @@ const PUBLIC_CONTRACTS = {
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
   query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route"],
   generate_indexes: ["--write", "--check"],
+  dashboard: ["start", "status", "stop", "--force", "--plan-only", "--no-open", "--skip-install", "--port"],
 };
 
 function validate() {
@@ -262,7 +263,8 @@ function validate() {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory() && !IGNORED_DIRS.has(entry.name)) collectReadmes(full, out);
       else if (entry.isFile() && entry.name === "README.md" && full !== path.join(REPO_ROOT, "README.md")) {
-        out.push(path.relative(REPO_ROOT, full).split(path.sep).join("/"));
+        const rel = path.relative(REPO_ROOT, full).split(path.sep).join("/");
+        if (!rel.includes("/runtime/dashboard/template")) out.push(rel);
       }
     }
   }

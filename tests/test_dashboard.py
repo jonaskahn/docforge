@@ -1,12 +1,16 @@
-"""Dashboard: metadata reconciliation, route planning, MDX conversion, validation, fingerprinting."""
+"""Dashboard: metadata reconciliation, signatures, staged build, serving, and stop.
+
+The public CLI is `dashboard start` (reconcile -> build-if-changed -> serve ->
+open), `status`, and `stop`; plan, validation, and fingerprints are internal
+stages covered here through `start --plan-only` and `start` output.
+"""
 
 from __future__ import annotations
 
 import json
 import os
-import signal
+import re
 import subprocess
-import sys
 import tempfile
 import time
 import unittest
@@ -18,21 +22,28 @@ from _support import (
     blob_hash,
     load_manifest,
     markdown_with_provenance,
-    normalized,
     provenance,
 )
 
-DASH_CLI_PY = ROOT / "skills" / "docforge-dashboard" / "runtime" / "cli" / "python"
-DASH_CLI_JS = ROOT / "skills" / "docforge-dashboard" / "runtime" / "cli" / "js"
+DASH_CLI_PY = ROOT / "skills" / "docforge" / "_shared" / "runtime" / "cli" / "python"
+DASH_CLI_JS = ROOT / "skills" / "docforge" / "_shared" / "runtime" / "cli" / "js"
 
 
-def run_dashboard(runtime: str, *args: str) -> subprocess.CompletedProcess:
+def run_dashboard(
+    runtime: str,
+    *args: str,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess:
     command = (
         ["python3", str(DASH_CLI_PY / "dashboard.py")]
         if runtime == "py"
         else ["node", str(DASH_CLI_JS / "dashboard.js")]
     )
-    return subprocess.run(command + list(args), cwd=ROOT, text=True, capture_output=True)
+    return subprocess.run(command + list(args), cwd=ROOT, text=True, capture_output=True, env=env)
+
+
+def stop_dashboard(runtime: str, repo: Path) -> None:
+    run_dashboard(runtime, "stop", "--repo", str(repo))
 
 
 def wait_until(predicate, timeout: float = 10) -> bool:
@@ -50,6 +61,37 @@ def url_responds(url: str) -> bool:
             return True
     except Exception:  # noqa: BLE001 - refusal and HTTP errors both mean unavailable
         return False
+
+
+FAKE_NPM = """#!/usr/bin/env python3
+import http.server
+import sys
+
+port = int(sys.argv[sys.argv.index("-p") + 1])
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"ok")
+
+    def log_message(self, _format, *_args):
+        pass
+
+http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+"""
+
+
+def fake_npm_env() -> tuple[dict[str, str], Path]:
+    root = Path(tempfile.mkdtemp(prefix="docforge-fake-npm-"))
+    bin_dir = root / "bin"
+    bin_dir.mkdir()
+    npm = bin_dir / "npm"
+    npm.write_text(FAKE_NPM, encoding="utf-8")
+    npm.chmod(0o755)
+    env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ.get("PATH", ""))
+    return env, root
+
 
 INDEX_BODY = """# Documentation
 
@@ -141,64 +183,42 @@ def seed_repo(repo: Path) -> None:
         target.write_text(markdown_with_provenance(doc["provenance"], bodies[doc["id"]]), encoding="utf-8")
 
 
-class DashboardMetadataTests(unittest.TestCase):
-    def test_reconcile_adds_id_title_and_is_idempotent(self) -> None:
+SIG_RE = re.compile(r"render_sig: ([0-9a-f]{64})")
+
+
+class DashboardStartTests(unittest.TestCase):
+    def test_start_reconciles_metadata_and_is_idempotent(self) -> None:
+        env, _bin = fake_npm_env()
         with tempfile.TemporaryDirectory() as tmp:
-            outputs = []
             for runtime in ("py", "js"):
                 repo = Path(tmp) / runtime
                 repo.mkdir()
                 seed_repo(repo)
-                result = run_dashboard(runtime, "metadata", "--repo", str(repo))
-                self.assertEqual(result.returncode, 0, result.stderr)
-                text = (repo / "docs" / "product" / "overview.md").read_text(encoding="utf-8")
-                self.assertTrue(text.startswith('---\nid: "product_overview"\n'))
-                self.assertIn('title: "Product Overview"', text)
-                self.assertIn('# Overview\n\nBody.\n', text)
-                second = run_dashboard(runtime, "metadata", "--repo", str(repo))
-                self.assertEqual(second.returncode, 0, second.stderr)
-                self.assertIn("reconciled: 0", second.stdout)
-                outputs.append(normalized(result.stdout, [repo]))
-            self.assertEqual(outputs[0], outputs[1])
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    text = (repo / "docs" / "product" / "overview.md").read_text(encoding="utf-8")
+                    self.assertTrue(text.startswith('---\nid: "product_overview"\n'))
+                    self.assertIn('title: "Product Overview"', text)
+                    self.assertIn('# Overview\n\nBody.\n', text)
+                    self.assertIn("converted 3 documents", result.stdout)
+                    second = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                    self.assertEqual(second.returncode, 0, second.stderr)
+                    self.assertIn("metadata: 0 reconciled, 3 unchanged", second.stdout)
+                    self.assertIn("signature unchanged", second.stdout)
+                finally:
+                    stop_dashboard(runtime, repo)
 
-    def test_reconcile_fixes_provenance_doc_id_and_path(self) -> None:
+    def test_start_plan_only_reports_route_plan_and_duplicate_urls(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             seed_repo(repo)
-            target = repo / "docs" / "architecture" / "constraints.md"
-            text = target.read_text(encoding="utf-8")
-            text = text.replace('doc_id: "architecture_constraints"', 'doc_id: "stale_id"')
-            text = text.replace('path: "docs/architecture/constraints.md"', 'path: "docs/architecture/stale.md"')
-            target.write_text(text, encoding="utf-8")
-            result = run_dashboard("py", "metadata", "--repo", str(repo), "--json")
+            result = run_dashboard("py", "start", "--repo", str(repo), "--plan-only")
             self.assertEqual(result.returncode, 0, result.stderr)
-            fixed = [row for row in json.loads(result.stdout)["reconciled"] if row["doc"] == "architecture_constraints"]
-            self.assertEqual(fixed[0]["fixed"], ["id", "title", "provenance.doc_id", "provenance.path"])
-            fresh = target.read_text(encoding="utf-8")
-            self.assertIn('doc_id: "architecture_constraints"', fresh)
-            self.assertIn('path: "docs/architecture/constraints.md"', fresh)
+            self.assertIn("3 pages in 3 folders; 0 problems", result.stdout)
+            self.assertIn("/docs", result.stdout)
+            self.assertIn("render_sig: ", result.stdout)
 
-
-class DashboardPlanTests(unittest.TestCase):
-    def test_route_plan_readme_becomes_index(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "plan", "--repo", str(repo), "--json")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                plan = json.loads(result.stdout)
-                by_path = {page["source_path"]: page for page in plan["pages"]}
-                self.assertEqual(by_path["docs/README.md"]["url"], "/docs")
-                self.assertEqual(by_path["docs/README.md"]["output_path"], "index.mdx")
-                self.assertEqual(by_path["docs/architecture/constraints.md"]["url"], "/docs/architecture/constraints")
-                self.assertEqual(by_path["docs/architecture/constraints.md"]["output_path"], "architecture/constraints.mdx")
-                self.assertEqual(plan["problems"], [])
-
-    def test_duplicate_url_detected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
             manifest = load_manifest(repo)
             manifest["documents"].append(written_doc("collision_a", "docs/architecture.md", "# Architecture\n"))
             manifest["documents"].append(written_doc("collision_b", "docs/architecture/README.md", "# Architecture\n"))
@@ -212,12 +232,11 @@ class DashboardPlanTests(unittest.TestCase):
             )
             (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "plan", "--repo", str(repo), "--json")
+                result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
                 self.assertEqual(result.returncode, 1)
-                plan = json.loads(result.stdout)
-                self.assertTrue(any("duplicate url" in problem for problem in plan["problems"]))
+                self.assertTrue(any("duplicate url" in line for line in result.stdout.splitlines()))
 
-    def test_root_level_documents_route_under_root(self) -> None:
+    def test_start_plan_only_routes_root_level_documents(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             seed_repo(repo)
@@ -234,331 +253,143 @@ class DashboardPlanTests(unittest.TestCase):
                 encoding="utf-8",
             )
             for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "plan", "--repo", str(repo), "--json")
+                result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
                 self.assertEqual(result.returncode, 0, result.stderr)
-                plan = json.loads(result.stdout)
-                by_path = {page["source_path"]: page for page in plan["pages"]}
-                self.assertEqual(by_path["CHANGELOG.md"]["url"], "/docs/root/changelog")
-                self.assertEqual(by_path["CHANGELOG.md"]["output_path"], "root/changelog.mdx")
-                self.assertEqual(by_path["README.md"]["url"], "/docs/root/readme")
-                self.assertEqual(by_path["README.md"]["output_path"], "root/readme.mdx")
-                self.assertEqual(plan["problems"], [])
-
-    def test_root_level_documents_without_provenance_are_excluded(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            manifest = load_manifest(repo)
-            local_shim = written_doc("claude_local", "CLAUDE.local.md", "# Local\n", write_order=7)
-            manifest["documents"].append(local_shim)
-            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            (repo / "CLAUDE.local.md").write_text("# Local preferences\n", encoding="utf-8")
-            for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "plan", "--repo", str(repo), "--json")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                plan = json.loads(result.stdout)
-                by_path = {page["source_path"]: page for page in plan["pages"]}
-                self.assertNotIn("CLAUDE.local.md", by_path)
-                build = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
-                self.assertEqual(build.returncode, 0, build.stderr)
-                self.assertFalse((repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "claude.local.mdx").exists())
-
-
-class DashboardFingerprintTests(unittest.TestCase):
-    def test_fingerprint_parity_and_sensitivity(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            manifest = load_manifest(repo)
-            changelog = written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5)
-            manifest["documents"].append(changelog)
-            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            (repo / "CHANGELOG.md").write_text(
-                markdown_with_provenance(changelog["provenance"], "# Changelog\n"),
-                encoding="utf-8",
-            )
-            py = run_dashboard("py", "fingerprint", "--repo", str(repo)).stdout.strip()
-            js = run_dashboard("js", "fingerprint", "--repo", str(repo)).stdout.strip()
-            self.assertEqual(py, js)
-            before = py
-            (repo / "CHANGELOG.md").write_text(
-                markdown_with_provenance(changelog["provenance"], "# Changelog\n\nNew entry.\n"),
-                encoding="utf-8",
-            )
-            py_after = run_dashboard("py", "fingerprint", "--repo", str(repo)).stdout.strip()
-            self.assertNotEqual(before, py_after)
-
-
-class DashboardServerTests(unittest.TestCase):
-    def test_serve_stays_attached_and_signals_stop_server(self) -> None:
-        fake_npm = """#!/usr/bin/env python3
-import http.server
-import sys
-
-port = int(sys.argv[sys.argv.index("-p") + 1])
-
-class Handler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"ok")
-
-    def log_message(self, _format, *_args):
-        pass
-
-http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
-"""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            bin_dir = root / "bin"
-            bin_dir.mkdir()
-            npm = bin_dir / "npm"
-            npm.write_text(fake_npm, encoding="utf-8")
-            npm.chmod(0o755)
-            env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ.get("PATH", ""))
-
-            for runtime in ("py", "js"):
-                for stop_signal in (signal.SIGINT, signal.SIGTSTP):
-                    with self.subTest(runtime=runtime, signal=stop_signal):
-                        dashboard = root / f"dashboard-{runtime}-{stop_signal}"
-                        dashboard.mkdir()
-                        command = (
-                            [sys.executable, str(DASH_CLI_PY / "dashboard.py")]
-                            if runtime == "py"
-                            else ["node", str(DASH_CLI_JS / "dashboard.js")]
-                        )
-                        proc = subprocess.Popen(
-                            command + ["serve", "--dashboard", str(dashboard)],
-                            cwd=ROOT,
-                            text=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            env=env,
-                        )
-                        state_path = dashboard / ".docforge-dashboard.json"
-
-                        def running() -> bool:
-                            if not state_path.is_file():
-                                return False
-                            state = json.loads(state_path.read_text(encoding="utf-8"))
-                            return isinstance(state.get("url"), str) and url_responds(state["url"])
-
-                        self.assertTrue(wait_until(running), "dashboard server did not start")
-                        state = json.loads(state_path.read_text(encoding="utf-8"))
-                        url = state["url"]
-                        self.assertIsNone(proc.poll(), "serve command exited instead of staying attached")
-                        os.kill(proc.pid, stop_signal)
-                        stdout, stderr = proc.communicate(timeout=10)
-                        self.assertEqual(proc.returncode, 128 + stop_signal, stderr)
-                        self.assertIn("dashboard server stopped", stdout)
-                        stopped_state = json.loads(state_path.read_text(encoding="utf-8"))
-                        self.assertNotIn("pid", stopped_state)
-                        self.assertNotIn("port", stopped_state)
-                        self.assertNotIn("url", stopped_state)
-                        self.assertTrue(wait_until(lambda: not url_responds(url)), "server port remained open")
+                self.assertIn("-> /docs/root/changelog", result.stdout)
+                self.assertIn("-> /docs/root/readme", result.stdout)
+                self.assertIn("0 problems", result.stdout)
 
 
 class DashboardBuildTests(unittest.TestCase):
-    def test_build_converts_escapes_and_rewrites_links(self) -> None:
+    def test_start_build_converts_escapes_and_rewrites_links(self) -> None:
+        env, _bin = fake_npm_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    output = repo / ".docforge" / "dashboard" / "content" / "docs" / "architecture" / "constraints.mdx"
+                    text = output.read_text(encoding="utf-8")
+                    self.assertTrue(text.startswith('---\nid: "architecture_constraints"\n'))
+                    self.assertIn('title: "Constraints"', text)
+                    self.assertIn("Owner is &lt;TEAM_OWNER&gt;", text)
+                    self.assertIn("&#123;stay&#125;", text)
+                    self.assertIn("const x = '<TEAM_OWNER> {not escaped}';", text)
+                    self.assertIn("[the index](/docs#documentation)", text)
+                    self.assertIn("```mermaid", text)
+                    self.assertIn("| Area | Limit |", text)
+                    self.assertIn("| Latency | &lt;100 ms |", text)
+                    index = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
+                    self.assertIn('title: "Documentation"', index.read_text(encoding="utf-8"))
+                    root_meta = json.loads((repo / ".docforge" / "dashboard" / "content" / "docs" / "meta.json").read_text(encoding="utf-8"))
+                    self.assertEqual(root_meta["title"], "Documentation")
+                finally:
+                    stop_dashboard(runtime, repo)
+
+    def test_start_force_rebuilds_even_when_unchanged(self) -> None:
+        env, _bin = fake_npm_env()
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             seed_repo(repo)
-            for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                output = repo / ".docforge" / "dashboard" / "content" / "docs" / "architecture" / "constraints.mdx"
-                text = output.read_text(encoding="utf-8")
-                self.assertTrue(text.startswith('---\nid: "architecture_constraints"\n'))
-                self.assertIn('title: "Constraints"', text)
-                self.assertIn("Owner is &lt;TEAM_OWNER&gt;", text)
-                self.assertIn("&#123;stay&#125;", text)
-                self.assertIn("const x = '<TEAM_OWNER> {not escaped}';", text)
-                self.assertIn("[the index](/docs#documentation)", text)
-                self.assertIn("```mermaid", text)
-                self.assertIn("| Area | Limit |", text)
-                self.assertIn("| Latency | &lt;100 ms |", text)
+            try:
+                first = run_dashboard("py", "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                self.assertEqual(first.returncode, 0, first.stderr)
+                self.assertIn("converted 3 documents", first.stdout)
+                unchanged = run_dashboard("py", "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                self.assertEqual(unchanged.returncode, 0, unchanged.stderr)
+                self.assertIn("signature unchanged", unchanged.stdout)
+                forced = run_dashboard("py", "start", "--repo", str(repo), "--force", "--no-open", "--skip-install", env=env)
+                self.assertEqual(forced.returncode, 0, forced.stderr)
+                self.assertIn("converted 3 documents", forced.stdout)
+            finally:
+                stop_dashboard("py", repo)
+
+    def test_failed_conversion_leaves_previous_dashboard_untouched(self) -> None:
+        env, _bin = fake_npm_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            try:
+                first = run_dashboard("py", "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                self.assertEqual(first.returncode, 0, first.stderr)
                 index = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
-                self.assertIn('title: "Documentation"', index.read_text(encoding="utf-8"))
-                root_meta = json.loads((repo / ".docforge" / "dashboard" / "content" / "docs" / "meta.json").read_text(encoding="utf-8"))
-                self.assertEqual(root_meta["title"], "Documentation")
-                validate = run_dashboard(runtime, "validate", "--repo", str(repo))
-                self.assertEqual(validate.returncode, 0, validate.stdout)
+                self.assertTrue(index.is_file())
+                (repo / "docs" / "product" / "overview.md").write_text("# Broken\n\nNo frontmatter.\n", encoding="utf-8")
+                broken = run_dashboard("py", "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                self.assertEqual(broken.returncode, 1)
+                self.assertIn("has no frontmatter", broken.stdout + broken.stderr)
+                self.assertTrue(index.is_file(), "previous dashboard must survive a failed conversion")
+                self.assertFalse((repo / ".docforge" / "dashboard" / "content" / ".staging").exists())
+            finally:
+                stop_dashboard("py", repo)
 
-    def test_build_rewrites_links_to_root_level_documents(self) -> None:
+
+class DashboardSignatureTests(unittest.TestCase):
+    def test_render_signature_parity_and_sensitivity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             seed_repo(repo)
-            manifest = load_manifest(repo)
-            changelog = written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5)
-            root_readme = written_doc("root_readme", "README.md", "# Root Readme\n", write_order=6)
-            manifest["documents"].extend([changelog, root_readme])
-            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            (repo / "CHANGELOG.md").write_text(
-                markdown_with_provenance(changelog["provenance"], "# Changelog\n\nSee [docs](docs/README.md).\n"),
+            py = run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout
+            js = run_dashboard("js", "start", "--repo", str(repo), "--plan-only").stdout
+            self.assertEqual(SIG_RE.search(py).group(1), SIG_RE.search(js).group(1))
+            before = SIG_RE.search(py).group(1)
+            (repo / "docs" / "README.md").write_text(
+                markdown_with_provenance(load_manifest(repo)["documents"][0]["provenance"], "# Documentation\n\nChanged.\n"),
                 encoding="utf-8",
             )
-            (repo / "README.md").write_text(
-                markdown_with_provenance(root_readme["provenance"], "# Root Readme\n\n## Documentation\n\nSee [changelog](CHANGELOG.md).\n"),
-                encoding="utf-8",
-            )
-            index = repo / "docs" / "README.md"
-            index.write_text(
-                index.read_text(encoding="utf-8").replace(
-                    "See [architecture/](architecture/README.md) and [product/overview.md](product/overview.md).",
-                    "See [architecture/](architecture/README.md), [CHANGELOG.md](../CHANGELOG.md) and [docs](../README.md#documentation).",
-                ),
-                encoding="utf-8",
-            )
+            after = run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout
+            self.assertNotEqual(before, SIG_RE.search(after).group(1))
+
+    def test_render_signature_ignores_flow_index_and_root_package_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            (repo / ".docforge" / "flow-index.json").write_text('{"version": "1.1"}\n', encoding="utf-8")
+            (repo / "package.json").write_text('{"name": "repo"}\n', encoding="utf-8")
+            before = SIG_RE.search(run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout).group(1)
+            (repo / ".docforge" / "flow-index.json").write_text('{"version": "1.1", "extra": true}\n', encoding="utf-8")
+            (repo / "package.json").write_text('{"name": "repo", "scripts": {}}\n', encoding="utf-8")
+            after = SIG_RE.search(run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout).group(1)
+            self.assertEqual(before, after)
+
+
+class DashboardServerTests(unittest.TestCase):
+    def test_start_serves_detached_and_stop_shuts_down(self) -> None:
+        env, _bin = fake_npm_env()
+        with tempfile.TemporaryDirectory() as tmp:
             for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                index_mdx = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
-                text = index_mdx.read_text(encoding="utf-8")
-                self.assertIn("[CHANGELOG.md](/docs/root/changelog)", text)
-                self.assertIn("[docs](/docs/root/readme#documentation)", text)
-                changelog_mdx = repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "changelog.mdx"
-                self.assertTrue(changelog_mdx.is_file())
-                self.assertIn("[docs](/docs)", changelog_mdx.read_text(encoding="utf-8"))
-                readme_mdx = repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "readme.mdx"
-                self.assertTrue(readme_mdx.is_file())
-                self.assertIn("[changelog](/docs/root/changelog)", readme_mdx.read_text(encoding="utf-8"))
-                validate = run_dashboard(runtime, "validate", "--repo", str(repo))
-                self.assertEqual(validate.returncode, 0, validate.stdout)
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                dashboard = repo / ".docforge" / "dashboard"
+                state_path = dashboard / ".docforge-dashboard.json"
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("running in the background", result.stdout)
+                    state = json.loads(state_path.read_text(encoding="utf-8"))
+                    self.assertTrue(url_responds(state["url"]), "dashboard server did not start")
+                    self.assertTrue(wait_until(lambda: url_responds(state["url"])))
 
-    def test_meta_order_follows_write_order_not_alphabet(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            manifest = load_manifest(repo)
-            additions = [
-                written_doc("zeta_index", "docs/zeta/README.md", "# Zeta\n", write_order=5),
-                written_doc("alpha_index", "docs/alpha/README.md", "# Alpha\n", write_order=90),
-                written_doc("mm_one", "docs/mm-one.md", "# Mm\n", write_order=40),
-                written_doc("aa_two", "docs/aa-two.md", "# Aa\n", write_order=70),
-            ]
-            manifest["documents"].extend(additions)
-            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            for doc in additions:
-                target = repo / doc["path"]
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(markdown_with_provenance(doc["provenance"], "# Title\n"), encoding="utf-8")
-            for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                meta = json.loads((repo / ".docforge" / "dashboard" / "content" / "docs" / "meta.json").read_text(encoding="utf-8"))
-                self.assertEqual(
-                    meta["pages"],
-                    ["index", "zeta", "architecture", "product", "mm-one", "aa-two", "alpha"],
-                )
+                    status = run_dashboard(runtime, "status", "--repo", str(repo), "--json")
+                    self.assertEqual(status.returncode, 0, status.stderr)
+                    report = json.loads(status.stdout)
+                    self.assertTrue(report["server"]["running"])
+                    self.assertTrue(report["render_sig"]["match"])
+                    self.assertEqual(report["counts"]["included_docs"], 3)
 
-    def test_root_folder_is_named_others_and_sorts_last(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            manifest = load_manifest(repo)
-            changelog = written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5)
-            root_readme = written_doc("root_readme", "README.md", "# Root Readme\n", write_order=6)
-            manifest["documents"].extend([changelog, root_readme])
-            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            for doc in (changelog, root_readme):
-                (repo / doc["path"]).write_text(
-                    markdown_with_provenance(doc["provenance"], f"# {doc['id']}\n"),
-                    encoding="utf-8",
-                )
-            for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                root_meta = json.loads(
-                    (repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "meta.json").read_text(encoding="utf-8")
-                )
-                self.assertEqual(root_meta["title"], "Others")
-                top_meta = json.loads(
-                    (repo / ".docforge" / "dashboard" / "content" / "docs" / "meta.json").read_text(encoding="utf-8")
-                )
-                self.assertEqual(top_meta["pages"][-1], "root")
-
-    def test_build_fast_path_does_not_rewrite_content(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            first = run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
-            self.assertEqual(first.returncode, 0, first.stderr)
-            output = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
-            before = output.read_text(encoding="utf-8")
-            second = run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
-            self.assertEqual(second.returncode, 0, second.stderr)
-            self.assertIn("fingerprint unchanged", second.stdout)
-            self.assertEqual(output.read_text(encoding="utf-8"), before)
-
-    def test_template_signature_credits_docforge_and_fumadocs(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
-            layout = (repo / ".docforge" / "dashboard" / "app" / "docs" / "layout.tsx").read_text(encoding="utf-8")
-            self.assertNotIn("min-h-screen", layout)
-            self.assertNotIn("<footer", layout)
-            page = (repo / ".docforge" / "dashboard" / "app" / "docs" / "[[...slug]]" / "page.tsx").read_text(encoding="utf-8")
-            self.assertIn("Documentation generated by", page)
-            self.assertIn("https://github.com/jonaskahn/docforge", page)
-            self.assertIn("UI by", page)
-            self.assertIn("https://www.fumadocs.dev/", page)
-
-    def test_bauhaus_theme_applied(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
-            css = (repo / ".docforge" / "dashboard" / "app" / "global.css").read_text(encoding="utf-8")
-            self.assertIn("#e30613", css)
-            self.assertIn("--color-fd-primary: #e30613", css)
-            self.assertIn("--color-fd-background: #0a0a0a", css)
-            self.assertIn("--color-fd-background: #ffffff", css)
-            self.assertIn('"Avenir Next"', css)
-            self.assertIn("--radius-lg: 2px", css)
-            self.assertIn("font-variant-numeric: tabular-nums", css)
-
-    def test_build_generates_dashboard_gitignore_rule(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
-            gitignore = (repo / ".docforge" / ".gitignore").read_text(encoding="utf-8")
-            self.assertIn("dashboard/", gitignore)
-            self.assertTrue((repo / ".docforge" / "dashboard" / "package.json").is_file())
-            self.assertTrue((repo / ".docforge" / "dashboard" / "lib" / "shared.ts").is_file())
-
-    def test_template_nav_title_links_to_docs_route(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
-            shared = (repo / ".docforge" / "dashboard" / "lib" / "shared.ts").read_text(encoding="utf-8")
-            self.assertIn("docsRoute = '/docs'", shared)
-            layout = (repo / ".docforge" / "dashboard" / "lib" / "layout.shared.tsx").read_text(encoding="utf-8")
-            self.assertIn("docsRoute", layout)
-            self.assertIn("url: docsRoute", layout)
-
-
-class DashboardValidateTests(unittest.TestCase):
-    def test_validate_reports_broken_links_and_missing_index(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
-            content = repo / ".docforge" / "dashboard" / "content" / "docs" / "architecture" / "constraints.mdx"
-            text = content.read_text(encoding="utf-8")
-            content.write_text(
-                text.replace("[the index](/docs#documentation)", "[one](/docs/nope) and [two](/docs#missing)"),
-                encoding="utf-8",
-            )
-            for runtime in ("py", "js"):
-                result = run_dashboard(runtime, "validate", "--repo", str(repo), "--json")
-                self.assertEqual(result.returncode, 1)
-                report = json.loads(result.stdout)
-                self.assertFalse(report["ok"])
-                self.assertTrue(any("broken link" in error for error in report["errors"]))
-                self.assertTrue(any("broken anchor" in error for error in report["errors"]))
+                    stopped = run_dashboard(runtime, "stop", "--repo", str(repo))
+                    self.assertEqual(stopped.returncode, 0, stopped.stderr)
+                    self.assertIn("stopped: True", stopped.stdout)
+                    self.assertTrue(wait_until(lambda: not url_responds(state["url"])), "server port remained open")
+                    state = json.loads(state_path.read_text(encoding="utf-8"))
+                    self.assertNotIn("pid", state)
+                    self.assertNotIn("port", state)
+                finally:
+                    stop_dashboard(runtime, repo)
 
 
 if __name__ == "__main__":
