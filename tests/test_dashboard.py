@@ -29,11 +29,16 @@ def run_dashboard(runtime: str, *args: str) -> subprocess.CompletedProcess:
     )
     return subprocess.run(command + list(args), cwd=ROOT, text=True, capture_output=True)
 
-INDEX_BODY = """# Docs Index
+INDEX_BODY = """# Documentation
 
-## Documentation
+## Introduction
 
 See [architecture/](architecture/README.md) and [product/overview.md](product/overview.md).
+
+| Section | Description |
+| --- | --- |
+| Architecture | How it is built |
+| Product | What it does |
 """
 
 CONSTRAINTS_BODY = """# Constraints
@@ -44,7 +49,11 @@ Owner is <TEAM_OWNER>. Literal braces {stay} safe.
 const x = '<TEAM_OWNER> {not escaped}';
 ```
 
-See [the index](../README.md#docs-index).
+See [the index](../README.md#documentation).
+
+| Area | Limit |
+| --- | --- |
+| Latency | <100 ms |
 
 ```mermaid
 graph TD;
@@ -53,7 +62,7 @@ graph TD;
 """
 
 
-def written_doc(doc_id: str, path: str, body: str) -> dict:
+def written_doc(doc_id: str, path: str, body: str, write_order: int = 10) -> dict:
     value = provenance(
         doc_id=doc_id,
         path=path,
@@ -74,7 +83,7 @@ def written_doc(doc_id: str, path: str, body: str) -> dict:
         "requires": [],
         "scaffold_template": "unused",
         "target_depth": "orientation",
-        "write_order": 10,
+        "write_order": write_order,
         "provenance_mode": "sections",
         "audit_profile": "standard",
         "provenance": value,
@@ -89,9 +98,9 @@ def seed_repo(repo: Path) -> None:
         "product_overview": "# Overview\n\nBody.\n",
     }
     docs = [
-        written_doc("docs_index", "docs/README.md", INDEX_BODY),
-        written_doc("architecture_constraints", "docs/architecture/constraints.md", CONSTRAINTS_BODY),
-        written_doc("product_overview", "docs/product/overview.md", bodies["product_overview"]),
+        written_doc("docs_index", "docs/README.md", INDEX_BODY, write_order=30),
+        written_doc("architecture_constraints", "docs/architecture/constraints.md", CONSTRAINTS_BODY, write_order=9),
+        written_doc("product_overview", "docs/product/overview.md", bodies["product_overview"], write_order=19),
     ]
     manifest = {
         "version": "3.1",
@@ -214,13 +223,46 @@ class DashboardBuildTests(unittest.TestCase):
                 output = repo / ".docforge" / "dashboard" / "content" / "docs" / "architecture" / "constraints.mdx"
                 text = output.read_text(encoding="utf-8")
                 self.assertTrue(text.startswith('---\nid: "architecture_constraints"\n'))
+                self.assertIn('title: "Constraints"', text)
                 self.assertIn("Owner is &lt;TEAM_OWNER&gt;", text)
                 self.assertIn("&#123;stay&#125;", text)
                 self.assertIn("const x = '<TEAM_OWNER> {not escaped}';", text)
-                self.assertIn("[the index](/docs#docs-index)", text)
+                self.assertIn("[the index](/docs#documentation)", text)
                 self.assertIn("```mermaid", text)
+                self.assertIn("| Area | Limit |", text)
+                self.assertIn("| Latency | &lt;100 ms |", text)
+                index = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
+                self.assertIn('title: "Documentation"', index.read_text(encoding="utf-8"))
+                root_meta = json.loads((repo / ".docforge" / "dashboard" / "content" / "docs" / "meta.json").read_text(encoding="utf-8"))
+                self.assertEqual(root_meta["title"], "Documentation")
                 validate = run_dashboard(runtime, "validate", "--repo", str(repo))
                 self.assertEqual(validate.returncode, 0, validate.stdout)
+
+    def test_meta_order_follows_write_order_not_alphabet(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            manifest = load_manifest(repo)
+            additions = [
+                written_doc("zeta_index", "docs/zeta/README.md", "# Zeta\n", write_order=5),
+                written_doc("alpha_index", "docs/alpha/README.md", "# Alpha\n", write_order=90),
+                written_doc("mm_one", "docs/mm-one.md", "# Mm\n", write_order=40),
+                written_doc("aa_two", "docs/aa-two.md", "# Aa\n", write_order=70),
+            ]
+            manifest["documents"].extend(additions)
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            for doc in additions:
+                target = repo / doc["path"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(markdown_with_provenance(doc["provenance"], "# Title\n"), encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                meta = json.loads((repo / ".docforge" / "dashboard" / "content" / "docs" / "meta.json").read_text(encoding="utf-8"))
+                self.assertEqual(
+                    meta["pages"],
+                    ["index", "zeta", "architecture", "product", "mm-one", "aa-two", "alpha"],
+                )
 
     def test_build_fast_path_does_not_rewrite_content(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -255,7 +297,7 @@ class DashboardValidateTests(unittest.TestCase):
             content = repo / ".docforge" / "dashboard" / "content" / "docs" / "architecture" / "constraints.mdx"
             text = content.read_text(encoding="utf-8")
             content.write_text(
-                text.replace("[the index](/docs#docs-index)", "[one](/docs/nope) and [two](/docs#missing)"),
+                text.replace("[the index](/docs#documentation)", "[one](/docs/nope) and [two](/docs#missing)"),
                 encoding="utf-8",
             )
             for runtime in ("py", "js"):

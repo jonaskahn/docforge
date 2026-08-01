@@ -334,6 +334,27 @@ def convert_body(body: str, source_path: str, ledger: dict, assets_needed: set[s
     return converted, unresolved
 
 
+def first_h1_title(body: str) -> str | None:
+    """Extract the first H1 heading as the document's meaningful title.
+
+    Strips Fumadocs heading markers (`[!toc]`, `[toc]`, `[#custom-id]`),
+    link syntax, and inline formatting. Returns None when there is no H1 so
+    callers can fall back to the manifest title.
+    """
+    for line in body.splitlines():
+        match = re.match(r"^\s{0,3}#\s+(.+?)\s*#*\s*$", line)
+        if not match:
+            continue
+        text = match.group(1)
+        text = re.sub(r"(\s*\[(?:[!#]|toc)[^\]]*\])+\s*$", "", text)
+        text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+        text = re.sub(r"[*_`]", "", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        if text:
+            return text
+    return None
+
+
 def heading_anchors(text: str) -> list[str]:
     anchors: list[str] = []
     for line in text.splitlines():
@@ -407,18 +428,37 @@ def meta_plans(ledger: dict, manifest: dict) -> dict[str, dict]:
         folders[folder]["write_order"][page["doc_id"]] = page["write_order"]
     for folder in folders:
         folders[folder]["files"].sort(key=lambda p: (p["write_order"], p["source_path"]))
-        folders[folder]["subfolders"] = sorted({
+
+    def folder_order(folder: str) -> tuple[int, str]:
+        """Meaningful order: a folder is ordered by its index document's
+        manifest write_order, else by the smallest write_order among its
+        pages, with the folder name as the deterministic tie-break."""
+        info = folders.get(folder)
+        if info is None:
+            return (10**9, folder)
+        if info["index"] is not None:
+            return (info["index"]["write_order"], folder)
+        return (min((p["write_order"] for p in info["files"]), default=10**9), folder)
+
+    plans: dict[str, dict] = {}
+    for folder, info in folders.items():
+        names = {
             posixpath.relpath(other, folder).split("/", 1)[0]
             for other in folders
             if other != folder and (not folder or other.startswith(folder + "/"))
-        })
-    plans: dict[str, dict] = {}
-    for folder, info in folders.items():
+        }
+        entries: list[tuple[tuple[int, str], str]] = []
+        for name in names:
+            order, _ = folder_order(posixpath.join(folder, name))
+            entries.append(((order, name), name))
+        for page in info["files"]:
+            stem = posixpath.splitext(posixpath.basename(page["output_path"]))[0]
+            entries.append(((page["write_order"], stem), stem))
+        entries.sort(key=lambda item: item[0])
         pages = []
         if info["index"] is not None:
             pages.append("index")
-        pages.extend(info["subfolders"])
-        pages.extend(posixpath.splitext(posixpath.basename(p["output_path"]))[0] for p in info["files"])
+        pages.extend(name for _, name in entries)
         plans[folder] = {
             "path": f"{folder}/meta.json" if folder else "meta.json",
             "title": meta_title(folder, ledger, manifest),
@@ -445,6 +485,9 @@ def convert_documents(repo: Path, manifest: dict, ledger: dict, stage_docs: Path
         if not isinstance(provenance, dict) or provenance.get("schema") != SCHEMA_VERSION:
             raise ValueError(f"provenance is not schema 2.0: {doc['source_path']}")
         mdx_body, unresolved = convert_body(body, doc["source_path"], ledger, assets_needed)
+        h1_title = first_h1_title(body)
+        if h1_title:
+            doc["title"] = h1_title
         page = {"id": doc["doc_id"], "title": doc["title"]}
         content = public_frontmatter(page, provenance) + mdx_body
         target = stage_docs / doc["output_path"]

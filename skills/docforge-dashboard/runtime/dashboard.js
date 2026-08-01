@@ -330,6 +330,20 @@ function convertBody(body, sourcePath, ledger, assetsNeeded) {
   return [converted, unresolved];
 }
 
+function firstH1Title(body) {
+  for (const line of body.split(/\r?\n/)) {
+    const match = HEADING_RE.exec(line);
+    if (!match) continue;
+    let text = match[2];
+    text = text.replace(/(\s*\[(?:[!#]|toc)[^\]]*\])+\s*$/, "");
+    text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+    text = text.replace(/[*_`]/g, "");
+    text = text.replace(/\s+/g, " ").trim();
+    if (text) return text;
+  }
+  return null;
+}
+
 function headingAnchors(text) {
   const anchors = [];
   for (const line of text.split(/\r?\n/)) {
@@ -422,17 +436,39 @@ function metaPlans(ledger, manifest) {
   }
   for (const folder of Object.keys(folders)) {
     folders[folder].files.sort((a, b) => a.write_order - b.write_order || (a.source_path < b.source_path ? -1 : 1));
-    folders[folder].subfolders = Object.keys(folders)
-      .filter((other) => other !== folder && (folder === "" || other.startsWith(folder + "/")))
-      .map((other) => path.posix.relative(folder, other).split("/")[0])
-      .sort();
   }
+  const folderOrder = (folder) => {
+    const info = folders[folder];
+    if (!info) return [Number.MAX_SAFE_INTEGER, folder];
+    if (info.index) return [info.index.write_order, folder];
+    const min = info.files.length ? Math.min(...info.files.map((p) => p.write_order)) : Number.MAX_SAFE_INTEGER;
+    return [min, folder];
+  };
+
   const plans = {};
   for (const [folder, info] of Object.entries(folders)) {
+    const names = new Set(
+      Object.keys(folders)
+        .filter((other) => other !== folder && (folder === "" || other.startsWith(folder + "/")))
+        .map((other) => path.posix.relative(folder, other).split("/")[0]),
+    );
+    const entries = [];
+    for (const name of names) {
+      const [order] = folderOrder(folder ? `${folder}/${name}` : name);
+      entries.push([[order, name], name]);
+    }
+    for (const page of info.files) {
+      const stem = stemOf(path.posix.basename(page.output_path));
+      entries.push([[page.write_order, stem], stem]);
+    }
+    entries.sort((a, b) => {
+      const [oa, na] = a[0];
+      const [ob, nb] = b[0];
+      return oa - ob || (na < nb ? -1 : na > nb ? 1 : 0);
+    });
     const pages = [];
     if (info.index) pages.push("index");
-    pages.push(...info.subfolders);
-    pages.push(...info.files.map((p) => stemOf(path.posix.basename(p.output_path))));
+    pages.push(...entries.map((entry) => entry[1]));
     plans[folder] = {
       path: folder ? `${folder}/meta.json` : "meta.json",
       title: metaTitle(folder, ledger, manifest),
@@ -462,6 +498,8 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
       throw new Error(`provenance is not schema 2.0: ${doc.source_path}`);
     }
     const [mdxBody] = convertBody(body, doc.source_path, ledger, assetsNeeded);
+    const h1Title = firstH1Title(body);
+    if (h1Title) doc.title = h1Title;
     const content = publicFrontmatter(doc, provenance) + mdxBody;
     const target = path.join(stageDocs, doc.output_path);
     fs.mkdirSync(path.dirname(target), { recursive: true });

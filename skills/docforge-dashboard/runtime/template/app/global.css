@@ -10,3 +10,12 @@ html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;
 }
+
+/* Plain code fences (not shiki-highlighted, e.g. indented blocks or unknown
+   languages) have no line spans to carry horizontal padding, so they would
+   stick to the right edge of the code block when lines overflow. Give them
+   the same inset the highlighted blocks get. */
+.prose pre:not(.shiki):not(.not-fumadocs-codeblock *) {
+  padding-inline: calc(var(--spacing) * 4);
+}
+

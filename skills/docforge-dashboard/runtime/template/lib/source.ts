@@ -1,6 +1,7 @@
 import { loader } from 'fumadocs-core/source';
 import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons';
 import { defineDocs } from 'fumadocs-mdx/macro';
+import { applyMdxPreset } from 'fumadocs-mdx/config';
 import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
 import { remarkMdxMermaid } from 'fumadocs-core/mdx-plugins';
 import { docsRoute } from './shared';
@@ -9,9 +10,11 @@ const docs = defineDocs({
   dir: 'content/docs',
   docs: {
     schema: pageSchema,
-    mdxOptions: {
+    // extend the Fumadocs default preset (GFM, headings, images, structure)
+    // instead of replacing it, so Markdown tables keep working
+    mdxOptions: applyMdxPreset({
       remarkPlugins: [remarkMdxMermaid],
-    },
+    }),
   },
   meta: {
     schema: metaSchema,
