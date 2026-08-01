@@ -474,6 +474,17 @@ class DashboardBuildTests(unittest.TestCase):
             self.assertTrue((repo / ".docforge" / "dashboard" / "package.json").is_file())
             self.assertTrue((repo / ".docforge" / "dashboard" / "lib" / "shared.ts").is_file())
 
+    def test_template_nav_title_links_to_docs_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            run_dashboard("py", "build", "--repo", str(repo), "--skip-install")
+            shared = (repo / ".docforge" / "dashboard" / "lib" / "shared.ts").read_text(encoding="utf-8")
+            self.assertIn("docsRoute = '/docs'", shared)
+            layout = (repo / ".docforge" / "dashboard" / "lib" / "layout.shared.tsx").read_text(encoding="utf-8")
+            self.assertIn("docsRoute", layout)
+            self.assertIn("url: docsRoute", layout)
+
 
 class DashboardValidateTests(unittest.TestCase):
     def test_validate_reports_broken_links_and_missing_index(self) -> None:
