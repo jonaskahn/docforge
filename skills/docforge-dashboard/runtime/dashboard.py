@@ -441,6 +441,8 @@ def meta_title(folder: str, ledger: dict, manifest: dict) -> str:
         for doc in manifest.get("documents", []):
             if doc.get("id") == "docs_index":
                 return title_for(doc)
+    if folder == "root":
+        return "Others"
     name = posixpath.basename(folder)
     return name.replace("-", " ").replace("_", " ").title()
 
@@ -461,7 +463,11 @@ def meta_plans(ledger: dict, manifest: dict) -> dict[str, dict]:
     def folder_order(folder: str) -> tuple[int, str]:
         """Meaningful order: a folder is ordered by its index document's
         manifest write_order, else by the smallest write_order among its
-        pages, with the folder name as the deterministic tie-break."""
+        pages, with the folder name as the deterministic tie-break. The
+        `root` folder (repository-root files such as README.md and
+        CHANGELOG.md) always sorts last."""
+        if folder == "root":
+            return (10**9, folder)
         info = folders.get(folder)
         if info is None:
             return (10**9, folder)

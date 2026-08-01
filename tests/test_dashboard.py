@@ -451,6 +451,32 @@ class DashboardBuildTests(unittest.TestCase):
                     ["index", "zeta", "architecture", "product", "mm-one", "aa-two", "alpha"],
                 )
 
+    def test_root_folder_is_named_others_and_sorts_last(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            manifest = load_manifest(repo)
+            changelog = written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5)
+            root_readme = written_doc("root_readme", "README.md", "# Root Readme\n", write_order=6)
+            manifest["documents"].extend([changelog, root_readme])
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            for doc in (changelog, root_readme):
+                (repo / doc["path"]).write_text(
+                    markdown_with_provenance(doc["provenance"], f"# {doc['id']}\n"),
+                    encoding="utf-8",
+                )
+            for runtime in ("py", "js"):
+                result = run_dashboard(runtime, "build", "--repo", str(repo), "--skip-install")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                root_meta = json.loads(
+                    (repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "meta.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(root_meta["title"], "Others")
+                top_meta = json.loads(
+                    (repo / ".docforge" / "dashboard" / "content" / "docs" / "meta.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(top_meta["pages"][-1], "root")
+
     def test_build_fast_path_does_not_rewrite_content(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

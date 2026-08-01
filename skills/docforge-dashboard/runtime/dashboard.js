@@ -447,6 +447,7 @@ function metaTitle(folder, ledger, manifest) {
       if (doc.id === "docs_index") return titleFor(doc);
     }
   }
+  if (folder === "root") return "Others";
   const name = path.posix.basename(folder);
   return name.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -467,6 +468,9 @@ function metaPlans(ledger, manifest) {
     folders[folder].files.sort((a, b) => a.write_order - b.write_order || (a.source_path < b.source_path ? -1 : 1));
   }
   const folderOrder = (folder) => {
+    // The `root` folder (repository-root files such as README.md and
+    // CHANGELOG.md) always sorts last in the sidebar.
+    if (folder === "root") return [Number.MAX_SAFE_INTEGER, folder];
     const info = folders[folder];
     if (!info) return [Number.MAX_SAFE_INTEGER, folder];
     if (info.index) return [info.index.write_order, folder];
