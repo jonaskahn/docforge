@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-from runtime.flows.derive_flow_graph import *  # noqa: F401,F403
-from runtime.flows import derive_flow_graph as _impl
+from runtime.flows.python.derive_flow_graph import *  # noqa: F401,F403
+from runtime.flows.python import derive_flow_graph as _impl
 
 if __name__ == "__main__":
     raise SystemExit(_impl.main())

@@ -1,10 +1,12 @@
 # CLI launchers
 
 Public entrypoints for Docforge tools. Each file is a thin re-export of the
-matching implementation under `runtime/<subsystem>/`. Business logic never
-lives here.
+matching implementation under `runtime/<subsystem>/{js,python}/`. Business
+logic never lives here.
 
 Paths below are relative to the cartridge root (`skills/docforge/_shared/`).
+In a repo with `docforge install --local`, `runtime/` is a symlink in the
+repo root, so the same paths work from the repo root too.
 
 ## Session runtime (agent-owned)
 

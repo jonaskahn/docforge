@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-from runtime.common._util import *  # noqa: F401,F403
+from runtime.common.python._util import *  # noqa: F401,F403
 
 if __name__ == "__main__":
     raise SystemExit("error: _util.py is a shared module, not a CLI")

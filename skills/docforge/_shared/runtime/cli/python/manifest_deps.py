@@ -7,4 +7,4 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-from runtime.common.manifest_deps import *  # noqa: F401,F403
+from runtime.common.python.manifest_deps import *  # noqa: F401,F403

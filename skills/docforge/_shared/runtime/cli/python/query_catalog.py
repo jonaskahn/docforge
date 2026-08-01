@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-from runtime.catalog.query_catalog import *  # noqa: F401,F403
-from runtime.catalog import query_catalog as _impl
+from runtime.catalog.python.query_catalog import *  # noqa: F401,F403
+from runtime.catalog.python import query_catalog as _impl
 
 if __name__ == "__main__":
     raise SystemExit(_impl.main())

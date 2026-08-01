@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-from runtime.graph.precheck_graph import *  # noqa: F401,F403
-from runtime.graph import precheck_graph as _impl
+from runtime.graph.python.precheck_graph import *  # noqa: F401,F403
+from runtime.graph.python import precheck_graph as _impl
 
 if __name__ == "__main__":
     raise SystemExit(_impl.main())

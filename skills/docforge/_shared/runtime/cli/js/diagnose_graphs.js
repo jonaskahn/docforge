@@ -2,7 +2,7 @@
 "use strict";
 /** Launcher: delegates to runtime/graph/diagnose_graphs.js. */
 
-module.exports = require("../../graph/diagnose_graphs.js");
+module.exports = require("../../graph/js/diagnose_graphs.js");
 
 if (require.main === module) {
   process.exitCode = module.exports.main();

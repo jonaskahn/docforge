@@ -30,6 +30,7 @@ inline fallback in each workflow.
 | [`content/`](content/README.md) | Contracts, instructions, templates |
 | [`runtime/cli/`](runtime/cli/README.md) | Public Python/Node launchers |
 | [`runtime/`](runtime/README.md) | Implementation behind launchers (incl. [`runtime/dashboard/`](runtime/dashboard/README.md) — the dashboard build/serve runtime and its Fumadocs template) |
+| [`bin/`](bin/docforge) | `docforge` launcher — resolves a global or repo-local cartridge, runs tools, links the runtime into a repo |
 | [`.metadata/`](.metadata/) | Catalog, schemas, profiles |
 
 Tools run with this directory as the cartridge root. The agent locks one

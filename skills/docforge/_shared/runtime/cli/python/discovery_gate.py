@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-from runtime.catalog.discovery_gate import *  # noqa: F401,F403
+from runtime.catalog.python.discovery_gate import *  # noqa: F401,F403
 
 if __name__ == "__main__":
     raise SystemExit("discovery_gate is a library module")

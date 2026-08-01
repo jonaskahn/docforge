@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-from runtime.manifest.check_staleness import *  # noqa: F401,F403
-from runtime.manifest import check_staleness as _impl
+from runtime.manifest.python.check_staleness import *  # noqa: F401,F403
+from runtime.manifest.python import check_staleness as _impl
 
 if __name__ == "__main__":
     raise SystemExit(_impl.main())
