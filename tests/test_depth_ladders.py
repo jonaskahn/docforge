@@ -17,7 +17,7 @@ class DepthLadderTests(unittest.TestCase):
     def test_prov_core_projection_is_sorted_and_deduplicated(self) -> None:
         provenance = {
             "doc_id": "architecture", "generated_at": "2026-07-31T00:00:00Z",
-            "generator": {"name": "docforge", "version": "2.7.0"},
+            "generator": {"name": "docforge", "version": "2.8.0"},
             "sections": [{"sources": [
                 {"path": "z.py", "git_blob": "b" * 40, "role": "code"},
                 {"path": "a.py", "git_blob": "a" * 40, "role": "config"},

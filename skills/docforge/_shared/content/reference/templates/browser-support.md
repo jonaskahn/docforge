@@ -6,7 +6,7 @@ docforge_provenance:
   generated_at: "<GENERATED_AT>"
   generator:
     name: "docforge"
-    version: "2.7.0"
+    version: "2.8.0"
   tier: "<TIER>"
   target_depth: "<TARGET_DEPTH>"
   graph:

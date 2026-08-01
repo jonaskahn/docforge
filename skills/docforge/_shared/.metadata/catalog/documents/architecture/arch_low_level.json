@@ -25,6 +25,6 @@
     "arc42": "runtime-scenarios",
     "mermaid": "annotated"
   },
-  "contract_revision": "2.7.0",
+  "contract_revision": "2.8.0",
   "template_file": "content/architecture/templates/architecture-low-level.md"
 }

@@ -20,7 +20,7 @@ const path = require("path");
 const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../../docforge/_shared/runtime/common/_util.js");
 const pf = require("../../docforge/_shared/runtime/common/provenance_frontmatter.js");
 
-const TOOL_VERSION = "2.7.0";
+const TOOL_VERSION = "2.8.0";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";

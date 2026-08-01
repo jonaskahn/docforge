@@ -24,6 +24,6 @@
     "stride": "full-element",
     "mermaid": "annotated"
   },
-  "contract_revision": "2.7.0",
+  "contract_revision": "2.8.0",
   "template_file": "content/security/templates/threat-model.md"
 }

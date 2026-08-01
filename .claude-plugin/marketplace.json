@@ -13,7 +13,7 @@
         "url": "https://github.com/jonaskahn/docforge.git"
       },
       "description": "Catalog-driven repository documentation with bounded repository-evidence retrieval, manifest metadata, independent audits, and equivalent Python/Node tools.",
-      "version": "2.7.0",
+      "version": "2.8.0",
       "author": {
         "name": "Jonas Kahn",
         "url": "https://github.com/jonaskahn"

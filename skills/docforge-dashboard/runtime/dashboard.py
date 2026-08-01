@@ -43,7 +43,7 @@ from runtime.common.provenance_frontmatter import (
     split_frontmatter,
 )
 
-TOOL_VERSION = "2.7.0"
+TOOL_VERSION = "2.8.0"
 TEMPLATE_VERSION = "1"
 STATE_SCHEMA = 1
 STATE_FILE = ".docforge-dashboard.json"

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.8.0 - Revise re-ask deltas and attached dashboard serve
+
+- Revise re-asks persisted manifest choices as changes only: current tier,
+  profiles, and audiences are displayed as the baseline, and controls offer
+  `Change to` for tier and `Add` / `Remove` for profiles and audiences —
+  never a `Keep` option or re-selection of current values; an empty change set
+  preserves the manifest only after explicit confirmation.
+- `dashboard serve` now stays attached to the terminal and stops the whole
+  server process group on `Ctrl+C`, `Ctrl+Z`, terminal closure, or termination
+  signals (graceful stop with forced escalation), clearing PID/port state;
+  Python and Node peers stay equivalent and are covered by an end-to-end signal
+  test in `tests/test_dashboard.py`.
+
 ## Dashboard (local Fumadocs site)
 
 - Added `/docforge-dashboard` (`skills/docforge-dashboard/SKILL.md`,

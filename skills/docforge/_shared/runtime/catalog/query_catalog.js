@@ -47,7 +47,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.7.0";
+const CATALOG_VERSION = "2.8.0";
 
 function loadIndex() {
   if (!fs.existsSync(INDEX_PATH)) throw new Error(`catalog index not found: ${INDEX_PATH}`);
