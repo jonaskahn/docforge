@@ -34,19 +34,18 @@ first; see [`../docforge/_shared/workflows/tools.md`](../docforge/_shared/workfl
 | `/docforge-revise <area>` | Scoped revise (architecture, flows, operations, …) |
 | `/docforge-revise flow` | Full flow pipeline |
 
-Revise re-asks only what the manifest cannot resolve: scope (bare invocation),
-tier when not explicit (keep the manifest tier or change it repo-wide), the
-suitable-missing-audiences confirm/add-more prompt, and execution mode when
-needed. It displays an annotated plan tree (`add` / `update` / `rewrite` /
-`unchanged` / `skip`) before writing, including the `Flows:` mapping.
+Before any migration, detection, or writing, revise always stops and asks first,
+using the question pack owned by
+[`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md).
+Present the discovery brief and question set in one response: Scope, Tier (keep
+manifest tier or change), Profiles (shape / platform / framework / concern),
+Output audience, and Execution mode — with manifest values pre-checked as
+defaults and fresh detection shown as proposed additions. Show the confirmation
+summary and wait for explicit confirmation before continuing; never proceed on
+silent defaults.
 
-**Always stop and ask first — same popup as `/docforge`.** Before any
-migration, detection, or writing, present the discovery brief and the full
-question pack in one response: Scope, Tier (keep manifest tier or change),
-the five profile dimensions, Output audience, and Execution mode — with the
-manifest's current values pre-checked and fresh detection shown as proposed
-additions. Then show the confirmation summary and wait for explicit
-confirmation before continuing. Never proceed on silent defaults.
+Before writing, revise displays an annotated plan tree (`add` / `update` /
+`rewrite` / `unchanged` / `skip`), including the `Flows:` mapping.
 
 ## Flags
 
@@ -57,7 +56,7 @@ Example: `/docforge-revise flow --plan-only`.
 
 ## Not this command
 
-- Brand-new documentation plan (no revise scope) → `/docforge`
+- Fresh-start documentation plan (no revise scope) → `/docforge`
   ([`../docforge/SKILL.md`](../docforge/SKILL.md)).
 - Single named-document update/refresh → natural language under `/docforge`,
   staleness-first path in

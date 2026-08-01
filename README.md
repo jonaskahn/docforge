@@ -189,7 +189,7 @@ before the command or before a required scope argument):
 
 | Command | Use |
 |---|---|
-| `/docforge` | New plan, intake, or write |
+| `/docforge` | Fresh start: intake, plan, or write |
 | `/docforge --plan-only` | Plan / dry-run tree only |
 | `/docforge-revise all` | Full-tree structural refresh |
 | `/docforge-revise <area>` | Scoped revise (e.g. architecture) |

@@ -130,8 +130,8 @@ Ask only what remains unresolved, in this order:
      types they unlock, e.g. BA → `ba_*`, PO → `po_*`, Coding agents →
      `agents_*`). Still show **all seven** options so the user can confirm or
      **add more**. If the manifest has no audiences, use the new/plan-only
-     path above. Do not silent-keep the current set without that full
-     multi-select confirm/add-more prompt.
+     path above. Never keep defaults silently without that full multi-select
+     confirm/add-more prompt.
    - **Resume or Status**: omit audience when the manifest already resolves
      it; otherwise use the new/plan-only path. Single-document update/refresh
      does not re-prompt audience unless the named document's catalog
@@ -154,22 +154,22 @@ Ask only what remains unresolved, in this order:
    Explain that Auto-accept never approves installation, configuration,
    indexing, refreshes, archive/delete, or other separately approved side
    effects. Do not treat Goal's “planning without writing” as a substitute for
-   Execution mode, and do not default mode silently. If the reply omits mode,
-   ask one mode-only follow-up.
+   Execution mode, and never apply execution mode on silent defaults. If the reply
+   omits mode, ask one mode-only follow-up.
 
 Collect the applicable answers as one response. If the user supplied one or
 more choices in the original request, retain them and include only unresolved
- questions in the intake. For Resume or Status, omit tier, audience, and shape
- questions that the existing manifest already resolves. For
- `/docforge-revise all`, `/docforge-revise <area>`, `/docforge-revise flow`, or
- any revise that rediscovers docs, always stop and present the full question
- pack exactly like a fresh start — scope, tier (keep the manifest tier or
- change it repo-wide), the five profile dimensions, Output audience, and
- Execution mode — with the manifest's current values pre-checked as defaults
- and fresh detection shown as proposed additions. Do not proceed on silent
- defaults; collect the answers in one response, show the confirmation summary,
- and wait for explicit confirmation before continuing. If the reply leaves a
-material choice missing or ambiguous — including Output audience or Execution
+questions in the intake. For Resume or Status, omit tier, audience, and shape
+questions that the existing manifest already resolves. For
+`/docforge-revise all`, `/docforge-revise <area>`, `/docforge-revise flow`, or
+any revise that rediscovers docs, always stop and present the full question
+pack owned by `intake.md` exactly like a fresh start — Scope, Tier (keep the
+manifest tier or change it repo-wide), Profiles (shape / platform / framework /
+concern), Output audience, and Execution mode — with the manifest's current
+values pre-checked as defaults and fresh detection shown as proposed additions.
+Never proceed on silent defaults; collect the answers in one response, show the
+confirmation summary, and wait for explicit confirmation before continuing. If the reply
+leaves a material choice missing or ambiguous — including Output audience or Execution
 mode when required — ask one concise follow-up containing only those
 unresolved choices.
 
@@ -227,13 +227,13 @@ intake confirmation and all side-effect approvals remain mandatory under
 Shared flag definitions:
 [`../flags.md`](../flags.md). Intake-specific effects:
 
-- `--plan-only`: on `/docforge`, precheck, analyze, initialize the complete
-  static manifest, add discovered dynamic documents, and display the dry-run
-  tree (no placeholder documents). On `/docforge-revise`, run revise analysis
-  and show the structure update / dry-run tree; do not write or re-ground
-  document bodies.
-- `--auto-accept`: display each plan and result but continue without
-  conversational confirmation pauses; see [`../flags.md`](../flags.md) for the
+- `--plan-only`: analyze and show the plan / dry-run tree; do not write or
+  re-ground document bodies. On `/docforge`, precheck, analyze, initialize the
+  complete static manifest, add discovered dynamic documents, and display the
+  dry-run tree (no placeholder documents). On `/docforge-revise`, run revise
+  analysis and show the structure update / dry-run tree.
+- `--auto-accept`: display plans, trees, and results, then continue without
+  routine conversational pauses; see [`../flags.md`](../flags.md) for the
   explicit list of excluded side effects.
 
 Structural revise uses `/docforge-revise` (not `/docforge --revise`). There is

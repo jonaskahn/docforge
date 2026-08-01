@@ -43,12 +43,12 @@ no rediscovery, unless that document is untracked.
 ## Questions revise asks
 
 Revise always **stops and asks first**, using the interactive question pack owned by
-[`intake.md`](intake.md) — never silent defaults. Before migration, detection, or writing,
+[`intake.md`](intake.md) — never proceed on silent defaults. Before migration, detection, or writing,
 revise presents a discovery brief and one combined question set ([`intake.md`](intake.md)):
 
 1. **Scope** — `all`, `<area>`, or `flow` (pre-checked from invocation).
 2. **Tier** — keep current tier or change repo-wide (manifest value pre-checked).
-3. **Profiles** — shape, platform, framework, concern, audience (current pre-checked + fresh detected proposed).
+3. **Profiles** — shape, platform, framework, concern (current pre-checked + fresh detected proposed).
 4. **Output audience** — suitable missing pre-checked with unlock reasons (see [`intake.md`](intake.md)).
 5. **Execution mode** — review or Auto-accept.
 
@@ -115,7 +115,7 @@ directly with `scaffold_docs --dry-run --revise`.
 | Flag | Effect on revise |
 |---|---|
 | `--plan-only` | Run migrate, staleness sync, detect/catalog, suitable-missing-audiences prompt, and show the structure update / dry-run tree; stop before writing or re-grounding document bodies |
-| `--auto-accept` | Display trees and updates, then continue without routine conversational pauses; never authorizes install, graph build/refresh, archive/delete, or other side effects |
+| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, manifest initialization, root `INDEX.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](flags.md)) |
 
 Flags combine with a scope argument, e.g.
 `/docforge-revise flow --plan-only`.

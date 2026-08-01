@@ -5,8 +5,8 @@ description: Catalog-driven repository documentation with bounded repository-evi
 
 # Docforge
 
-Slash command: `/docforge`. Plan and write documentation from repository
-evidence. Shared cartridge: [`./_shared/`](./_shared/INDEX.md).
+Slash command: `/docforge`. Fresh-start documentation mode: plan and write new
+documentation from repository evidence. Shared cartridge: [`./_shared/`](./_shared/INDEX.md).
 
 ## Load order
 
@@ -40,7 +40,8 @@ then writing. Natural-language **update** / **refresh** of a named document →
 
 ## Other routes
 
-- Structural revise (`all` / `<area>` / `flow`) → sibling skill
+- Structural revise (`all` / `<area>` / `flow`) → structural refresh of an
+  existing plan/tree in sibling skill
   [`../docforge-revise/SKILL.md`](../docforge-revise/SKILL.md).
 - Staleness, migration, or a whole-tree/cross-document check →
   [`./_shared/workflows/validation.md`](./_shared/workflows/validation.md).
