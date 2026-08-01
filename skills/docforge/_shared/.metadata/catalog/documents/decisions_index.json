@@ -1,7 +1,7 @@
 {
   "id": "decisions_index",
   "type": "decision-index",
-  "summary": "Numeric decision router with title, status, date, and optional topic",
+  "summary": "What decision records are, the status lifecycle, and the reader question each record answers",
   "contract_file": "content/records/decision-index.contract.md",
   "path": "docs/architecture/decisions/README.md",
   "group": "records",
@@ -20,5 +20,6 @@
   "provenance_mode": "sections",
   "audit_profile": "router",
   "template_file": "content/shared/decision-index.template.md",
-  "contract_revision": "2.8.0"
+  "contract_revision": "2.9.0",
+  "title": "Decision log"
 }

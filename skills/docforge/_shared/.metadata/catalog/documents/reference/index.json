@@ -8,7 +8,7 @@
     {
       "id": "reference_index",
       "path": "reference_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Reference documentation overview: what this section covers and the reader question each reference document answers"
     },
     {
       "id": "configuration",

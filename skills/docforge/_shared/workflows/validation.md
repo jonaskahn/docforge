@@ -20,9 +20,11 @@ The command exits nonzero for any defect. When available, dispatch
 cross-document checks inline. The checks owned by
 [`../references/quality-bar.md`](../references/quality-bar.md) cover
 reachability, onboarding, location, reviewer, stranger, duplication, and host
-neutrality. A whole-tree discovery that changes one artifact sends that
-artifact through its independent audit again
-([`writing.md`](writing.md)).
+neutrality, plus README-specific checks: every section README links each
+selected and materialized direct child (the `readme child coverage` finding),
+and no section README routes readers into source files. A whole-tree discovery
+that changes one artifact sends that artifact through its independent audit
+again ([`writing.md`](writing.md)).
 
 ## Manifest and provenance
 

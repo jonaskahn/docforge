@@ -140,7 +140,7 @@ function makeDocument(definition, origins, evidence = [], catalogId = null) {
   // by the time this runs, so callers pass the original catalog id
   // explicitly via `catalogId`.
   const detail = queryCatalog.loadType(catalogId || definition.id);
-  return {
+  const document = {
     id: definition.id,
     title: detail.title || definition.id.replace(/[-_]/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
     type: definition.type,
@@ -160,6 +160,10 @@ function makeDocument(definition, origins, evidence = [], catalogId = null) {
     }),
     audit: null,
   };
+  if (detail.contract_revision !== undefined && detail.contract_revision !== null) {
+    document.contract_revision = detail.contract_revision;
+  }
+  return document;
 }
 const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
 const ORIGIN_KINDS = {
@@ -380,6 +384,50 @@ function cmdAdd(args) {
     return fail(error.message, 2);
   }
 }
+function syncContractRevisions(catalog, docs) {
+  // Refresh catalog-owned metadata on kept documents and demote written
+  // documents whose content-contract revision drifted (so a revise run
+  // re-grounds them even when source provenance is FRESH).
+  const contractUpdated = [];
+  for (const doc of docs) {
+    let catalogId = null;
+    if (doc.id === doc.type) {
+      catalogId = doc.id;
+    } else {
+      for (const candidate of catalog.documents) {
+        if (candidate.id === doc.id) {
+          catalogId = candidate.id;
+          break;
+        }
+        if (
+          candidate.type === doc.type
+          && (candidate.selection || {}).mode === "dynamic"
+        ) {
+          catalogId = candidate.id;
+        }
+      }
+      if (catalogId === null) continue;
+    }
+    const detail = queryCatalog.loadType(catalogId);
+    doc.title = detail.title || doc.title;
+    doc.scaffold_template = detail.template_file;
+    doc.instruction_file = detail.instruction_file === undefined ? null : detail.instruction_file;
+    if (detail.target_depth !== undefined) doc.target_depth = detail.target_depth;
+    if (detail.write_order !== undefined) doc.write_order = detail.write_order;
+    if (detail.audit_profile !== undefined) doc.audit_profile = detail.audit_profile;
+    doc.requires = [...(detail.requires || doc.requires || [])];
+    const revision = detail.contract_revision === undefined ? null : detail.contract_revision;
+    if (revision !== null && doc.contract_revision !== revision) {
+      doc.contract_revision = revision;
+      if (["generated", "needs_review", "complete"].includes(doc.status)) {
+        doc.status = "in_progress";
+        doc.audit = null;
+      }
+      contractUpdated.push(doc.id);
+    }
+  }
+  return contractUpdated;
+}
 function cmdReconcile(args) {
   let manifest;
   try {
@@ -421,6 +469,7 @@ function cmdReconcile(args) {
     }
   }
   const added = selected.filter((doc) => !keptIds.has(doc.id));
+  const contractUpdated = syncContractRevisions(catalog, kept);
   const oldTier = manifest.project.tier;
   manifest.documents = [...kept, ...added];
   manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
@@ -434,6 +483,7 @@ function cmdReconcile(args) {
   }
   if (added.length) console.log(`  added: ${added.map((doc) => doc.id).sort().join(", ")}`);
   if (removed.length) console.log(`  removed-planned: ${removed.sort().join(", ")}`);
+  if (contractUpdated.length) console.log(`  contract-updated: ${contractUpdated.sort().join(", ")}`);
   console.log(`  kept: ${kept.length} documents`);
   console.log("");
   for (const line of planLines(args.repo, manifest, path.join(args.repo, ".docforge", "flow-index.json"), true)) {

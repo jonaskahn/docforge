@@ -8,7 +8,7 @@
     {
       "id": "operations_index",
       "path": "operations_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Operations documentation overview: what this section covers and the reader question each operations document answers"
     },
     {
       "id": "deployment",
@@ -48,7 +48,7 @@
     {
       "id": "runbooks_index",
       "path": "runbooks_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Runbook documentation overview: what runbooks are, scope, and the reader question each runbook answers"
     },
     {
       "id": "infra_disaster_recovery",

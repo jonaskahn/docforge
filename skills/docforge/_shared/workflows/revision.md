@@ -13,6 +13,13 @@ apply in scope:
 1. **Update obsolete documents** — sync provenance and compare `git_blob`
    values; re-ground `PARTIAL` / `UNTRACKED` sections (see Update one
    document for the per-doc mechanics).
+1a. **Upgrade contract-drifted documents** — a document whose catalog
+   `contract_revision` changed is set `in_progress` with its audit cleared by
+   reconcile, even when its source provenance is `FRESH`. Re-ground the
+   affected sections (for section READMEs: introduction, at-a-glance, scope,
+   start-here, child map, empty state), preserve valid prose, lint, audit, and
+   complete it. A second revise is idempotent once the current revision is
+   complete.
 2. **Add documents from detect / catalog** — re-run profile detection and
    condition evidence when needed; select newly evidenced static and dynamic
    types; add them to the manifest in `write_order`.
@@ -85,7 +92,13 @@ Rules:
 - Written, skipped, and dynamic documents are always preserved — reconcile
   never deletes content or dynamic instances.
 - Ancestor indexes are recomputed with the new selection.
-- The command prints the delta (tier, profiles, added, removed-planned, kept)
+- Kept documents have their catalog-owned metadata refreshed (title,
+  template, instruction, depth, write order, audit profile, requires); written
+  documents whose `contract_revision` drifted are demoted to `in_progress` with
+  cleared audits and reported under `contract-updated` — re-ground them as in
+  step 1a even when source blobs are `FRESH`.
+- The command prints the delta (tier, profiles, added, removed-planned,
+  contract-updated, kept)
   and the annotated plan tree; then continue with `scaffold_docs --dry-run
   --revise` and the writing workflow.
 

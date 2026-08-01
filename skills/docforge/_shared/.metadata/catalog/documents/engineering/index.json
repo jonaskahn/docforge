@@ -8,7 +8,7 @@
     {
       "id": "engineering_index",
       "path": "engineering_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Engineering documentation overview: what this section covers and the reader question each engineering document answers"
     },
     {
       "id": "setup_guide",

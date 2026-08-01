@@ -8,12 +8,17 @@
     {
       "id": "portfolio_readme",
       "path": "portfolio_readme.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Portfolio overview: what the portfolio layer is, its boundary, and the reader question each portfolio document answers"
     },
     {
       "id": "portfolio_repo_inventory",
       "path": "portfolio_repo_inventory.json",
       "summary": "Discovered repositories, role, owner token, documentation state, evidence"
+    },
+    {
+      "id": "epics_index",
+      "path": "epics_index.json",
+      "summary": "Portfolio epics overview: what epics are and the reader question each epic answers"
     },
     {
       "id": "portfolio_system_context",
@@ -28,7 +33,7 @@
     {
       "id": "portfolio_decisions_index",
       "path": "portfolio_decisions_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Portfolio decisions overview: what these records are and the reader question each decision answers"
     },
     {
       "id": "epic",

@@ -114,5 +114,34 @@ Independent artifact-only audits may run concurrently, but their manifest
 results are recorded serially by the orchestrator as required by
 [`../references/parallel-execution.md`](../references/parallel-execution.md).
 
+## 6. Bottom-up README closeout
+
+Section READMEs are the top-down entry points of the tree, so they are
+finalized **after** their child documents — never before. Ancestor indexes may
+be scaffolded early (so the tree exists), but a README must not be grounded or
+audited until the children it routes to are materialized.
+
+After every selected document passes its independent audit, close out the
+READMEs deepest-first:
+
+```text
+deepest collection READMEs (concepts, runbooks, decisions, migrations, epics)
+→ area READMEs (architecture, product, engineering, operations, reference,
+  security, contributing, agents, portfolio)
+→ docs/README.md
+→ root README.md
+```
+
+For each README-capable document (`folder-index`, `docs-index`, `ba-index`,
+`po-index`, `portfolio-index`, `portfolio-decisions-index`, `decision-index`;
+`flow-index` is rendered from the flow index first), re-ground it from
+repository evidence and the completed children: self-introduction, at-a-glance,
+scope and boundaries, start-here reading paths, child map with one reader
+question per child, related sections, and an honest empty state when no child
+is evidenced. Stamp provenance per heading, run the mechanical gate
+(`lint_document` plus the `scaffold_docs --audit` README child-coverage check),
+then the independent audit, and record the result. Never restate child-owned
+facts or link a child that is not selected and materialized.
+
 Next: once every selected document passes individually, proceed to
 [`validation.md`](validation.md) for the whole-tree gate.

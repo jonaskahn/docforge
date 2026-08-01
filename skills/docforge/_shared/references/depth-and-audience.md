@@ -6,7 +6,10 @@ evidence changes a reader decision, implementation, diagnosis, review, or risk
 judgment.
 
 - **Orientation (`orientation`):** purpose, audience, boundary, selection condition, and next
-  links. It routes a reader; it does not summarize a child document.
+  links. Section READMEs at this depth are self-introductions: they explain
+  what the section is, its scope, a reading path, and the reader question each
+  child answers — without summarizing child content or carrying child-owned
+  facts.
 - **Working depth:** ordered behavior, important rules, inputs/outputs, common
   failures, and a success or verification condition. Include only the minimum
   mechanism needed to execute or maintain the work safely. (Catalog machine values

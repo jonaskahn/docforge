@@ -13,7 +13,7 @@
     {
       "id": "security_index",
       "path": "security_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Security documentation overview: what this section covers and the reader question each security document answers"
     },
     {
       "id": "threat_model",

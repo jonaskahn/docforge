@@ -1,7 +1,7 @@
 {
   "id": "portfolio_decisions_index",
   "type": "portfolio-decisions-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Portfolio decisions overview: what these records are and the reader question each decision answers",
   "contract_file": "content/portfolio/contracts/portfolio-decisions-index.md",
   "path": "docs-portfolio/decisions/README.md",
   "group": "portfolio",
@@ -19,5 +19,7 @@
   "write_order": 103,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Portfolio decisions",
+  "contract_revision": "2.9.0"
 }

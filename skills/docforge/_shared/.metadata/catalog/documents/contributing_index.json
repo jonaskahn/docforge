@@ -1,7 +1,7 @@
 {
   "id": "contributing_index",
   "type": "folder-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Contribution documentation overview: how this section guides contributors and the reader question each document answers",
   "contract_file": "content/shared/folder-index.contract.md",
   "path": "docs/contributing/README.md",
   "group": "contributing",
@@ -17,5 +17,7 @@
   "write_order": 85,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Contributing",
+  "contract_revision": "2.9.0"
 }

@@ -15,6 +15,12 @@ const LINK = /\[[^\]]*\]\(([^)]+)\)/g;
 const FORGE = /\b(github|gitlab|bitbucket|gitea|forgejo|sourcehut|azure devops|github actions|gitlab ci|codeowners)\b/gi;
 const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
+const INDEX_TYPES = new Set([
+  "folder-index", "docs-index", "portfolio-index", "portfolio-decisions-index",
+  "ba-index", "po-index", "decision-index", "flow-index",
+]);
+const CHILDREN_START = "<!-- docforge-children:start -->";
+const CHILDREN_END = "<!-- docforge-children:end -->";
 const SCALAR_PROVENANCE_FIELDS = new Set(
   [...pf.PROVENANCE_FIELDS].filter((key) => !["graph", "sections", "generator"].includes(key)),
 );
@@ -83,33 +89,39 @@ function isDirectChild(directory, candidate) {
   const parts = relative.split("/");
   return !relative.startsWith("..") && (parts.length === 1 || (parts.length === 2 && parts[1] === "README.md"));
 }
-function indexBody(doc, manifest) {
+function childRows(doc, manifest) {
   const directory = posixDirname(doc.path);
   const children = activeDocuments(manifest)
     .filter((candidate) => candidate.id !== doc.id && isDirectChild(directory, candidate))
     .sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path));
-  const lines = [
-    `# ${titleFor(doc)}`,
-    "",
-    "## Overview",
-    "",
-    "{{Explain this section's purpose, its major facts, boundaries, and how a reader should use the documents below.}}",
-    "",
-    "## Contents",
-    "",
-    "| Document | Purpose |",
-    "|---|---|",
-  ];
-  for (const child of children) {
+  const rows = children.map((child) => {
     const relative = path.posix.relative(directory, child.path);
-    lines.push(`| [${titleFor(child)}](${relative}) | {{Describe ${child.id} from repository evidence.}} |`);
+    return `| [${titleFor(child)}](${relative}) | {{the reader question ${child.id} answers}} |`;
+  });
+  if (!rows.length) {
+    return ["| _No documents are selected in this section yet; they are written when repository evidence selects them._ | — |"];
   }
-  if (!children.length) lines.push("| {{document}} | {{purpose}} |");
-  return scaffoldProvenance(doc, manifest) + lines.join("\n") + "\n";
+  return rows;
+}
+function expandChildrenBlock(body, doc, manifest) {
+  const start = body.indexOf(CHILDREN_START);
+  const end = body.indexOf(CHILDREN_END);
+  if (start === -1 || end === -1) return body;
+  const block = [CHILDREN_START, ...childRows(doc, manifest), CHILDREN_END].join("\n");
+  return body.slice(0, start) + block + body.slice(end + CHILDREN_END.length);
 }
 function scaffoldBody(doc, manifest) {
-  const indexes = new Set(["folder-index", "docs-index", "portfolio-index", "decision-index", "portfolio-decisions-index", "ba-index", "po-index"]);
-  if (indexes.has(doc.type)) return indexBody(doc, manifest);
+  if (INDEX_TYPES.has(doc.type)) {
+    const template = path.join(SKILL_ROOT, doc.scaffold_template);
+    if (!fs.existsSync(template)) throw new Error(`template not found for ${doc.id}: ${doc.scaffold_template}`);
+    let body = fs.readFileSync(template, "utf8");
+    const parsed = pf.parseFrontmatter(body);
+    if (parsed.state !== "missing" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
+      body = scaffoldProvenance(doc, manifest) + body.slice(parsed.end);
+    }
+    body = expandChildrenBlock(body, doc, manifest);
+    return body.replace("{{TITLE}}", titleFor(doc));
+  }
   const template = path.join(SKILL_ROOT, doc.scaffold_template);
   if (!fs.existsSync(template)) throw new Error(`template not found for ${doc.id}: ${doc.scaffold_template}`);
   let body = fs.readFileSync(template, "utf8");
@@ -281,6 +293,21 @@ function provenanceDefects(repo, doc, text, tier) {
 function headingAnchor(value) {
   return value.trim().toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, "").replace(/[\s-]+/g, "-").replace(/^-|-$/g, "");
 }
+function readmeChildCoverage(repo, doc, manifest, text) {
+  if (!INDEX_TYPES.has(doc.type)) return [];
+  const directory = posixDirname(doc.path);
+  const missing = [];
+  for (const candidate of activeDocuments(manifest)) {
+    if (candidate.id === doc.id) continue;
+    const relative = path.posix.relative(directory, candidate.path);
+    const parts = relative.split("/");
+    if (relative.startsWith("..")) continue;
+    if (!(parts.length === 1 || (parts.length === 2 && parts[1] === "README.md"))) continue;
+    if (!fs.existsSync(path.join(repo, ...candidate.path.split("/")))) continue;
+    if (!text.includes(relative) && !text.includes(`./${relative}`)) missing.push(candidate.path);
+  }
+  return missing;
+}
 function audit(repo, manifest) {
   const findings = {
     missing: [],
@@ -294,6 +321,7 @@ function audit(repo, manifest) {
     "unknown source": [],
     "unknown section": [],
     "broken links": [],
+    "readme child coverage": [],
     "invalid json": [],
     "folder-only promotion": [],
     "forge leakage": [],
@@ -346,6 +374,9 @@ function audit(repo, manifest) {
       if (!clean || /^(https?:\/\/|mailto:)/.test(clean)) continue;
       if (/\{\{[^}]+\}\}|<[A-Z][A-Z0-9_]{2,}>/.test(clean)) continue;
       if (!fs.existsSync(path.resolve(path.dirname(target), clean))) findings["broken links"].push(`${doc.path} -> ${link}`);
+    }
+    for (const item of readmeChildCoverage(repo, doc, manifest, text)) {
+      findings["readme child coverage"].push(`${doc.path}: missing link to ${item}`);
     }
   }
   for (const prefix of ["docs/flows/", "docs/architecture/concepts/"]) {

@@ -14,19 +14,19 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
-- `architecture_index` — Selected children and one-line purpose → [index.json](index.json)
+- `architecture_index` — What the system is and how it is built: section overview and one-line purpose of every selected architecture document → [index.json](index.json)
 - `arch_high_level` — Context, deployable or provisioned blocks labeled with implementing technology (e.g. 'React SPA', 'PostgreSQL 15', or for `infrastructure-platform`... → [index.json](index.json)
 - `arch_low_level` — Module/component responsibilities and their interfaces (or, for `infrastructure-platform`, resource-group / stack responsibilities and apply order); one... → [index.json](index.json)
 - `architecture_constraints` — Hard bounds with source and design implication; deliberate non-goals → [index.json](index.json)
 - `dependencies` — Direct dependencies/integrations, purpose, criticality, failure behavior → [index.json](index.json)
 - `tech_debt` — Shortcut, consequence, evidence, remediation direction → [index.json](index.json)
-- `concepts_index` — Selected children and one-line purpose → [index.json](index.json)
+- `concepts_index` — Section overview for architecture concepts: what concepts are, scope, and the reader question each concept answers → [index.json](index.json)
 - `app_lifecycle` — Launch/activation/background/termination states, ownership, restoration, failure boundaries → [index.json](index.json)
 - `concept` — One durable concept, responsibility, relationships, invariants, failure boundaries → [index.json](index.json)
 - `data_flow` — Producers, transformations, contracts, checks, failure/recovery, schema ownership → [index.json](index.json)
 - `ai_integration` — Model/provider boundary, prompts/inputs, outputs, evaluation, safety, privacy, failure → [index.json](index.json)
 - `app_ui_state` — Surfaces, navigation, state ownership, transitions, restoration, error presentation → [index.json](index.json)
-- `data_contracts_index` — Selected children and one-line purpose → [index.json](index.json)
+- `data_contracts_index` — Section overview for data contracts: scope, boundaries, and the reader question each contract document answers → [index.json](index.json)
 - `persistence` — Entities, storage mapping, migrations, transactions, consistency, failure recovery → [index.json](index.json)
 - `system_overview` — The handful of major capabilities; for each, the components it touches and its owning flow; the primary end-to-end path(s) tying features together; external... → [index.json](index.json)
 - `contract_system` — Contracts, storage, authorities, networks, upgrade boundary, economic/security invariants → [index.json](index.json)

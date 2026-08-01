@@ -24,9 +24,53 @@ class CatalogRecordTests(unittest.TestCase):
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]
-        self.assertEqual(len(document_types), 128)
+        self.assertEqual(len(document_types), 129)
         ids = [entry["id"] for entry in document_types]
         self.assertEqual(len(ids), len(set(ids)), "duplicate document ids in index.json")
+
+    def test_every_readme_record_has_title_summary_and_contract_revision(self) -> None:
+        readme_paths = {
+            "README.md",
+            "docs/README.md",
+            "docs/architecture/README.md",
+            "docs/architecture/concepts/README.md",
+            "docs/architecture/contracts/README.md",
+            "docs/architecture/decisions/README.md",
+            "docs/product/README.md",
+            "docs/product/migrations/README.md",
+            "docs/product/business-analyst/README.md",
+            "docs/product/product-owner/README.md",
+            "docs/flows/README.md",
+            "docs/engineering/README.md",
+            "docs/operations/README.md",
+            "docs/operations/runbooks/README.md",
+            "docs/reference/README.md",
+            "docs/security/README.md",
+            "docs/contributing/README.md",
+            "docs/agents/README.md",
+            "docs-portfolio/README.md",
+            "docs-portfolio/decisions/README.md",
+            "docs-portfolio/epics/README.md",
+        }
+        matched = {
+            entry["path"] for entry in self.index["document_types"] if entry["path"] in readme_paths
+        }
+        self.assertEqual(matched, readme_paths, "declared README paths must all be cataloged")
+        for entry in self.index["document_types"]:
+            if entry["path"] not in readme_paths:
+                continue
+            with self.subTest(path=entry["path"]):
+                detail = json.loads((CATALOG_DIR / entry["record"]).read_text(encoding="utf-8"))
+                self.assertTrue(detail.get("title"), f"{entry['id']}: title must be non-empty")
+                self.assertLessEqual(len(detail["title"]), 80)
+                self.assertTrue(
+                    detail.get("contract_revision"),
+                    f"{entry['id']}: contract_revision must be set",
+                )
+                self.assertTrue(
+                    detail["template_file"].startswith("content/"),
+                    f"{entry['id']}: template must live in content/",
+                )
 
     def test_profiles_path_map_resolves(self) -> None:
         for dimension, rel in self.index["profiles"].items():

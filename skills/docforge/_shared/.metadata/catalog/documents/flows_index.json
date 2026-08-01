@@ -19,5 +19,7 @@
   "write_order": 21,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/flows/flow-index.template.md"
+  "template_file": "content/flows/flow-index.template.md",
+  "title": "Flow index",
+  "contract_revision": "2.9.0"
 }

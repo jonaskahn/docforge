@@ -1,7 +1,7 @@
 {
   "id": "data_contracts_index",
   "type": "folder-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Section overview for data contracts: scope, boundaries, and the reader question each contract document answers",
   "contract_file": "content/shared/folder-index.contract.md",
   "path": "docs/architecture/contracts/README.md",
   "group": "architecture",
@@ -21,5 +21,7 @@
   "write_order": 17,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Data contracts",
+  "contract_revision": "2.9.0"
 }

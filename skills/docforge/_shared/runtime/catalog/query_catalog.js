@@ -175,6 +175,7 @@ function route(value) {
     requires: detail.requires || [],
     target_depth: detail.target_depth,
     audit_profile: detail.audit_profile,
+    contract_revision: detail.contract_revision === undefined ? null : detail.contract_revision,
     model_depth: modelDepth,
   };
 }

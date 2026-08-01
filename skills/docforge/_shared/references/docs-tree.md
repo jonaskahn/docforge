@@ -11,8 +11,11 @@ path list is `.metadata/catalog/` (queried via `runtime/cli/python/query_catalog
   agent shims/configuration.
 - Portfolio documents live under `docs-portfolio/`.
 - Collection folders use plural nouns; single-subject areas use singular nouns.
-- Every selected folder index is a manifest document. Its table is generated
-  from selected manifest entries, never from a generic empty list.
+- Every selected folder index is a manifest document. Its child map is generated
+  from selected manifest entries; the section overview around it (introduction,
+  scope, reading paths) is authored from repository evidence. A section README
+  is finalized after its child documents, so it links only materialized
+  documents.
 - Actual flows, decisions, runbooks, datasets, concepts, migrations,
   portfolio decisions, and epics are dynamically discovered. Do not create
   example files.
@@ -77,7 +80,9 @@ docs-portfolio/
 ```
 
 Actual cross-repository decisions and epics are dynamic entries under
-`docs-portfolio/decisions/` and `docs-portfolio/epics/`. Collection procedure and cross-repository writing
+`docs-portfolio/decisions/` and `docs-portfolio/epics/`; both collection
+indexes are catalog records (`portfolio_decisions_index`,
+`epics_index`). Collection procedure and cross-repository writing
 specifics live in [`portfolio.md`](portfolio.md).
 
 ## Typed profiles

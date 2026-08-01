@@ -1,7 +1,7 @@
 {
   "id": "ba_index",
   "type": "ba-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Business Analyst documentation overview: what this view covers and the reader question each BA document answers",
   "contract_file": "content/product/contracts/ba-index.md",
   "path": "docs/product/business-analyst/README.md",
   "group": "product",
@@ -23,5 +23,7 @@
   "write_order": 43,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/product/templates/ba-readme.md"
+  "template_file": "content/product/templates/ba-readme.md",
+  "title": "Business Analyst documentation",
+  "contract_revision": "2.9.0"
 }

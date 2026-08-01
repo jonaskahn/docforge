@@ -227,6 +227,7 @@ def route(value: str) -> dict:
         "requires": detail.get("requires", []),
         "target_depth": detail.get("target_depth"),
         "audit_profile": detail.get("audit_profile"),
+        "contract_revision": detail.get("contract_revision"),
         "model_depth": model_depth,
     }
 

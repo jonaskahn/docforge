@@ -729,6 +729,12 @@
       "record": "documents/portfolio/epic.json"
     },
     {
+      "id": "epics_index",
+      "tier": "portfolio",
+      "path": "docs-portfolio/epics/README.md",
+      "record": "documents/portfolio/epics_index.json"
+    },
+    {
       "id": "portfolio_security",
       "tier": "portfolio",
       "path": "docs-portfolio/security-posture.md",

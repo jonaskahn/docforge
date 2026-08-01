@@ -8,7 +8,7 @@
     {
       "id": "product_index",
       "path": "product_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Product documentation overview: what the product is, scope, and the reader question each product document answers"
     },
     {
       "id": "product_overview",
@@ -38,7 +38,7 @@
     {
       "id": "library_migrations_index",
       "path": "library_migrations_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Migration documentation overview: what migrations are, scope, and the reader question each migration document answers"
     },
     {
       "id": "localization",
@@ -48,7 +48,7 @@
     {
       "id": "ba_index",
       "path": "ba_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Business Analyst documentation overview: what this view covers and the reader question each BA document answers"
     },
     {
       "id": "migration",
@@ -73,7 +73,7 @@
     {
       "id": "po_index",
       "path": "po_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Product Owner documentation overview: what this view covers and the reader question each PO document answers"
     },
     {
       "id": "po_features",

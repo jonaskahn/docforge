@@ -78,6 +78,7 @@
         "title": {"type": "string", "minLength": 1},
         "type": {"type": "string"},
         "path": {"type": "string"},
+        "contract_revision": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
         "group": {"type": "string"},
         "selection": {
           "type": "object",

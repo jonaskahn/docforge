@@ -28,7 +28,7 @@
     {
       "id": "agents_index",
       "path": "agents_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Coding-agent views overview: what these views cover and the reader question each agent view answers"
     },
     {
       "id": "agents_architecture",

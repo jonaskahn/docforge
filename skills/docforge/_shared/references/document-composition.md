@@ -41,9 +41,11 @@ document does yet (topology-derived conventions, patterns exemplars).
 ## One owner per fact
 
 Choose the document whose reader question naturally owns a fact, write it there
-once, and link from every other view. Indexes summarize only enough to route.
-Agent and audience views do not restate architecture, flow steps, configuration,
-limitations, or glossary definitions.
+once, and link from every other view. Indexes summarize only enough to route;
+section READMEs own orientation (introduction, scope, reading path, and child
+map) and never duplicate child-owned facts. Agent and audience views do not
+restate architecture, flow steps, configuration, limitations, or glossary
+definitions.
 
 | Fact | Owner | Linked from |
 |---|---|---|

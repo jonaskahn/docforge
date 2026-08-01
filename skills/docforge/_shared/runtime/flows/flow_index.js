@@ -15,6 +15,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { spawnSync } = require("child_process");
 const { fail, readJson } = require("../common/_util.js");
 const pf = require("../common/provenance_frontmatter.js");
@@ -634,11 +635,37 @@ function markdown(index, tier = "spine", repo = null) {
     flow: "none",
     generated_at: generated,
   });
+  const sections = [];
+  if (repo) {
+    const flowFile = path.join(repo, ".docforge", "flow-index.json");
+    if (fs.existsSync(flowFile) && fs.statSync(flowFile).isFile()) {
+      const content = fs.readFileSync(flowFile);
+      const blob = crypto.createHash("sha1")
+        .update(Buffer.from(`blob ${content.length}\0`))
+        .update(content)
+        .digest("hex");
+      sections.push({
+        id: "flow-index",
+        sources: [{ path: ".docforge/flow-index.json", git_blob: blob, role: "manifest" }],
+        unresolved: [],
+      });
+    }
+  }
+  provenance.sections = sections;
   const lines = [
     "# Flow index", "",
-    "This is the complete evidence-backed flow candidate index. `main` priority",
-    "standalone rows get deep-dive documentation; `member` rows are composed into",
-    "a parent; `index_only` / deferred rows stay discoverable without stub files.",
+    "This index lists every evidence-backed flow candidate and routes readers",
+    "to the deep-dive flow documents. **Main** priority **standalone** rows get",
+    "deep-dive documentation; **member** rows are composed into a parent;",
+    "**index_only** / deferred rows stay discoverable without stub files.",
+    "",
+    "## How to read this index", "",
+    "Pick a flow by trigger or entry point. **main** rows are the current",
+    "operating paths and own deep-dive documents; **deferred** rows are",
+    "evidenced but not yet documented; **placeholder** rows are candidates",
+    "awaiting confirmation; **documented** rows point at their flow document;",
+    "**skipped** rows were examined and set aside. `Confidence` states how much",
+    "evidence backs the candidate; `Reach` is steps / boundaries / changes.",
     "",
   ];
   const flows = (index.flows || []).filter((row) => row && typeof row === "object");

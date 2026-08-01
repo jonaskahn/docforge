@@ -1,7 +1,7 @@
 {
   "id": "library_migrations_index",
   "type": "folder-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Migration documentation overview: what migrations are, scope, and the reader question each migration document answers",
   "contract_file": "content/shared/folder-index.contract.md",
   "path": "docs/product/migrations/README.md",
   "group": "product",
@@ -21,5 +21,7 @@
   "write_order": 42,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Migrations",
+  "contract_revision": "2.9.0"
 }

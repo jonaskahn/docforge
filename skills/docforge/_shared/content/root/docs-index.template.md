@@ -19,9 +19,17 @@ docforge_provenance:
 
 # Documentation
 
-{{One line: what this repository is.}}
+{{Two or three sentences that introduce the documentation itself: what this
+repository is, who the documentation is for, and how it is organized.}}
 
-## By audience
+## At a glance
+
+{{One or two sentences describing the overall documentation shape: product
+understanding, architecture, engineering practice, operations, reference, and
+security each live in their own section; audience-specific views exist for
+Business Analysts, Product Owners, and coding agents when selected.}}
+
+## Start here
 
 | You are | Read |
 |---|---|
@@ -32,17 +40,13 @@ docforge_provenance:
 | Reviewing risk | [security/](security/README.md) · [architecture/dependencies.md](architecture/dependencies.md) · [reference/limitations.md](reference/limitations.md) |
 | Contributing | [contributing/](contributing/README.md) |
 
-## By folder
+## Sections
 
-| Folder | Contents |
+<!-- docforge-children:start -->
+| Folder | Answers |
 |---|---|
-| [product/](product/) | What this does and why it exists — business language |
-| [architecture/](architecture/) | How it is built, and why — code map, flows, decisions, dependencies |
-| [engineering/](engineering/) | Setup, testing, conventions, release |
-| [operations/](operations/) | Deployment, observability, runbooks |
-| [reference/](reference/) | Configuration, limitations, errors, glossary |
-| [security/](security/) | Threat model, data handling, disclosure |
-| [contributing/](contributing/) | How changes get proposed, reviewed and merged |
+| {{section link}} | {{the reader question this section answers}} |
+<!-- docforge-children:end -->
 
 ## Conventions
 

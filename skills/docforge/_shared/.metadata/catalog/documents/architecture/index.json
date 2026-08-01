@@ -8,7 +8,7 @@
     {
       "id": "architecture_index",
       "path": "architecture_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "What the system is and how it is built: section overview and one-line purpose of every selected architecture document"
     },
     {
       "id": "arch_high_level",
@@ -38,7 +38,7 @@
     {
       "id": "concepts_index",
       "path": "concepts_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Section overview for architecture concepts: what concepts are, scope, and the reader question each concept answers"
     },
     {
       "id": "app_lifecycle",
@@ -68,7 +68,7 @@
     {
       "id": "data_contracts_index",
       "path": "data_contracts_index.json",
-      "summary": "Selected children and one-line purpose"
+      "summary": "Section overview for data contracts: scope, boundaries, and the reader question each contract document answers"
     },
     {
       "id": "persistence",

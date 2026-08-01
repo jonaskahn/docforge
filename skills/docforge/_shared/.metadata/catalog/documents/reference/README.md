@@ -14,7 +14,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
-- `reference_index` — Selected children and one-line purpose → [index.json](index.json)
+- `reference_index` — Reference documentation overview: what this section covers and the reader question each reference document answers → [index.json](index.json)
 - `configuration` — Every read setting, default, scope, sensitivity, validation → [index.json](index.json)
 - `limitations` — Known bounds, trigger, impact, workaround, source evidence → [index.json](index.json)
 - `glossary` — Repository terms, precise definitions, owning document links → [index.json](index.json)

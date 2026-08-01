@@ -1,7 +1,7 @@
 {
   "id": "architecture_index",
   "type": "folder-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "What the system is and how it is built: section overview and one-line purpose of every selected architecture document",
   "contract_file": "content/shared/folder-index.contract.md",
   "path": "docs/architecture/README.md",
   "group": "architecture",
@@ -17,5 +17,7 @@
   "write_order": 9,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Architecture",
+  "contract_revision": "2.9.0"
 }

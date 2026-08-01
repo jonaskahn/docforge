@@ -35,6 +35,12 @@ FORGE = re.compile(
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_PROVENANCE_FIELDS = PROVENANCE_FIELDS - {"graph", "sections", "generator"}
+INDEX_TYPES = {
+    "folder-index", "docs-index", "portfolio-index", "portfolio-decisions-index",
+    "ba-index", "po-index", "decision-index", "flow-index",
+}
+CHILDREN_START = "<!-- docforge-children:start -->"
+CHILDREN_END = "<!-- docforge-children:end -->"
 
 
 def resolve_manifest(value: Path, repo: Path) -> Path:
@@ -104,7 +110,7 @@ def scaffold_provenance(doc: dict, manifest: dict) -> str:
     return emit_document_frontmatter(doc["id"], title_for(doc), provenance)
 
 
-def index_body(doc: dict, manifest: dict) -> str:
+def child_rows(doc: dict, manifest: dict) -> list[str]:
     directory = PurePosixPath(doc["path"]).parent
     children = []
     for candidate in active_documents(manifest):
@@ -117,32 +123,39 @@ def index_body(doc: dict, manifest: dict) -> str:
             continue
         if len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md"):
             children.append(candidate)
-    lines = [
-        f"# {title_for(doc)}",
-        "",
-        "## Overview",
-        "",
-        "{{Explain this section's purpose, its major facts, boundaries, and how a reader should use the documents below.}}",
-        "",
-        "## Contents",
-        "",
-        "| Document | Purpose |",
-        "|---|---|",
+    children.sort(key=lambda item: (item["write_order"], item["path"]))
+    rows = [
+        f"| [{title_for(child)}]({PurePosixPath(child['path']).relative_to(directory).as_posix()}) | {{{{the reader question {child['id']} answers}}}} |"
+        for child in children
     ]
-    for child in sorted(children, key=lambda item: (item["write_order"], item["path"])):
-        relative = PurePosixPath(child["path"]).relative_to(directory).as_posix()
-        lines.append(f"| [{title_for(child)}]({relative}) | {{{{Describe {child['id']} from repository evidence.}}}} |")
-    if not children:
-        lines.append("| {{document}} | {{purpose}} |")
-    return scaffold_provenance(doc, manifest) + "\n".join(lines) + "\n"
+    if not rows:
+        return [
+            "| _No documents are selected in this section yet; they are written when repository evidence selects them._ | — |",
+        ]
+    return rows
+
+
+def expand_children_block(body: str, doc: dict, manifest: dict) -> str:
+    start = body.find(CHILDREN_START)
+    end = body.find(CHILDREN_END)
+    if start == -1 or end == -1:
+        return body
+    rows = child_rows(doc, manifest)
+    block = CHILDREN_START + "\n" + "\n".join(rows) + "\n" + CHILDREN_END
+    return body[:start] + block + body[end + len(CHILDREN_END):]
 
 
 def scaffold_body(doc: dict, manifest: dict) -> str:
-    if doc["type"] in {
-        "folder-index", "docs-index", "portfolio-index", "decision-index",
-        "portfolio-decisions-index", "ba-index", "po-index",
-    }:
-        return index_body(doc, manifest)
+    if doc["type"] in INDEX_TYPES:
+        template = SKILL_ROOT / doc["scaffold_template"]
+        if not template.is_file():
+            raise ValueError(f"template not found for {doc['id']}: {doc['scaffold_template']}")
+        body = template.read_text(encoding="utf-8")
+        state, _, body_start = codec_parse_frontmatter(body)
+        if state != "missing" and doc["path"] not in MARKDOWN_EXCEPTIONS:
+            body = scaffold_provenance(doc, manifest) + body[body_start:]
+        body = expand_children_block(body, doc, manifest)
+        return body.replace("{{TITLE}}", title_for(doc), 1)
     template = SKILL_ROOT / doc["scaffold_template"]
     if not template.is_file():
         raise ValueError(f"template not found for {doc['id']}: {doc['scaffold_template']}")
@@ -337,6 +350,29 @@ def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None
     return result
 
 
+def readme_child_coverage(repo: Path, doc: dict, manifest: dict, text: str) -> list[str]:
+    """Every materialized direct child of a section README must be linked."""
+    if doc["type"] not in INDEX_TYPES:
+        return []
+    directory = PurePosixPath(doc["path"]).parent
+    missing = []
+    for candidate in active_documents(manifest):
+        if candidate["id"] == doc["id"]:
+            continue
+        try:
+            relative = PurePosixPath(candidate["path"]).relative_to(directory)
+        except ValueError:
+            continue
+        if not (len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md")):
+            continue
+        if not (repo / candidate["path"]).is_file():
+            continue
+        rel = relative.as_posix()
+        if rel not in text and f"./{rel}" not in text:
+            missing.append(candidate["path"])
+    return missing
+
+
 def audit(repo: Path, manifest: dict) -> int:
     findings: dict[str, list[str]] = {
         "missing": [],
@@ -350,6 +386,7 @@ def audit(repo: Path, manifest: dict) -> int:
         "unknown source": [],
         "unknown section": [],
         "broken links": [],
+        "readme child coverage": [],
         "invalid json": [],
         "folder-only promotion": [],
         "forge leakage": [],
@@ -399,6 +436,10 @@ def audit(repo: Path, manifest: dict) -> int:
                 continue
             if not (target.parent / clean).resolve().exists():
                 findings["broken links"].append(f"{doc['path']} -> {link}")
+        findings["readme child coverage"].extend(
+            f"{doc['path']}: missing link to {item}" 
+            for item in readme_child_coverage(repo, doc, manifest, text)
+        )
     for prefix in ("docs/flows/", "docs/architecture/concepts/"):
         folders = {
             str(PurePosixPath(path).parent)

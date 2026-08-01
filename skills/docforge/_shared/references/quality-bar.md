@@ -11,7 +11,12 @@ This file owns mechanical and whole-tree acceptance.
 - no dead relative links;
 - no invented claims or untyped external unknowns;
 - no links into Docforge’s internal `references/` directory;
-- one primary mode and the catalog’s must-present/keep-out contract;
+- one primary mode and the catalog's must-present/keep-out contract;
+- section READMEs additionally: open with a self-introduction (what, why, for
+  whom), state scope and boundaries, offer a start-here reading path, link
+  every selected and materialized direct child with the reader question it
+  answers, and state an honest empty state when no child is evidenced — never
+  a placeholder row; they never navigate readers into source files;
 - required review date uses `_Last reviewed: YYYY-MM-DD_`;
 - provider and forge neutrality outside their explicit integration references
   (vocabulary and confinement craft: [`host-neutrality.md`](host-neutrality.md)).

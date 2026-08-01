@@ -1,25 +1,25 @@
 {
-  "id": "concepts_index",
+  "id": "epics_index",
   "type": "folder-index",
-  "summary": "Section overview for architecture concepts: what concepts are, scope, and the reader question each concept answers",
+  "title": "Epics",
+  "summary": "Portfolio epics overview: what epics are and the reader question each epic answers",
   "contract_file": "content/shared/folder-index.contract.md",
-  "path": "docs/architecture/concepts/README.md",
-  "group": "architecture",
+  "path": "docs-portfolio/epics/README.md",
+  "group": "portfolio",
   "selection": {
     "mode": "static",
-    "min_tier": "diligence",
+    "min_tier": "portfolio",
     "selectors": {},
     "condition": null
   },
   "instruction_file": "content/shared/folder-index.instruction.md",
   "requires": [
-    "code_graph"
+    "git_history"
   ],
   "target_depth": "orientation",
-  "write_order": 15,
+  "write_order": 102,
   "provenance_mode": "sections",
-  "audit_profile": "router",
+  "audit_profile": "portfolio",
   "template_file": "content/shared/section-readme.template.md",
-  "title": "Architecture concepts",
   "contract_revision": "2.9.0"
 }

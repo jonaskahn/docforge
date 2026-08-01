@@ -14,11 +14,12 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
-- `portfolio_readme` — Selected children and one-line purpose → [index.json](index.json)
+- `portfolio_readme` — Portfolio overview: what the portfolio layer is, its boundary, and the reader question each portfolio document answers → [index.json](index.json)
 - `portfolio_repo_inventory` — Discovered repositories, role, owner token, documentation state, evidence → [index.json](index.json)
+- `epics_index` — Portfolio epics overview: what epics are and the reader question each epic answers → [index.json](index.json)
 - `portfolio_system_context` — Repository/system boundaries, shared services, cross-repo flows, directed dependency edges between members with coupling type and resolution confidence → [index.json](index.json)
 - `portfolio_decision` — Cross-repository decision evidence or shared terminology with member links → [index.json](index.json)
-- `portfolio_decisions_index` — Selected children and one-line purpose → [index.json](index.json)
+- `portfolio_decisions_index` — Portfolio decisions overview: what these records are and the reader question each decision answers → [index.json](index.json)
 - `epic` — Initiative outcome; member repos spanned; per repo, owning flow/feature and component touched; cross-repo sequence tying them together; open gaps → [index.json](index.json)
 - `portfolio_security` — Cross-repo controls, gaps, shared dependencies, operational coupling → [index.json](index.json)
 - `portfolio_operations` — Cross-repo controls, gaps, shared dependencies, operational coupling → [index.json](index.json)

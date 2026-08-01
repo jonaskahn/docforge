@@ -9,7 +9,7 @@
         {
           "id": "docs_index",
           "path": "docs_index.json",
-          "summary": "Selected children and one-line purpose"
+          "summary": "Self-introduction to the documentation: what the repo is, who it serves, and the reader question each selected section answers"
         },
         {
           "id": "root_readme",
@@ -89,7 +89,7 @@
         {
           "id": "contributing_index",
           "path": "contributing_index.json",
-          "summary": "Selected children and one-line purpose"
+          "summary": "Contribution documentation overview: how this section guides contributors and the reader question each document answers"
         },
         {
           "id": "ownership",
@@ -106,7 +106,7 @@
         {
           "id": "decisions_index",
           "path": "decisions_index.json",
-          "summary": "Numeric decision router with title, status, date, and optional topic"
+          "summary": "What decision records are, the status lifecycle, and the reader question each record answers"
         },
         {
           "id": "adr",
@@ -120,7 +120,7 @@
       "id": "portfolio",
       "kind": "folder",
       "index": "portfolio/index.json",
-      "count": 10
+      "count": 11
     },
     {
       "id": "agent-context",

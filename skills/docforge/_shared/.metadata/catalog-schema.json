@@ -96,6 +96,7 @@
       "properties": {
         "id": {"type": "string"},
         "type": {"type": "string"},
+        "title": {"type": "string", "maxLength": 80},
         "path": {"type": "string"},
         "group": {"type": "string"},
         "selection": {

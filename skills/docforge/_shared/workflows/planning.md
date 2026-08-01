@@ -133,6 +133,11 @@ manifest, update it first and show a structure update before writing resumes:
 - changed requirements, selection origins, or write order;
 - the refreshed exact tree and updated document count.
 
+Section READMEs are scaffolded early but finalized bottom-up in the writing
+closeout (see [`writing.md`](writing.md)), after their child documents are
+materialized and audited — the plan tree lists them in write order, but their
+grounding waits for their children.
+
 In review mode, wait for confirmation of this updated tree. In auto-accept
 mode, display the same update and continue only when no separate side effect or
 destructive action needs approval. Never write against an undisplayed manifest

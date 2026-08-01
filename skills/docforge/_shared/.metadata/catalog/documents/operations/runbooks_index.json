@@ -1,7 +1,7 @@
 {
   "id": "runbooks_index",
   "type": "folder-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Runbook documentation overview: what runbooks are, scope, and the reader question each runbook answers",
   "contract_file": "content/shared/folder-index.contract.md",
   "path": "docs/operations/runbooks/README.md",
   "group": "operations",
@@ -17,5 +17,7 @@
   "write_order": 73,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Runbooks",
+  "contract_revision": "2.9.0"
 }

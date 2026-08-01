@@ -15,6 +15,7 @@ standard-library-only and equivalent to its Node peer.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -797,12 +798,38 @@ def markdown(index: dict, tier: str = "spine", repo: Path | None = None) -> str:
         flow="none",
         generated_at=generated,
     )
+    sections: list[dict] = []
+    if repo is not None:
+        flow_file = repo / ".docforge" / "flow-index.json"
+        if flow_file.is_file():
+            content = flow_file.read_bytes()
+            blob = hashlib.sha1(b"blob %d\0" % len(content) + content).hexdigest()
+            sections = [{
+                "id": "flow-index",
+                "sources": [{
+                    "path": ".docforge/flow-index.json",
+                    "git_blob": blob,
+                    "role": "manifest",
+                }],
+                "unresolved": [],
+            }]
+    provenance["sections"] = sections
     lines = [
         "# Flow index",
         "",
-        "This is the complete evidence-backed flow candidate index. `main` priority",
-        "standalone rows get deep-dive documentation; `member` rows are composed into",
-        "a parent; `index_only` / deferred rows stay discoverable without stub files.",
+        "This index lists every evidence-backed flow candidate and routes readers",
+        "to the deep-dive flow documents. **Main** priority **standalone** rows get",
+        "deep-dive documentation; **member** rows are composed into a parent;",
+        "**index_only** / deferred rows stay discoverable without stub files.",
+        "",
+        "## How to read this index",
+        "",
+        "Pick a flow by trigger or entry point. **main** rows are the current",
+        "operating paths and own deep-dive documents; **deferred** rows are",
+        "evidenced but not yet documented; **placeholder** rows are candidates",
+        "awaiting confirmation; **documented** rows point at their flow document;",
+        "**skipped** rows were examined and set aside. `Confidence` states how much",
+        "evidence backs the candidate; `Reach` is steps / boundaries / changes.",
         "",
     ]
 

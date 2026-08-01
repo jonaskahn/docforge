@@ -1,7 +1,7 @@
 {
   "id": "portfolio_readme",
   "type": "portfolio-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Portfolio overview: what the portfolio layer is, its boundary, and the reader question each portfolio document answers",
   "contract_file": "content/portfolio/contracts/portfolio-index.md",
   "path": "docs-portfolio/README.md",
   "group": "portfolio",
@@ -20,5 +20,7 @@
   "write_order": 100,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Portfolio",
+  "contract_revision": "2.9.0"
 }

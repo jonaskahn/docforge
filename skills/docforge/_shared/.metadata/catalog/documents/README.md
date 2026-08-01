@@ -20,7 +20,7 @@ Choose the subject area below, then use its generated group index to identify a 
 - [security/](security/index.json) — Security posture, permissions, and threat model. (8 documents)
 - contributing — Contribution guidelines and root-level contributor docs. (3 documents, flat)
 - records — Architecture decision records. (2 documents, flat)
-- [portfolio/](portfolio/index.json) — Cross-repository portfolio layer for multi-repo diligence. (10 documents)
+- [portfolio/](portfolio/index.json) — Cross-repository portfolio layer for multi-repo diligence. (11 documents)
 - [agent-context/](agent-context/index.json) — Agent-facing context: AGENTS.md and coding-agent views. (12 documents)
 
 ## Boundaries

@@ -14,7 +14,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
-- `operations_index` — Selected children and one-line purpose → [index.json](index.json)
+- `operations_index` — Operations documentation overview: what this section covers and the reader question each operations document answers → [index.json](index.json)
 - `deployment` — Environments, artifact path, rollout, rollback, verification → [index.json](index.json)
 - `distribution` — Artifact, build, signing, packaging, channels, verification, update/rollback → [index.json](index.json)
 - `flashing_recovery` — Prerequisites, artifact, connection, flashing, verification, rollback/recovery, safety → [index.json](index.json)
@@ -22,7 +22,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 - `observability` — Signals, ownership, correlation, alert intent, blind spots → [index.json](index.json)
 - `worker_reliability` — Retry, idempotency, timeout, backpressure, dead-letter, replay, observability → [index.json](index.json)
 - `infra_apply` — Plan/apply safety, external state, locking, ownership, resource inventory, drift, recovery → [index.json](index.json)
-- `runbooks_index` — Selected children and one-line purpose → [index.json](index.json)
+- `runbooks_index` — Runbook documentation overview: what runbooks are, scope, and the reader question each runbook answers → [index.json](index.json)
 - `infra_disaster_recovery` — Failure scenarios, recovery order, verification, data-loss boundary → [index.json](index.json)
 - `infra_state` — Plan/apply safety, external state, locking, ownership, resource inventory, drift, recovery → [index.json](index.json)
 - `runbook` — Symptom, safety, diagnosis, remediation, verification, escalation → [index.json](index.json)

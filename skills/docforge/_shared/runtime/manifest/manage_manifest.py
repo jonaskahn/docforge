@@ -196,7 +196,7 @@ def make_document(
     # id by the time this runs, so callers pass the original catalog id
     # explicitly via `catalog_id`.
     detail = query_catalog.load_type(catalog_id or definition["id"])
-    return {
+    document = {
         "id": definition["id"],
         "title": detail.get("title") or definition["id"].replace("_", " ").replace("-", " ").title(),
         "type": definition["type"],
@@ -221,6 +221,9 @@ def make_document(
         ),
         "audit": None,
     }
+    if detail.get("contract_revision") is not None:
+        document["contract_revision"] = detail["contract_revision"]
+    return document
 
 
 PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
@@ -460,6 +463,45 @@ def cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
+def sync_contract_revisions(catalog: dict, docs: list[dict]) -> list[str]:
+    """Refresh catalog-owned metadata on kept documents and demote written
+    documents whose content-contract revision drifted (so a revise run
+    re-grounds them even when source provenance is FRESH)."""
+    contract_updated: list[str] = []
+    for doc in docs:
+        catalog_id = None
+        if doc["id"] == doc.get("type"):
+            catalog_id = doc["id"]
+        else:
+            for candidate in catalog["documents"]:
+                if candidate["id"] == doc.get("id"):
+                    catalog_id = candidate["id"]
+                    break
+                if (
+                    candidate.get("type") == doc.get("type")
+                    and candidate.get("selection", {}).get("mode") == "dynamic"
+                ):
+                    catalog_id = candidate["id"]
+        if catalog_id is None:
+            continue
+        detail = query_catalog.load_type(catalog_id)
+        doc["title"] = detail.get("title") or doc["title"]
+        doc["scaffold_template"] = detail["template_file"]
+        doc["instruction_file"] = detail.get("instruction_file")
+        doc["target_depth"] = detail.get("target_depth", doc["target_depth"])
+        doc["write_order"] = detail.get("write_order", doc["write_order"])
+        doc["audit_profile"] = detail.get("audit_profile", doc["audit_profile"])
+        doc["requires"] = list(detail.get("requires", doc.get("requires", [])))
+        revision = detail.get("contract_revision")
+        if revision is not None and doc.get("contract_revision") != revision:
+            doc["contract_revision"] = revision
+            if doc["status"] in {"generated", "needs_review", "complete"}:
+                doc["status"] = "in_progress"
+                doc["audit"] = None
+            contract_updated.append(doc["id"])
+    return contract_updated
+
+
 def cmd_reconcile(args: argparse.Namespace) -> int:
     """Apply the revise question pack answers to an existing manifest.
 
@@ -506,6 +548,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         else:
             removed.append(doc["id"])
     added = [doc for doc in selected if doc["id"] not in kept_ids]
+    contract_updated = sync_contract_revisions(catalog, kept)
     old_tier = manifest["project"]["tier"]
     manifest["documents"] = kept + added
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
@@ -520,6 +563,8 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         print(f"  added: {', '.join(doc['id'] for doc in sorted(added, key=lambda d: d['id']))}")
     if removed:
         print(f"  removed-planned: {', '.join(sorted(removed))}")
+    if contract_updated:
+        print(f"  contract-updated: {', '.join(sorted(contract_updated))}")
     print(f"  kept: {len(kept)} documents")
     print()
     for line in plan_lines(args.repo, manifest, args.repo / ".docforge" / "flow-index.json", revise=True):

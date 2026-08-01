@@ -1,7 +1,7 @@
 {
   "id": "engineering_index",
   "type": "folder-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Engineering documentation overview: what this section covers and the reader question each engineering document answers",
   "contract_file": "content/shared/folder-index.contract.md",
   "path": "docs/engineering/README.md",
   "group": "engineering",
@@ -17,5 +17,7 @@
   "write_order": 50,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/shared/generic.template.md"
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Engineering",
+  "contract_revision": "2.9.0"
 }

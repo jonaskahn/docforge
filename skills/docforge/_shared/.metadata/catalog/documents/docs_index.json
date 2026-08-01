@@ -1,7 +1,7 @@
 {
   "id": "docs_index",
   "type": "docs-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Self-introduction to the documentation: what the repo is, who it serves, and the reader question each selected section answers",
   "contract_file": "content/root/docs-index.contract.md",
   "path": "docs/README.md",
   "group": "root",
@@ -19,5 +19,7 @@
   "write_order": 30,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/root/docs-index.template.md"
+  "template_file": "content/root/docs-index.template.md",
+  "title": "Documentation",
+  "contract_revision": "2.9.0"
 }

@@ -1,7 +1,7 @@
 {
   "id": "po_index",
   "type": "po-index",
-  "summary": "Selected children and one-line purpose",
+  "summary": "Product Owner documentation overview: what this view covers and the reader question each PO document answers",
   "contract_file": "content/product/contracts/po-index.md",
   "path": "docs/product/product-owner/README.md",
   "group": "product",
@@ -23,5 +23,7 @@
   "write_order": 47,
   "provenance_mode": "sections",
   "audit_profile": "router",
-  "template_file": "content/product/templates/po-readme.md"
+  "template_file": "content/product/templates/po-readme.md",
+  "title": "Product Owner documentation",
+  "contract_revision": "2.9.0"
 }

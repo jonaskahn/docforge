@@ -14,7 +14,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
-- `engineering_index` — Selected children and one-line purpose → [index.json](index.json)
+- `engineering_index` — Engineering documentation overview: what this section covers and the reader question each engineering document answers → [index.json](index.json)
 - `setup_guide` — Prerequisites, install, configuration, run, verification, recovery → [index.json](index.json)
 - `testing_guide` — Test layers, commands, fixtures, isolation, failure diagnosis → [index.json](index.json)
 - `conventions` — Evidenced style, structure, error, testing, and review conventions → [index.json](index.json)
