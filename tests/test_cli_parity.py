@@ -121,6 +121,27 @@ class RuntimeParityTests(unittest.TestCase):
                 results.append((settings, ignore))
             self.assertEqual(results[0], results[1])
 
+    def test_docforge_finish_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            results = {}
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                init = initialize(runtime, repo, "spine")
+                self.assertEqual(init.returncode, 0, init.stderr)
+                (repo / ".docforge" / "tmp" / "scratch.json").write_text("{}", encoding="utf-8")
+                finish = run(runtime, "manage_manifest", "finish", "--repo", str(repo))
+                self.assertEqual(finish.returncode, 0, finish.stderr)
+                results[runtime] = {
+                    "tmp_exists": (repo / ".docforge" / "tmp" / "scratch.json").exists(),
+                    "gitignore_exists": (repo / ".docforge" / ".gitignore").is_file(),
+                    "manifest_exists": (repo / ".docforge" / "manifest.json").is_file(),
+                }
+            self.assertEqual(results["py"], results["js"])
+            self.assertFalse(results["py"]["tmp_exists"])
+            self.assertTrue(results["py"]["gitignore_exists"])
+            self.assertTrue(results["py"]["manifest_exists"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { fail, loadManifest } = require("../common/_util.js");
+const { ensureDocforgeGitignore, fail, loadManifest } = require("../common/_util.js");
 const pf = require("../common/provenance_frontmatter.js");
 const { planEntries } = require("../common/plan.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../common/special_files.js");
@@ -166,6 +166,7 @@ function requiredIndexes(doc, manifest) {
   return ancestors.reverse().filter((item) => item !== doc.path && byPath[item]).map((item) => byPath[item]);
 }
 function materialize(repo, manifest, docId) {
+  ensureDocforgeGitignore(path.join(repo, ".docforge"));
   const doc = activeDocuments(manifest).find((item) => item.id === docId);
   if (!doc) return fail(`document id not found or skipped: ${docId}`, 2);
   try {

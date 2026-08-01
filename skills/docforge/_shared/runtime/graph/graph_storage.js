@@ -17,7 +17,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { ensureGitignoredDir } = require("../common/_util.js");
+const { ensureDocforgeGitignore, ensureGitignoredDir } = require("../common/_util.js");
 
 // Directories a graph file may live in, for diagnostics only. Detection
 // itself is per-source (each source declares its own candidate paths); this
@@ -142,6 +142,7 @@ function writeFlowGraph(repo, flowGraph, destRel = ".docforge/tmp") {
 // Drop $PROJECT_ROOT/.docforge/tmp/.gitignore containing '*' so the
 // provisional derived flow graph is never committed. Idempotent.
 function ensureTmpDirGitignored(repo) {
+  ensureDocforgeGitignore(path.join(path.resolve(repo), ".docforge"));
   return ensureGitignoredDir(path.join(path.resolve(repo), ".docforge", "tmp"));
 }
 

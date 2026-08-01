@@ -30,11 +30,75 @@ def dump_json(value: object) -> str:
     return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
 
 
+import shutil
+
+
+DOCFORGE_GITIGNORE_RULES: list[str] = [
+    "# Ephemeral run state and scratch space for Docforge",
+    "tmp/",
+    "audits/",
+    "scratch/",
+    "backups/",
+    "cache/",
+    "*.tmp",
+    "*.log",
+]
+
+
+def ensure_docforge_gitignore(docforge_dir: Path) -> Path:
+    """Create `docforge_dir` (.docforge) if needed and drop/update `.docforge/.gitignore`
+    containing standard ignore rules so ephemeral state (tmp/, audits/, scratch/)
+    is never committed, while persistent files (manifest.json, flow-index.json)
+    stay tracked in git history."""
+    docforge_dir.mkdir(parents=True, exist_ok=True)
+    gitignore = docforge_dir / ".gitignore"
+    if not gitignore.is_file():
+        gitignore.write_text("\n".join(DOCFORGE_GITIGNORE_RULES) + "\n", encoding="utf-8")
+    else:
+        existing_lines = gitignore.read_text(encoding="utf-8").splitlines()
+        missing = [
+            rule
+            for rule in DOCFORGE_GITIGNORE_RULES
+            if not rule.startswith("#") and rule not in existing_lines
+        ]
+        if missing:
+            content = gitignore.read_text(encoding="utf-8")
+            suffix = "" if not content or content.endswith("\n") else "\n"
+            gitignore.write_text(content + suffix + "\n".join(missing) + "\n", encoding="utf-8")
+    return gitignore
+
+
+def finish_docforge(docforge_dir: Path, clean_tmp: bool = True) -> dict:
+    """Finish docforge process by ensuring .gitignore is present and cleaning up
+    ephemeral run state inside .docforge (tmp/, scratch/). Returns status summary."""
+    ensure_docforge_gitignore(docforge_dir)
+    cleaned = []
+    if clean_tmp:
+        for folder_name in ("tmp", "scratch"):
+            folder = docforge_dir / folder_name
+            if folder.is_dir():
+                for item in folder.iterdir():
+                    if item.name == ".gitignore":
+                        continue
+                    if item.is_dir():
+                        shutil.rmtree(item)
+                    else:
+                        item.unlink()
+                cleaned.append(folder_name)
+    return {
+        "docforge_dir": str(docforge_dir),
+        "gitignore_ensured": True,
+        "cleaned_dirs": cleaned,
+    }
+
+
 def ensure_gitignored_dir(path: Path) -> Path:
     """Create `path` if needed and drop a `.gitignore` containing '*' inside
     it so its contents are never committed, in whichever repo Docforge is
     documenting. Idempotent."""
     path.mkdir(parents=True, exist_ok=True)
+    if path.name in ("tmp", "audits", "scratch") and path.parent.name == ".docforge":
+        ensure_docforge_gitignore(path.parent)
     gitignore = path / ".gitignore"
     if not gitignore.is_file():
         gitignore.write_text("*\n", encoding="utf-8")

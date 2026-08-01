@@ -76,3 +76,19 @@ and changes only each document's provenance section.
 A document is `complete` only with a passing `subagent` or `cold-pass` audit
 record. A run is complete only when every selected document is `complete` or
 explicitly `skipped`, and the whole-tree gate above exits zero.
+
+## Process completion & git state
+
+Docforge maintains persistent records and ephemeral run state under `.docforge/`:
+- **Tracked / Pushed to Git**: `.docforge/manifest.json`, `.docforge/flow-index.json`, `.docforge/.gitignore`.
+- **Ignored by Git**: `.docforge/tmp/`, `.docforge/audits/`, `.docforge/scratch/`, `.docforge/backups/`, `.docforge/cache/`, `*.tmp`, `*.log`.
+
+On fresh start or revision, `.docforge/.gitignore` is automatically created and maintained in `.docforge/`.
+Upon process completion, run:
+
+```sh
+python3 runtime/cli/python/manage_manifest.py finish --repo <repo>
+node runtime/cli/js/manage_manifest.js finish --repo <repo>
+```
+
+This ensures `.docforge/.gitignore` is up to date and cleans up ephemeral scratch directories (`tmp/`, `scratch/`), leaving only the persistent tracked files.

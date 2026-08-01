@@ -28,11 +28,72 @@ function dumpJson(value) {
   return JSON.stringify(value, null, 2) + "\n";
 }
 
+const DOCFORGE_GITIGNORE_RULES = [
+  "# Ephemeral run state and scratch space for Docforge",
+  "tmp/",
+  "audits/",
+  "scratch/",
+  "backups/",
+  "cache/",
+  "*.tmp",
+  "*.log",
+];
+
+function ensureDocforgeGitignore(docforgeDir) {
+  fs.mkdirSync(docforgeDir, { recursive: true });
+  const gitignore = path.join(docforgeDir, ".gitignore");
+  if (!fs.existsSync(gitignore)) {
+    fs.writeFileSync(gitignore, DOCFORGE_GITIGNORE_RULES.join("\n") + "\n", "utf-8");
+  } else {
+    const existing = fs.readFileSync(gitignore, "utf8").split(/\r?\n/);
+    const missing = DOCFORGE_GITIGNORE_RULES.filter(
+      (rule) => !rule.startsWith("#") && !existing.includes(rule),
+    );
+    if (missing.length > 0) {
+      let content = fs.readFileSync(gitignore, "utf8");
+      const suffix = !content || content.endsWith("\n") ? "" : "\n";
+      fs.writeFileSync(gitignore, content + suffix + missing.join("\n") + "\n", "utf-8");
+    }
+  }
+  return gitignore;
+}
+
+function finishDocforge(docforgeDir, options = {}) {
+  const cleanTmp = options.cleanTmp !== false;
+  ensureDocforgeGitignore(docforgeDir);
+  const cleaned = [];
+  if (cleanTmp) {
+    for (const folderName of ["tmp", "scratch"]) {
+      const folder = path.join(docforgeDir, folderName);
+      if (fs.existsSync(folder) && fs.statSync(folder).isDirectory()) {
+        const entries = fs.readdirSync(folder);
+        for (const entry of entries) {
+          if (entry === ".gitignore") continue;
+          const fullPath = path.join(folder, entry);
+          fs.rmSync(fullPath, { recursive: true, force: true });
+        }
+        cleaned.push(folderName);
+      }
+    }
+  }
+  return {
+    docforge_dir: docforgeDir,
+    gitignore_ensured: true,
+    cleaned_dirs: cleaned,
+  };
+}
+
 // Create dirPath if needed and drop a .gitignore containing '*' inside it so
 // its contents are never committed, in whichever repo Docforge is
 // documenting. Idempotent.
 function ensureGitignoredDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
+  if (
+    ["tmp", "audits", "scratch"].includes(path.basename(dirPath)) &&
+    path.basename(path.dirname(dirPath)) === ".docforge"
+  ) {
+    ensureDocforgeGitignore(path.dirname(dirPath));
+  }
   const gitignore = path.join(dirPath, ".gitignore");
   if (!fs.existsSync(gitignore)) fs.writeFileSync(gitignore, "*\n", "utf-8");
   return gitignore;
@@ -65,6 +126,9 @@ module.exports = {
   dumpJson,
   loadManifest,
   ensureGitignoredDir,
+  ensureDocforgeGitignore,
+  finishDocforge,
+  DOCFORGE_GITIGNORE_RULES,
 };
 
 if (require.main === module) {

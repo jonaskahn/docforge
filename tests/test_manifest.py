@@ -1138,6 +1138,38 @@ process.stdout.write(pf.emitYaml(value));
                 details = {item["detail"] for item in payload["defects"] if item["kind"] == "obsolete schema"}
                 self.assertTrue(any("migrate_metadata" in detail for detail in details))
 
+    def test_docforge_gitignore_and_finish_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            docforge_dir = repo / ".docforge"
+
+            result = run("py", "manage_manifest", "init", "--repo", str(repo), "--tier", "spine")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            gitignore = docforge_dir / ".gitignore"
+            self.assertTrue(gitignore.is_file())
+            content = gitignore.read_text(encoding="utf-8")
+            self.assertIn("tmp/", content)
+            self.assertIn("audits/", content)
+            self.assertIn("scratch/", content)
+            self.assertIn("backups/", content)
+            self.assertIn("cache/", content)
+
+            tmp_file = docforge_dir / "tmp" / "provisional.json"
+            scratch_file = docforge_dir / "scratch" / "profiles.json"
+            tmp_file.parent.mkdir(parents=True, exist_ok=True)
+            scratch_file.parent.mkdir(parents=True, exist_ok=True)
+            tmp_file.write_text("{}\n", encoding="utf-8")
+            scratch_file.write_text("{}\n", encoding="utf-8")
+            self.assertTrue(tmp_file.exists())
+            self.assertTrue(scratch_file.exists())
+
+            finish_res = run("py", "manage_manifest", "finish", "--repo", str(repo))
+            self.assertEqual(finish_res.returncode, 0, finish_res.stderr)
+            self.assertFalse(tmp_file.exists())
+            self.assertFalse(scratch_file.exists())
+            self.assertTrue((docforge_dir / "manifest.json").is_file())
+            self.assertTrue(gitignore.is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

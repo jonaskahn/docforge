@@ -10,7 +10,14 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
-from runtime.common._util import dump_json, ensure_gitignored_dir, fail, load_manifest
+from runtime.common._util import (
+    dump_json,
+    ensure_docforge_gitignore,
+    ensure_gitignored_dir,
+    fail,
+    finish_docforge,
+    load_manifest,
+)
 from runtime.common.plan import plan_lines
 from runtime.catalog.detect_profiles import detect as detect_profiles
 from runtime.common.provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
@@ -106,8 +113,7 @@ def save_manifest(repo: Path, manifest: dict) -> None:
     path = manifest_path(repo)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dump_json(manifest), encoding="utf-8")
-    # tmp/ (derived flow graph scratch) and audits/ (per-run reports) are
-    # ephemeral run state, never committed in whichever repo this is.
+    ensure_docforge_gitignore(path.parent)
     ensure_gitignored_dir(path.parent / "tmp")
     ensure_gitignored_dir(path.parent / "audits")
 
@@ -609,6 +615,17 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_finish(args: argparse.Namespace) -> int:
+    docforge_dir = args.repo / ".docforge"
+    if not docforge_dir.is_dir():
+        return fail(f".docforge directory not found: {docforge_dir}", 2)
+    result = finish_docforge(docforge_dir, clean_tmp=not args.keep_tmp)
+    cleaned = ", ".join(result["cleaned_dirs"]) if result["cleaned_dirs"] else "none"
+    print(f"finish  ensured {docforge_dir / '.gitignore'}")
+    print(f"finish  cleaned ephemeral scratch dirs: {cleaned}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -665,6 +682,12 @@ def build_parser() -> argparse.ArgumentParser:
     reconcile.add_argument("--concern", action="append", default=[])
     reconcile.add_argument("--audience", action="append", default=[])
     reconcile.set_defaults(func=cmd_reconcile)
+
+    finish = sub.add_parser("finish")
+    add_repo(finish)
+    finish.add_argument("--keep-tmp", action="store_true", help="Do not clean up tmp/ and scratch/")
+    finish.set_defaults(func=cmd_finish)
+
     return parser
 
 

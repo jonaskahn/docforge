@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { dumpJson, ensureGitignoredDir, fail, loadManifest } = require("../common/_util.js");
+const { dumpJson, ensureDocforgeGitignore, ensureGitignoredDir, fail, finishDocforge, loadManifest } = require("../common/_util.js");
 const { planLines } = require("../common/plan.js");
 const { detect: detectProfiles } = require("../catalog/detect_profiles.js");
 const pf = require("../common/provenance_frontmatter.js");
@@ -79,8 +79,7 @@ function saveManifest(repo, manifest) {
   const target = manifestPath(repo);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, dumpJson(manifest));
-  // tmp/ (derived flow graph scratch) and audits/ (per-run reports) are
-  // ephemeral run state, never committed in whichever repo this is.
+  ensureDocforgeGitignore(path.dirname(target));
   ensureGitignoredDir(path.join(path.dirname(target), "tmp"));
   ensureGitignoredDir(path.join(path.dirname(target), "audits"));
 }
@@ -243,10 +242,10 @@ function selectedStaticDocuments(catalog, repo, tier, profiles) {
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "add", "set", "audit", "status", "reconcile"]);
+  const knownCommands = new Set(["init", "add", "set", "audit", "status", "reconcile", "finish"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence"]);
-  const boolean = new Set(["force"]);
+  const boolean = new Set(["force", "keep-tmp"]);
   const allowed = {
     init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force"]),
     add: new Set(["repo", "type", "id", "path", "title", "evidence"]),
@@ -254,6 +253,7 @@ function parseArgs(argv) {
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
     reconcile: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience"]),
+    finish: new Set(["repo", "keep-tmp"]),
   }[command];
   const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [], evidence: [] };
   for (let i = 1; i < argv.length; i++) {
@@ -516,8 +516,21 @@ function cmdStatus(args) {
     return fail(error.message, 2);
   }
 }
+function cmdFinish(args) {
+  required(args, ["repo"]);
+  const docforgeDir = path.join(args.repo, ".docforge");
+  if (!fs.existsSync(docforgeDir) || !fs.statSync(docforgeDir).isDirectory()) {
+    return fail(`.docforge directory not found: ${docforgeDir}`, 2);
+  }
+  const cleanTmp = !args.keep_tmp;
+  const result = finishDocforge(docforgeDir, { cleanTmp });
+  const cleaned = result.cleaned_dirs.length > 0 ? result.cleaned_dirs.join(", ") : "none";
+  console.log(`finish  ensured ${path.join(docforgeDir, ".gitignore")}`);
+  console.log(`finish  cleaned ephemeral scratch dirs: ${cleaned}`);
+  return 0;
+}
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <subagent|cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path>");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <subagent|cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;
@@ -530,7 +543,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, add: cmdAdd, set: cmdSet, audit: cmdAudit, status: cmdStatus, reconcile: cmdReconcile }[args.command](args);
+    return { init: cmdInit, add: cmdAdd, set: cmdSet, audit: cmdAudit, status: cmdStatus, reconcile: cmdReconcile, finish: cmdFinish }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

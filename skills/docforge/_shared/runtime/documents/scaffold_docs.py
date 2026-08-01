@@ -9,7 +9,7 @@ import re
 import sys
 from pathlib import Path, PurePosixPath
 
-from runtime.common._util import fail, load_manifest
+from runtime.common._util import ensure_docforge_gitignore, fail, load_manifest
 from runtime.common.plan import plan_entries
 from runtime.common.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.provenance_frontmatter import (
@@ -206,6 +206,7 @@ def required_indexes(doc: dict, manifest: dict) -> list[dict]:
 
 
 def materialize(repo: Path, manifest: dict, doc_id: str) -> int:
+    ensure_docforge_gitignore(repo / ".docforge")
     matches = [doc for doc in active_documents(manifest) if doc["id"] == doc_id]
     if not matches:
         return fail(f"document id not found or skipped: {doc_id}", 2)

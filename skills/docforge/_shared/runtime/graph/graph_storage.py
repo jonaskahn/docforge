@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from runtime.common._util import ensure_gitignored_dir
+from runtime.common._util import ensure_docforge_gitignore, ensure_gitignored_dir
 
 # Directories a graph file may live in, for diagnostics only. Detection itself
 # is per-source (each source declares its own candidate paths); this list is
@@ -114,6 +114,7 @@ def write_flow_graph(repo: Path, flow_graph: dict, dest_rel: str = ".docforge/tm
 
 
 def ensure_tmp_dir_gitignored(repo: Path) -> Path:
-    """Drop $PROJECT_ROOT/.docforge/tmp/.gitignore containing '*' so the
+    """Drop $PROJECT_ROOT/.docforge/.gitignore and .docforge/tmp/.gitignore containing '*' so the
     provisional derived flow graph is never committed. Idempotent."""
+    ensure_docforge_gitignore(repo.resolve() / ".docforge")
     return ensure_gitignored_dir(repo.resolve() / ".docforge" / "tmp")
