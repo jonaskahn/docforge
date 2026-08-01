@@ -19,6 +19,7 @@ import json
 import os
 import posixpath
 import re
+import signal
 import shutil
 import socket
 import subprocess
@@ -701,12 +702,21 @@ def server_up(port: int) -> bool:
         return False
 
 
-def wait_for_server(port: int, log_path: Path, timeout: int = 180) -> None:
+class ServeInterrupted(Exception):
+    def __init__(self, signum: int):
+        super().__init__(f"dashboard serve interrupted by signal {signum}")
+        self.signum = signum
+
+
+def wait_for_server(port: int, log_path: Path, timeout: int = 180, interrupted=None) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
+        signum = interrupted() if interrupted else None
+        if signum:
+            raise ServeInterrupted(signum)
         if server_up(port):
             return
-        time.sleep(2)
+        time.sleep(0.25)
     tail = ""
     if log_path.is_file():
         lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -714,9 +724,12 @@ def wait_for_server(port: int, log_path: Path, timeout: int = 180) -> None:
     raise ValueError(f"dashboard server did not start within {timeout}s; last log lines:\n{tail}")
 
 
-def ensure_server(dashboard: Path, requested_port: int | None) -> dict:
+def ensure_server(dashboard: Path, requested_port: int | None, interrupted=None) -> dict:
     state = load_state(dashboard)
     log_path = dashboard / "dev.log"
+    signum = interrupted() if interrupted else None
+    if signum:
+        raise ServeInterrupted(signum)
     if state.get("pid") and state.get("dashboard") == str(dashboard.resolve()):
         if isinstance(state.get("pid"), int) and pid_alive(state["pid"]) and isinstance(state.get("port"), int):
             if server_up(state["port"]):
@@ -743,31 +756,69 @@ def ensure_server(dashboard: Path, requested_port: int | None) -> dict:
     })
     save_state(dashboard, new_state)
     try:
-        wait_for_server(port, log_path)
+        wait_for_server(port, log_path, interrupted=interrupted)
     except ValueError:
         proc.terminate()
         raise
     return {"pid": proc.pid, "port": port, "reused": False, "url": new_state["url"]}
 
 
+def process_group_alive(pid: int) -> bool:
+    try:
+        os.waitpid(pid, os.WNOHANG)
+    except (ChildProcessError, OSError):
+        pass
+    try:
+        os.killpg(pid, 0)
+        return True
+    except PermissionError:
+        return True
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return pid_alive(pid)
+
+
+def signal_process_group(pid: int, signum: int) -> bool:
+    try:
+        os.killpg(pid, signum)
+        return True
+    except (ProcessLookupError, PermissionError):
+        try:
+            os.kill(pid, signum)
+            return True
+        except OSError:
+            return False
+    except OSError:
+        return False
+
+
 def stop_server(dashboard: Path) -> dict:
     state = load_state(dashboard)
     pid = state.get("pid")
-    if isinstance(pid, int) and pid > 0:
-        try:
-            os.killpg(pid, 15)
-        except (ProcessLookupError, PermissionError):
-            try:
-                os.kill(pid, 15)
-            except OSError:
-                pass
-        except OSError:
-            pass
+    stopped = isinstance(pid, int) and pid > 0
+    forced = False
+    if stopped and process_group_alive(pid):
+        signal_process_group(pid, signal.SIGTERM)
+        deadline = time.time() + 3
+        while process_group_alive(pid) and time.time() < deadline:
+            time.sleep(0.05)
+        if process_group_alive(pid):
+            forced = signal_process_group(pid, signal.SIGKILL)
     state.pop("pid", None)
     state.pop("port", None)
     state.pop("url", None)
     save_state(dashboard, state)
-    return {"stopped": isinstance(pid, int) and pid > 0}
+    return {"stopped": stopped, "forced": forced}
+
+
+def supervise_server(pid: int, interrupted) -> int | None:
+    while process_group_alive(pid):
+        signum = interrupted()
+        if signum:
+            return signum
+        time.sleep(0.25)
+    return None
 
 
 def cmd_status(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:
@@ -907,9 +958,39 @@ def cmd_validate(args: argparse.Namespace, dashboard: Path, manifest: dict) -> i
 
 
 def cmd_serve(args: argparse.Namespace, dashboard: Path) -> int:
-    result = ensure_server(dashboard, args.port)
-    print(f"dashboard: {result['url']} (reused={result['reused']})")
-    return 0
+    stop_signal = None
+    watched = [signal.SIGINT, signal.SIGTERM]
+    for name in ("SIGHUP", "SIGTSTP"):
+        value = getattr(signal, name, None)
+        if value is not None:
+            watched.append(value)
+    previous = {value: signal.getsignal(value) for value in watched}
+
+    def request_stop(signum, _frame) -> None:
+        nonlocal stop_signal
+        if stop_signal is None:
+            stop_signal = signum
+
+    for value in watched:
+        signal.signal(value, request_stop)
+
+    try:
+        result = ensure_server(dashboard, args.port, interrupted=lambda: stop_signal)
+        print(f"dashboard: {result['url']} (reused={result['reused']})")
+        print("server attached; press Ctrl+C or Ctrl+Z to stop")
+        stop_signal = supervise_server(result["pid"], lambda: stop_signal)
+    except ServeInterrupted as exc:
+        stop_signal = exc.signum
+    finally:
+        for value, handler in previous.items():
+            signal.signal(value, handler)
+        stop_server(dashboard)
+
+    if stop_signal is not None:
+        print("dashboard server stopped")
+        return 128 + stop_signal
+    print("dashboard server exited unexpectedly")
+    return 1
 
 
 def cmd_stop(args: argparse.Namespace, dashboard: Path) -> int:

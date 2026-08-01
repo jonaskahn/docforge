@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
+import urllib.request
 from pathlib import Path
 
 from _support import (
@@ -28,6 +33,23 @@ def run_dashboard(runtime: str, *args: str) -> subprocess.CompletedProcess:
         else ["node", str(DASH_CLI_JS / "dashboard.js")]
     )
     return subprocess.run(command + list(args), cwd=ROOT, text=True, capture_output=True)
+
+
+def wait_until(predicate, timeout: float = 10) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def url_responds(url: str) -> bool:
+    try:
+        with urllib.request.urlopen(url, timeout=0.2):
+            return True
+    except Exception:  # noqa: BLE001 - refusal and HTTP errors both mean unavailable
+        return False
 
 INDEX_BODY = """# Documentation
 
@@ -210,6 +232,75 @@ class DashboardFingerprintTests(unittest.TestCase):
             (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             py_after = run_dashboard("py", "fingerprint", "--repo", str(repo)).stdout.strip()
             self.assertNotEqual(before, py_after)
+
+
+class DashboardServerTests(unittest.TestCase):
+    def test_serve_stays_attached_and_signals_stop_server(self) -> None:
+        fake_npm = """#!/usr/bin/env python3
+import http.server
+import sys
+
+port = int(sys.argv[sys.argv.index("-p") + 1])
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"ok")
+
+    def log_message(self, _format, *_args):
+        pass
+
+http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            npm = bin_dir / "npm"
+            npm.write_text(fake_npm, encoding="utf-8")
+            npm.chmod(0o755)
+            env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ.get("PATH", ""))
+
+            for runtime in ("py", "js"):
+                for stop_signal in (signal.SIGINT, signal.SIGTSTP):
+                    with self.subTest(runtime=runtime, signal=stop_signal):
+                        dashboard = root / f"dashboard-{runtime}-{stop_signal}"
+                        dashboard.mkdir()
+                        command = (
+                            [sys.executable, str(DASH_CLI_PY / "dashboard.py")]
+                            if runtime == "py"
+                            else ["node", str(DASH_CLI_JS / "dashboard.js")]
+                        )
+                        proc = subprocess.Popen(
+                            command + ["serve", "--dashboard", str(dashboard)],
+                            cwd=ROOT,
+                            text=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            env=env,
+                        )
+                        state_path = dashboard / ".docforge-dashboard.json"
+
+                        def running() -> bool:
+                            if not state_path.is_file():
+                                return False
+                            state = json.loads(state_path.read_text(encoding="utf-8"))
+                            return isinstance(state.get("url"), str) and url_responds(state["url"])
+
+                        self.assertTrue(wait_until(running), "dashboard server did not start")
+                        state = json.loads(state_path.read_text(encoding="utf-8"))
+                        url = state["url"]
+                        self.assertIsNone(proc.poll(), "serve command exited instead of staying attached")
+                        os.kill(proc.pid, stop_signal)
+                        stdout, stderr = proc.communicate(timeout=10)
+                        self.assertEqual(proc.returncode, 128 + stop_signal, stderr)
+                        self.assertIn("dashboard server stopped", stdout)
+                        stopped_state = json.loads(state_path.read_text(encoding="utf-8"))
+                        self.assertNotIn("pid", stopped_state)
+                        self.assertNotIn("port", stopped_state)
+                        self.assertNotIn("url", stopped_state)
+                        self.assertTrue(wait_until(lambda: not url_responds(url)), "server port remained open")
 
 
 class DashboardBuildTests(unittest.TestCase):

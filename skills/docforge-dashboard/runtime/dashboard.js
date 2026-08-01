@@ -14,6 +14,7 @@ const { execFileSync, spawn, spawnSync } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
 const net = require("net");
+const os = require("os");
 const path = require("path");
 
 const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../../docforge/_shared/runtime/common/_util.js");
@@ -753,11 +754,22 @@ async function serverUp(port) {
   }
 }
 
-async function waitForServer(port, logPath, timeout = 180) {
+class ServeInterrupted extends Error {
+  constructor(signal) {
+    super(`dashboard serve interrupted by ${signal}`);
+    this.signal = signal;
+  }
+}
+
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function waitForServer(port, logPath, timeout = 180, interrupted = () => null) {
   const deadline = Date.now() + timeout * 1000;
   while (Date.now() < deadline) {
+    const signal = interrupted();
+    if (signal) throw new ServeInterrupted(signal);
     if (await serverUp(port)) return;
-    await new Promise((r) => setTimeout(r, 2000));
+    await delay(250);
   }
   let tail = "";
   if (fs.existsSync(logPath)) {
@@ -767,9 +779,11 @@ async function waitForServer(port, logPath, timeout = 180) {
   throw new Error(`dashboard server did not start within ${timeout}s; last log lines:\n${tail}`);
 }
 
-async function ensureServer(dashboard, requestedPort) {
+async function ensureServer(dashboard, requestedPort, interrupted = () => null) {
   const state = loadState(dashboard);
   const logPath = path.join(dashboard, "dev.log");
+  const pendingSignal = interrupted();
+  if (pendingSignal) throw new ServeInterrupted(pendingSignal);
   if (state.pid && state.dashboard === path.resolve(dashboard)) {
     if (typeof state.pid === "number" && pidAlive(state.pid) && typeof state.port === "number") {
       if (await serverUp(state.port)) {
@@ -802,33 +816,66 @@ async function ensureServer(dashboard, requestedPort) {
   };
   saveState(dashboard, newState);
   try {
-    await waitForServer(port, logPath);
+    await waitForServer(port, logPath, 180, interrupted);
   } catch (error) {
-    proc.kill();
+    await stopServer(dashboard);
     throw error;
   }
   return { pid: proc.pid, port, reused: false, url: newState.url };
 }
 
-function stopServer(dashboard) {
+function processGroupAlive(pid) {
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch {
+    return pidAlive(pid);
+  }
+}
+
+function signalProcessGroup(pid, signal) {
+  try {
+    process.kill(-pid, signal);
+    return true;
+  } catch {
+    try {
+      process.kill(pid, signal);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+async function stopServer(dashboard) {
   const state = loadState(dashboard);
   const pid = state.pid;
-  if (typeof pid === "number" && pid > 0) {
-    try {
-      process.kill(-pid, "SIGTERM");
-    } catch {
-      try {
-        process.kill(pid, "SIGTERM");
-      } catch {
-        /* already gone */
-      }
+  const stopped = typeof pid === "number" && pid > 0;
+  let forced = false;
+  if (stopped && processGroupAlive(pid)) {
+    signalProcessGroup(pid, "SIGTERM");
+    const deadline = Date.now() + 3000;
+    while (processGroupAlive(pid) && Date.now() < deadline) {
+      await delay(50);
+    }
+    if (processGroupAlive(pid)) {
+      forced = signalProcessGroup(pid, "SIGKILL");
     }
   }
   delete state.pid;
   delete state.port;
   delete state.url;
   saveState(dashboard, state);
-  return { stopped: typeof pid === "number" && pid > 0 };
+  return { stopped, forced };
+}
+
+async function superviseServer(pid, interrupted) {
+  while (processGroupAlive(pid)) {
+    const signal = interrupted();
+    if (signal) return signal;
+    await delay(250);
+  }
+  return null;
 }
 
 async function cmdStatus(args, dashboard, manifest, templateDir) {
@@ -961,15 +1008,41 @@ function cmdValidate(args, dashboard, manifest) {
   return result.ok ? 0 : 1;
 }
 
-function cmdServe(args, dashboard) {
-  return ensureServer(dashboard, args.port).then((result) => {
+async function cmdServe(args, dashboard) {
+  let stopSignal = null;
+  const signals = ["SIGINT", "SIGTERM", "SIGHUP", "SIGTSTP"];
+  const handlers = new Map();
+  for (const signal of signals) {
+    const handler = () => {
+      if (!stopSignal) stopSignal = signal;
+    };
+    handlers.set(signal, handler);
+    process.on(signal, handler);
+  }
+
+  try {
+    const result = await ensureServer(dashboard, args.port, () => stopSignal);
     console.log(`dashboard: ${result.url} (reused=${result.reused})`);
-    return 0;
-  });
+    console.log("server attached; press Ctrl+C or Ctrl+Z to stop");
+    stopSignal = await superviseServer(result.pid, () => stopSignal);
+  } catch (error) {
+    if (error instanceof ServeInterrupted) stopSignal = error.signal;
+    else throw error;
+  } finally {
+    for (const [signal, handler] of handlers) process.off(signal, handler);
+    await stopServer(dashboard);
+  }
+
+  if (stopSignal) {
+    console.log("dashboard server stopped");
+    return 128 + (os.constants.signals[stopSignal] || 0);
+  }
+  console.log("dashboard server exited unexpectedly");
+  return 1;
 }
 
-function cmdStop(args, dashboard) {
-  const result = stopServer(dashboard);
+async function cmdStop(args, dashboard) {
+  const result = await stopServer(dashboard);
   console.log(`stopped: ${result.stopped}`);
   return 0;
 }
@@ -1047,7 +1120,7 @@ async function main() {
       case "serve":
         return await cmdServe(args, dashboard);
       case "stop":
-        return cmdStop(args, dashboard);
+        return await cmdStop(args, dashboard);
       default:
         return 2;
     }

@@ -80,6 +80,8 @@ PREFLIGHT -> FINGERPRINT -> METADATA RECONCILE -> OPTIONAL REVISE
   anchors, assets, and the docs index.
 - **Serve:** localhost-only dev server on a free port; PID and port are stored
   in `.docforge/dashboard/.docforge-dashboard.json` and reused while healthy.
+  The command stays attached and stops the server on `Ctrl+C`, `Ctrl+Z`, or
+  terminal closure.
 - **Open:** the dashboard at `http://127.0.0.1:<port>/docs`.
 
 ## Isolation rules

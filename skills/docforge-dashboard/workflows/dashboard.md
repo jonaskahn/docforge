@@ -239,6 +239,9 @@ node runtime/cli/js/dashboard.js serve --repo <repo> [--port N]
   `.docforge/dashboard/dev.log`;
 - polls `/docs` until it responds (timeout 180 s; on timeout, prints the log
   tail and fails);
+- stays attached to the terminal while the server runs; `Ctrl+C`, `Ctrl+Z`,
+  terminal closure, and termination signals stop the whole server process group
+  before the command exits (with forced termination after a short grace period);
 - ordinary content refreshes hot-reload; the server is restarted only when
   the app shell or dependencies changed.
 
