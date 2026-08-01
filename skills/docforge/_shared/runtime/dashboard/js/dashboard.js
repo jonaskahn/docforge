@@ -1017,6 +1017,7 @@ function stageBuild(dashboard, repo, manifest, templateDir, force) {
     return { converted: converted.converted, copied, validation };
   } catch (error) {
     fs.rmSync(staging, { recursive: true, force: true });
+    console.log("dashboard was NOT opened: the documentation failed the dashboard build; run /docforge-revise to fix it, then `dashboard start` again");
     throw error;
   }
 }

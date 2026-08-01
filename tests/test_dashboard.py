@@ -417,6 +417,8 @@ class DashboardBuildTests(unittest.TestCase):
                 result = run_dashboard("py", "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("unresolved internal link", result.stdout + result.stderr)
+                self.assertIn("dashboard was NOT opened", result.stdout + result.stderr)
+                self.assertIn("/docforge-revise", result.stdout + result.stderr)
             finally:
                 stop_dashboard("py", repo)
 
@@ -452,6 +454,8 @@ class DashboardBuildTests(unittest.TestCase):
                 broken = run_dashboard("py", "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
                 self.assertEqual(broken.returncode, 1)
                 self.assertIn("has no frontmatter", broken.stdout + broken.stderr)
+                self.assertIn("dashboard was NOT opened", broken.stdout + broken.stderr)
+                self.assertIn("/docforge-revise", broken.stdout + broken.stderr)
                 self.assertTrue(index.is_file(), "previous dashboard must survive a failed conversion")
                 self.assertFalse((repo / ".docforge" / "dashboard" / "content" / ".staging").exists())
             finally:

@@ -154,6 +154,21 @@ class SkillContentTests(unittest.TestCase):
             self.assertIn("URL reported in the final response", text)
             self.assertIn("Never finish a run with the docs", text)
 
+    def test_dashboard_failure_requests_revision_before_open(self) -> None:
+        """A failed dashboard build is never opened; the user is asked to
+        revise the documentation first."""
+        workflow = (SHARED_ROOT / "workflows" / "dashboard.md").read_text(encoding="utf-8")
+        self.assertIn("## When the build fails: revise before the dashboard", workflow)
+        self.assertIn("Never open the dashboard and never present the previous build", workflow)
+        self.assertIn("`/docforge-revise`", workflow)
+        self.assertIn("passes the whole-tree gate", workflow)
+        self.assertIn("`--auto-accept` does not waive this", workflow)
+        thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("## Validation failure", thin)
+        self.assertIn("is **not** opened", thin)
+        self.assertIn("`/docforge-revise`", thin)
+        self.assertIn("`--auto-accept` never skips this", thin)
+
     def test_help_supported_by_all_entrypoints(self) -> None:
         """--help is accepted by all three entrypoints and routes to the
         canonical per-entrypoint reference in _shared/help.md."""

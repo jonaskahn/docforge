@@ -981,6 +981,7 @@ def _stage_build(dashboard: Path, repo: Path, manifest: dict, template_dir: Path
     except Exception:
         if staging.exists():
             shutil.rmtree(staging)
+        print("dashboard was NOT opened: the documentation failed the dashboard build; run /docforge-revise to fix it, then `dashboard start` again")
         raise
 
 

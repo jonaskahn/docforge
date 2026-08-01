@@ -103,6 +103,32 @@ the read-only way to check whether the dashboard is up to date.
 `stop` stops the recorded dev server (whole process group, forced after a
 short grace period) and clears the PID/port state.
 
+## When the build fails: revise before the dashboard
+
+A `start` that cannot build is a **docs problem, not a view problem**: route
+plan problems, conversion failures, and validation errors (links, anchors,
+coverage, assets) exit `1` before install/serve/open, the previous dashboard
+is left untouched, and the dev server is never started.
+
+When `start` fails, the agent must:
+
+1. Present every error exactly as printed (route plan problems, conversion
+   errors, validation errors). Never summarize away a failing check.
+2. **Never open the dashboard and never present the previous build as
+   current** — the served site must reflect the documentation, and it does
+   not yet.
+3. Ask the user to **revise the documentation first** — recommend
+   [`workflows/revision.md`](revision.md) (`/docforge-revise`, scoped to the
+   area owning the failing documents, or `all`) — and ask whether to run it
+   now.
+4. Only after the revision passes the whole-tree gate
+   ([`validation.md`](validation.md)) and the next `dashboard start` succeeds,
+   serve and open the dashboard.
+
+`--auto-accept` does not waive this: a failed build is never opened, and the
+revise request is still asked (like other mandatory safety gates in
+[`flags.md`](flags.md)).
+
 ## What the dashboard is not
 
 - Never write outside `<repo>/.docforge/dashboard/` except the metadata

@@ -57,6 +57,16 @@ state), `stop` (shut down the background dev server). See
 [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md>)
 for the full lifecycle and isolation rules.
 
+## Validation failure
+
+If `dashboard start` fails (route plan problems, conversion errors, or
+validation errors), the dashboard is **not** opened and the previous build
+must not be presented as current. Show every error, then ask the user to
+**revise the documentation first** — `/docforge-revise` (scoped to the
+failing area, or `all`) — and only re-run `dashboard start` after the
+revision passes the whole-tree gate. `--auto-accept` never skips this
+request.
+
 ## Not this command
 
 - Fresh-start documentation plan → `/docforge`
