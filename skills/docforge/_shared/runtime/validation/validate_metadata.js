@@ -6,12 +6,13 @@ const fs = require("fs");
 const path = require("path");
 const { readJson } = require("../common/_util.js");
 const pf = require("../common/provenance_frontmatter.js");
+const { SPECIAL_DOC_SOURCES } = require("../common/special_files.js");
 const queryCatalog = require("../catalog/query_catalog.js");
 const generateIndexes = require("./generate_indexes.js");
 
 const SKILL_ROOT = path.resolve(__dirname, "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
-const EXCEPTIONS = new Set(["agents-kernel.md", "claude-md.md", "claude-local-md.md"]);
+const EXCEPTIONS = SPECIAL_DOC_SOURCES;
 const CATALOG_VERSION = "2.7.0";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "status", "audit", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report"],

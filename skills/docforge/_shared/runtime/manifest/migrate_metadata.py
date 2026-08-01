@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 from runtime.common._util import fail, load_manifest
+from runtime.common.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.provenance_frontmatter import (
     FLOW_VALUES,
     LEGACY_SCHEMA,
@@ -32,7 +33,7 @@ from runtime.common.provenance_frontmatter import (
 
 MANIFEST_CURRENT = "3.1"
 MANIFEST_LEGACY = "3.0"
-MARKDOWN_EXCEPTIONS = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
+MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
 MANIFEST_LOAD = {

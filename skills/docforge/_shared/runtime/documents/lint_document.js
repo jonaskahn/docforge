@@ -34,6 +34,7 @@ const path = require("path");
 const pf = require("../common/provenance_frontmatter.js");
 const { validateLocators } = require("../common/evidence_locators.js");
 const { illustrationDefects: budgetDefects } = require("../common/illustration_metrics.js");
+const { SPECIAL_DOC_OUTPUTS } = require("../common/special_files.js");
 
 const SCAFFOLD_RE = /\{\{.*?\}\}/g;
 const TOKEN_RE = /<[A-Z][A-Z0-9_]*>/g;
@@ -50,7 +51,7 @@ const TREE_GLYPH_RE = /[│├└┌]/;
 const SCALAR_PROVENANCE_FIELDS = new Set(
   [...pf.PROVENANCE_FIELDS].filter((key) => !["graph", "sections", "generator"].includes(key)),
 );
-const MARKDOWN_EXCEPTIONS = new Set(["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"]);
+const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 
 function isExternalLink(target) {
   const t = target.trim();

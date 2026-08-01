@@ -11,13 +11,14 @@ from pathlib import Path
 
 from runtime.common._util import read_json
 from runtime.common.provenance_frontmatter import PROVENANCE_FIELDS, SCHEMA_VERSION, parse_frontmatter
+from runtime.common.special_files import SPECIAL_DOC_SOURCES
 from . import generate_indexes
 from runtime.catalog import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
 CATALOG_VERSION = "2.7.0"
-MARKDOWN_EXCEPTIONS = {"agents-kernel.md", "claude-md.md", "claude-local-md.md"}
+MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "status", "audit", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report"],
     "detect_profiles": ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],

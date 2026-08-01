@@ -376,6 +376,13 @@ class ProfileSelectionTests(unittest.TestCase):
             failed = apply_judgment(pack["detections"], bad, pack)
             self.assertFalse(failed["ok"])
 
+    def test_glob_matcher_single_star_does_not_cross_slash(self) -> None:
+        from runtime.catalog.detect_profiles import matches_path
+
+        self.assertTrue(matches_path("src/app.py", "src/*.py"))
+        self.assertFalse(matches_path("src/nested/app.py", "src/*.py"))
+        self.assertTrue(matches_path("src/nested/app.py", "src/**/*.py"))
+
 
 if __name__ == "__main__":
     unittest.main()

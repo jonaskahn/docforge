@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 
 from runtime.common._util import fail, load_manifest
 from runtime.common.plan import plan_entries
+from runtime.common.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.provenance_frontmatter import (
     BLOB,
     FLOW_VALUES,
@@ -31,7 +32,7 @@ FORGE = re.compile(
     r"github actions|gitlab ci|codeowners)\b",
     re.IGNORECASE,
 )
-MARKDOWN_EXCEPTIONS = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
+MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_PROVENANCE_FIELDS = PROVENANCE_FIELDS - {"graph", "sections", "generator"}
 

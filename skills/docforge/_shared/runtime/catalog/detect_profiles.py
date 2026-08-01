@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -38,15 +39,38 @@ TEXT_NAMES = {
 }
 
 
+def glob_regex(pattern: str) -> re.Pattern[str]:
+    expression = []
+    index = 0
+    while index < len(pattern):
+        char = pattern[index]
+        if char == "*" and index + 1 < len(pattern) and pattern[index + 1] == "*":
+            expression.append(".*")
+            index += 2
+        elif char == "*":
+            expression.append("[^/]*")
+            index += 1
+        elif char == "?":
+            expression.append("[^/]")
+            index += 1
+        else:
+            expression.append(re.escape(char))
+            index += 1
+    return re.compile(f"^{''.join(expression)}$")
+
+
 def matches_path(relative: str, pattern: str) -> bool:
-    path = PurePosixPath(relative)
     patterns = [pattern]
     if pattern.startswith("**/"):
         patterns.append(pattern[3:])
-    return any(
-        fnmatch.fnmatchcase(relative, candidate) or path.match(candidate)
-        for candidate in patterns
-    )
+    basename = PurePosixPath(relative).name
+    for candidate in patterns:
+        regex = glob_regex(candidate)
+        if regex.match(relative):
+            return True
+        if "/" not in candidate and regex.match(basename):
+            return True
+    return False
 
 
 def signal_strength(signal: dict) -> str:

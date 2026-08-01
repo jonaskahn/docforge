@@ -48,6 +48,7 @@ from runtime.common.provenance_frontmatter import (
     parse_frontmatter as codec_parse_frontmatter,
 )
 from runtime.common.evidence_locators import validate_locators
+from runtime.common.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.illustration_metrics import illustration_defects as budget_defects
 
 SCAFFOLD_RE = re.compile(r"\{\{.*?\}\}")
@@ -68,7 +69,7 @@ MERMAID_FORBIDDEN_RE = re.compile(r"(?:^|\s)(style\s|classDef|click\s)")
 MERMAID_RESERVED_NODE_RE = re.compile(r"\b(end|graph|subgraph)\b\s*[\[\(\{]", re.IGNORECASE)
 TREE_GLYPH_RE = re.compile(r"[│├└┌]")
 SCALAR_PROVENANCE_FIELDS = PROVENANCE_FIELDS - {"graph", "sections", "generator"}
-MARKDOWN_EXCEPTIONS = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
+MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 
 
 def is_external_link(target: str) -> bool:

@@ -38,3 +38,11 @@ link.
 
 See [`workflows/INDEX.md`](workflows/INDEX.md) to route an unfamiliar
 invocation to exactly one file.
+
+## Internal Runtime Conventions
+
+- **Dual Field Naming**: Catalog records own `template_file` (specifying the source template path under `content/`), while materialized project manifests carry `scaffold_template` (copied from `template_file` during manifest scaffolding to maintain legacy manifest compatibility).
+- **Two Special-File Sets**: The runtime maintains two distinct special-file sets defined in [`runtime/common/special_files`](runtime/common/special_files.py):
+  - `SPECIAL_DOC_SOURCES` (`{"agents-kernel.md", "claude-md.md", "claude-local-md.md"}`): template source filenames scanned during metadata validation (`validate_metadata`).
+  - `SPECIAL_DOC_OUTPUTS` (`{"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}`): materialized output doc filenames that bypass standard linting and scaffolding constraints (`scaffold_docs`, `lint_document`, `migrate_metadata`).
+

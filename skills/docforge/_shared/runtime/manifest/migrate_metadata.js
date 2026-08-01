@@ -14,10 +14,11 @@ const fs = require("fs");
 const path = require("path");
 const { fail, loadManifest } = require("../common/_util.js");
 const pf = require("../common/provenance_frontmatter.js");
+const { SPECIAL_DOC_OUTPUTS } = require("../common/special_files.js");
 
 const MANIFEST_CURRENT = "3.1";
 const MANIFEST_LEGACY = "3.0";
-const MARKDOWN_EXCEPTIONS = new Set(["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"]);
+const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
 const MANIFEST_LOAD = {
