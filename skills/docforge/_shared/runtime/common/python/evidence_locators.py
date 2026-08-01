@@ -43,12 +43,14 @@ def _outside_fences(text: str) -> list[tuple[int, str]]:
 def validate_locators(document: Path, text: str | None = None) -> list[dict]:
     """Return structured locator defects without broadening provenance 2.0."""
     text = document.read_text(encoding="utf-8", errors="replace") if text is None else text
+    document = document.resolve()
     state, provenance, body_start = parse_frontmatter(text)
     if state != "ok" or not isinstance(provenance, dict):
         return []
     body = text[body_start:]
+    body_line0 = text[:body_start].count("\n")
     headings: list[tuple[int, str]] = [
-        (body_start + index, _anchor(match.group(2)))
+        (body_line0 + index, _anchor(match.group(2)))
         for index, line in enumerate(body.splitlines(), 1)
         if (match := HEADING_RE.match(line))
     ]

@@ -28,12 +28,14 @@ function outsideFences(text) {
   return lines;
 }
 function validateLocators(document, text = null) {
+  document = path.resolve(document);
   const contents = text == null ? fs.readFileSync(document, "utf8") : text;
   const parsed = pf.parseFrontmatter(contents);
   if (parsed.state !== "ok" || !parsed.provenance || typeof parsed.provenance !== "object") return [];
   const headings = [];
+  const bodyLine0 = contents.slice(0, parsed.end).split(/\r?\n/).length;
   for (const [index, line] of contents.slice(parsed.end).split(/\r?\n/).entries()) {
-    const match = line.match(HEADING); if (match) headings.push([parsed.end + index + 1, anchor(match[2])]);
+    const match = line.match(HEADING); if (match) headings.push([bodyLine0 + index + 1, anchor(match[2])]);
   }
   const sourcePairs = new Map();
   for (const section of parsed.provenance.sections || []) {
