@@ -20,5 +20,6 @@
   "provenance_mode": "sections",
   "audit_profile": "flow",
   "dominant_form": "sequenceDiagram",
-  "template_file": "content/shared/topic-readme.template.md"
+  "contract_revision": "2.12.0",
+  "template_file": "content/flows/flow.template.md"
 }

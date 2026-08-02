@@ -24,13 +24,13 @@ _Last reviewed: {{YYYY-MM-DD}}_
 
 **Before**
 
-```{{language}}
+```{{language}} docforge-role=code
 {{old}}
 ```
 
 **After**
 
-```{{language}}
+```{{language}} docforge-role=code
 {{new}}
 ```
 

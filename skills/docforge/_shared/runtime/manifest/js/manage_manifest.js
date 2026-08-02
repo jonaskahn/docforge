@@ -131,7 +131,7 @@ function validateSelectionEvidence(repo, values) {
   }
   return validated;
 }
-function makeDocument(definition, origins, evidence = [], catalogId = null) {
+function makeDocument(definition, origins, evidence = [], catalogId = null, audiences = []) {
   // `definition` comes from the legacy-view catalog (bare filenames, kept
   // stable for --legacy CLI output); the manifest's scaffold_template must
   // be a skill-root-relative path so scaffold_docs.js can locate the file
@@ -140,6 +140,7 @@ function makeDocument(definition, origins, evidence = [], catalogId = null) {
   // by the time this runs, so callers pass the original catalog id
   // explicitly via `catalogId`.
   const detail = queryCatalog.loadType(catalogId || definition.id);
+  const [primaryAudience, presentation] = queryCatalog.resolvePresentation(detail, audiences);
   const document = {
     id: definition.id,
     title: detail.title || definition.id.replace(/[-_]/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -155,6 +156,7 @@ function makeDocument(definition, origins, evidence = [], catalogId = null) {
     write_order: definition.write_order,
     provenance_mode: definition.provenance_mode,
     audit_profile: definition.audit_profile,
+    presentation: { primary_audience: primaryAudience, ...presentation },
     provenance: pf.scaffoldProvenance(definition.id, definition.path, {
       target_depth: definition.target_depth,
     }),
@@ -202,7 +204,7 @@ function matchingOrigins(rule, profiles) {
   }
   return origins;
 }
-function addAncestorIndexes(catalog, selected) {
+function addAncestorIndexes(catalog, selected, audiences) {
   const indexTypes = new Set(["folder-index", "docs-index", "portfolio-index", "decision-index", "portfolio-decisions-index", "flow-index"]);
   const definitions = new Map(catalog.documents
     .filter((item) => item.selection.mode === "static" && indexTypes.has(item.type))
@@ -217,7 +219,7 @@ function addAncestorIndexes(catalog, selected) {
         const candidate = path.posix.join(parent, "README.md");
         const definition = definitions.get(candidate);
         if (definition && !selectedPaths.has(candidate)) {
-          selected.push(makeDocument(definition, [{ kind: "ancestor", id: child.id }]));
+          selected.push(makeDocument(definition, [{ kind: "ancestor", id: child.id }], [], null, audiences));
           selectedPaths.add(candidate);
           changed = true;
         }
@@ -241,22 +243,23 @@ function selectedStaticDocuments(catalog, repo, tier, profiles) {
     if (rule.condition && !evidence.length) continue;
     if (!hasSelectors) origins.push({ kind: "tier", id: rule.min_tier });
     if (rule.condition) origins.push({ kind: "condition", id: rule.condition });
-    selected.push(makeDocument(definition, origins, evidence));
+    selected.push(makeDocument(definition, origins, evidence, null, profiles.audiences));
   }
-  addAncestorIndexes(catalog, selected);
+  addAncestorIndexes(catalog, selected, profiles.audiences);
   return selected.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
 }
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "add", "set", "audit", "status", "reconcile", "finish"]);
+  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "reconcile", "finish"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence"]);
-  const boolean = new Set(["force", "keep-tmp"]);
+  const boolean = new Set(["force", "keep-tmp", "reset"]);
   const allowed = {
     init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force"]),
     add: new Set(["repo", "type", "id", "path", "title", "evidence"]),
     set: new Set(["repo", "id", "status"]),
+    presentation: new Set(["repo", "id", "primary-audience", "code", "related-docs", "repository-paths", "reset"]),
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
     reconcile: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience"]),
@@ -374,7 +377,7 @@ function cmdAdd(args) {
     if (args.title) actual.title = args.title;
     const origins = [{ kind: "dynamic", id: definition.type }, ...profileOrigins];
     if (rule.condition) origins.push({ kind: "condition", id: rule.condition });
-    manifest.documents.push(makeDocument(actual, origins, evidence, definition.id));
+    manifest.documents.push(makeDocument(actual, origins, evidence, definition.id, manifest.project.profiles.audiences));
     manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
     saveManifest(args.repo, manifest);
     if (flowIndex && flowRow) {
@@ -387,30 +390,39 @@ function cmdAdd(args) {
     return fail(error.message, 2);
   }
 }
+function catalogIdForDocument(catalog, doc) {
+  if (doc.id === doc.type) return doc.id;
+  for (const candidate of catalog.documents) {
+    if (candidate.id === doc.id) return candidate.id;
+    if (candidate.type === doc.type && (candidate.selection || {}).mode === "dynamic") {
+      return candidate.id;
+    }
+  }
+  return null;
+}
+
+function effectivePresentation(catalogId, audiences, override = null) {
+  let detail = queryCatalog.loadType(catalogId);
+  if (override) detail = { ...detail, presentation: { ...(detail.presentation || {}), ...override } };
+  const [primaryAudience, presentation] = queryCatalog.resolvePresentation(detail, audiences);
+  return { primary_audience: primaryAudience, ...presentation };
+}
+
+function demoteForPresentationChange(doc) {
+  if (["generated", "needs_review", "complete"].includes(doc.status)) {
+    doc.status = "in_progress";
+    doc.audit = null;
+  }
+}
+
 function syncContractRevisions(catalog, docs) {
   // Refresh catalog-owned metadata on kept documents and demote written
   // documents whose content-contract revision drifted (so a revise run
   // re-grounds them even when source provenance is FRESH).
   const contractUpdated = [];
   for (const doc of docs) {
-    let catalogId = null;
-    if (doc.id === doc.type) {
-      catalogId = doc.id;
-    } else {
-      for (const candidate of catalog.documents) {
-        if (candidate.id === doc.id) {
-          catalogId = candidate.id;
-          break;
-        }
-        if (
-          candidate.type === doc.type
-          && (candidate.selection || {}).mode === "dynamic"
-        ) {
-          catalogId = candidate.id;
-        }
-      }
-      if (catalogId === null) continue;
-    }
+    const catalogId = catalogIdForDocument(catalog, doc);
+    if (catalogId === null) continue;
     const detail = queryCatalog.loadType(catalogId);
     doc.title = detail.title || doc.title;
     doc.scaffold_template = detail.template_file;
@@ -432,6 +444,25 @@ function syncContractRevisions(catalog, docs) {
   }
   return contractUpdated;
 }
+
+function syncPresentations(catalog, docs, audiences) {
+  const updated = [];
+  for (const doc of docs) {
+    const catalogId = catalogIdForDocument(catalog, doc);
+    if (catalogId === null) continue;
+    const resolved = effectivePresentation(catalogId, audiences, doc.presentation_override || null);
+    if (!("presentation" in doc)) {
+      doc.presentation = resolved;
+      continue;
+    }
+    if (JSON.stringify(doc.presentation) !== JSON.stringify(resolved)) {
+      doc.presentation = resolved;
+      demoteForPresentationChange(doc);
+      updated.push(doc.id);
+    }
+  }
+  return updated;
+}
 function cmdReconcile(args) {
   let manifest;
   try {
@@ -444,9 +475,10 @@ function cmdReconcile(args) {
   const raw = {};
   for (const dimension of PROFILE_DIMENSIONS) {
     const singular = dimension === "audiences" ? "audience" : dimension.slice(0, -1);
-    let values = [...(args[singular] || [])];
-    if (values.length === 1 && values[0] === "none") values = [];
-    raw[dimension] = values.length ? values : (manifest.project.profiles[dimension] || []);
+    const values = [...(args[singular] || [])];
+    raw[dimension] = values.length === 1 && values[0] === "none"
+      ? []
+      : (values.length ? values : (manifest.project.profiles[dimension] || []));
   }
   let profiles;
   try {
@@ -474,6 +506,7 @@ function cmdReconcile(args) {
   }
   const added = selected.filter((doc) => !keptIds.has(doc.id));
   const contractUpdated = syncContractRevisions(catalog, kept);
+  const presentationUpdated = syncPresentations(catalog, kept, profiles.audiences);
   const oldTier = manifest.project.tier;
   manifest.documents = [...kept, ...added];
   manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
@@ -488,6 +521,7 @@ function cmdReconcile(args) {
   if (added.length) console.log(`  added: ${added.map((doc) => doc.id).sort().join(", ")}`);
   if (removed.length) console.log(`  removed-planned: ${removed.sort().join(", ")}`);
   if (contractUpdated.length) console.log(`  contract-updated: ${contractUpdated.sort().join(", ")}`);
+  if (presentationUpdated.length) console.log(`  presentation-updated: ${presentationUpdated.sort().join(", ")}`);
   console.log(`  kept: ${kept.length} documents`);
   console.log("");
   for (const line of planLines(args.repo, manifest, path.join(args.repo, ".docforge", "flow-index.json"), true)) {
@@ -521,6 +555,50 @@ function cmdSet(args) {
     doc.status = args.status;
     saveManifest(args.repo, manifest);
     console.log(`${args.id}: ${old} -> ${args.status}`);
+    return 0;
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+}
+function cmdPresentation(args) {
+  required(args, ["repo", "id"]);
+  try {
+    const manifest = loadManifest(manifestPath(args.repo), { unsupportedHint: MANIFEST_HINT });
+    const doc = findDocument(manifest, args.id);
+    const catalog = loadCatalog();
+    const catalogId = catalogIdForDocument(catalog, doc);
+    if (catalogId === null) throw new Error(`catalog definition not found for document: ${args.id}`);
+    if (args.reset) {
+      if (args.primary_audience || args.code || args.related_docs || args.repository_paths) {
+        return fail("--reset cannot be combined with presentation values", 2);
+      }
+      delete doc.presentation_override;
+    } else {
+      const override = {};
+      for (const [field, value] of Object.entries({
+        primary_audience: args.primary_audience,
+        code: args.code,
+        related_docs: args.related_docs,
+        repository_paths: args.repository_paths,
+      })) {
+        if (value !== undefined) override[field] = value;
+      }
+      if (!Object.keys(override).length) return fail("set at least one presentation value or pass --reset", 2);
+      const audienceIds = new Set(catalog.profiles.audiences.map((item) => item.id));
+      if (override.primary_audience && !audienceIds.has(override.primary_audience)) {
+        return fail(`unknown audience: ${override.primary_audience}`, 2);
+      }
+      for (const [field, allowed] of Object.entries(queryCatalog.PRESENTATION_VALUES)) {
+        if (field in override && !allowed.has(override[field])) return fail(`invalid ${field}: ${override[field]}`, 2);
+      }
+      doc.presentation_override = { ...(doc.presentation_override || {}), ...override };
+    }
+    const resolved = effectivePresentation(catalogId, manifest.project.profiles.audiences, doc.presentation_override || null);
+    const changed = JSON.stringify(doc.presentation) !== JSON.stringify(resolved);
+    doc.presentation = resolved;
+    if (changed) demoteForPresentationChange(doc);
+    saveManifest(args.repo, manifest);
+    console.log(`Presentation ${args.id}: ${changed ? "updated" : "unchanged"}.`);
     return 0;
   } catch (error) {
     return fail(error.message, 2);
@@ -584,7 +662,7 @@ function cmdFinish(args) {
   return 0;
 }
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | finish --repo <path> [--keep-tmp]");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;
@@ -597,7 +675,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, add: cmdAdd, set: cmdSet, audit: cmdAudit, status: cmdStatus, reconcile: cmdReconcile, finish: cmdFinish }[args.command](args);
+    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, reconcile: cmdReconcile, finish: cmdFinish }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

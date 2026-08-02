@@ -45,5 +45,8 @@ Schema owned by: [data-types.md](data-types.md#{{anchor}})
 
 ## Failure and recovery
 
-{{What happens to in-flight data on a stage failure — replay, drop, or
-dead-letter — for this lineage.}}
+- **{{Transient failure}}.** {{What retries, delays, and acknowledgement do.}}
+- **{{Permanent failure}}.** {{What is recorded and when retry stops.}}
+- **{{Recovery}}.** {{How stale work is recovered, replayed, or escalated.}}
+
+> **Related:** {{Existing generated flow, runbook, or reference documents; delete when none exist.}}

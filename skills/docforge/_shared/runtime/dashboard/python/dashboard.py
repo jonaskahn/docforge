@@ -51,7 +51,7 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-TOOL_VERSION = "2.11.0"
+TOOL_VERSION = "2.12.0"
 TEMPLATE_VERSION = "1"
 STATE_SCHEMA = 1
 STATE_FILE = ".docforge-dashboard.json"
@@ -435,16 +435,6 @@ def resolve_link(target: str, source_path: str, ledger: dict, assets_needed: set
 def convert_body(body: str, source_path: str, ledger: dict, assets_needed: set[str]) -> tuple[str, list[str]]:
     unresolved: list[str] = []
     body = strip_html_comments(body)
-    in_fence = False
-    lines: list[str] = []
-    for line in body.splitlines(keepends=True):
-        stripped = line.lstrip()
-        if stripped.startswith("```"):
-            in_fence = not in_fence
-            lines.append(line)
-            continue
-        lines.append(escape_mdx_text(line) if not in_fence else line)
-    converted = "".join(lines)
 
     def replace(match: re.Match) -> str:
         inner = match.group(3)
@@ -453,8 +443,17 @@ def convert_body(body: str, source_path: str, ledger: dict, assets_needed: set[s
             return match.group(0)
         return f"{match.group(1)}({rewritten})"
 
-    converted = LINK_RE.sub(replace, converted)
-    return converted, unresolved
+    in_fence = False
+    lines: list[str] = []
+    for line in body.splitlines(keepends=True):
+        stripped = line.lstrip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            lines.append(line)
+            continue
+        converted_line = escape_mdx_text(line) if not in_fence else line
+        lines.append(LINK_RE.sub(replace, converted_line) if not in_fence else converted_line)
+    return "".join(lines), unresolved
 
 
 def first_h1_title(body: str) -> str | None:

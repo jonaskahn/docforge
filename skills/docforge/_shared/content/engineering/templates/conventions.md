@@ -22,10 +22,10 @@ _Last reviewed: {{YYYY-MM-DD}}_
 
 **Convention:** {{stated plainly}}
 
-**Evidence:** {{lint rule / CI check / repeated pattern, cited}}
+**Evidence:** {{lint rule, CI check, or repeated behavior recorded in provenance}}
 
-```{{language}}
-{{example from the codebase}}
+```{{language}} docforge-role=code
+{{small consumer-facing example, only when it helps a reader apply the convention}}
 ```
 
 **If not followed:** {{consequence — failing check, or "no enforcement"}}

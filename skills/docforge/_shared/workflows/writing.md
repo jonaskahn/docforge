@@ -9,7 +9,7 @@ For each routed document, load `model_depth` from `query_catalog --route` and
 apply the minimum rung in [`../references/model-depth-ladders.md`](../references/model-depth-ladders.md).
 It is not a heading checklist: verify evidence, decisions, controls, interfaces,
 and stopping conditions before requesting independent audit. Document lint also
-validates illustration budgets and immutable evidence locators.
+validates illustration budgets and presentation-safe fences.
 
 ## Continue incomplete run
 
@@ -27,14 +27,17 @@ For the next document in `write_order`:
 2. Resolve its route in one call:
 
    ```sh
-   python3 runtime/cli/python/query_catalog.py --route <id>
-   node runtime/cli/js/query_catalog.js --route <id>
+    python3 runtime/cli/python/query_catalog.py --route <id> --audience <audience>
+    node runtime/cli/js/query_catalog.js --route <id> --audience <audience>
    # bun  runtime/cli/js/query_catalog.js --route <id>
    # deno run -A runtime/cli/js/query_catalog.js --route <id>
    ```
 
-   Read its content contract (`contract`), then its optional `instruction`
-   for writing craft. Select and author any visual using
+    Apply the returned `primary_audience` and `presentation`, read its content
+    contract (`contract`), then its optional `instruction` for writing craft.
+    Use [`../references/code-presentation.md`](../references/code-presentation.md)
+    and [`../references/evidence-presentation.md`](../references/evidence-presentation.md).
+    Select and author any visual using
    [`../references/illustration.md`](../references/illustration.md).
 3. Materialize that document and selected ancestor indexes:
 
@@ -55,7 +58,7 @@ For the next document in `write_order`:
 
    - One provenance `sections[]` entry per Markdown heading that makes claims;
      `id` is that heading's anchor.
-   - Each claim cites at least one repository-relative `path` with `role`
+    - Each claim records at least one repository-relative `path` with `role`
      (`code`, `config`, `manifest`, `doc`, `test`, or `history`) and
      `git_blob` = the SHA-1 of `blob <len>\0` + file bytes (same value as
      `git hash-object <path>` and `check_staleness`'s blob helper).

@@ -66,12 +66,16 @@ from the absolute cartridge root with `query_catalog --validate`,
 
 - `query_catalog.{py,js}`: read the catalog (`--tier`, `--id`, `--ids`,
   `--profile`, `--applicable`, `--validate`, `--category <group>`,
-  `--route <id>`). Every workflow step uses this instead of opening catalog
+  `--route <id> --audience <audience>`). Route responses include the resolved
+  primary audience and presentation policy. Every workflow step uses this instead of opening catalog
   files directly.
 - `generate_indexes.{py,js}`: regenerate catalog routers (`--write`,
   `--check`). `--check` exits `1` without writing when generated output is
   stale.
-- `manage_manifest.{py,js}`: `init`, `add`, `set`, `audit`, `status`, and `reconcile`.
+- `manage_manifest.{py,js}`: `init`, `add`, `set`, `presentation`, `audit`,
+  `status`, and `reconcile`. `presentation` persists a per-document reader
+  policy override and invalidates audited output only when its effective
+  presentation changes.
 - `detect_profiles.{py,js}`: read-only shape/platform/framework/concern
   recommendations with strong/weak match strength, cue bags, and
   `confirmed|candidate` confidence; `--emit-gate-pack` for agent intake.
@@ -109,13 +113,13 @@ from the absolute cartridge root with `query_catalog --validate`,
 
 ```sh
 # After locking python3 for the session:
-python3 runtime/cli/python/query_catalog.py --route <document-id>
+python3 runtime/cli/python/query_catalog.py --route <document-id> --audience <audience>
 
 # Or, if the session locked node instead:
-node runtime/cli/js/query_catalog.js --route <document-id>
+node runtime/cli/js/query_catalog.js --route <document-id> --audience <audience>
 ```
 
 Returns the document's group, summary, definition path, contract,
 instruction (or `null`), template, owning workflow, and required
-capabilities in one call — see the retrieval protocol in
+capabilities, primary audience, and presentation policy in one call — see the retrieval protocol in
 [`../retrieval.md`](../retrieval.md).

@@ -187,6 +187,7 @@ def make_document(
     evidence: list[str] | None = None,
     *,
     catalog_id: str | None = None,
+    audiences: list[str] | None = None,
 ) -> dict:
     # `definition` comes from the legacy-view catalog (bare filenames, kept
     # stable for --legacy CLI output); the manifest's scaffold_template must
@@ -196,6 +197,7 @@ def make_document(
     # id by the time this runs, so callers pass the original catalog id
     # explicitly via `catalog_id`.
     detail = query_catalog.load_type(catalog_id or definition["id"])
+    primary_audience, presentation, _ = query_catalog.resolve_presentation(detail, audiences)
     document = {
         "id": definition["id"],
         "title": detail.get("title") or definition["id"].replace("_", " ").replace("-", " ").title(),
@@ -214,6 +216,7 @@ def make_document(
         "write_order": definition["write_order"],
         "provenance_mode": definition["provenance_mode"],
         "audit_profile": definition["audit_profile"],
+        "presentation": {"primary_audience": primary_audience, **presentation},
         "provenance": scaffold_provenance(
             definition["id"],
             definition["path"],
@@ -271,7 +274,7 @@ def matching_origins(rule: dict, profiles: dict[str, list[str]]) -> list[dict]:
     return origins
 
 
-def add_ancestor_indexes(catalog: dict, selected: list[dict]) -> None:
+def add_ancestor_indexes(catalog: dict, selected: list[dict], audiences: list[str]) -> None:
     definitions = {
         item["path"]: item for item in catalog["documents"]
         if item["selection"]["mode"] == "static" and item["type"] in {
@@ -293,6 +296,7 @@ def add_ancestor_indexes(catalog: dict, selected: list[dict]) -> None:
                     selected.append(make_document(
                         definition,
                         [{"kind": "ancestor", "id": child["id"]}],
+                        audiences=audiences,
                     ))
                     selected_paths.add(candidate)
                     changed = True
@@ -325,8 +329,8 @@ def selected_static_documents(
             origins.append({"kind": "tier", "id": rule["min_tier"]})
         if rule.get("condition"):
             origins.append({"kind": "condition", "id": rule["condition"]})
-        selected.append(make_document(definition, origins, evidence))
-    add_ancestor_indexes(catalog, selected)
+        selected.append(make_document(definition, origins, evidence, audiences=profiles["audiences"]))
+    add_ancestor_indexes(catalog, selected, profiles["audiences"])
     return sorted(selected, key=lambda item: (item["write_order"], item["path"], item["id"]))
 
 
@@ -454,7 +458,13 @@ def cmd_add(args: argparse.Namespace) -> int:
     origins = [{"kind": "dynamic", "id": definition["type"]}, *profile_origins]
     if rule.get("condition"):
         origins.append({"kind": "condition", "id": rule["condition"]})
-    doc = make_document(actual, origins, evidence, catalog_id=definition["id"])
+    doc = make_document(
+        actual,
+        origins,
+        evidence,
+        catalog_id=definition["id"],
+        audiences=manifest["project"]["profiles"]["audiences"],
+    )
     manifest["documents"].append(doc)
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
     save_manifest(args.repo, manifest)
@@ -465,25 +475,44 @@ def cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
+def catalog_id_for_document(catalog: dict, doc: dict) -> str | None:
+    if doc["id"] == doc.get("type"):
+        return doc["id"]
+    for candidate in catalog["documents"]:
+        if candidate["id"] == doc.get("id"):
+            return candidate["id"]
+        if (
+            candidate.get("type") == doc.get("type")
+            and candidate.get("selection", {}).get("mode") == "dynamic"
+        ):
+            return candidate["id"]
+    return None
+
+
+def effective_presentation(catalog_id: str, audiences: list[str], override: dict | None = None) -> dict:
+    detail = query_catalog.load_type(catalog_id)
+    if override:
+        detail = {
+            **detail,
+            "presentation": {**detail.get("presentation", {}), **override},
+        }
+    primary, presentation, _ = query_catalog.resolve_presentation(detail, audiences)
+    return {"primary_audience": primary, **presentation}
+
+
+def demote_for_presentation_change(doc: dict) -> None:
+    if doc["status"] in {"generated", "needs_review", "complete"}:
+        doc["status"] = "in_progress"
+        doc["audit"] = None
+
+
 def sync_contract_revisions(catalog: dict, docs: list[dict]) -> list[str]:
     """Refresh catalog-owned metadata on kept documents and demote written
     documents whose content-contract revision drifted (so a revise run
     re-grounds them even when source provenance is FRESH)."""
     contract_updated: list[str] = []
     for doc in docs:
-        catalog_id = None
-        if doc["id"] == doc.get("type"):
-            catalog_id = doc["id"]
-        else:
-            for candidate in catalog["documents"]:
-                if candidate["id"] == doc.get("id"):
-                    catalog_id = candidate["id"]
-                    break
-                if (
-                    candidate.get("type") == doc.get("type")
-                    and candidate.get("selection", {}).get("mode") == "dynamic"
-                ):
-                    catalog_id = candidate["id"]
+        catalog_id = catalog_id_for_document(catalog, doc)
         if catalog_id is None:
             continue
         detail = query_catalog.load_type(catalog_id)
@@ -504,6 +533,28 @@ def sync_contract_revisions(catalog: dict, docs: list[dict]) -> list[str]:
                 doc["audit"] = None
             contract_updated.append(doc["id"])
     return contract_updated
+
+
+def sync_presentations(catalog: dict, docs: list[dict], audiences: list[str]) -> list[str]:
+    """Hydrate legacy manifests and invalidate only changed reader-facing output."""
+    updated: list[str] = []
+    for doc in docs:
+        catalog_id = catalog_id_for_document(catalog, doc)
+        if catalog_id is None:
+            continue
+        resolved = effective_presentation(
+            catalog_id,
+            audiences,
+            doc.get("presentation_override"),
+        )
+        if "presentation" not in doc:
+            doc["presentation"] = resolved
+            continue
+        if doc["presentation"] != resolved:
+            doc["presentation"] = resolved
+            demote_for_presentation_change(doc)
+            updated.append(doc["id"])
+    return updated
 
 
 def cmd_reconcile(args: argparse.Namespace) -> int:
@@ -528,9 +579,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     for dimension in PROFILE_DIMENSIONS:
         singular = "audience" if dimension == "audiences" else dimension[:-1]
         values = list(getattr(args, singular, []) or [])
-        if values == ["none"]:
-            values = []
-        raw[dimension] = values or manifest["project"]["profiles"].get(dimension, [])
+        raw[dimension] = [] if values == ["none"] else (values or manifest["project"]["profiles"].get(dimension, []))
     try:
         profiles = normalize_profiles(catalog, raw)
     except ValueError as exc:
@@ -553,6 +602,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
             removed.append(doc["id"])
     added = [doc for doc in selected if doc["id"] not in kept_ids]
     contract_updated = sync_contract_revisions(catalog, kept)
+    presentation_updated = sync_presentations(catalog, kept, profiles["audiences"])
     old_tier = manifest["project"]["tier"]
     manifest["documents"] = kept + added
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
@@ -569,6 +619,8 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         print(f"  removed-planned: {', '.join(sorted(removed))}")
     if contract_updated:
         print(f"  contract-updated: {', '.join(sorted(contract_updated))}")
+    if presentation_updated:
+        print(f"  presentation-updated: {', '.join(sorted(presentation_updated))}")
     print(f"  kept: {len(kept)} documents")
     print()
     for line in plan_lines(args.repo, manifest, args.repo / ".docforge" / "flow-index.json", revise=True):
@@ -607,6 +659,56 @@ def cmd_set(args: argparse.Namespace) -> int:
     doc["status"] = args.status
     save_manifest(args.repo, manifest)
     print(f"{args.id}: {old} -> {args.status}")
+    return 0
+
+
+def cmd_presentation(args: argparse.Namespace) -> int:
+    try:
+        manifest = load_manifest(manifest_path(args.repo), unsupported_hint=MANIFEST_HINT)
+        doc = find_document(manifest, args.id)
+        catalog = load_catalog()
+        catalog_id = catalog_id_for_document(catalog, doc)
+        if catalog_id is None:
+            raise ValueError(f"catalog definition not found for document: {args.id}")
+    except ValueError as exc:
+        return fail(str(exc), 2)
+
+    if args.reset:
+        if any((args.primary_audience, args.code, args.related_docs, args.repository_paths)):
+            return fail("--reset cannot be combined with presentation values", 2)
+        doc.pop("presentation_override", None)
+    else:
+        override = {
+            key: value
+            for key, value in {
+                "primary_audience": args.primary_audience,
+                "code": args.code,
+                "related_docs": args.related_docs,
+                "repository_paths": args.repository_paths,
+            }.items()
+            if value is not None
+        }
+        if not override:
+            return fail("set at least one presentation value or pass --reset", 2)
+        audience_ids = {item["id"] for item in catalog["profiles"]["audiences"]}
+        if "primary_audience" in override and override["primary_audience"] not in audience_ids:
+            return fail(f"unknown audience: {override['primary_audience']}", 2)
+        for field, allowed in query_catalog.PRESENTATION_VALUES.items():
+            if field in override and override[field] not in allowed:
+                return fail(f"invalid {field}: {override[field]}", 2)
+        doc["presentation_override"] = {**doc.get("presentation_override", {}), **override}
+
+    resolved = effective_presentation(
+        catalog_id,
+        manifest["project"]["profiles"]["audiences"],
+        doc.get("presentation_override"),
+    )
+    changed = doc.get("presentation") != resolved
+    doc["presentation"] = resolved
+    if changed:
+        demote_for_presentation_change(doc)
+    save_manifest(args.repo, manifest)
+    print(f"Presentation {args.id}: {'updated' if changed else 'unchanged'}.")
     return 0
 
 
@@ -709,6 +811,16 @@ def build_parser() -> argparse.ArgumentParser:
     set_status.add_argument("--id", required=True)
     set_status.add_argument("--status", required=True, choices=STATUSES)
     set_status.set_defaults(func=cmd_set)
+
+    presentation = sub.add_parser("presentation")
+    add_repo(presentation)
+    presentation.add_argument("--id", required=True)
+    presentation.add_argument("--primary-audience")
+    presentation.add_argument("--code", choices=sorted(query_catalog.PRESENTATION_VALUES["code"]))
+    presentation.add_argument("--related-docs", choices=sorted(query_catalog.PRESENTATION_VALUES["related_docs"]))
+    presentation.add_argument("--repository-paths", choices=sorted(query_catalog.PRESENTATION_VALUES["repository_paths"]))
+    presentation.add_argument("--reset", action="store_true")
+    presentation.set_defaults(func=cmd_presentation)
 
     audit = sub.add_parser("audit")
     add_repo(audit)

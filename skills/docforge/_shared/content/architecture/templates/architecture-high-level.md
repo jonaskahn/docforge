@@ -54,8 +54,8 @@ not code. Deep mechanism lives in [low-level.md](low-level.md) and
 
 ## Boundaries and invariants
 
-{{State stable boundary and invariant facts. A relationship must have an inline
-source citation or a one-sentence rationale. For detailed flow, link
+{{State stable boundary and invariant facts. A relationship must have a
+one-sentence rationale. For detailed flow, link
 [data-flow.md](data-flow.md) rather than repeating it.}}
 
 ## Stable by design

@@ -47,7 +47,12 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.11.0";
+const CATALOG_VERSION = "2.12.0";
+const PRESENTATION_VALUES = {
+  code: new Set(["contract-only", "task-focused"]),
+  related_docs: new Set(["none", "compact", "traceability"]),
+  repository_paths: new Set(["hidden", "actionable-only"]),
+};
 
 function loadIndex() {
   if (!fs.existsSync(INDEX_PATH)) throw new Error(`catalog index not found: ${INDEX_PATH}`);
@@ -152,7 +157,59 @@ function category(group) {
   };
 }
 
-function route(value) {
+function orderedAudiences(values) {
+  const profiles = loadProfiles();
+  const canonical = normalizeProfileIds("audiences", values, profiles);
+  const order = Object.fromEntries(profiles.audiences.map((item) => [item.id, item.order]));
+  return canonical.sort((a, b) => (order[a] - order[b]) || a.localeCompare(b));
+}
+
+function resolvePresentation(detail, audiences = []) {
+  const index = loadIndex();
+  const defaults = index.presentation_defaults;
+  const selected = orderedAudiences(audiences);
+  const override = detail.presentation || {};
+  const selectorAudiences = (((detail.selection || {}).selectors || {}).audiences || []);
+  const selectedForDocument = selected.filter((audience) => selectorAudiences.includes(audience));
+  let primary;
+  let primaryOrigin;
+  if (override.primary_audience) {
+    primary = override.primary_audience;
+    primaryOrigin = "record";
+  } else if (selectedForDocument.length) {
+    primary = selectedForDocument[0];
+    primaryOrigin = "selector";
+  } else if (selectorAudiences.length) {
+    primary = orderedAudiences(selectorAudiences)[0];
+    primaryOrigin = "selector";
+  } else {
+    primary = defaults.primary_audience_by_group[detail.group] || "engineers";
+    primaryOrigin = "group";
+  }
+  const audienceDefaults = defaults.by_audience[primary];
+  const presentation = {
+    code: audienceDefaults.code,
+    related_docs: audienceDefaults.related_docs,
+    repository_paths: audienceDefaults.repository_paths,
+    source_evidence: defaults.source_evidence,
+  };
+  const origins = {
+    primary_audience: primaryOrigin,
+    code: `audience:${primary}`,
+    related_docs: `audience:${primary}`,
+    repository_paths: `audience:${primary}`,
+    source_evidence: "catalog",
+  };
+  for (const field of Object.keys(PRESENTATION_VALUES)) {
+    if (Object.prototype.hasOwnProperty.call(override, field)) {
+      presentation[field] = override[field];
+      origins[field] = "record";
+    }
+  }
+  return [primary, presentation, origins];
+}
+
+function route(value, audiences = []) {
   const docId = resolveCatalogId(value);
   const row = indexRow(docId);
   const detail = loadType(docId);
@@ -163,6 +220,7 @@ function route(value) {
       modelDepth[model] = detail.model_depth[model];
     }
   }
+  const [primaryAudience, presentation, presentationOrigin] = resolvePresentation(detail, audiences);
   return {
     id: docId,
     group: detail.group,
@@ -177,6 +235,9 @@ function route(value) {
     audit_profile: detail.audit_profile,
     contract_revision: detail.contract_revision === undefined ? null : detail.contract_revision,
     model_depth: modelDepth,
+    primary_audience: primaryAudience,
+    presentation,
+    presentation_origin: presentationOrigin,
   };
 }
 
@@ -315,7 +376,7 @@ function validate() {
   if (index.version !== CATALOG_VERSION) {
     errors.push(`catalog version must be ${CATALOG_VERSION}, got ${index.version}`);
   }
-  for (const key of ["tiers", "groups", "capabilities", "profiles", "document_types"]) {
+  for (const key of ["tiers", "groups", "capabilities", "profiles", "presentation_defaults", "document_types"]) {
     if (!(key in index)) errors.push(`index.json missing ${key}`);
   }
   const tiers = index.tiers || {};
@@ -351,6 +412,37 @@ function validate() {
         names[name] = item.id;
       }
     }
+  }
+
+  const presentationDefaults = index.presentation_defaults || {};
+  const audienceIds = profileIds.audiences || new Set();
+  if (presentationDefaults.source_evidence !== "provenance-only") {
+    errors.push("presentation_defaults.source_evidence must be provenance-only");
+  }
+  let groupDefaults = presentationDefaults.primary_audience_by_group;
+  if (!groupDefaults || typeof groupDefaults !== "object" || Array.isArray(groupDefaults)) {
+    errors.push("presentation_defaults.primary_audience_by_group must be an object");
+    groupDefaults = {};
+  }
+  for (const [group, audience] of Object.entries(groupDefaults)) {
+    if (!(index.groups || []).includes(group)) errors.push(`presentation_defaults: unknown group ${group}`);
+    if (!audienceIds.has(audience)) errors.push(`presentation_defaults: unknown primary audience ${audience}`);
+  }
+  let audienceDefaults = presentationDefaults.by_audience;
+  if (!audienceDefaults || typeof audienceDefaults !== "object" || Array.isArray(audienceDefaults)) {
+    errors.push("presentation_defaults.by_audience must be an object");
+    audienceDefaults = {};
+  }
+  for (const audience of audienceIds) {
+    const value = audienceDefaults[audience];
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      errors.push(`presentation_defaults: missing audience defaults for ${audience}`);
+      continue;
+    }
+    validatePresentation(value, `presentation_defaults.by_audience.${audience}`, errors, { requireAll: true });
+  }
+  for (const audience of Object.keys(audienceDefaults)) {
+    if (!audienceIds.has(audience)) errors.push(`presentation_defaults: unknown audience ${audience}`);
   }
 
   const declaredProfiles = index.profiles || {};
@@ -444,6 +536,9 @@ function validate() {
     if (doc.contract_revision !== undefined && (typeof doc.contract_revision !== "string" || !CONTRACT_REVISION_RE.test(doc.contract_revision))) {
       errors.push(`${docId}: contract_revision must be MAJOR.MINOR.PATCH`);
     }
+    if (doc.presentation !== undefined) {
+      validatePresentation(doc.presentation, `${docId}: presentation`, errors, { audienceIds });
+    }
     if (doc.selection_evidence_required !== undefined && typeof doc.selection_evidence_required !== "boolean") {
       errors.push(`${docId}: selection_evidence_required must be boolean`);
     }
@@ -528,6 +623,28 @@ function validate() {
     }
   }
   return errors;
+}
+
+function validatePresentation(value, label, errors, options = {}) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    errors.push(`${label} must be an object`);
+    return;
+  }
+  const allowed = new Set(["primary_audience", ...Object.keys(PRESENTATION_VALUES)]);
+  const unknown = Object.keys(value).filter((field) => !allowed.has(field)).sort();
+  if (unknown.length) errors.push(`${label}: unknown fields: ${unknown.join(", ")}`);
+  if (options.requireAll) {
+    const missing = Object.keys(PRESENTATION_VALUES).filter((field) => !(field in value)).sort();
+    if (missing.length) errors.push(`${label}: missing fields: ${missing.join(", ")}`);
+  }
+  if ("primary_audience" in value && options.audienceIds && !options.audienceIds.has(value.primary_audience)) {
+    errors.push(`${label}: unknown primary audience ${value.primary_audience}`);
+  }
+  for (const [field, allowedValues] of Object.entries(PRESENTATION_VALUES)) {
+    if (field in value && !allowedValues.has(value[field])) {
+      errors.push(`${label}: invalid ${field} ${value[field]}`);
+    }
+  }
 }
 
 function parseArgs(argv) {
@@ -644,7 +761,7 @@ function main(argv = process.argv.slice(2)) {
       return 0;
     }
     if (args.routeId) {
-      process.stdout.write(dumpJson(route(args.routeId)));
+      process.stdout.write(dumpJson(route(args.routeId, args.audience)));
       return 0;
     }
   } catch (error) {
@@ -665,9 +782,11 @@ module.exports = {
   applicable,
   category,
   route,
+  resolvePresentation,
   validate,
   main,
   CATALOG_VERSION,
+  PRESENTATION_VALUES,
   GROUP_SUMMARIES,
 };
 

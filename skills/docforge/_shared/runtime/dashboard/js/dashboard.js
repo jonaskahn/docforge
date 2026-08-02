@@ -22,7 +22,7 @@ const path = require("path");
 const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 
-const TOOL_VERSION = "2.11.0";
+const TOOL_VERSION = "2.12.0";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";
@@ -396,7 +396,12 @@ function convertBody(body, sourcePath, ledger, assetsNeeded) {
   const unresolved = [];
   body = stripHtmlComments(body);
   let inFence = false;
-  let lines = [];
+  const replace = (whole, label, __, inner) => {
+    const rewritten = resolveLink(inner, sourcePath, ledger, assetsNeeded);
+    if (rewritten == null || rewritten === inner) return whole;
+    return `${label}(${rewritten})`;
+  };
+  const lines = [];
   for (const line of body.split(/(?<=\n)/)) {
     const stripped = line.trimStart();
     if (stripped.startsWith("```")) {
@@ -404,16 +409,10 @@ function convertBody(body, sourcePath, ledger, assetsNeeded) {
       lines.push(line);
       continue;
     }
-    lines.push(inFence ? line : escapeMdxText(line));
+    const convertedLine = inFence ? line : escapeMdxText(line);
+    lines.push(inFence ? convertedLine : convertedLine.replace(LINK_RE, replace));
   }
-  let converted = lines.join("");
-
-  converted = converted.replace(LINK_RE, (whole, label, __, inner) => {
-    const rewritten = resolveLink(inner, sourcePath, ledger, assetsNeeded);
-    if (rewritten == null || rewritten === inner) return whole;
-    return `${label}(${rewritten})`;
-  });
-  return [converted, unresolved];
+  return [lines.join(""), unresolved];
 }
 
 function firstH1Title(body) {

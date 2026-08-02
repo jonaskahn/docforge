@@ -25,5 +25,6 @@
   "write_order": 79,
   "provenance_mode": "sections",
   "audit_profile": "risk",
+  "contract_revision": "2.12.0",
   "template_file": "content/security/templates/platform-permissions.md"
 }

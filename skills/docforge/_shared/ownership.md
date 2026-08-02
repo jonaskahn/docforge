@@ -11,6 +11,10 @@
   topic ownership and no-duplication.
 - [`references/provenance-tracking.md`](references/provenance-tracking.md):
   metadata format and staleness.
+- [`references/evidence-presentation.md`](references/evidence-presentation.md):
+  reader-facing routing and source-evidence visibility.
+- [`references/code-presentation.md`](references/code-presentation.md): fenced
+  content roles, examples, and source-excerpt boundaries.
 - [`references/document-audit.md`](references/document-audit.md): independent
   completion gate.
 - [`references/quality-bar.md`](references/quality-bar.md): mechanical and
@@ -46,4 +50,3 @@ invocation to exactly one file.
 - **Two Special-File Sets**: The runtime maintains two distinct special-file sets defined in [`runtime/common/python/special_files`](runtime/common/python/special_files.py):
   - `SPECIAL_DOC_SOURCES` (`{"agents-kernel.md", "claude-md.md", "claude-local-md.md"}`): template source filenames scanned during metadata validation (`validate_metadata`).
   - `SPECIAL_DOC_OUTPUTS` (`{"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}`): materialized output doc filenames that bypass standard linting and scaffolding constraints (`scaffold_docs`, `lint_document`, `migrate_metadata`). `AGENTS.md` is not unlinted for that: it is covered by the dedicated `lint_agents_kernel` rubric check in place of `lint_document`. The fixed shims (`CLAUDE.md`, `CLAUDE.local.md`) are emitted literally and need no rubric lint.
-

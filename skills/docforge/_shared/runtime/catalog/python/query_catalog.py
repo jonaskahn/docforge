@@ -51,7 +51,12 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.11.0"
+CATALOG_VERSION = "2.12.0"
+PRESENTATION_VALUES = {
+    "code": {"contract-only", "task-focused"},
+    "related_docs": {"none", "compact", "traceability"},
+    "repository_paths": {"hidden", "actionable-only"},
+}
 
 
 def load_index() -> dict:
@@ -205,7 +210,56 @@ def category(group: str) -> dict:
     }
 
 
-def route(value: str) -> dict:
+def _ordered_audiences(values: list[str]) -> list[str]:
+    profiles = load_profiles()
+    canonical = _normalize_profile_ids("audiences", values, profiles)
+    order = {item["id"]: item["order"] for item in profiles["audiences"]}
+    return sorted(canonical, key=lambda item: (order[item], item))
+
+
+def resolve_presentation(detail: dict, audiences: list[str] | None = None) -> tuple[str, dict, dict]:
+    """Resolve the reader-facing policy without changing legacy catalog views."""
+    index = load_index()
+    defaults = index["presentation_defaults"]
+    selected = _ordered_audiences(audiences or [])
+    override = detail.get("presentation", {})
+    selector_audiences = detail.get("selection", {}).get("selectors", {}).get("audiences", [])
+    selected_for_document = [audience for audience in selected if audience in selector_audiences]
+    if override.get("primary_audience"):
+        primary = override["primary_audience"]
+        primary_origin = "record"
+    elif selected_for_document:
+        primary = selected_for_document[0]
+        primary_origin = "selector"
+    elif selector_audiences:
+        primary = _ordered_audiences(selector_audiences)[0]
+        primary_origin = "selector"
+    else:
+        primary = defaults["primary_audience_by_group"].get(detail["group"], "engineers")
+        primary_origin = "group"
+
+    audience_defaults = defaults["by_audience"][primary]
+    presentation = {
+        "code": audience_defaults["code"],
+        "related_docs": audience_defaults["related_docs"],
+        "repository_paths": audience_defaults["repository_paths"],
+        "source_evidence": defaults["source_evidence"],
+    }
+    origins = {
+        "primary_audience": primary_origin,
+        "code": f"audience:{primary}",
+        "related_docs": f"audience:{primary}",
+        "repository_paths": f"audience:{primary}",
+        "source_evidence": "catalog",
+    }
+    for field in PRESENTATION_VALUES:
+        if field in override:
+            presentation[field] = override[field]
+            origins[field] = "record"
+    return primary, presentation, origins
+
+
+def route(value: str, audiences: list[str] | None = None) -> dict:
     doc_id = resolve_catalog_id(value)
     row = index_row(doc_id)
     detail = load_type(doc_id)
@@ -215,6 +269,7 @@ def route(value: str) -> dict:
         for model in MODEL_DEPTH_ORDER
         if model in detail.get("model_depth", {})
     }
+    primary_audience, presentation, presentation_origin = resolve_presentation(detail, audiences)
     return {
         "id": doc_id,
         "group": detail.get("group"),
@@ -229,6 +284,9 @@ def route(value: str) -> dict:
         "audit_profile": detail.get("audit_profile"),
         "contract_revision": detail.get("contract_revision"),
         "model_depth": model_depth,
+        "primary_audience": primary_audience,
+        "presentation": presentation,
+        "presentation_origin": presentation_origin,
     }
 
 
@@ -357,7 +415,7 @@ def validate() -> list[str]:
         return [str(exc)]
     if index.get("version") != CATALOG_VERSION:
         errors.append(f"catalog version must be {CATALOG_VERSION}, got {index.get('version')}")
-    for key in ("tiers", "groups", "capabilities", "profiles", "document_types"):
+    for key in ("tiers", "groups", "capabilities", "profiles", "presentation_defaults", "document_types"):
         if key not in index:
             errors.append(f"index.json missing {key}")
     tiers = index.get("tiers", {})
@@ -402,6 +460,33 @@ def validate() -> list[str]:
             errors.append(f"index.json profiles.{dimension} is missing")
         elif not (CATALOG_DIR / rel).is_file():
             errors.append(f"index.json profiles.{dimension} points to missing file: {rel}")
+
+    presentation_defaults = index.get("presentation_defaults", {})
+    audience_ids = profile_ids.get("audiences", set())
+    if presentation_defaults.get("source_evidence") != "provenance-only":
+        errors.append("presentation_defaults.source_evidence must be provenance-only")
+    group_defaults = presentation_defaults.get("primary_audience_by_group")
+    if not isinstance(group_defaults, dict):
+        errors.append("presentation_defaults.primary_audience_by_group must be an object")
+        group_defaults = {}
+    for group, audience in group_defaults.items():
+        if group not in set(index.get("groups", [])):
+            errors.append(f"presentation_defaults: unknown group {group}")
+        if audience not in audience_ids:
+            errors.append(f"presentation_defaults: unknown primary audience {audience}")
+    audience_defaults = presentation_defaults.get("by_audience")
+    if not isinstance(audience_defaults, dict):
+        errors.append("presentation_defaults.by_audience must be an object")
+        audience_defaults = {}
+    for audience in audience_ids:
+        value = audience_defaults.get(audience)
+        if not isinstance(value, dict):
+            errors.append(f"presentation_defaults: missing audience defaults for {audience}")
+            continue
+        _validate_presentation(value, f"presentation_defaults.by_audience.{audience}", errors, require_all=True)
+    for audience in audience_defaults:
+        if audience not in audience_ids:
+            errors.append(f"presentation_defaults: unknown audience {audience}")
 
     index_ids = [row["id"] for row in index.get("document_types", [])]
     if len(index_ids) != len(set(index_ids)):
@@ -468,6 +553,8 @@ def validate() -> list[str]:
         revision = doc.get("contract_revision")
         if revision is not None and (not isinstance(revision, str) or not CONTRACT_REVISION_RE.fullmatch(revision)):
             errors.append(f"{doc_id}: contract_revision must be MAJOR.MINOR.PATCH")
+        if "presentation" in doc:
+            _validate_presentation(doc["presentation"], f"{doc_id}: presentation", errors, audience_ids=audience_ids)
         if "selection_evidence_required" in doc and not isinstance(doc["selection_evidence_required"], bool):
             errors.append(f"{doc_id}: selection_evidence_required must be boolean")
         selectors = selection.get("selectors", {})
@@ -537,6 +624,32 @@ def validate() -> list[str]:
             if alias not in aliases:
                 errors.append(f"infrastructure-platform missing alias {alias}")
     return errors
+
+
+def _validate_presentation(
+    value: object,
+    label: str,
+    errors: list[str],
+    *,
+    require_all: bool = False,
+    audience_ids: set[str] | None = None,
+) -> None:
+    if not isinstance(value, dict):
+        errors.append(f"{label} must be an object")
+        return
+    allowed = {"primary_audience", *PRESENTATION_VALUES}
+    unknown = sorted(set(value) - allowed)
+    if unknown:
+        errors.append(f"{label}: unknown fields: {', '.join(unknown)}")
+    if require_all:
+        missing = sorted(set(PRESENTATION_VALUES) - set(value))
+        if missing:
+            errors.append(f"{label}: missing fields: {', '.join(missing)}")
+    if "primary_audience" in value and audience_ids is not None and value["primary_audience"] not in audience_ids:
+        errors.append(f"{label}: unknown primary audience {value['primary_audience']}")
+    for field, allowed_values in PRESENTATION_VALUES.items():
+        if field in value and value[field] not in allowed_values:
+            errors.append(f"{label}: invalid {field} {value[field]}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -630,7 +743,7 @@ def main(argv: list[str] | None = None) -> int:
             print(dump_json(category(args.category)), end="")
             return 0
         if args.route_id:
-            print(dump_json(route(args.route_id)), end="")
+            print(dump_json(route(args.route_id, args.audience)), end="")
             return 0
     except ValueError as exc:
         return fail(str(exc), 2)

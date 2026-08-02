@@ -52,7 +52,7 @@ Always put the command/subcommand before flags (e.g.
 | `validate_metadata` | Catalog, schema, peer, and release-metadata validation |
 | `detect_profiles` | Read-only shape/platform/framework/concern recommendations |
 | `discovery_gate` | Validate/apply discovery-gate judgment JSON |
-| `manage_manifest` | `init` / `add` / `set` / `status` / `audit` |
+| `manage_manifest` | `init` / `add` / `set` / `presentation` / `status` / `audit` |
 | `scaffold_docs` | Dry-run tree, one-document materialize, manifest audit |
 | `check_staleness` | Provenance blob drift + optional sync |
 | `migrate_metadata` | Idempotent metadata / provenance upgrade |

@@ -24,10 +24,10 @@ One entry per rule the codebase actually enforces. Verify against the conditiona
 ### Rule: {{plain-language rule name}}
 
 **Statement:** {{the rule, in one sentence a business stakeholder would recognize}}
-**Enforced in:** {{the module/file by path — describe the behaviour; never a `module::function` symbol or line number}}
+**Behavioral evidence:** {{the observed behavior and the owning flow or reference document}}
 **Applies to:** {{which flow, which entity}}
 **Exceptions:** {{override conditions, if any — state "none found" rather than omitting the field}}
-**Source:** verified against the selected flow evidence and repository source for `{{flow-name}}`, {{date}}
+**Related:** {{existing flow or reference documentation; omit when none exists}}
 
 <!-- Repeat the block above per rule. Each rule needs its own `sections` entry
      in the frontmatter above, with its own section id matching the anchor

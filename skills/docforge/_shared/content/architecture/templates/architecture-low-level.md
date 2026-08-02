@@ -23,7 +23,7 @@ Component-level decomposition. Zooms into named blocks in
 
 ## Layout
 
-```text
+```text docforge-role=structure
 {{repository}}/
 ├── {{source directory}}/    {{one-line responsibility}}
 ├── {{service directory}}/   {{one-line responsibility}}
@@ -44,11 +44,11 @@ Component-level decomposition. Zooms into named blocks in
 
 ### {{Component name}}
 
-**Responsibility:** {{what it does, with an immutable locator for material claims: `path/to/file.ext#L1-L2 @ 40-lowercase-hex-blob`}}
+**Responsibility:** {{what it does and the boundary it owns.}}
 
 **Technology:** {{library/framework}}
 
-**Public contract:** `{{signature or protocol}}` (`{{path}}#L{{start}}-L{{end}} @ {{blob}}`)
+**Public contract:** `{{signature or protocol}}`
 
 - **Talks to:** -> {{component}} — {{specific active verb and protocol when evidenced}}
 - **Owns:** {{the data or responsibility that is exclusively its}}

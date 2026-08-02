@@ -23,8 +23,8 @@ The business process as actually executed by the system — business-language st
 
 ### Flow: {{business name, e.g. "Order approval"}}
 
-1. {{step, in business language}} — enforced in {{the `<module>` by path, not a private symbol}}
-2. {{step}} — enforced in {{the `<module>` by path}}
+1. {{step, in business language}}
+2. {{step}}
 3. {{...}}
 
 ```mermaid
@@ -38,5 +38,7 @@ flowchart TD
 {{One sentence: which branch a reader must understand before changing the flow.}}
 
 **Decision points:** {{where the flow branches, and on what business condition}} — see [business-rules.md](./business-rules.md#{{rule-slug}})
+
+> **Related:** {{Existing generated flow or rule documents; delete when none exist.}}
 
 <!-- Repeat per flow. One `sections` entry per flow, id matching its heading anchor. -->

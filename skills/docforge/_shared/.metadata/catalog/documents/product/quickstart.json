@@ -25,5 +25,8 @@
   "write_order": 41,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
+  "presentation": {
+    "primary_audience": "beginners"
+  },
   "template_file": "content/product/templates/quickstart.md"
 }

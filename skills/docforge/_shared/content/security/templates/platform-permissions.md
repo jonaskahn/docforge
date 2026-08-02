@@ -30,4 +30,4 @@ _Last reviewed: {{YYYY-MM-DD}}_
 
 **Change later:** {{settings path}}
 
-**Evidence:** {{manifest / entitlement / declaration file and line}}
+**Evidence:** {{declaration and runtime behavior recorded in provenance}}

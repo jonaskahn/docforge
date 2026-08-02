@@ -23,8 +23,8 @@ non-obvious failure, name evidence and the symptom or escalation boundary that
 hands control to operations or another owner.
 
 At `component-evidence` depth, every material responsibility and public contract
-uses `path#Lx-Ly @ <40-lowercase-hex-blob>` and the heading's provenance section
-contains the same source pair. Keep the prose at responsibility/interface level:
+has complete heading-level provenance. Keep paths, ranges, and blob hashes out
+of reader-facing prose. Keep the prose at responsibility/interface level:
 no Level-4 code section, class diagram, private-symbol inventory, or directory
 walk. Each selected whitebox states why it is decomposed and the dependency
 direction it permits. The runtime scenario names its outcome and a material

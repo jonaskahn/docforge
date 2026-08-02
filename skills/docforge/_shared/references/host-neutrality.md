@@ -47,15 +47,7 @@ Exactly three places may contain forge-specific detail. Everywhere else stays ne
 
 **Diagrams.** Mermaid illustrations follow [`illustration.md`](illustration.md) for complexity budgets, rendering, and fallback rules. Always precede a diagram with one or two sentences stating what it shows.
 
-**Links.** Relative paths (`../architecture/high-level.md`) work when browsing the forge, in most editors, and in generated static sites. Absolute URLs to the current host break on migration and on forks. Never link to a line number in another file; link to the file by path and describe the location in prose — never anchor to a private symbol a rename would break (durability rule R1 in `document-composition.md`).
-
-**Source references.** Every mention of a repository source file in a document body is a Markdown link with a human-readable label, never a bare path or a `path:line` string:
-
-```markdown
-[the checkout service (`src/checkout.py`)](src/checkout.py)
-```
-
-The target stays repository-relative so it resolves in editors, forges, and generated sites; the label names what the file is, not its internal symbols. When a precise location matters, link the file and describe the function, region, or behavior in prose — never anchor to a line number or a private symbol a rename would break. Only a genuinely unresolved external value may stay a typed token (`<SECURITY_CONTACT>`), never a code path.
+**Links.** Relative paths (`../architecture/high-level.md`) work when browsing the forge, in most editors, and in generated static sites. Absolute URLs to the current host break on migration and on forks. Link generated documentation for related topics. Source grounding stays in provenance; see [`evidence-presentation.md`](evidence-presentation.md). Never link to a line number or a private symbol.
 
 **Callouts.** Blockquote-based callouts are the only universally portable form:
 

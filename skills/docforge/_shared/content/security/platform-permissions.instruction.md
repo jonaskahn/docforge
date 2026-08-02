@@ -1,9 +1,8 @@
 # Platform-permissions writing craft
 
-Pair each manifest or entitlement declaration with source evidence for request
-timing, denial fallback, and revocation recovery. Cite durable paths and relevant
-declarations, not line numbers; a declaration without runtime evidence is a gap,
-not proof of behavior.
+Pair each manifest or entitlement declaration with provenance for request timing,
+denial fallback, and revocation recovery. A declaration without runtime evidence
+is a gap, not proof of behavior.
 
 **Preferred illustration:** Follow
 [`../../references/illustration.md`](../../references/illustration.md); a table
@@ -18,8 +17,8 @@ handled path, not an edge case. State how a user changes their mind later
 is revoked mid-session; a permission that silently breaks on revocation is
 a defect this document should surface, not hide.
 
-Ground every entry in the manifest, entitlement file, or platform
-declaration that actually requests it — cite the evidence. Never invent an
+Ground every entry in the manifest, entitlement file, or platform declaration
+that actually requests it. Never invent an
 entitlement, capability, or policy claim the repository does not evidence;
 a permission the reader cannot find declared anywhere is worse than an
 undocumented one, because it reads as authoritative.

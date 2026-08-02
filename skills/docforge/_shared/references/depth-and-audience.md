@@ -41,8 +41,16 @@ architecture, operations, security, or reference document. Business Analyst
 views emphasize rules and traceability; Product Owner views emphasize value and
 measures; agent views compress navigation and commands; operator views emphasize
 safe execution, observability, and recovery; security-reviewer views emphasize
-boundaries, controls, residual risk, and evidence. Engineers and beginners use
+ boundaries, controls, residual risk, and evidence. Engineers and beginners use
 the default contracts unless a selected specialist profile applies.
+
+The routed presentation policy applies those differences consistently: Business
+Analyst and Product Owner documents use business and outcome language without
+implementation excerpts; engineers, beginners, operators, and coding agents
+receive only task-relevant commands or examples; security reviewers receive
+control and traceability detail without source citations. See
+[`code-presentation.md`](code-presentation.md) and
+[`evidence-presentation.md`](evidence-presentation.md).
 
 When the evidence cannot establish an audience-critical fact, record its limit
 or typed external unknown in the owning document. Never fill a depth tier with

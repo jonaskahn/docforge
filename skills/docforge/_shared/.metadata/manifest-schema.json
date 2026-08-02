@@ -70,6 +70,29 @@
       }
     },
     "provenance": {"$ref": "provenance-schema.json"},
+    "presentation": {
+      "type": "object",
+      "required": ["primary_audience", "code", "related_docs", "repository_paths", "source_evidence"],
+      "properties": {
+        "primary_audience": {"type": "string"},
+        "code": {"enum": ["contract-only", "task-focused"]},
+        "related_docs": {"enum": ["none", "compact", "traceability"]},
+        "repository_paths": {"enum": ["hidden", "actionable-only"]},
+        "source_evidence": {"const": "provenance-only"}
+      },
+      "additionalProperties": false
+    },
+    "presentation_override": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "primary_audience": {"type": "string"},
+        "code": {"enum": ["contract-only", "task-focused"]},
+        "related_docs": {"enum": ["none", "compact", "traceability"]},
+        "repository_paths": {"enum": ["hidden", "actionable-only"]}
+      },
+      "additionalProperties": false
+    },
     "document": {
       "type": "object",
       "required": ["id", "type", "path", "group", "selection", "status", "requires", "scaffold_template", "target_depth", "write_order", "provenance_mode", "audit_profile", "provenance", "audit"],
@@ -96,6 +119,8 @@
         "write_order": {"type": "integer"},
         "provenance_mode": {"enum": ["sections", "manifest"]},
         "audit_profile": {"type": "string"},
+        "presentation": {"$ref": "#/definitions/presentation"},
+        "presentation_override": {"$ref": "#/definitions/presentation_override"},
         "provenance": {"$ref": "#/definitions/provenance"},
         "audit": {"type": ["object", "null"]}
       },

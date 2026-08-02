@@ -2,9 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Docforge Catalog Index",
   "type": "object",
-  "required": ["version", "tiers", "groups", "capabilities", "profiles", "document_types"],
+  "required": ["version", "tiers", "groups", "capabilities", "profiles", "presentation_defaults", "document_types"],
   "properties": {
-    "version": {"const": "2.8.0"},
+    "version": {"const": "2.12.0"},
     "profiles": {
       "type": "object",
       "required": ["shapes", "platforms", "frameworks", "concerns", "audiences"],
@@ -14,6 +14,16 @@
         "frameworks": {"type": "string"},
         "concerns": {"type": "string"},
         "audiences": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "presentation_defaults": {
+      "type": "object",
+      "required": ["source_evidence", "primary_audience_by_group", "by_audience"],
+      "properties": {
+        "source_evidence": {"const": "provenance-only"},
+        "primary_audience_by_group": {"type": "object", "additionalProperties": {"type": "string"}},
+        "by_audience": {"type": "object", "additionalProperties": {"$ref": "#/definitions/presentation"}}
       },
       "additionalProperties": false
     },
@@ -57,6 +67,18 @@
         },
         "additionalProperties": false
       }
+    }
+  },
+  "definitions": {
+    "presentation": {
+      "type": "object",
+      "required": ["code", "related_docs", "repository_paths"],
+      "properties": {
+        "code": {"enum": ["contract-only", "task-focused"]},
+        "related_docs": {"enum": ["none", "compact", "traceability"]},
+        "repository_paths": {"enum": ["hidden", "actionable-only"]}
+      },
+      "additionalProperties": false
     }
   }
 }

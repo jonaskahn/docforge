@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.12.0 - Audience-aware presentation
+
+- Routes now resolve an audience-aware presentation policy and manifests retain
+  that policy with an optional per-document `presentation` override command.
+  A meaningful presentation change returns an audited document to
+  `in_progress`; legacy manifests hydrate without a forced rewrite.
+- Repository source paths, line ranges, and blob hashes remain in provenance
+  rather than reader-facing citations. Generated documents may instead use a
+  compact `Related` footer linking to existing owning documentation.
+- Added fenced-content roles and linting for source-code links, visible source
+  locators, and high-confidence explanatory prose placed in code-oriented
+  fences. Dashboard conversion now leaves links inside fenced examples intact.
+- Flow, data-flow, architecture, BA, conventions, migration, and permissions
+  contracts use the new presentation rules through targeted `2.12.0` revision
+  markers; unaffected documents adopt the policy on their next revision.
+
 ## 2.11.0 - Legacy manifest re-registration
 
 - `migrate_metadata` now re-registers **any** pre-3.0 legacy manifest (1.1

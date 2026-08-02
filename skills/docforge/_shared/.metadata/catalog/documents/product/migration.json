@@ -24,5 +24,6 @@
   "write_order": 43,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
+  "contract_revision": "2.12.0",
   "template_file": "content/product/templates/migration.md"
 }

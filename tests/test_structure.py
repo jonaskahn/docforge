@@ -115,16 +115,14 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Scaffold the **newest** template", revision)
         self.assertIn("`rewrite (template)`", revision)
 
-    def test_source_references_are_human_readable_links(self) -> None:
-        """Document bodies mention source files as human-readable links, never
-        bare paths or file:line strings."""
+    def test_source_evidence_stays_in_provenance(self) -> None:
+        """Reader-facing source citations are replaced by provenance and docs links."""
         host = (SHARED_ROOT / "references" / "host-neutrality.md").read_text(encoding="utf-8")
-        self.assertIn("**Source references.**", host)
-        self.assertIn("human-readable label", host)
-        self.assertIn("never a bare path or a `path:line` string", host)
-        source = (SHARED_ROOT / "references" / "source-analysis.md").read_text(encoding="utf-8")
-        self.assertIn("human-readable link", source)
-        self.assertIn("host-neutrality.md", source)
+        self.assertIn("Source grounding stays in provenance", host)
+        evidence = (SHARED_ROOT / "references" / "evidence-presentation.md").read_text(encoding="utf-8")
+        self.assertIn("Never show source paths, line ranges, blob hashes", evidence)
+        code = (SHARED_ROOT / "references" / "code-presentation.md").read_text(encoding="utf-8")
+        self.assertIn("Never paste repository implementation", code)
 
     def test_validation_workflow_auto_serves_dashboard_on_completion(self) -> None:
         validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")

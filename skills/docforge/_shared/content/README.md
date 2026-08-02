@@ -28,7 +28,8 @@ Contracts, instructions, and templates for every catalog document, organized by 
 Every substantive document must:
 
 - answer the reader question implied by its type;
-- cite the repository evidence used by each section;
+- record the repository evidence used by each section in provenance; render it
+  according to [`../references/evidence-presentation.md`](../references/evidence-presentation.md);
 - describe current behavior, boundaries, failure modes, and adjacent systems;
 - keep rationale in decision records and volatile lookup facts in reference
   documents;
@@ -38,6 +39,9 @@ Every substantive document must:
 Router/index documents orient and link. Procedure documents are executable in
 order. Reference documents optimize lookup. Explanation documents establish
 mechanism, constraints, and tradeoffs.
+
+Code, output, configuration, and diagrams follow
+[`../references/code-presentation.md`](../references/code-presentation.md).
 
 ## Risk-register routing
 

@@ -1,12 +1,38 @@
 {
   "$schema": "catalog-index-schema.json",
-  "version": "2.11.0",
+  "version": "2.12.0",
   "profiles": {
     "shapes": "profiles/shapes.json",
     "platforms": "profiles/platforms.json",
     "frameworks": "profiles/frameworks.json",
     "concerns": "profiles/concerns.json",
     "audiences": "profiles/audiences.json"
+  },
+  "presentation_defaults": {
+    "source_evidence": "provenance-only",
+    "primary_audience_by_group": {
+      "root": "beginners",
+      "product": "engineers",
+      "architecture": "engineers",
+      "flows": "engineers",
+      "engineering": "engineers",
+      "operations": "operators",
+      "reference": "engineers",
+      "security": "security-reviewers",
+      "contributing": "engineers",
+      "records": "engineers",
+      "portfolio": "product-owners",
+      "agent-context": "coding-agents"
+    },
+    "by_audience": {
+      "engineers": {"code": "task-focused", "related_docs": "compact", "repository_paths": "actionable-only"},
+      "beginners": {"code": "task-focused", "related_docs": "compact", "repository_paths": "actionable-only"},
+      "business-analysts": {"code": "contract-only", "related_docs": "compact", "repository_paths": "hidden"},
+      "product-owners": {"code": "contract-only", "related_docs": "compact", "repository_paths": "hidden"},
+      "coding-agents": {"code": "task-focused", "related_docs": "traceability", "repository_paths": "actionable-only"},
+      "operators": {"code": "task-focused", "related_docs": "compact", "repository_paths": "actionable-only"},
+      "security-reviewers": {"code": "contract-only", "related_docs": "traceability", "repository_paths": "actionable-only"}
+    }
   },
   "tiers": {
     "spine": {

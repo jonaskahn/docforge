@@ -50,6 +50,7 @@ from runtime.common.python.provenance_frontmatter import (
 from runtime.common.python.evidence_locators import validate_locators
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.illustration_metrics import illustration_defects as budget_defects
+from runtime.common.python.markdown_fences import visible_presentation_defects
 
 SCAFFOLD_RE = re.compile(r"\{\{.*?\}\}")
 TOKEN_RE = re.compile(r"<[A-Z][A-Z0-9_]*>")
@@ -233,6 +234,7 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
     target_depth = provenance.get("target_depth", "deep-dive") if isinstance(provenance, dict) else "deep-dive"
     defects.extend(budget_defects(text, target_depth))
     defects.extend(validate_locators(path, text))
+    defects.extend(visible_presentation_defects(text))
 
     # scaffold markers + tokens, with line numbers
     for i, line in enumerate(lines, 1):

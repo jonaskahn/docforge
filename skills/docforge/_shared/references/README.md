@@ -14,6 +14,8 @@ concern; workflows link here instead of repeating the rule.
 - "How do I gather evidence without reading everything?" → [source-analysis.md](source-analysis.md)
 - "Can I fan out evidence questions across agents?" → [parallel-execution.md](parallel-execution.md)
 - "How does a document earn `complete` status?" → [document-audit.md](document-audit.md)
+- "Should this be code, output, or a diagram?" → [code-presentation.md](code-presentation.md)
+- "How should grounded evidence appear to readers?" → [evidence-presentation.md](evidence-presentation.md)
 - "What must every document contain, and what must never repeat?" → [document-composition.md](document-composition.md)
 - "What counts as mechanical vs whole-tree quality?" → [quality-bar.md](quality-bar.md)
 - "How is provenance stamped, migrated, and checked for staleness?" → [provenance-tracking.md](provenance-tracking.md)
@@ -32,7 +34,8 @@ concern; workflows link here instead of repeating the rule.
    [document-composition.md](document-composition.md), [model-depth-ladders.md](model-depth-ladders.md), [quality-bar.md](quality-bar.md),
   [provenance-tracking.md](provenance-tracking.md), [illustration.md](illustration.md),
   [host-neutrality.md](host-neutrality.md), [decision-records.md](decision-records.md),
-  [portfolio.md](portfolio.md)
+   [portfolio.md](portfolio.md), [code-presentation.md](code-presentation.md),
+   [evidence-presentation.md](evidence-presentation.md)
 
 ## Boundaries
 
