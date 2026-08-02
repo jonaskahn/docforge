@@ -17,6 +17,7 @@
   ],
   "target_depth": "orientation",
   "write_order": 21,
+  "nav_order": 30,
   "provenance_mode": "sections",
   "audit_profile": "router",
   "template_file": "content/flows/flow-index.template.md",

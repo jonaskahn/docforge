@@ -126,7 +126,7 @@ graph TD;
 """
 
 
-def written_doc(doc_id: str, path: str, body: str, write_order: int = 10) -> dict:
+def written_doc(doc_id: str, path: str, body: str, write_order: int = 10, nav_order: int | None = None) -> dict:
     value = provenance(
         doc_id=doc_id,
         path=path,
@@ -136,7 +136,7 @@ def written_doc(doc_id: str, path: str, body: str, write_order: int = 10) -> dic
         source_path="src/main.ts",
         source_blob=blob_hash(b"evidence"),
     )
-    return {
+    document = {
         "id": doc_id,
         "title": doc_id.replace("_", " ").title(),
         "type": "generic",
@@ -153,6 +153,9 @@ def written_doc(doc_id: str, path: str, body: str, write_order: int = 10) -> dic
         "provenance": value,
         "audit": None,
     }
+    if nav_order is not None:
+        document["nav_order"] = nav_order
+    return document
 
 
 def seed_repo(repo: Path) -> None:
@@ -257,6 +260,99 @@ class DashboardStartTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn("-> /docs/root/changelog", result.stdout)
                 self.assertIn("-> /docs/root/readme", result.stdout)
+                self.assertIn("0 problems", result.stdout)
+
+
+class DashboardNavigationTests(unittest.TestCase):
+    def test_nav_order_drives_sidebar_meta_ordering(self) -> None:
+        env, _bin = fake_npm_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                manifest = load_manifest(repo)
+                additions = [
+                    ("product_index", "docs/product/README.md", "# Product\n", 19, 10),
+                    ("architecture_index", "docs/architecture/README.md", "# Architecture\n", 9, 20),
+                    ("flows_index", "docs/flows/README.md", "# Flows\n", 21, 30),
+                    ("concepts_index", "docs/architecture/concepts/README.md", "# Concepts\n", 15, 25),
+                    ("concept_dedup", "docs/architecture/concepts/dedup.md", "# Dedup\n", 18, 26),
+                    ("changelog", "CHANGELOG.md", "# Changelog\n", 5, None),
+                ]
+                paired = [(written_doc(doc_id, path, body, write_order=wo, nav_order=nav), body) for doc_id, path, body, wo, nav in additions]
+                manifest["documents"].extend(doc for doc, _ in paired)
+                for doc in manifest["documents"]:
+                    if doc["id"] == "architecture_constraints":
+                        doc["nav_order"] = 30
+                (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                for doc, body in paired:
+                    target = repo / doc["path"]
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(markdown_with_provenance(doc["provenance"], body), encoding="utf-8")
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    content = repo / ".docforge" / "dashboard" / "content" / "docs"
+                    root_meta = json.loads((content / "meta.json").read_text(encoding="utf-8"))
+                    self.assertEqual(root_meta["title"], "Documentation")
+                    self.assertEqual(root_meta["pages"], ["index", "product", "architecture", "flows", "root"])
+                    arch_meta = json.loads((content / "architecture" / "meta.json").read_text(encoding="utf-8"))
+                    self.assertEqual(arch_meta["title"], "Architecture")
+                    self.assertEqual(arch_meta["pages"], ["index", "concepts", "constraints"])
+                    concepts_meta = json.loads((content / "architecture" / "concepts" / "meta.json").read_text(encoding="utf-8"))
+                    self.assertEqual(concepts_meta["pages"], ["index", "dedup"])
+                    root_meta = json.loads((content / "root" / "meta.json").read_text(encoding="utf-8"))
+                    self.assertEqual(root_meta["title"], "Project")
+                    self.assertEqual(root_meta["pages"], ["changelog"])
+                finally:
+                    stop_dashboard(runtime, repo)
+
+    def test_nav_order_falls_back_to_write_order(self) -> None:
+        env, _bin = fake_npm_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                manifest = load_manifest(repo)
+                manifest["documents"].append(written_doc("product_index", "docs/product/README.md", "# Product\n", write_order=19))
+                (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                (repo / "docs" / "product" / "README.md").write_text(
+                    markdown_with_provenance(manifest["documents"][-1]["provenance"], "# Product\n"),
+                    encoding="utf-8",
+                )
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    content = repo / ".docforge" / "dashboard" / "content" / "docs"
+                    root_meta = json.loads((content / "meta.json").read_text(encoding="utf-8"))
+                    # no nav_order: architecture (9) sorts before product (19)
+                    self.assertEqual(root_meta["pages"], ["index", "architecture", "product"])
+                finally:
+                    stop_dashboard(runtime, repo)
+
+    def test_dashboard_excludes_claude_local_from_routes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            manifest = load_manifest(repo)
+            manifest["documents"].append(written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5))
+            manifest["documents"].append(written_doc("claude_local", "CLAUDE.local.md", "# Local\n", write_order=202))
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / "CHANGELOG.md").write_text(
+                markdown_with_provenance(manifest["documents"][-2]["provenance"], "# Changelog\n"),
+                encoding="utf-8",
+            )
+            (repo / "CLAUDE.local.md").write_text(
+                markdown_with_provenance(manifest["documents"][-1]["provenance"], "# Local\n"),
+                encoding="utf-8",
+            )
+            for runtime in ("py", "js"):
+                result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertNotIn("/docs/root/claude.local", result.stdout)
+                self.assertIn("-> /docs/root/changelog", result.stdout)
                 self.assertIn("0 problems", result.stdout)
 
 

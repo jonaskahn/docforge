@@ -485,6 +485,8 @@ def validate() -> list[str]:
                 errors.append(f"{doc_id}: unknown requirement {requirement}")
         if not isinstance(doc.get("write_order"), int):
             errors.append(f"{doc_id}: write_order must be an integer")
+        if doc.get("nav_order") is not None and not isinstance(doc.get("nav_order"), int):
+            errors.append(f"{doc_id}: nav_order must be an integer")
         form = doc.get("dominant_form")
         if form not in ALLOWED_DOMINANT_FORMS:
             errors.append(f"{doc_id}: invalid dominant_form {form!r}")

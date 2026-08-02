@@ -17,6 +17,7 @@
   ],
   "target_depth": "router",
   "write_order": 80,
+  "nav_order": 90,
   "provenance_mode": "sections",
   "audit_profile": "router",
   "template_file": "content/shared/decision-index.template.md",

@@ -87,6 +87,7 @@ function includedDocuments(repo, manifest) {
   for (const doc of manifest.documents || []) {
     if (!WRITTEN.has(doc.status)) continue;
     const p = doc.path || "";
+    if (p === "CLAUDE.local.md") continue; // gitignored, machine-local preferences: never a shared page
     if (!(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
     if (!p.startsWith(DOC_PREFIX) && p.includes("/")) continue;
     if (!fs.existsSync(path.join(repo, p))) continue;
@@ -126,6 +127,7 @@ function buildLedger(docs) {
       output_path: output,
       url,
       write_order: doc.write_order || 0,
+      nav_order: doc.nav_order,
     };
     ledger.pages.push(page);
     ledger.by_path[doc.path] = page;
@@ -174,6 +176,7 @@ function manifestProjection(manifest) {
       status: doc.status || "",
       title: titleFor(doc),
       write_order: doc.write_order || 0,
+      nav_order: doc.nav_order,
     }));
 }
 
@@ -576,25 +579,29 @@ function metaTitle(folder, ledger, manifest) {
       if (doc.id === "docs_index") return titleFor(doc);
     }
   }
-  if (folder === "root") return "Others";
+  if (folder === "root") return "Project";
   const name = path.posix.basename(folder);
   return name.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function pageOrder(page) {
+  return Number.isInteger(page.nav_order) ? page.nav_order : page.write_order;
 }
 
 function metaPlans(ledger, manifest) {
   const folders = {};
   for (const page of ledger.pages) {
     const folder = dirOf(page.output_path);
-    folders[folder] = folders[folder] || { index: null, files: [], write_order: {} };
+    folders[folder] = folders[folder] || { index: null, files: [], orders: {} };
     if (path.posix.basename(page.output_path) === "index.mdx") {
       folders[folder].index = page;
     } else {
       folders[folder].files.push(page);
     }
-    folders[folder].write_order[page.doc_id] = page.write_order;
+    folders[folder].orders[page.doc_id] = pageOrder(page);
   }
   for (const folder of Object.keys(folders)) {
-    folders[folder].files.sort((a, b) => a.write_order - b.write_order || (a.source_path < b.source_path ? -1 : 1));
+    folders[folder].files.sort((a, b) => pageOrder(a) - pageOrder(b) || (a.source_path < b.source_path ? -1 : 1));
   }
   const folderOrder = (folder) => {
     // The `root` folder (repository-root files such as README.md and
@@ -602,8 +609,8 @@ function metaPlans(ledger, manifest) {
     if (folder === "root") return [Number.MAX_SAFE_INTEGER, folder];
     const info = folders[folder];
     if (!info) return [Number.MAX_SAFE_INTEGER, folder];
-    if (info.index) return [info.index.write_order, folder];
-    const min = info.files.length ? Math.min(...info.files.map((p) => p.write_order)) : Number.MAX_SAFE_INTEGER;
+    if (info.index) return [pageOrder(info.index), folder];
+    const min = info.files.length ? Math.min(...info.files.map((p) => pageOrder(p))) : Number.MAX_SAFE_INTEGER;
     return [min, folder];
   };
 
@@ -621,7 +628,7 @@ function metaPlans(ledger, manifest) {
     }
     for (const page of info.files) {
       const stem = stemOf(path.posix.basename(page.output_path));
-      entries.push([[page.write_order, stem], stem]);
+      entries.push([[pageOrder(page), stem], stem]);
     }
     entries.sort((a, b) => {
       const [oa, na] = a[0];

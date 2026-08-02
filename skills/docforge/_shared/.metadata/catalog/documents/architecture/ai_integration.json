@@ -22,6 +22,7 @@
   ],
   "target_depth": "deep-dive",
   "write_order": 17,
+  "nav_order": 28,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "template_file": "content/architecture/templates/ai-integration.md"

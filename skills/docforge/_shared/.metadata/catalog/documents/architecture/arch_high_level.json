@@ -17,6 +17,7 @@
   ],
   "target_depth": "orientation",
   "write_order": 10,
+  "nav_order": 21,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "flowchart",

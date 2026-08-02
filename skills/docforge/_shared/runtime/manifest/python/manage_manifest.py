@@ -223,6 +223,8 @@ def make_document(
     }
     if detail.get("contract_revision") is not None:
         document["contract_revision"] = detail["contract_revision"]
+    if detail.get("nav_order") is not None:
+        document["nav_order"] = detail["nav_order"]
     return document
 
 
@@ -490,6 +492,8 @@ def sync_contract_revisions(catalog: dict, docs: list[dict]) -> list[str]:
         doc["instruction_file"] = detail.get("instruction_file")
         doc["target_depth"] = detail.get("target_depth", doc["target_depth"])
         doc["write_order"] = detail.get("write_order", doc["write_order"])
+        if detail.get("nav_order") is not None:
+            doc["nav_order"] = detail["nav_order"]
         doc["audit_profile"] = detail.get("audit_profile", doc["audit_profile"])
         doc["requires"] = list(detail.get("requires", doc.get("requires", [])))
         revision = detail.get("contract_revision")

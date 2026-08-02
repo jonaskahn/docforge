@@ -470,6 +470,9 @@ function validate() {
     if (!Number.isInteger(doc.write_order)) {
       errors.push(`${docId}: write_order must be an integer`);
     }
+    if (doc.nav_order !== undefined && doc.nav_order !== null && !Number.isInteger(doc.nav_order)) {
+      errors.push(`${docId}: nav_order must be an integer`);
+    }
     if (!ALLOWED_DOMINANT_FORMS.has(doc.dominant_form)) {
       errors.push(`${docId}: invalid dominant_form ${JSON.stringify(doc.dominant_form)}`);
     }

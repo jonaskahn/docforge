@@ -163,6 +163,9 @@ function makeDocument(definition, origins, evidence = [], catalogId = null) {
   if (detail.contract_revision !== undefined && detail.contract_revision !== null) {
     document.contract_revision = detail.contract_revision;
   }
+  if (detail.nav_order !== undefined && detail.nav_order !== null) {
+    document.nav_order = detail.nav_order;
+  }
   return document;
 }
 const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
@@ -414,6 +417,7 @@ function syncContractRevisions(catalog, docs) {
     doc.instruction_file = detail.instruction_file === undefined ? null : detail.instruction_file;
     if (detail.target_depth !== undefined) doc.target_depth = detail.target_depth;
     if (detail.write_order !== undefined) doc.write_order = detail.write_order;
+    if (detail.nav_order !== undefined && detail.nav_order !== null) doc.nav_order = detail.nav_order;
     if (detail.audit_profile !== undefined) doc.audit_profile = detail.audit_profile;
     doc.requires = [...(detail.requires || doc.requires || [])];
     const revision = detail.contract_revision === undefined ? null : detail.contract_revision;

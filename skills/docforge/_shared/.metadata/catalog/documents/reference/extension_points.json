@@ -22,6 +22,7 @@
   ],
   "target_depth": "reference",
   "write_order": 65,
+  "nav_order": 66,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "template_file": "content/reference/templates/extension-points.md"

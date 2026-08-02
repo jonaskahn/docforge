@@ -124,6 +124,9 @@ def included_documents(repo: Path, manifest: dict) -> list[dict]:
         if doc.get("status") not in WRITTEN:
             continue
         path = doc.get("path", "")
+        if path == "CLAUDE.local.md":
+            # gitignored, machine-local preferences: never a shared page
+            continue
         if not (path.endswith(".md") or path.endswith(".mdx")):
             continue
         if not (path.startswith(DOC_PREFIX) or "/" not in path):
@@ -165,6 +168,7 @@ def build_ledger(docs: list[dict]) -> dict:
             "output_path": output,
             "url": url,
             "write_order": doc.get("write_order", 0),
+            "nav_order": doc.get("nav_order"),
         }
         ledger["pages"].append(page)
         ledger["by_path"][doc["path"]] = page
@@ -192,17 +196,21 @@ def _sorted_template_files(template_dir: Path) -> list[Path]:
 
 def _manifest_projection(manifest: dict) -> list[dict]:
     """The manifest fields that affect rendered output: status, path, id,
-    title, and write_order. Everything else (evidence, selection, audit
-    records, ...) does not change the site and must not trigger a rebuild."""
+    title, write_order, and nav_order. Everything else (evidence, selection,
+    audit records, ...) does not change the site and must not trigger a
+    rebuild."""
     docs = []
     for doc in sorted(manifest.get("documents", []), key=lambda d: d.get("path", "")):
-        docs.append({
+        entry = {
             "id": doc.get("id", ""),
             "title": title_for(doc),
             "path": doc.get("path", ""),
             "status": doc.get("status", ""),
             "write_order": doc.get("write_order", 0),
-        })
+        }
+        if doc.get("nav_order") is not None:
+            entry["nav_order"] = doc["nav_order"]
+        docs.append(entry)
     return docs
 
 
@@ -603,38 +611,45 @@ def meta_title(folder: str, ledger: dict, manifest: dict) -> str:
             if doc.get("id") == "docs_index":
                 return title_for(doc)
     if folder == "root":
-        return "Others"
+        return "Project"
     name = posixpath.basename(folder)
     return name.replace("-", " ").replace("_", " ").title()
+
+
+def page_order(page: dict) -> int:
+    """Navigation order of a page: the curated `nav_order` when present
+    (reader-first sidebar), falling back to the generation `write_order`."""
+    nav = page.get("nav_order")
+    return nav if isinstance(nav, int) else page["write_order"]
 
 
 def meta_plans(ledger: dict, manifest: dict) -> dict[str, dict]:
     folders: dict[str, dict] = {}
     for page in ledger["pages"]:
         folder = posixpath.dirname(page["output_path"])
-        folders.setdefault(folder, {"index": None, "files": [], "write_order": {}})
+        folders.setdefault(folder, {"index": None, "files": [], "orders": {}})
         if posixpath.basename(page["output_path"]) == "index.mdx":
             folders[folder]["index"] = page
         else:
             folders[folder]["files"].append(page)
-        folders[folder]["write_order"][page["doc_id"]] = page["write_order"]
+        folders[folder]["orders"][page["doc_id"]] = page_order(page)
     for folder in folders:
-        folders[folder]["files"].sort(key=lambda p: (p["write_order"], p["source_path"]))
+        folders[folder]["files"].sort(key=lambda p: (page_order(p), p["source_path"]))
 
     def folder_order(folder: str) -> tuple[int, str]:
         """Meaningful order: a folder is ordered by its index document's
-        manifest write_order, else by the smallest write_order among its
-        pages, with the folder name as the deterministic tie-break. The
-        `root` folder (repository-root files such as README.md and
-        CHANGELOG.md) always sorts last."""
+        nav_order (falling back to the manifest write_order), else by the
+        smallest order among its pages, with the folder name as the
+        deterministic tie-break. The `root` folder (repository-root files
+        such as README.md and CHANGELOG.md) always sorts last."""
         if folder == "root":
             return (10**9, folder)
         info = folders.get(folder)
         if info is None:
             return (10**9, folder)
         if info["index"] is not None:
-            return (info["index"]["write_order"], folder)
-        return (min((p["write_order"] for p in info["files"]), default=10**9), folder)
+            return (page_order(info["index"]), folder)
+        return (min((page_order(p) for p in info["files"]), default=10**9), folder)
 
     plans: dict[str, dict] = {}
     for folder, info in folders.items():
@@ -649,7 +664,7 @@ def meta_plans(ledger: dict, manifest: dict) -> dict[str, dict]:
             entries.append(((order, name), name))
         for page in info["files"]:
             stem = posixpath.splitext(posixpath.basename(page["output_path"]))[0]
-            entries.append(((page["write_order"], stem), stem))
+            entries.append(((page_order(page), stem), stem))
         entries.sort(key=lambda item: item[0])
         pages = []
         if info["index"] is not None:

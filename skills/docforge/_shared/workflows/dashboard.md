@@ -104,9 +104,10 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 - **Signature:** two working-tree signatures decide what to rebuild:
   - `render_sig` — `docs/**/*.md[x]` paths and bytes (including images),
     included root-document bytes, and a manifest projection (`id`, `title`,
-    `path`, `status`, `write_order`). Git `HEAD`, the flow index, and the
-    repository's package files are **not** part of it: they do not affect the
-    rendered site, and unrelated changes must not trigger a rebuild.
+    `path`, `status`, `write_order`, `nav_order`). Git `HEAD`, the flow
+    index, and the repository's package files are **not** part of it: they do
+    not affect the rendered site, and unrelated changes must not trigger a
+    rebuild.
   - `shell_sig` — dashboard template file bytes, the per-project app name and
     repository URL (the `lib/shared.ts` inputs), and the template version.
   Both are computed from the working tree, never from committed Git blobs, so
@@ -264,8 +265,9 @@ root** (a path with no `/`). Root-level documents (for example `README.md`,
 under `/docs/root/<slug>` so `docs/` pages can link to them and resolve. Root
 files are only included when they carry docforge provenance (schema 2.0) — in
 file frontmatter for section-provenance documents, or in the manifest for
-`provenance_mode: manifest` documents such as `AGENTS.md` — so local shims
-such as a gitignored `CLAUDE.local.md` are excluded.
+`provenance_mode: manifest` documents such as `AGENTS.md`. `CLAUDE.local.md`
+is **always excluded**: it is gitignored, machine-local preferences, and must
+never become a shared page even when it carries provenance.
 Machine JSON, planned/skipped docs, subdirectory-rooted docs outside `docs/`,
 and untracked Markdown are excluded.
 
@@ -294,14 +296,18 @@ One `meta.json` per folder:
 ```
 
 - `index` first when the folder has an index page;
-- then folders and pages **interleaved by the manifest `write_order`**
-  (Docforge's curated, meaningful dependency order — architecture before
-  product before reference, never alphabetical). A folder is ordered by its
-  index document's `write_order`, or by the smallest `write_order` among its
-  pages when it has no index; the name breaks ties deterministically;
+- then folders and pages **interleaved by the manifest `nav_order`** (a
+  curated, reader-first navigation order independent of the generation
+  `write_order`), falling back to `write_order` when `nav_order` is absent —
+  so the sidebar reads the way a reader moves through the material (product
+  before architecture before reference), never alphabetically and never by
+  generation order. A folder is ordered by its index document's `nav_order`
+  (or `write_order`), or by the smallest order among its pages when it has no
+  index; the name breaks ties deterministically;
 - folder titles come from the folder's index document title, then the
   `docs_index` manifest title for the root folder, then a prettified folder
-  name;
+  name; the `root` folder (repository-root files such as `README.md` and
+  `CHANGELOG.md`) always sorts last and is titled **Project**;
 - exact coverage: every generated page appears in exactly one `meta.json`
   (validated, no `...` wildcard reliance).
 
