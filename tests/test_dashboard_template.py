@@ -62,9 +62,33 @@ class DashboardTemplateTests(unittest.TestCase):
         css = (TEMPLATE / "app" / "global.css").read_text(encoding="utf-8")
         self.assertIn("#nd-sidebar", css)
         self.assertIn("--glass-blur", css)
+        self.assertIn("--glass-specular", css)
         self.assertIn("backdrop-filter", css)
         self.assertIn("body::before", css)
         self.assertIn("radial-gradient", css)
+
+    def test_light_and_dark_modes_define_complete_glass_materials(self) -> None:
+        css = (TEMPLATE / "app" / "global.css").read_text(encoding="utf-8")
+        light, dark = css.split(".dark {", maxsplit=1)
+        for token in (
+            "--glass-fill:",
+            "--glass-fill-strong:",
+            "--glass-fill-hover:",
+            "--glass-border-bright:",
+            "--glass-specular:",
+            "--glass-highlight:",
+            "--glass-blur:",
+            "--glass-shadow:",
+            "--glass-control-shadow:",
+        ):
+            self.assertIn(token, light)
+            self.assertIn(token, dark)
+
+    def test_glass_controls_have_pointer_feedback(self) -> None:
+        css = (TEMPLATE / "app" / "global.css").read_text(encoding="utf-8")
+        self.assertIn("button.rounded-full:hover", css)
+        self.assertIn("button.rounded-full:active", css)
+        self.assertIn("scale(0.97)", css)
 
     def test_accessibility_fallbacks_present(self) -> None:
         css = (TEMPLATE / "app" / "global.css").read_text(encoding="utf-8")
