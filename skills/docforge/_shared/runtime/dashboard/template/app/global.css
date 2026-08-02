@@ -3,6 +3,18 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
+/* Universal reset — borders collapse into the box, margins are removed, and
+   padding starts from zero. Keeps the glass theme's borders consistent. */
+*,
+::after,
+::before,
+::backdrop {
+  box-sizing: border-box;
+  border: 0 solid;
+  margin: 0;
+  padding: 1.25px;
+}
+
 /* Docforge "liquid docs" theme — a Liquid Glass / Aero-inspired adaptation of
    the Fumadocs Glass layout. Neutral gray darks keep the reading canvas
    quiet and true-black in dark mode (no blue cast); Docforge red is reserved
