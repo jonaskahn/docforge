@@ -38,7 +38,8 @@ require `flow_graph`. A missing flow graph delays two views, not the whole profi
 Keep a small root kernel: repository map, verified commands, validation rules,
 critical constraints, and links to deeper context. It is exempt from
 frontmatter, records provenance in the manifest, and must pass the dedicated
-`lint_agents_kernel` size/content rubric.
+`lint_agents_kernel.{py,js}` size/content rubric (see
+[`../../runtime/documents/README.md`](../../runtime/documents/README.md)).
 
 ### Fixed shims and settings
 
@@ -95,5 +96,6 @@ Signals to look for, in order of evidence strength:
   same order).
 
 Rank candidates by rarity and traceability, keep only the top few, and cap the
-bullet count to fit the kernel's `lint_agents_kernel` line budget. Never
+bullet count to fit the kernel's `lint_agents_kernel.{py,js}` line budget.
+Never
 restate a convention a human architecture document already owns — link instead.

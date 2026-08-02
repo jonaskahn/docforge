@@ -25,7 +25,7 @@ capabilities; provenance records the repository sources used for claims.
 
 | Provider | Persisted artifact | Native strengths | Native read path | Refresh behavior |
 |---|---|---|---|---|
-| Understand Anything | `.ua/knowledge-graph.json` and `.ua/domain-graph.json` (legacy `.understand-anything/`) | shareable code-graph JSON; semantic summaries; native flows and steps | Understand Anything skills for exploration; `read_graph` for deterministic JSON inventory | `/understand` is incremental; optional auto-update hook |
+| Understand Anything | `.ua/knowledge-graph.json` and `.ua/domain-graph.json` (legacy `.understand-anything/`) | shareable code-graph JSON; semantic summaries; native flows and steps | Understand Anything skills for exploration; `read_graph.{py,js}` for deterministic JSON inventory (see [`../../runtime/graph/README.md`](../../runtime/graph/README.md)) | `/understand` is incremental; optional auto-update hook |
 | GitNexus | `.gitnexus/lbug` plus index metadata | calls, dependencies, communities, indexed execution processes, change/impact views | GitNexus MCP tools/resources or project-local CLI; optional read-only LadybugDB inventory | `analyze` refreshes the index; compare indexed commit with `HEAD` |
 | CodeGraph | `.codegraph/codegraph.db` | current source, symbol relationships, call paths, routes, and blast radius in one query | `codegraph_explore` MCP tool (or its CLI equivalent when the skill directs it) | watcher and connect-time reconciliation; `status`/`sync` for exceptional manual checks |
 
@@ -53,7 +53,9 @@ own contract.
 
 ## Selection
 
-Run `precheck_graph --need code`. One readable provider is sufficient; Docforge
+Run `precheck_graph.{py,js} --need code` (see
+[`../../runtime/graph/README.md`](../../runtime/graph/README.md)). One readable
+provider is sufficient; Docforge
 does not require or benefit from building every supported provider index.
 
 - If exactly one source is ready, select it as the proposed default and report
@@ -102,7 +104,8 @@ be agent-run. Side effects remain deliberately separate:
   repository files must be disclosed before approval;
 - `--auto-accept` never supplies approval for any of these actions.
 
-After a build or refresh, rerun `precheck_graph --need code`. Do not require a
+After a build or refresh, rerun `precheck_graph.{py,js} --need code`. Do not
+require a
 flow graph yet unless the active manifest contains a selected document whose
 `requires` includes `flow_graph`.
 
@@ -135,7 +138,8 @@ Examples:
 
 Resolve flow data native-first. The numbered list below is a **fallback
 order**, not a readiness claim for the plan summary — report only providers
-that `precheck_graph` marked READY, and never echo “Understand Anything +
+that `precheck_graph.{py,js}` marked READY, and never echo “Understand
+Anything +
 GitNexus” when one or both are absent:
 
 1. use Understand Anything’s native flow graph when ready;
@@ -150,7 +154,9 @@ Schedule must say **Docforge-derived (provisional)**, never “Native flow
 source: CodeGraph”.
 
 Before choosing flow documents, harvest the complete
-`.docforge/flow-index.json` through `flow_index.py|js`. GitNexus Process nodes
+`.docforge/flow-index.json` through `flow_index.{py,js}` (see
+[`../../runtime/flows/README.md`](../../runtime/flows/README.md)). GitNexus
+Process nodes
 are grouped by `entryPointId`; they are candidate path evidence, not one
 document each. Understand Anything native flow nodes are confirmed entries,
 then its knowledge graph is scanned for additional candidates because a domain

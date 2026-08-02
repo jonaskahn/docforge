@@ -67,4 +67,6 @@ written but the dashboard never started or its URL never shown.
 - Staleness, migration, or a whole-tree/cross-document check →
   [`${CLAUDE_SKILL_DIR}/_shared/workflows/validation.md`](<${CLAUDE_SKILL_DIR}/_shared/workflows/validation.md>).
 - Read-only progress → plain language or
-  `manage_manifest status --repo <repo>` (no `--status` skill flag).
+  `manage_manifest.{py,js} status --repo <repo>` (no `--status` skill flag;
+  scripts and README:
+  [`${CLAUDE_SKILL_DIR}/_shared/runtime/manifest/README.md`](<${CLAUDE_SKILL_DIR}/_shared/runtime/manifest/README.md>)).

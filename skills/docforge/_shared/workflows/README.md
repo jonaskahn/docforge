@@ -15,7 +15,8 @@ loaded; every procedural detail lives here.
   document → [revision.md](revision.md)
 - Staleness, migration, the whole-tree gate, or completion criteria →
   [validation.md](validation.md)
-- The local dashboard (`dashboard start` / `status` / `stop`) →
+- The local dashboard (`dashboard.{py,js} start` / `status` / `stop`, see
+  [`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)) →
   [dashboard.md](dashboard.md)
 - Looking up a script's exact flags, invocation form, or exit codes →
   [tools.md](tools.md)
@@ -33,7 +34,8 @@ Canonical workflow responsibility is owned by [`../ownership.md`](../ownership.m
 - [writing.md](writing.md) — per-document execution card, evidence, scaffolding, provenance, status transitions, independent audit; continue incomplete runs.
 - [revision.md](revision.md) — `/docforge-revise` (incl. shared flags), single-document update/refresh, flow-index organization.
 - [validation.md](validation.md) — staleness, migration, whole-tree audit, cross-document quality gate.
-- [dashboard.md](dashboard.md) — `dashboard start` / `status` / `stop`: metadata reconcile, signatures, build-if-changed, serve, open.
+- [dashboard.md](dashboard.md) — `dashboard.{py,js} start` / `status` /
+  `stop`: metadata reconcile, signatures, build-if-changed, serve, open.
 - [tools.md](tools.md) — every public script's Python/Node invocation, inputs, outputs, exit codes.
 
 ## Boundaries

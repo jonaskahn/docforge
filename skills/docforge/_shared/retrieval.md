@@ -7,7 +7,8 @@
 3. For a document task, resolve it in one call (from this cartridge root):
    `python3 runtime/cli/python/query_catalog.py --route <document-id>`
    (or `node` / `bun` / `deno run -A` against
-   `runtime/cli/js/query_catalog.js`).
+   `runtime/cli/js/query_catalog.js`; see
+   [`runtime/catalog/README.md`](runtime/catalog/README.md)).
 4. Read only what that call returns: the named workflow, the document
    definition, the contract, the optional instruction, and the template
    (only when materializing).

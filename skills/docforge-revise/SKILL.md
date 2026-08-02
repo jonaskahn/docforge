@@ -85,5 +85,6 @@ revised but the dashboard never started or its URL never shown.
   staleness-first path in
   [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md>)
   (not a full revise).
-- Read-only progress → plain language or `manage_manifest status` (no
-  `--status` skill flag).
+- Read-only progress → plain language or `manage_manifest.{py,js} status`
+  (no `--status` skill flag; scripts and README:
+  [`${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/manifest/README.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/manifest/README.md>)).

@@ -12,7 +12,7 @@ import re
 import unittest
 from pathlib import Path
 
-from _support import ROOT
+from _support import ROOT, run
 
 
 SKILL_ROOT = ROOT / "skills" / "docforge"
@@ -195,7 +195,7 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("**Update metadata only**", workflow)
         self.assertIn("**Stop**", workflow)
         self.assertIn("`--auto-accept` never bypasses this gate", workflow)
-        self.assertIn("`migrate_metadata --dry-run`", workflow)
+        self.assertIn("`migrate_metadata.{py,js} --dry-run`", workflow)
         self.assertIn("for **any** legacy version", workflow)
         self.assertNotIn("Legacy manifest gate (v1.1)", workflow)
         thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
@@ -380,6 +380,51 @@ class SkillContentTests(unittest.TestCase):
                 self.assertTrue(
                     target.exists(), f"{path.name}: unresolved reference {match.group(0)}"
                 )
+
+
+class RuntimeReadmeTests(unittest.TestCase):
+    """Every runtime subsystem documents its scripts so agents can pick the
+    right tool without reading sources. Runtime READMEs are agent/operator
+    documentation and are exempt from the obsolete-nested-README rule."""
+
+    SUBSYSTEMS = [
+        "catalog", "cli", "common", "dashboard", "documents", "flows",
+        "graph", "manifest", "migrations", "portfolio", "validation",
+    ]
+
+    def test_every_subsystem_has_readme_linked_from_runtime_root(self) -> None:
+        root_readme = (SHARED_ROOT / "runtime" / "README.md").read_text(encoding="utf-8")
+        for name in self.SUBSYSTEMS:
+            readme = SHARED_ROOT / "runtime" / name / "README.md"
+            self.assertTrue(readme.is_file(), f"missing runtime/{name}/README.md")
+            self.assertIn(f"{name}/README.md", root_readme, name)
+
+    def test_subsystem_readmes_name_every_script(self) -> None:
+        for name in self.SUBSYSTEMS:
+            readme_path = SHARED_ROOT / "runtime" / name / "README.md"
+            readme = readme_path.read_text(encoding="utf-8")
+            for lang in ("js", "python"):
+                scripts_dir = readme_path.parent / lang
+                if not scripts_dir.is_dir():
+                    continue
+                for script in sorted(scripts_dir.glob(f"*.{lang}")):
+                    stem = script.stem
+                    if stem == "__init__":
+                        continue
+                    self.assertIn(
+                        stem, readme,
+                        f"{name}/README.md does not document {lang}/{stem}",
+                    )
+
+    def test_runtime_readmes_are_exempt_from_obsolete_readme_rule(self) -> None:
+        runtime_readmes = {
+            f"skills/docforge/_shared/runtime/{name}/README.md"
+            for name in self.SUBSYSTEMS
+        }
+        for runtime in ("py", "js"):
+            result = run(runtime, "validate_metadata")
+            for rel in sorted(runtime_readmes):
+                self.assertNotIn(rel, result.stdout, runtime)
 
 
 if __name__ == "__main__":

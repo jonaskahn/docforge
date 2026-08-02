@@ -37,7 +37,8 @@ that it was found and how it was resolved.
 
 Actual cross-repository decisions are dynamic documents under
 `docs-portfolio/decisions/`. Cross-repository epics are dynamic documents under
-`docs-portfolio/epics/`, added manually the same way (`manage_manifest add
+`docs-portfolio/epics/`, added manually the same way (`manage_manifest.{py,js}
+add
 --type epic`) when a reviewer names an initiative and the repos it spans —
 automatic inference across siblings is deferred.
 

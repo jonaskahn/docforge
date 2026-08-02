@@ -13,8 +13,10 @@ configuration, or archive/delete anything.
 
 First perform only safe discovery: identify the repository root, check whether
 `.docforge/manifest.json` exists, run the read-only code-graph precheck, and run
-`detect_profiles` inline to identify candidate shapes, platforms, frameworks,
-and concerns. `detect_profiles` recognizes frameworks and shapes by reading
+`detect_profiles.{py,js}` inline to identify candidate shapes, platforms,
+frameworks, and concerns (see
+[`../runtime/catalog/README.md`](../runtime/catalog/README.md)).
+`detect_profiles.{py,js}` recognizes frameworks and shapes by reading
 *declared dependencies* structurally from project-definition manifests
 (`package.json`, `pyproject.toml`/`requirements.txt`, `pom.xml`,
 `build.gradle*`, `go.mod`, `Cargo.toml`, `Gemfile`, `composer.json`,
@@ -23,11 +25,14 @@ and concerns. `detect_profiles` recognizes frameworks and shapes by reading
 they never alone confirm a profile. The same noun or team term can mean
 different aspects across projects, stacks, and domain language.
 
-When the pack from `detect_profiles --emit-gate-pack` sets `needs_gate`, run the
+When the pack from `detect_profiles.{py,js} --emit-gate-pack` sets
+`needs_gate`, run the
 **discovery gate** before the discovery brief: follow
 [`../references/discovery-gate.md`](../references/discovery-gate.md), ground
 decisions only in the bounded pack, and emit judgment JSON (`promote` / `keep`
-/ `demote` / `drop` / `propose`). Apply it with `discovery_gate` helpers; on
+/ `demote` / `drop` / `propose`). Apply it with the `discovery_gate` library
+API (`runtime/catalog/{python/discovery_gate.py,js/discovery_gate.js}`, see
+[`../runtime/catalog/README.md`](../runtime/catalog/README.md)); on
 invalid judgment, fail open to deterministic ranks. Detection and the gate
 propose profiles; they never confirm them on the user's behalf. When exactly
 one readable code-graph provider is ready, use it as the proposed default and
@@ -92,7 +97,9 @@ Ask only what remains unresolved, in this order:
    also offer resuming it (plain language / intake goal →
    [`writing.md`](writing.md); no `--resume` flag), checking status or
    staleness (read-only; no `--status` flag — use plain language or
-   `manage_manifest status`), updating or refreshing a named document,
+   `manage_manifest.{py,js} status`, see
+   [`../runtime/manifest/README.md`](../runtime/manifest/README.md)), updating
+   or refreshing a named document,
    revising via `/docforge-revise` (`flow` / `<area>` / `all`, with the same
    `--plan-only` / `--auto-accept` / `--no-dashboard` flags), or replacing the plan. Briefly
    distinguish inspection, planning, writing, and read-only reporting.
@@ -233,7 +240,9 @@ For example, `.gitnexus/lbug` with indexed Process nodes satisfies both
 or CodeGraph indexes in that case unless the user asks to compare or switch.
 Likewise, a READY CodeGraph index alone is sufficient for `code_graph`; do not
 mention absent Understand Anything or GitNexus. The all-provider output of
-`diagnose_graphs` is troubleshooting detail and is never the default
+`diagnose_graphs.{py,js}` is troubleshooting detail (see
+[`../runtime/graph/README.md`](../runtime/graph/README.md)) and is never the
+default
 `/docforge` intake.
 
 Explicit requests such as "create diligence API documentation" skip answered

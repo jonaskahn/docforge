@@ -1,6 +1,7 @@
 # Dashboard
 
-Owns: the dashboard capability of the `docforge` skill — `dashboard start`,
+Owns: the dashboard capability of the `docforge` skill — `dashboard.{py,js}
+start`,
 `status`, and `stop`; the generated Fumadocs application under
 `<repo>/.docforge/dashboard/`; metadata reconciliation for public frontmatter;
 MDX conversion; route planning; navigation generation; validation; and the
@@ -30,7 +31,9 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan` and `start` require a manifest 3.1 (or 3.0, which `migrate_metadata`
+`scan` and `start` require a manifest 3.1 (or 3.0, which
+`migrate_metadata.{py,js}` — see
+[`../runtime/manifest/README.md`](../runtime/manifest/README.md) —
 upgrades in place). When the preflight fails because
 `.docforge/manifest.json` carries an **older legacy manifest version** (1.1
 `project_context` / `document_groups`, 2.0 flat `documents` with overlays, or
@@ -38,14 +41,18 @@ any other pre-3.0 shape), stop and present exactly these options before any
 write:
 
 1. **Revise all (recommended)** — run `/docforge-revise all`. Its
-   `migrate_metadata` step re-registers the legacy manifest as 3.1 (adopting
+   `migrate_metadata.{py,js}` step re-registers the legacy manifest as 3.1
+   (adopting
    written documents as `generated` with provenance 2.0, bodies preserved),
    then the revision re-grounds, lints, and audits the tree per
-   [`workflows/revision.md`](revision.md). Run `dashboard start` again after
+   [`workflows/revision.md`](revision.md). Run `dashboard.{py,js} start` again
+   after
    the whole-tree gate passes.
 2. **Update metadata only** — run
-   `migrate_metadata --repo <repo> --report` to re-register the manifest
-   without revising content, then re-run `dashboard scan` (or `start`). This
+   `migrate_metadata.{py,js} --repo <repo> --report` to re-register the
+   manifest
+   without revising content, then re-run `dashboard.{py,js} scan` (or
+   `start`). This
    path exists for **any** legacy version — nothing is hard-coded to one
    shape. The dashboard opens only if the migrated tree passes the route
    plan and validation; otherwise present every remaining finding and offer
@@ -53,7 +60,8 @@ write:
 3. **Stop** — make no changes; the dashboard is not opened and no previous
    build is presented as current.
 
-`--plan-only` runs `migrate_metadata --dry-run` and shows the migration
+`--plan-only` runs `migrate_metadata.{py,js} --dry-run` and shows the
+migration
 preview instead of writing. `--auto-accept` never bypasses this gate: the
 manifest rewrite and frontmatter adoption are side effects with their own
 approval, like every other safety gate in [`flags.md`](../flags.md).
@@ -92,8 +100,10 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
   version), apply the [Legacy manifest gate](#legacy-manifest-gate)
   before continuing. The
   session engine is locked (see
-  [`workflows/tools.md`](tools.md)); run every `dashboard` call with the same
-  engine. Node.js 22+ is required only for install/serve steps.
+  [`workflows/tools.md`](tools.md)); run every `dashboard.{py,js}` call with
+  the same engine (scripts and README:
+  [`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)). Node.js
+  22+ is required only for install/serve steps.
 - **Scan:** a read-only diagnostic pass over the manifest and tree (see
   [Scan: you should revise again](#scan-you-should-revise-again) below). `start`
   prints the findings and the recommendation up front; it does not hide them.
@@ -133,7 +143,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 - **Open:** opens `http://127.0.0.1:<port>/docs` in the default browser
   (`open` / `xdg-open`; never fails the run). `--no-open` skips this.
 - `start` exits after the server is healthy; the server keeps running in the
-  background until `dashboard stop`.
+  background until `dashboard.{py,js} stop`.
 
 `--plan-only` performs the preflight, metadata reconcile **dry-run**, both
 signatures, and the route plan only: no writes, no install, no server. It
@@ -171,7 +181,8 @@ When `start` fails, the agent must:
    area owning the failing documents, or `all`) — and ask whether to run it
    now.
 4. Only after the revision passes the whole-tree gate
-   ([`validation.md`](validation.md)) and the next `dashboard start` succeeds,
+   ([`validation.md`](validation.md)) and the next `dashboard.{py,js} start`
+   succeeds,
    serve and open the dashboard.
 
 `--auto-accept` does not waive this: a failed build is never opened, and the
@@ -337,7 +348,8 @@ Same flags as `/docforge` (see [`flags.md`](flags.md)):
 
 - `--plan-only`: preflight, metadata dry-run, signatures, and route plan
   only; no conversion, no install, no server. On a legacy manifest, the
-  metadata dry-run is the `migrate_metadata --dry-run` preview (see the
+  metadata dry-run is the `migrate_metadata.{py,js} --dry-run` preview (see
+  the
   [Legacy manifest gate](#legacy-manifest-gate)).
 - `--auto-accept`: skips the revise-vs-render prompt (renders current
   documentation) and routine pauses; never authorizes installing Node.js,

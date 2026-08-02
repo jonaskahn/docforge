@@ -1,7 +1,7 @@
 # Discovery gate
 
 The discovery gate interprets open-vocabulary cues after deterministic
-`detect_profiles` and before the user confirms repository profiles.
+`detect_profiles.{py,js}` and before the user confirms repository profiles.
 
 ## Authority
 
@@ -17,7 +17,8 @@ model API.
 ## When to run
 
 Run the gate during interactive intake when `needs_gate` is true in the pack
-from `detect_profiles --repo <path> --emit-gate-pack`. That is true when any
+from `detect_profiles.{py,js} --repo <path> --emit-gate-pack`. That is true
+when any
 detection is `candidate`, any row has `ambiguous_with`, or any cue lists two or
 more candidate profiles.
 
@@ -41,8 +42,11 @@ Return JSON matching `.metadata/discovery-gate-schema.json` `#/definitions/judgm
 - One cue may map to zero, one, or many aspects when evidence supports coexistence
 - Do not invent profile ids; do not confirm the intake summary
 
-Apply with `discovery_gate.apply_judgment` (Python) or
-`discovery_gate.applyJudgment` (Node). Persist the judgment as
+Apply with the `discovery_gate` library API — `discovery_gate.apply_judgment`
+(Python, `runtime/catalog/python/discovery_gate.py`) or
+`discovery_gate.applyJudgment` (Node, `runtime/catalog/js/discovery_gate.js`);
+see [`../runtime/catalog/README.md`](../runtime/catalog/README.md). Persist the
+judgment as
 `discovery_gate` beside `discovery` in the manifest when initializing after
 user confirmation.
 

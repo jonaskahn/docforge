@@ -4,7 +4,9 @@ Understand Anything writes a code graph to `.ua/knowledge-graph.json`
 and a native flow graph to `.ua/domain-graph.json`. Repositories already
 using `.understand-anything/` keep that legacy data directory. Because the
 artifacts are JSON, Docforge can deterministically inventory them with
-`read_graph.{py,js}` and can also use the provider’s own skills for semantic
+`read_graph.{py,js}` (see
+[`../../runtime/graph/README.md`](../../runtime/graph/README.md)) and can also
+use the provider’s own skills for semantic
 exploration.
 
 ## Prepare

@@ -41,6 +41,7 @@ Mechanical success does not complete a document; the independent audit in
 7. **No duplication:** shared facts have one owner and other views link.
 8. **Promotion integrity:** no flow or concept folder contains only README.
 
-`scaffold_docs --audit` must exit nonzero on any mechanical defect and zero on
+`scaffold_docs.{py,js} --audit` must exit nonzero on any mechanical defect and
+zero on
 a clean tree. If a whole-tree correction changes one document, independently
 audit that document again.

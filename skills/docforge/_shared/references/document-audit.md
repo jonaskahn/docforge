@@ -30,12 +30,17 @@ defects, and disposition, shaped by
 Atomic external values may remain as typed `<UPPER_SNAKE_CASE>` tokens. A
 derivable gap may not be waived to a human.
 
-Record the result with `manage_manifest audit`. A failure puts the document in
-`needs_review`. `manage_manifest set --status complete` rejects a document
+Record the result with `manage_manifest.{py,js} audit` (see
+[`../runtime/manifest/README.md`](../runtime/manifest/README.md)). A failure
+puts the document in
+`needs_review`. `manage_manifest.{py,js} set --status complete` rejects a
+document
 without a passing `cold-pass` audit record. Mechanical lint alone
 cannot produce PASS.
 
 AGENTS.md-shaped outputs (`AGENTS.md`, a `SPECIAL_DOC_OUTPUTS` member that
-`lint_document` skips) are linted by `lint_agents_kernel` instead; its defects
+`lint_document.{py,js}` skips) are linted by `lint_agents_kernel.{py,js}`
+instead (see [`../runtime/documents/README.md`](../runtime/documents/README.md));
+its defects
 are mechanical failures that block `PASS`. Fixed shims are emitted literally
 and carry no rubric lint.

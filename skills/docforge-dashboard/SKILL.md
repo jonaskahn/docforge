@@ -48,9 +48,9 @@ node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--
 
 | Flag | Effect |
 |---|---|
-| *(none)* | `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
+| *(none)* | `dashboard.{py,js} start` (scripts and README: [`${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/dashboard/README.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/dashboard/README.md>)): reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `--force` | Ignore signatures: always regenerate generated output (`content/docs`, assets, navigation, app shell), keeping `node_modules` |
-| `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server. On a legacy manifest, the metadata dry-run is the `migrate_metadata --dry-run` preview |
+| `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server. On a legacy manifest, the metadata dry-run is the `migrate_metadata.{py,js} --dry-run` preview (see [`${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/manifest/README.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/manifest/README.md>)) |
 | `--auto-accept` | Skip the revise-vs-render prompt and routine pauses; never authorizes npm install of new packages without its own confirmation gate (see [`${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md>)) |
 | `--help` | Print this command's purpose and full parameter reference — [`${CLAUDE_SKILL_DIR}/../docforge/_shared/help.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/help.md>) — then stop; run no workflow |
 
@@ -69,17 +69,20 @@ legacy manifest version (1.1 `project_context` / `document_groups`, 2.0 flat
 exactly these options before any write:
 
 1. **Revise all (recommended)** — run `/docforge-revise all`; its
-   `migrate_metadata` step re-registers the manifest as 3.1 and the revision
-   re-grounds and audits the tree, then `dashboard start` again.
+   `migrate_metadata.{py,js}` step re-registers the manifest as 3.1 and the
+   revision
+   re-grounds and audits the tree, then `dashboard.{py,js} start` again.
 2. **Update metadata only** — run
-   `migrate_metadata --repo <repo> --report` to re-register the manifest
-   without revising content, then re-run `dashboard scan` / `start`. This
+   `migrate_metadata.{py,js} --repo <repo> --report` to re-register the
+   manifest
+   without revising content, then re-run `dashboard.{py,js} scan` / `start`.
+   This
    path works for **any** legacy version — nothing is hard-coded to one
    shape.
 3. **Stop** — make no changes; the dashboard is not opened and no previous
    build is presented as current.
 
-`--plan-only` runs the `migrate_metadata --dry-run` preview instead of
+`--plan-only` runs the `migrate_metadata.{py,js} --dry-run` preview instead of
 writing. `--auto-accept` never bypasses this gate. Full detail:
 [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md>).
 
@@ -97,11 +100,11 @@ documentation is ready to render.
 
 ## Validation failure
 
-If `dashboard start` fails (route plan problems, conversion errors, or
+If `dashboard.{py,js} start` fails (route plan problems, conversion errors, or
 validation errors), the dashboard is **not** opened and the previous build
 must not be presented as current. Show every error, then ask the user to
 **revise the documentation first** — `/docforge-revise` (scoped to the
-failing area, or `all`) — and only re-run `dashboard start` after the
+failing area, or `all`) — and only re-run `dashboard.{py,js} start` after the
 revision passes the whole-tree gate. `--auto-accept` never skips this
 request.
 
@@ -111,5 +114,6 @@ request.
   ([`${CLAUDE_SKILL_DIR}/../docforge/SKILL.md`](<${CLAUDE_SKILL_DIR}/../docforge/SKILL.md>)).
 - Structural revise of the documentation itself → `/docforge-revise`
   ([`${CLAUDE_SKILL_DIR}/../docforge-revise/SKILL.md`](<${CLAUDE_SKILL_DIR}/../docforge-revise/SKILL.md>)).
-- Read-only progress → plain language or `manage_manifest status` (no
-  `--status` skill flag).
+- Read-only progress → plain language or `manage_manifest.{py,js} status` (no
+  `--status` skill flag; scripts and README:
+  [`${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/manifest/README.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/manifest/README.md>)).

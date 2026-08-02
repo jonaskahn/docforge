@@ -110,7 +110,8 @@ audit record, and sets the document status to `in_progress` so the agent can
 regenerate concrete provenance and re-ground claims. Planned documents that
 only need a scaffold are reported as `REGENERATED` without a status demotion.
 `/docforge-revise`, continuing an incomplete run, and
-`check_staleness --sync-provenance` invoke the same migration before their own
+`check_staleness.{py,js} --sync-provenance` invoke the same migration before
+their own
 work. Lint reports `obsolete schema` and names this command.
 
 ### Agent regeneration after `FAILED`
@@ -129,7 +130,8 @@ Do not leave a written document on scaffold tokens or an empty `sections` array.
 ## Manifest aggregation
 
 The manifest stores the same complete provenance object as the document.
-`check_staleness --sync-provenance` reads every manifest path, including root
+`check_staleness.{py,js} --sync-provenance` reads every manifest path,
+including root
 documents, and replaces only that document's `provenance` value. It never
 silently skips malformed frontmatter.
 
@@ -138,7 +140,9 @@ silently skips malformed frontmatter.
 - `missing provenance`: no frontmatter block or `docforge_provenance` key.
 - `unparseable provenance`: frontmatter YAML/JSON cannot be parsed.
 - `legacy provenance`: the provenance object has no `schema`.
-- `obsolete schema`: JSON 1.0 or other pre-2.0 shape; run `migrate_metadata`.
+- `obsolete schema`: JSON 1.0 or other pre-2.0 shape; run
+  `migrate_metadata.{py,js}` (see
+  [`../runtime/manifest/README.md`](../runtime/manifest/README.md)).
 - `empty provenance`: a written document has no sections.
 - `invalid blob`: `git_blob` is absent or is not 40 lowercase hexadecimal characters.
 - `unknown source`: a recorded source path is not a file in the repository.

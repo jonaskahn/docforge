@@ -5,7 +5,10 @@ side effects, and exit-code expectations.
 
 Paths are relative to the cartridge root (`skills/docforge/_shared/`). Launchers live
 under [`../runtime/cli/`](../runtime/cli/README.md); implementations under
-`../runtime/<subsystem>/{js,python}/`.
+`../runtime/<subsystem>/{js,python}/`. Per-script detail — flags, side
+effects, exit codes, and where each script is invoked — lives in the
+subsystem READMEs: `../runtime/{catalog,common,documents,flows,graph,manifest,
+migrations,portfolio,validation,dashboard}/README.md`.
 
 ## Installation
 

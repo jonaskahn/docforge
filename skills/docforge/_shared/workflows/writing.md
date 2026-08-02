@@ -5,7 +5,9 @@ provenance stamping, status transitions, mechanical linting, the independent
 audit, and continuing an incomplete run (intake goal or plain language — there
 is no `--resume` flag).
 
-For each routed document, load `model_depth` from `query_catalog --route` and
+For each routed document, load `model_depth` from
+`query_catalog.{py,js} --route` (see
+[`../runtime/catalog/README.md`](../runtime/catalog/README.md)) and
 apply the minimum rung in [`../references/model-depth-ladders.md`](../references/model-depth-ladders.md).
 It is not a heading checklist: verify evidence, decisions, controls, interfaces,
 and stopping conditions before requesting independent audit. Document lint also
@@ -14,7 +16,9 @@ validates illustration budgets and presentation-safe fences.
 ## Continue incomplete run
 
 When the user chooses Resume in intake or asks to continue an incomplete
-documentation run: run `migrate_metadata` when needed, load the version-3.1
+documentation run: run `migrate_metadata.{py,js}` when needed (see
+[`../runtime/manifest/README.md`](../runtime/manifest/README.md)), load the
+version-3.1
 manifest, and continue the first non-complete, non-skipped document in write
 order. Then follow **Write one document** below for that document. May combine
 with `--auto-accept`.
@@ -61,7 +65,7 @@ For the next document in `write_order`:
     - Each claim records at least one repository-relative `path` with `role`
      (`code`, `config`, `manifest`, `doc`, `test`, or `history`) and
      `git_blob` = the SHA-1 of `blob <len>\0` + file bytes (same value as
-     `git hash-object <path>` and `check_staleness`'s blob helper).
+      `git hash-object <path>` and `check_staleness.{py,js}`'s blob helper).
    - Empty `sections: []` is valid only while the document is `planned` or a
      fresh scaffold; lint rejects empty sections for written documents.
    - Filled example and field rules:
@@ -72,8 +76,11 @@ For the next document in `write_order`:
 5. Set it `generated`.
 6. Run the document linter and any audit-profile-specific mechanical checks.
    For the `agents-kernel` output (`AGENTS.md`, a `SPECIAL_DOC_OUTPUTS` member
-   that `lint_document` skips), the mechanical gate is
-   `lint_agents_kernel --file <path> --repo <root>` in place of `lint_document`.
+   that `lint_document.{py,js}` skips; see
+   [`../runtime/documents/README.md`](../runtime/documents/README.md)), the
+   mechanical gate is
+   `lint_agents_kernel.{py,js} --file <path> --repo <root>` in place of
+   `lint_document.{py,js}`.
 7. Independently audit it (below).
 8. Record the result:
 
@@ -105,7 +112,8 @@ passing `cold-pass` audit record.
 After writing, start a separate cold, artifact-only pass with only the artifact,
 its catalog contract, target depth, relevant quality checks, and cited sources;
 do not carry over writer reasoning. For the `agents-kernel` output, its
-mechanical gate is `lint_agents_kernel`, not `lint_document`. Record
+mechanical gate is `lint_agents_kernel.{py,js}`, not `lint_document.{py,js}`.
+Record
 `mode: cold-pass`. Mechanical checks alone never produce a completion verdict.
 Full audit procedure:
 [`../references/document-audit.md`](../references/document-audit.md).
@@ -139,7 +147,8 @@ repository evidence and the completed children: self-introduction, at-a-glance,
 scope and boundaries, start-here reading paths, child map with one reader
 question per child, related sections, and an honest empty state when no child
 is evidenced. Stamp provenance per heading, run the mechanical gate
-(`lint_document` plus the `scaffold_docs --audit` README child-coverage check),
+(`lint_document.{py,js}` plus the `scaffold_docs.{py,js} --audit` README
+child-coverage check),
 then the independent audit, and record the result. Never restate child-owned
 facts or link a child that is not selected and materialized.
 

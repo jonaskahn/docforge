@@ -60,7 +60,8 @@ compatibility, security, or operations.
 ### `backlog-traceability.md`
 
 When ticket IDs or a connected tracker provide evidence, map ticket → feature
-→ flow/change → verification/release. Add it with `manage_manifest add` using
+→ flow/change → verification/release. Add it with `manage_manifest.{py,js}`
+add using
 the dynamic `backlog-traceability` type. If evidence is absent, the correct
 result is no manifest entry and no file.
 

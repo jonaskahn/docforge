@@ -22,7 +22,9 @@ apply in scope:
     complete.
 1b. **Enforce current template conformance** — for every in-scope written
     document, the **newest template is the authority**. Fetch the document's
-    current contract, instruction, and template via `query_catalog --route`
+    current contract, instruction, and template via
+    `query_catalog.{py,js} --route` (see
+    [`../runtime/catalog/README.md`](../runtime/catalog/README.md))
     (`contract`, `instruction`, `template_file`), then compare the written
     document against the newest template's structure, format, and content
     requirements — required headings and their order, section granularity,
@@ -68,12 +70,15 @@ template (step 1b).
 A template rewrite runs in one pass per document:
 
 1. Scaffold the **newest** template for the document
-   (`scaffold_docs --document <id>`), never the old one.
+   (`scaffold_docs.{py,js} --document <id>`; see
+   [`../runtime/documents/README.md`](../runtime/documents/README.md)), never
+   the old one.
 2. Migrate still-valid prose into the matching new sections; drop obsolete
    sections and outdated formats; adopt every new required section.
 3. Re-ground the rewritten document from evidence (one section per claim
    heading), replace scaffold markers and typed tokens, then run the
-   mechanical gate (`lint_document` with the contract's required-heading set),
+   mechanical gate (`lint_document.{py,js}` with the contract's
+   required-heading set),
    the independent audit, and complete it.
 
 The newest template decides the result. A rewritten document that still
@@ -105,7 +110,8 @@ The first-time answers are stored in manifest metadata (`project.tier`,
 the user request only changes: change tier, add selections, or remove
 selections. Anything missing or newly applicable is generated as a recommended
 add action. Apply the explicitly confirmed result mechanically with
-`manage_manifest reconcile`:
+`manage_manifest.{py,js} reconcile` (see
+[`../runtime/manifest/README.md`](../runtime/manifest/README.md)):
 
 ```sh
 python runtime/cli/python/manage_manifest.py reconcile --repo <repo> \
@@ -132,8 +138,8 @@ Rules:
   step 1a even when source blobs are `FRESH`.
 - The command prints the delta (tier, profiles, added, removed-planned,
   contract-updated, kept)
-  and the annotated plan tree; then continue with `scaffold_docs --dry-run
-  --revise` and the writing workflow.
+  and the annotated plan tree; then continue with `scaffold_docs.{py,js}
+  --dry-run --revise` and the writing workflow.
 
 ## Annotated plan tree
 
@@ -153,7 +159,7 @@ with a per-document action comment, so the user sees exactly what will happen:
 
 Main-priority flows are listed under a `Flows:` section mapping each flow to its
 document path (`docs/flows/<slug>.md`) with the same action annotation. Run it
-directly with `scaffold_docs --dry-run --revise`.
+directly with `scaffold_docs.{py,js} --dry-run --revise`.
 
 ## Commands
 
@@ -162,7 +168,7 @@ directly with `scaffold_docs --dry-run --revise`.
 | Invocation | Behavior |
 |---|---|
 | `/docforge-revise` | Ask which scope: `all`, `<area>`, or `flow` |
-| `/docforge-revise all` / `/docforge-revise <area>` | Run `migrate_metadata` when needed, then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. If the manifest has no audiences, run the full audience multi-select. |
+| `/docforge-revise all` / `/docforge-revise <area>` | Run `migrate_metadata.{py,js}` when needed, then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. If the manifest has no audiences, run the full audience multi-select. |
 | `/docforge-revise flow` | Full flow pipeline (see below) |
 
 #### Flags (same as `/docforge`)
@@ -175,7 +181,8 @@ directly with `scaffold_docs --dry-run --revise`.
 Flags combine with a scope argument, e.g.
 `/docforge-revise flow --plan-only`.
 
-`migrate_metadata` also re-registers legacy manifests (any pre-3.0 version —
+`migrate_metadata.{py,js}` also re-registers legacy manifests (any pre-3.0
+version —
 1.1 `project_context` / `document_groups`, 2.0 flat `documents` with
 overlays, or any other shape) as 3.1: written documents are adopted as
 `generated` with provenance 2.0 (bodies preserved) and plan entries are
@@ -203,7 +210,7 @@ this revise.
 Natural-language **update** or **refresh** of a **named** document uses this
 path — not full revise rediscovery.
 
-1. Run `migrate_metadata` when needed.
+1. Run `migrate_metadata.{py,js}` when needed.
 2. Scan only that document:
 
    ```sh
@@ -235,12 +242,15 @@ It is not a blob-only pass. New flow connections force re-ground of existing
 flow docs and big-picture surfaces even when their cited `git_blob` values are
 still `FRESH`.
 
-1. Run `migrate_metadata` when needed, then precheck `--need flow`.
+1. Run `migrate_metadata.{py,js}` when needed, then precheck `--need flow`
+   (`precheck_graph.{py,js}`, see
+   [`../runtime/graph/README.md`](../runtime/graph/README.md)).
 2. Run the read-only harvest, rank, organization, and provisional-derivation
    stages inline in a temporary/provisional workspace. Use the advisory result
    to show the structure update and honor the execution-mode tree checkpoint
    before changing the repository.
-3. After that checkpoint, run `flow_index revise` to re-harvest candidates (with community-label and
+3. After that checkpoint, run `flow_index.{py,js} revise` to re-harvest
+   candidates (with community-label and
    near-candidate dedup), upsert every row into `.docforge/flow-index.json`
    (schema 1.1), set non-documented/non-skipped rows to `placeholder`, create
    stub markdown **only for main-priority standalone** placeholders, prune
@@ -249,15 +259,19 @@ still `FRESH`.
    harvest (or later step 8) introduces missing / new flow-related docs, run
    the suitable-missing-audiences prompt (step 3a) before writing — e.g.
    Coding agents when `agents_flow` or other agent-context flow docs are
-   newly selected.
-4. Run `flow_index organize emit`, have the agent write
+   newly selected. (`flow_index` scripts and README:
+   [`../runtime/flows/README.md`](../runtime/flows/README.md))
+4. Run `flow_index.{py,js} organize emit`, have the agent write
    `.docforge/tmp/flow-organization.json` (descriptive names, families,
-   composition), and `flow_index organize apply` before deep-dive analysis.
+   composition), and `flow_index.{py,js} organize apply` before deep-dive
+   analysis.
 5. Build an analysis pack from main-priority **standalone** flow-index rows,
    the compact communities summary, and (when no native flow graph)
-   `derive_flow_graph prepare` context; the agent/LLM analyzes those
+   `derive_flow_graph.{py,js} prepare` context; the agent/LLM analyzes those
    standalone mains only into `.docforge/tmp/flow-analysis.json`, then runs
-   `derive_flow_graph write` when a provisional graph is required. The main
+   `derive_flow_graph.{py,js} write` when a provisional graph is required.
+   (`derive_flow_graph` scripts and README:
+   [`../runtime/flows/README.md`](../runtime/flows/README.md)). The main
    agent renders and writes the committed flow index only after the
    execution-mode tree checkpoint, preserving Review and `--auto-accept`
    behavior. Full
@@ -267,7 +281,9 @@ still `FRESH`.
    or continue under `--auto-accept`):
    - **New** main standalone → full write via [`writing.md`](writing.md).
    - **Existing** documented flow → re-ground for harvest / organization /
-     connection changes; use `check_staleness --document` to limit *source*
+     connection changes; use `check_staleness.{py,js} --document` (see
+     [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) to
+     limit *source*
      rework to `PARTIAL` / `UNTRACKED` sections, but still update connection,
      composition, and cross-link sections when the flow index or neighbors
      changed, even if blobs are `FRESH`. Enforce current template conformance
@@ -288,7 +304,9 @@ picture, connections) inside that area.
 After the last document in scope passes its independent audit, run the
 whole-tree gate exactly as a fresh-start run does
 ([`validation.md`](validation.md) §7). Unless the invocation included
-`--plan-only` or `--no-dashboard`, start the dashboard (`dashboard start`),
+`--plan-only` or `--no-dashboard`, start the dashboard
+(`dashboard.{py,js} start`, see
+[`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)),
 wait for the healthy server, and report the `dashboard: <url>` line and URL
 in the final response — a revised tree without a started, reported dashboard
 is not a finished revise run.

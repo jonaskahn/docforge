@@ -29,7 +29,8 @@ again ([`writing.md`](writing.md)).
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
 Its schema version is `3.1`; there is no secondary runtime state file.
-Manifest 3.0 and provenance 1.0 are migrated by `migrate_metadata` before
+Manifest 3.0 and provenance 1.0 are migrated by `migrate_metadata.{py,js}`
+(see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
 resume, revision, or provenance synchronization. A legacy manifest of any
 pre-3.0 version (1.1 `project_context` / `document_groups`, 2.0 flat
 `documents` with overlays, or another shape) is re-registered by the same
@@ -95,7 +96,7 @@ reported in the final response:
 1. **Never under `--plan-only`** — a dry run builds nothing and serves nothing.
 2. **Skip when the invocation included `--no-dashboard`** — the run still
    completes; the user renders later with `/docforge-dashboard` or the
-   internal `dashboard start`.
+   internal `dashboard.{py,js} start`.
 3. Run the dashboard lifecycle — preflight, metadata reconcile, signature,
    build (when changed), serve, open — via
    [`./dashboard.md`](dashboard.md) (internal to this cartridge; the optional
@@ -109,8 +110,9 @@ reported in the final response:
    dashboard requirement and continue — a missing dashboard never blocks
    completion, but a successful run must print the `dashboard: <url>` line
    and name the URL in the final summary.
-6. The dev server runs detached; `dashboard stop` shuts it down without
-   affecting the written documentation or manifest state.
+6. The dev server runs detached; `dashboard.{py,js} stop` shuts it down
+   without affecting the written documentation or manifest state (see
+   [`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)).
 
 ## Process completion & git state
 

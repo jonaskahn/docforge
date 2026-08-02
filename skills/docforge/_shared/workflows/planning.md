@@ -63,7 +63,8 @@ Choose exactly one catalog tier:
   `docs-portfolio/` layer.
 
 Select shape, platform, framework, concern, and audience identifiers only from
-`.metadata/catalog/profiles/` (via `query_catalog --profile`). Aliases are
+`.metadata/catalog/profiles/` (via `query_catalog.{py,js} --profile`; see
+[`../runtime/catalog/README.md`](../runtime/catalog/README.md)). Aliases are
 accepted only at CLI input and normalize to canonical IDs. Shapes own durable
 document packs; platforms add platform constraints; frameworks tailor
 detection, terminology, evidence queries, and commands; concerns add
@@ -146,9 +147,11 @@ revision.
 Present a human-readable plan before writing. It must contain:
 
 1. **Evidence readiness** — selected primary graph provider and its persisted
-   artifact from `precheck_graph`, current/stale state, native or provisional
+   artifact from `precheck_graph.{py,js}` (see
+   [`../runtime/graph/README.md`](../runtime/graph/README.md)), current/stale
+   state, native or provisional
    flow status, and manifest/history evidence available. Name **only** providers
-   that `precheck_graph` reported READY. Understand Anything, GitNexus, and
+   that `precheck_graph.{py,js}` reported READY. Understand Anything, GitNexus, and
    CodeGraph are equally trusted for `code_graph` when ready; never imply that
    only UA/GitNexus count. Do not list absent competitors. Never echo the
    UA → GitNexus → derive priority list as if multiple sources were present.
@@ -195,7 +198,7 @@ Immediately before materializing each document, show the current structure
 summary (or "tree unchanged since the displayed checkpoint") and a compact
 execution card: path, reader, owned topics, evidence query, links to owning
 documents, and acceptance checks. This is derived from the manifest and the
-document's route (`query_catalog --route <id>`), not a second plan file.
+document's route (`query_catalog.{py,js} --route <id>`), not a second plan file.
 
 Next: for each document in `write_order`, proceed to
 [`writing.md`](writing.md).

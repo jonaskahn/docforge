@@ -1,7 +1,7 @@
 # Documentation tree
 
 This file owns paths, naming, tiers, and placement. The canonical selectable
-path list is `.metadata/catalog/` (queried via `runtime/cli/python/query_catalog.py`).
+path list is `.metadata/catalog/` (queried via `runtime/cli/python/query_catalog.py` / `runtime/cli/js/query_catalog.js`; see `runtime/catalog/README.md`).
 
 ## Naming and placement
 

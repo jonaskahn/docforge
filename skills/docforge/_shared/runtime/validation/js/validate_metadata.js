@@ -258,13 +258,14 @@ function validate() {
     errors.push("obsolete meta.json remains; Agent Skills install uses SKILL.md only");
   }
   const IGNORED_DIRS = new Set([".git", ".pytest_cache", "__pycache__", ".venv", "venv", "node_modules"]);
+  const RUNTIME_ROOT = path.join(SKILL_ROOT, "runtime");
   function collectReadmes(dir, out) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory() && !IGNORED_DIRS.has(entry.name)) collectReadmes(full, out);
       else if (entry.isFile() && entry.name === "README.md" && full !== path.join(REPO_ROOT, "README.md")) {
         const rel = path.relative(REPO_ROOT, full).split(path.sep).join("/");
-        if (!rel.includes("/runtime/dashboard/template")) out.push(rel);
+        if (!full.startsWith(RUNTIME_ROOT + path.sep)) out.push(rel); // runtime READMEs are agent/operator docs
       }
     }
   }

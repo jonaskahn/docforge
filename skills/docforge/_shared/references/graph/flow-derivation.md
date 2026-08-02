@@ -23,7 +23,9 @@ node runtime/cli/js/flow_index.js revise --repo <repo> \
   [--gitnexus-export <mcp-export.json>] [--main-limit 15]
 ```
 
-The equivalent Node command uses `flow_index.js`. Harvest writes
+The equivalent Node command uses `flow_index.js` (scripts and README:
+[`../../runtime/flows/README.md`](../../runtime/flows/README.md)). Harvest
+writes
 `.docforge/flow-index.json` (schema **1.1**) during repository discovery with
 `main` / `deferred` priorities. Revise re-harvests, merges with the existing
 index (preserving `documented` and `skipped`), sets other rows to
@@ -37,7 +39,8 @@ Bare verb symbols (`get`, `save`, `create`, …) receive deterministic
 not flooded with `save-2.md`-style collisions.
 
 After the manifest tree has passed the plan gate and `flows_index` reaches its
-write turn, run `flow_index.py|js render --repo <repo>` to project that machine
+write turn, run `flow_index.{py,js} render --repo <repo>` to project that
+machine
 record into `docs/flows/README.md`. Rendering is document writing and never
 precedes the plan gate.
 
@@ -135,8 +138,9 @@ priority enum.
 
 ## Derive main-flow detail
 
-Use this procedure after organize (when needed) and `flow_index harvest` /
-`revise` when main standalone rows need deep analysis. The agent/LLM performs
+Use this procedure after organize (when needed) and `flow_index.{py,js}
+harvest` / `revise` when main standalone rows need deep analysis. The
+agent/LLM performs
 the reasoning step; scripts only prepare compact context and validate JSON.
 
 1. Prefer the post-dedup analysis pack:
@@ -144,17 +148,22 @@ the reasoning step; scripts only prepare compact context and validate JSON.
    - `.docforge/tmp/communities.md` / `communities.json` when present
    - existing documented flow docs that need re-grounding
 2. When the chosen provider has a code graph but no native flow graph, also run
-   `derive_flow_graph prepare --repo <repo>` for the bounded code-graph digest
+   `derive_flow_graph.{py,js} prepare --repo <repo>` for the bounded code-graph
+   digest (see [`../../runtime/flows/README.md`](../../runtime/flows/README.md))
    in `.docforge/tmp/flow-context.json`.
 3. Agent/LLM analyzes **main standalone only**. For each flow record actors,
    trigger, ordered steps, branches, rules, failures, and outcome. Write
    `.docforge/tmp/flow-analysis.json` in the shape expected by
-   `derive_flow_graph write` (see `derive_flow_graph.py|js` docstring).
+   `derive_flow_graph.{py,js} write` (see the `derive_flow_graph.py|js`
+   docstring).
 4. When a provisional graph is required, run
-   `derive_flow_graph write --repo <repo> --analysis .docforge/tmp/flow-analysis.json`.
+   `derive_flow_graph.{py,js} write --repo <repo> --analysis
+   .docforge/tmp/flow-analysis.json`.
 5. Treat `.docforge/tmp/flow-graph.json` as provisional. Confirm business rules
    against source before asserting them in deep-dive flow documents.
-6. Rerun `precheck_graph --repo <repo> --need flow` before writing documents
+6. Rerun `precheck_graph.{py,js} --repo <repo> --need flow` (see
+   [`../../runtime/graph/README.md`](../../runtime/graph/README.md)) before
+   writing documents
    that require `flow_graph`.
 
 Containment edges never establish execution order. The derived file is

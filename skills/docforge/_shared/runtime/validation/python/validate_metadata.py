@@ -242,12 +242,13 @@ def validate() -> list[str]:
     if (REPO_ROOT / "meta.json").exists():
         errors.append("obsolete meta.json remains; Agent Skills install uses SKILL.md only")
     ignored_dirs = {".git", ".pytest_cache", "__pycache__", ".venv", "venv", "node_modules"}
+    runtime_root = SKILL_ROOT / "runtime"
     readmes = sorted(
         path.relative_to(REPO_ROOT).as_posix()
         for path in REPO_ROOT.rglob("README.md")
         if path != REPO_ROOT / "README.md"
         and not any(part in ignored_dirs for part in path.relative_to(REPO_ROOT).parts)
-        and "runtime/dashboard/template" not in path.relative_to(REPO_ROOT).as_posix()
+        and runtime_root not in path.parents  # agent/operator docs, not generated docs
     )
     if readmes:
         errors.append(f"nested README.md files are obsolete; use README.md: {', '.join(readmes)}")

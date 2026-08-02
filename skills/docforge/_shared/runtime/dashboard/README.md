@@ -16,3 +16,12 @@ under `<repo>/.docforge/dashboard/`.
 
 The runtime consumes the shared codec/util (`runtime.common.python.*` /
 `runtime/common/js/*`) exactly like every other subsystem.
+
+## Where invoked
+
+- [`workflows/dashboard.md`](../../workflows/dashboard.md) — full lifecycle
+  (scan / start / status / stop).
+- [`workflows/validation.md`](../../workflows/validation.md) — post-run
+  verification step.
+- `skills/docforge-dashboard/SKILL.md` — the thin optional dashboard
+  entrypoint skill.

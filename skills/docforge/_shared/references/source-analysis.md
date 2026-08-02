@@ -34,7 +34,9 @@ record the gap rather than widening scope without a new evidence question.
 
 Read manifests for commands, versions, configuration, and published surface.
 Declared dependencies also confirm and augment the frameworks and shapes
-`detect_profiles` proposed from the same manifests. Reconcile existing
+`detect_profiles.{py,js}` proposed from the same manifests (see
+[`../runtime/catalog/README.md`](../runtime/catalog/README.md)). Reconcile
+existing
 documentation as evidence, never as unquestioned truth.
 
 Ask narrow capability questions. Retrieve the files and edges that answer the

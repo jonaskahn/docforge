@@ -44,7 +44,8 @@ selection, terminology, and reader expectations.
 ## Boundaries
 
 Canonical profile IDs, aliases, and detection signals live in
-`.metadata/catalog/profiles/` (query via `query_catalog --profile`), not
+`.metadata/catalog/profiles/` (query via `query_catalog.{py,js} --profile`,
+see [`../../runtime/catalog/README.md`](../../runtime/catalog/README.md)), not
 here. These files own reader-facing guidance for a profile already selected;
 they do not select documents themselves.
 
