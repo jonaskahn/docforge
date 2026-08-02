@@ -30,6 +30,10 @@ parity directly.
 - `test_generation.py` — deterministic router generation: `--check` passes on
   current output, repeated `--write` produces identical bytes, manual drift
   is detected without writing, no timestamps leak into generated files.
+- `test_dashboard.py` — dashboard metadata reconciliation, signatures, staged
+  build, serving, and stop.
+- `test_dashboard_template.py` — dashboard app template contract: Fumadocs
+  Glass layout wiring, theme CSS, and accessibility fallbacks.
 - `test_structure.py` — SKILL.md content and (as the refactor below lands)
   router/link integrity and size budgets.
 
