@@ -14,6 +14,14 @@ const docs = defineDocs({
     // instead of replacing it, so Markdown tables keep working
     mdxOptions: applyMdxPreset({
       remarkPlugins: [remarkMdxMermaid],
+      // neutral gray code themes (github) instead of the blue-violet default,
+      // to match the no-blue-cast dark palette
+      rehypeCodeOptions: {
+        themes: {
+          light: 'github-light',
+          dark: 'github-dark',
+        },
+      },
     }),
   },
   meta: {
