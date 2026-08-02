@@ -89,6 +89,28 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn("button.rounded-full:hover", css)
         self.assertIn("button.rounded-full:active", css)
         self.assertIn("scale(0.97)", css)
+        self.assertIn("--glass-pointer-x", css)
+        self.assertIn("--glass-caustic", css)
+        self.assertIn(".liquid-glass-lens", css)
+
+    def test_hybrid_liquid_glass_provider_is_wired(self) -> None:
+        layout = (TEMPLATE / "app" / "docs" / "layout.tsx").read_text(encoding="utf-8")
+        provider = (TEMPLATE / "components" / "liquid-glass" / "liquid-glass-provider.tsx").read_text(
+            encoding="utf-8"
+        )
+        lens = (TEMPLATE / "components" / "liquid-glass" / "fluid-lens.tsx").read_text(encoding="utf-8")
+        package = (TEMPLATE / "package.json").read_text(encoding="utf-8")
+        self.assertIn("LiquidGlassProvider", layout)
+        self.assertIn("requestAnimationFrame", provider)
+        self.assertIn("prefers-reduced-motion", provider)
+        self.assertIn("getContext('webgl2')", provider)
+        self.assertIn("enabled ? <FluidLens", provider)
+        self.assertIn("MeshTransmissionMaterial", lens)
+        self.assertIn("frameloop={active ? 'always' : 'demand'}", lens)
+        self.assertIn('"@react-three/fiber"', package)
+        self.assertIn('"@react-three/drei"', package)
+        self.assertIn('"maath"', package)
+        self.assertIn('"three"', package)
 
     def test_accessibility_fallbacks_present(self) -> None:
         css = (TEMPLATE / "app" / "global.css").read_text(encoding="utf-8")

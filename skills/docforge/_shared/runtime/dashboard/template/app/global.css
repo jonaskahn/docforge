@@ -62,6 +62,8 @@
     inset 0 1px 0 var(--glass-border-bright),
     inset 0 -1px 0 hsla(218, 28%, 24%, 0.08),
     0 8px 22px -12px hsla(220, 38%, 18%, 0.4);
+  --glass-caustic: hsla(0, 0%, 100%, 0.5);
+  --glass-chroma: hsla(199, 92%, 66%, 0.18);
 }
 
 .dark {
@@ -104,6 +106,8 @@
     inset 0 1px 0 var(--glass-border-bright),
     inset 0 -1px 0 hsla(0, 0%, 0%, 0.42),
     0 10px 26px -14px hsla(0, 0%, 0%, 0.94);
+  --glass-caustic: hsla(0, 0%, 100%, 0.18);
+  --glass-chroma: hsla(346, 90%, 66%, 0.14);
 }
 
 html {
@@ -173,6 +177,25 @@ body::before {
   box-shadow: var(--glass-highlight), var(--glass-shadow);
 }
 
+/* The DOM layer carries the practical material. The optional WebGL lens only
+   augments fine-pointer desktops; this remains the complete interaction on
+   touch devices and browsers without WebGL. */
+[data-liquid-glass] {
+  --glass-pointer-x: 50%;
+  --glass-pointer-y: 50%;
+  --glass-tilt-x: 0deg;
+  --glass-tilt-y: 0deg;
+}
+
+.liquid-glass-lens {
+  position: fixed !important;
+  inset: 0;
+  z-index: 50;
+  width: 100vw !important;
+  height: 100vh !important;
+  pointer-events: none;
+}
+
 #fd-glass-layout > div.sticky {
   background-image: linear-gradient(to bottom, var(--glass-fill-strong), transparent);
 }
@@ -190,21 +213,42 @@ body::before {
   box-shadow: var(--glass-control-shadow);
   transition:
     background-color 180ms ease,
+    background-position 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
     border-color 180ms ease,
     box-shadow 180ms ease,
-    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: perspective(700px) rotateX(var(--glass-tilt-x)) rotateY(var(--glass-tilt-y));
+  transform-origin: center;
+  will-change: background-position, transform;
 }
 
 #fd-glass-layout button.rounded-full:hover {
   border-color: var(--glass-border-bright);
   background-color: var(--glass-fill-hover);
   box-shadow: var(--glass-control-shadow), 0 12px 28px -16px currentColor;
-  transform: translateY(-1px);
+  transform: perspective(700px) rotateX(var(--glass-tilt-x)) rotateY(var(--glass-tilt-y)) translateY(-1px);
 }
 
 #fd-glass-layout button.rounded-full:active {
   box-shadow: var(--glass-highlight);
-  transform: translateY(0) scale(0.97);
+  transform: perspective(700px) rotateX(var(--glass-tilt-x)) rotateY(var(--glass-tilt-y)) scale(0.97);
+}
+
+/* A focused caustic and a restrained cyan/red edge split mimic refraction at
+   the pointer location without placing a second glass surface over content. */
+#fd-glass-layout button.rounded-full[data-liquid-glass-active],
+#nd-toc[data-liquid-glass-active],
+#nd-sidebar[data-liquid-glass-active],
+#fd-glass-layout .inset-e-0[data-liquid-glass-active] {
+  background-image:
+    radial-gradient(circle 80px at var(--glass-pointer-x) var(--glass-pointer-y), var(--glass-caustic), transparent 66%),
+    radial-gradient(circle 120px at calc(var(--glass-pointer-x) + 9%) calc(var(--glass-pointer-y) + 7%), var(--glass-chroma), transparent 72%),
+    var(--glass-specular);
+}
+
+#fd-glass-layout button.rounded-full:focus-visible {
+  outline: 2px solid var(--color-fd-ring);
+  outline-offset: 3px;
 }
 
 /* Mobile sidebar drawer keeps the page context visible through a blur. */
@@ -310,6 +354,10 @@ body::before {
     backdrop-filter: none;
   }
 
+  .liquid-glass-lens {
+    display: none;
+  }
+
   @media (max-width: 79.98rem) {
     #nd-toc {
       background-color: var(--color-fd-popover);
@@ -327,6 +375,10 @@ body::before {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .liquid-glass-lens {
+    display: none;
   }
 }
 
