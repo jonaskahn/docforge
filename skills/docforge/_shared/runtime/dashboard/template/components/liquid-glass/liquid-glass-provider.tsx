@@ -1,9 +1,6 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
-
-const FluidLens = dynamic(() => import('./fluid-lens'), { ssr: false });
+import { useEffect, useRef } from 'react';
 
 const glassSelector = [
   '#nd-sidebar',
@@ -13,36 +10,29 @@ const glassSelector = [
   '#nd-toc',
 ].join(', ');
 
-type LensPosition = { x: number; y: number };
-
-function supportsFluidLens() {
-  const canvas = document.createElement('canvas');
-  const supportsWebGL = Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+function supportsPointerEffects() {
   return (
     window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
-    !window.matchMedia('(prefers-reduced-transparency: reduce)').matches &&
-    supportsWebGL
+    !window.matchMedia('(prefers-reduced-transparency: reduce)').matches
   );
 }
 
 export function LiquidGlassProvider() {
   const frame = useRef<number | undefined>(undefined);
   const hovered = useRef<HTMLElement | null>(null);
-  const pointer = useRef<LensPosition>({ x: 0, y: 0 });
-  const [enabled, setEnabled] = useState(false);
-  const [lens, setLens] = useState<{ active: boolean; position: LensPosition }>({
-    active: false,
-    position: { x: 0, y: 0 },
-  });
+  const pointer = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    if (!supportsFluidLens()) return;
-    setEnabled(true);
+    if (!supportsPointerEffects()) return;
 
     const elements = [...document.querySelectorAll<HTMLElement>(glassSelector)];
-    elements.forEach((element) => element.dataset.liquidGlass = '');
+    elements.forEach((element) => {
+      element.dataset.liquidGlass = '';
+    });
 
+    // All per-frame work happens through refs and DOM style writes, never
+    // React state, so hovering glass cannot trigger re-renders.
     const update = () => {
       frame.current = undefined;
       const element = hovered.current;
@@ -55,7 +45,6 @@ export function LiquidGlassProvider() {
       element.style.setProperty('--glass-pointer-y', `${(y * 100).toFixed(2)}%`);
       element.style.setProperty('--glass-tilt-x', `${((y - 0.5) * -2).toFixed(3)}deg`);
       element.style.setProperty('--glass-tilt-y', `${((x - 0.5) * 2).toFixed(3)}deg`);
-      setLens({ active: true, position: pointer.current });
     };
 
     const onPointerMove = (event: PointerEvent) => {
@@ -73,7 +62,6 @@ export function LiquidGlassProvider() {
     const onPointerLeave = () => {
       hovered.current?.removeAttribute('data-liquid-glass-active');
       hovered.current = null;
-      setLens((current) => ({ ...current, active: false }));
     };
 
     document.addEventListener('pointermove', onPointerMove, { passive: true });
@@ -90,9 +78,8 @@ export function LiquidGlassProvider() {
         element.style.removeProperty('--glass-tilt-x');
         element.style.removeProperty('--glass-tilt-y');
       });
-      setEnabled(false);
     };
   }, []);
 
-  return enabled ? <FluidLens active={lens.active} position={lens.position} /> : null;
+  return null;
 }

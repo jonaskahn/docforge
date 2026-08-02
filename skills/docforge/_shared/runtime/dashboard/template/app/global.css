@@ -40,12 +40,14 @@
   --color-fd-overlay: hsla(222, 30%, 8%, 0.45);
 
   /* Liquid Glass material. The layered gradients provide the directional
-     rim and specular response that a flat translucent fill cannot. */
-  --glass-fill: hsla(210, 40%, 99%, 0.58);
-  --glass-fill-strong: hsla(210, 35%, 99%, 0.74);
-  --glass-fill-hover: hsla(210, 45%, 100%, 0.78);
-  --glass-border-edge: hsla(215, 24%, 38%, 0.2);
-  --glass-border-bright: hsla(0, 0%, 100%, 0.76);
+     rim and specular response that a flat translucent fill cannot. Light
+     mode values favor legibility: a stronger fill, visible edges, and a
+     soft drop shadow so panels read against the white canvas. */
+  --glass-fill: hsla(210, 32%, 97%, 0.72);
+  --glass-fill-strong: hsla(210, 30%, 98%, 0.88);
+  --glass-fill-hover: hsla(215, 35%, 94%, 0.92);
+  --glass-border-edge: hsla(215, 25%, 40%, 0.34);
+  --glass-border-bright: hsla(0, 0%, 100%, 0.9);
   --glass-specular:
     linear-gradient(135deg, hsla(0, 0%, 100%, 0.7) 0%, hsla(0, 0%, 100%, 0.14) 28%, transparent 48%),
     linear-gradient(315deg, hsla(202, 72%, 78%, 0.12), transparent 42%);
@@ -55,13 +57,13 @@
     inset 0 -1px 0 hsla(218, 28%, 24%, 0.08);
   --glass-blur: blur(28px) saturate(185%) contrast(106%);
   --glass-shadow:
-    0 24px 54px -24px hsla(220, 38%, 18%, 0.36),
-    0 8px 20px -14px hsla(220, 38%, 18%, 0.28),
-    0 1px 2px hsla(220, 38%, 18%, 0.12);
+    0 24px 54px -24px hsla(220, 38%, 18%, 0.42),
+    0 8px 20px -14px hsla(220, 38%, 18%, 0.32),
+    0 1px 2px hsla(220, 38%, 18%, 0.16);
   --glass-control-shadow:
     inset 0 1px 0 var(--glass-border-bright),
     inset 0 -1px 0 hsla(218, 28%, 24%, 0.08),
-    0 8px 22px -12px hsla(220, 38%, 18%, 0.4);
+    0 8px 22px -12px hsla(220, 38%, 18%, 0.46);
   --glass-caustic: hsla(0, 0%, 100%, 0.5);
   --glass-chroma: hsla(199, 92%, 66%, 0.18);
 }
@@ -154,10 +156,10 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(64rem 44rem at 4% -8%, hsla(195, 82%, 58%, 0.2), transparent 62%),
-    radial-gradient(52rem 38rem at 98% 2%, hsla(274, 70%, 70%, 0.14), transparent 62%),
-    radial-gradient(56rem 40rem at 72% 108%, hsla(350, 76%, 68%, 0.1), transparent 62%),
-    linear-gradient(115deg, transparent 38%, hsla(210, 60%, 92%, 0.28) 50%, transparent 62%);
+    radial-gradient(64rem 44rem at 4% -8%, hsla(195, 82%, 58%, 0.28), transparent 62%),
+    radial-gradient(52rem 38rem at 98% 2%, hsla(274, 70%, 70%, 0.2), transparent 62%),
+    radial-gradient(56rem 40rem at 72% 108%, hsla(350, 76%, 68%, 0.16), transparent 62%),
+    linear-gradient(115deg, transparent 38%, hsla(210, 60%, 92%, 0.4) 50%, transparent 62%);
 }
 
 .dark body::before {
@@ -177,9 +179,7 @@ body::before {
   box-shadow: var(--glass-highlight), var(--glass-shadow);
 }
 
-/* The DOM layer carries the practical material. The optional WebGL lens only
-   augments fine-pointer desktops; this remains the complete interaction on
-   touch devices and browsers without WebGL. */
+/* The DOM layer carries the whole material: no WebGL, no framebuffer. */
 [data-liquid-glass] {
   --glass-pointer-x: 50%;
   --glass-pointer-y: 50%;
@@ -187,13 +187,29 @@ body::before {
   --glass-tilt-y: 0deg;
 }
 
-.liquid-glass-lens {
-  position: fixed !important;
-  inset: 0;
-  z-index: 50;
-  width: 100vw !important;
-  height: 100vh !important;
-  pointer-events: none;
+/* Sidebar navigation items — the active page is a frosted glass pill with a
+   clear accent tint and a red edge; every item picks up a distinct glass
+   hover state. Applies to the desktop sidebar and the mobile drawer.
+   The sheen stays soft: the shared specular's bright diagonal white washes
+   out the pill's rounded corners, so the pill gets its own faint gradient. */
+#nd-sidebar a.rounded-lg.bg-fd-primary\/10,
+#fd-glass-layout .inset-e-0 a.rounded-lg.bg-fd-primary\/10 {
+  background-color: color-mix(in oklab, var(--color-fd-primary) 22%, var(--glass-fill-hover));
+  background-image: linear-gradient(135deg, hsla(0, 0%, 100%, 0.16), transparent 45%);
+  box-shadow:
+    inset 0 1px 0 hsla(0, 0%, 100%, 0.3),
+    0 0 0 1px color-mix(in oklab, var(--color-fd-primary) 60%, transparent);
+  color: var(--color-fd-primary);
+  font-weight: 500;
+}
+
+#nd-sidebar a.rounded-lg:not(.bg-fd-primary\/10):hover,
+#fd-glass-layout .inset-e-0 a.rounded-lg:not(.bg-fd-primary\/10):hover {
+  background-color: color-mix(in oklab, var(--color-fd-foreground) 9%, var(--glass-fill-hover));
+  box-shadow:
+    inset 0 1px 0 hsla(0, 0%, 100%, 0.4),
+    0 0 0 1px var(--glass-border-edge);
+  color: var(--color-fd-foreground);
 }
 
 #fd-glass-layout > div.sticky {
@@ -354,10 +370,6 @@ body::before {
     backdrop-filter: none;
   }
 
-  .liquid-glass-lens {
-    display: none;
-  }
-
   @media (max-width: 79.98rem) {
     #nd-toc {
       background-color: var(--color-fd-popover);
@@ -375,10 +387,6 @@ body::before {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-
-  .liquid-glass-lens {
-    display: none;
   }
 }
 
