@@ -1135,7 +1135,7 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
 
   const state = loadState(dashboard);
   const built = fs.existsSync(path.join(dashboard, "content", "docs", "index.mdx"));
-  const needsRender = args.force || state.render_sig !== renderSig || !built;
+  const needsRender = args.force || state.render_sig !== renderSig || state.shell_sig !== shellSig || !built;
   if (needsRender) {
     const result = stageBuild(dashboard, args.repo, manifest, templateDir, args.force);
     const newState = {

@@ -47,6 +47,17 @@ class DashboardTemplateTests(unittest.TestCase):
         css = (TEMPLATE / "app" / "global.css").read_text(encoding="utf-8")
         self.assertIn("--color-fd-primary: #e30613", css)
 
+    def test_repository_link_uses_native_git_icon(self) -> None:
+        shared = (TEMPLATE / "lib" / "layout.shared.tsx").read_text(encoding="utf-8")
+        self.assertNotIn("githubUrl", shared)
+        self.assertIn("type: 'icon'", shared)
+        self.assertIn("GitIcon", shared)
+        self.assertNotIn("Github", shared)
+
+    def test_canvas_is_white_in_light_mode(self) -> None:
+        css = (TEMPLATE / "app" / "global.css").read_text(encoding="utf-8")
+        self.assertIn("--color-fd-background: #ffffff;", css)
+
     def test_glass_panels_and_ambient_background_present(self) -> None:
         css = (TEMPLATE / "app" / "global.css").read_text(encoding="utf-8")
         self.assertIn("#nd-sidebar", css)

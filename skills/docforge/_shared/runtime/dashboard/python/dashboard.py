@@ -1102,7 +1102,7 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
 
     state = load_state(dashboard)
     built = (dashboard / "content" / "docs" / "index.mdx").is_file()
-    needs_render = args.force or state.get("render_sig") != render_sig or not built
+    needs_render = args.force or state.get("render_sig") != render_sig or state.get("shell_sig") != shell_sig or not built
     if needs_render:
         result = _stage_build(dashboard, args.repo, manifest, template_dir, args.force)
         new_state = dict(state)
