@@ -4,7 +4,7 @@
   <h1>DOCFORGE</h1>
 
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
-  <p>An Agent Skill that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
+  <p>An Agent Skill cartridge that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
   [![Version](https://img.shields.io/badge/version-2.11.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
@@ -15,14 +15,27 @@
 
 ---
 
-## ▓▒░ INSERT COIN ░▒▓
+## ██▓▒░ TITLE SCREEN ░▒▓██
 
-Welcome to Docforge, the source-grounded documentation cartridge for AI
+```text
+          ██████╗  ██████╗  ██████╗ ███████╗ ██████╗ ██████╗  ██████╗ ███████╗
+          ██╔══██╗██╔═══██╗██╔════╝ ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██╔════╝
+          ██║  ██║██║   ██║██║      █████╗  ██║   ██║██████╔╝██║  ███╗█████╗
+          ██║  ██║██║   ██║██║      ██╔══╝  ██║   ██║██╔══██╗██║   ██║██╔══╝
+          ██████╔╝╚██████╔╝╚██████╗ ██║     ╚██████╔╝██║  ██║╚██████╔╝███████╗
+          ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚══════╝
+```
+
+```text
+HIGH SCORE : 2.11.0      CREDITS   : ∞      PLAYER 1 : YOUR REPO
+```
+
+Welcome to Docforge — the source-grounded documentation cartridge for AI
 coding agents. Created by [Jonas Kahn](https://github.com/jonaskahn), it is
-not a Markdown generator library — it is a whole arcade cabinet: instructions,
-references, templates, schemas, and paired Python/Node tools that make an
-agent design, write, audit, and maintain repository documentation that
-**actually matches the code**.
+not a Markdown generator library — it is a whole 8-bit arcade cabinet:
+instructions, references, templates, schemas, and paired Python/Node tools
+that make an agent design, write, audit, and maintain repository
+documentation that **actually matches the code**.
 
 The rules are simple:
 
@@ -39,87 +52,32 @@ The rules are simple:
   paths and `git hash-object` blobs it was grounded in, so the next run only
   rewrites what actually drifted.
 
-The core loop is a classic 6-stage game:
+The core loop is a classic 6-stage run:
 
 ```text
 PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 ```
 
 Spine, Diligence, or Portfolio tier. Five typed profile dimensions. Seven
-audiences. A local Fumadocs dashboard that renders your docs at the end —
-because what good is a high score if nobody can see it?
+audiences. A local Fumadocs dashboard with a Liquid Glass theme that renders
+your docs at the end — because what good is a high score if nobody can see it?
 
-## ▓▒░ WORLD MAP ░▒▓
+## ██▓▒░ WORLD MAP ░▒▓██
 
+- [How to play](#-how-to-play-)
 - [Boot sequence](#-boot-sequence-)
 - [Start game](#-start-game-)
 - [Core loop](#-core-loop-)
-- [Evidence and flows](#-evidence-and-flows-)
 - [Stage select](#-stage-select-)
 - [Boss gauntlet](#-boss-gauntlet-)
+- [Secret level: liquid docs](#-secret-level-liquid-docs-)
 - [Controller mapping](#-controller-mapping-)
-- [Inventory](#-inventory-)
+- [Save system](#-save-system-)
 - [System requirements](#-system-requirements-)
+- [Multiplayer](#-multiplayer-)
+- [Credits](#-credits-)
 
-## ▓▒░ BOOT SEQUENCE ░▒▓
-
-Prerequisites for the Agent Skills install path:
-
-- a compatible coding agent
-- Node.js 22+ with `npm`/`npx`
-- `git`
-- network access
-
-```sh
-# Install in the current project
-npx skills add jonaskahn/docforge
-
-# Install globally for supported agents
-npx skills add jonaskahn/docforge -g -y
-```
-
-These commands come from the [Agent Skills](https://agentskills.io) CLI and
-install whatever `skills/*/SKILL.md` trees the repo ships.
-
-### CLAUDE CODE CARTRIDGE
-
-Docforge also ships a native [Claude Code marketplace manifest](.claude-plugin/marketplace.json).
-The marketplace lists the GitHub repo as the plugin source and loads the same
-root `skills/` tree used by Agent Skills, with no mirrored package:
-
-```text
-/plugin marketplace add jonaskahn/docforge
-/plugin install docforge@docforge
-```
-
-If a prior add left a broken cache entry, remove and re-add first:
-
-```text
-/plugin marketplace remove docforge
-/plugin marketplace add jonaskahn/docforge
-/plugin install docforge@docforge
-```
-
-Claude Code's GitHub shorthand clones over SSH by default. This marketplace
-lists an HTTPS git URL so install does not need `github.com` in
-`~/.ssh/known_hosts`. If you still prefer SSH elsewhere, either add the host
-key (`ssh-keyscan github.com >> ~/.ssh/known_hosts`) or set
-`CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`.
-
-Both install paths load [`skills/docforge`](skills/docforge/SKILL.md) — the
-**required core bundle** that contains the whole shared cartridge, including
-the dashboard capability (workflow, runtime, and Fumadocs template).
-[`skills/docforge-revise`](skills/docforge-revise/SKILL.md) and
-[`skills/docforge-dashboard`](skills/docforge-dashboard/SKILL.md) are thin
-optional entrypoints that require `docforge`; installing only those is not
-supported. Claude Code plugin skills are namespaced
-(`/docforge:docforge`, `/docforge:docforge-revise`,
-`/docforge:docforge-dashboard`); [`commands/`](commands/) also registers the
-bare `/docforge`, `/docforge-revise`, and `/docforge-dashboard` slash
-commands. After updating the marketplace, run
-`/plugin marketplace update docforge` then reinstall or `/reload-plugins`.
-
-## ▓▒░ START GAME ░▒▓
+## ██▓▒░ HOW TO PLAY ░▒▓██
 
 Describe the documentation quest in plain language — no cheat codes needed:
 
@@ -164,7 +122,65 @@ Expected result:
 If evidence is insufficient, Docforge explains the available setup choices. It
 never changes repository analysis tooling automatically.
 
-## ▓▒░ CORE LOOP ░▒▓
+## ██▓▒░ BOOT SEQUENCE ░▒▓██
+
+Prerequisites for the Agent Skills install path:
+
+- a compatible coding agent
+- Node.js 22+ with `npm`/`npx`
+- `git`
+- network access
+
+```sh
+# Insert the cartridge in the current project
+npx skills add jonaskahn/docforge
+
+# Insert it globally for supported agents
+npx skills add jonaskahn/docforge -g -y
+```
+
+These commands come from the [Agent Skills](https://agentskills.io) CLI and
+install whatever `skills/*/SKILL.md` trees the repo ships.
+
+### CLAUDE CODE CARTRIDGE
+
+Docforge also ships a native [Claude Code marketplace manifest](.claude-plugin/marketplace.json).
+The marketplace lists the GitHub repo as the plugin source and loads the same
+root `skills/` tree used by Agent Skills, with no mirrored package:
+
+```text
+/plugin marketplace add jonaskahn/docforge
+/plugin install docforge@docforge
+```
+
+If a prior add left a broken cache entry, remove and re-add first:
+
+```text
+/plugin marketplace remove docforge
+/plugin marketplace add jonaskahn/docforge
+/plugin install docforge@docforge
+```
+
+Claude Code's GitHub shorthand clones over SSH by default. This marketplace
+lists an HTTPS git URL so install does not need `github.com` in
+`~/.ssh/known_hosts`. If you still prefer SSH elsewhere, either add the host
+key (`ssh-keyscan github.com >> ~/.ssh/known_hosts`) or set
+`CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`.
+
+Both install paths load [`skills/docforge`](skills/docforge/SKILL.md) — the
+**required core bundle** that contains the whole shared cartridge, including
+the dashboard capability (workflow, runtime, and Fumadocs template).
+[`skills/docforge-revise`](skills/docforge-revise/SKILL.md) and
+[`skills/docforge-dashboard`](skills/docforge-dashboard/SKILL.md) are thin
+optional entrypoints that require `docforge`; installing only those is not
+supported. Claude Code plugin skills are namespaced
+(`/docforge:docforge`, `/docforge:docforge-revise`,
+`/docforge:docforge-dashboard`); [`commands/`](commands/) also registers the
+bare `/docforge`, `/docforge-revise`, and `/docforge-dashboard` slash
+commands. After updating the marketplace, run
+`/plugin marketplace update docforge` then reinstall or `/reload-plugins`.
+
+## ██▓▒░ CORE LOOP ░▒▓██
 
 ```text
 PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
@@ -178,11 +194,16 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 5. **AUDIT** — run a recorded cold artifact-only pass; derivable gaps force a rewrite.
 6. **TRACK** — stamp section-level source paths and git blob hashes so later runs update only what drifted.
 
-Docforge writes behavior and boundaries, not prose tied to private symbols or line numbers. Derivable facts must be completed; only truly external values may remain as typed tokens such as `<SECURITY_CONTACT>`.
+Docforge writes behavior and boundaries, not prose tied to private symbols or
+line numbers. Derivable facts must be completed; only truly external values
+may remain as typed tokens such as `<SECURITY_CONTACT>`.
 
-Read the full [workflow](skills/docforge/_shared/workflows/README.md), [document contracts](skills/docforge/_shared/content/README.md), [audit gate](skills/docforge/_shared/references/document-audit.md), and [provenance model](skills/docforge/_shared/references/provenance-tracking.md).
+Read the full [workflow](skills/docforge/_shared/workflows/README.md),
+[document contracts](skills/docforge/_shared/content/README.md),
+[audit gate](skills/docforge/_shared/references/document-audit.md), and
+[provenance model](skills/docforge/_shared/references/provenance-tracking.md).
 
-## ▓▒░ EVIDENCE AND FLOWS ░▒▓
+### EVIDENCE AND FLOWS
 
 Docforge grounds documents in the repository evidence available to the current
 session. It writes evidence-backed flow candidates to `.docforge/flow-index.json`
@@ -193,7 +214,7 @@ clearly labeled placeholders until their evidence improves.
 Think of it as a map that only reveals rooms you have actually visited — no
 phantom corridors.
 
-## ▓▒░ STAGE SELECT ░▒▓
+## ██▓▒░ STAGE SELECT ░▒▓██
 
 Choose **Spine** for a repository baseline, **Diligence** for external scrutiny,
 or **Portfolio** for a multi-repository review. Docforge then composes five
@@ -224,9 +245,11 @@ when ticket evidence exists. Select `coding-agents` (aliases include `agent`
 and `agent-context`) for a compact `AGENTS.md` kernel, Claude shims/settings,
 and token-budgeted `docs/agents/` views.
 
-The tier rules, profile signals, and complete level layout live in the [canonical docs tree](skills/docforge/_shared/references/docs-tree.md) and [`SKILL.md`](skills/docforge/SKILL.md).
+The tier rules, profile signals, and complete level layout live in the
+[canonical docs tree](skills/docforge/_shared/references/docs-tree.md) and
+[`SKILL.md`](skills/docforge/SKILL.md).
 
-## ▓▒░ BOSS GAUNTLET ░▒▓
+## ██▓▒░ BOSS GAUNTLET ░▒▓██
 
 Every documentation project has its final bosses. Docforge exists to take
 them down:
@@ -248,7 +271,30 @@ them down:
 
 Continue? Insert the next repository.
 
-## ▓▒░ CONTROLLER MAPPING ░▒▓
+## ██▓▒░ SECRET LEVEL: LIQUID DOCS ░▒▓██
+
+The generated dashboard is not a beige HTML museum. It runs the Fumadocs Glass
+layout under a **Liquid Glass / Aero-inspired "liquid docs" theme** — the
+cabinet's attract mode after a run:
+
+- **Glass on the navigation layer only.** Sidebar, header controls, mobile
+  drawer, and compact TOC float as frosted panels over a cool ambient
+  gradient canvas; prose, tables, and code stay stable and high-contrast.
+- **Pointer-tracked material.** Glass panels pick up a cursor-following
+  caustic, chromatic edge split, and perspective tilt (sidebar, TOC, and
+  round controls). Implemented in pure DOM/CSS — no WebGL — and it respects
+  `prefers-reduced-motion`, `prefers-reduced-transparency`, forced colors,
+  and print, falling back to opaque panels where blur is unsupported.
+- **Neutral true-black dark mode.** No blue cast: neutral grays keep the
+  reading canvas quiet, Docforge red is reserved for active and primary
+  states, code blocks use GitHub colors, and tables align tabular figures.
+- **Reader-first sidebar.** Every document carries a `nav_order` (falling
+  back to write order); root documents live under the **Project** group, the
+  native git icon marks the repo, and the build reruns when the shell
+  changes. Machine-local `CLAUDE.local.md` preferences are never published.
+- A fixed `zoom: 1.05` keeps the arcade cabinet readable at a distance.
+
+## ██▓▒░ CONTROLLER MAPPING ░▒▓██
 
 Invocation order is always **command → scope args → flags** (never flags
 before the command or before a required scope argument):
@@ -293,9 +339,11 @@ authorize installation, global configuration, evidence tooling changes,
 archive/delete actions, or other separately approved side effects; it also
 does not skip grounding, plan display, audits, or final checks.
 
-The exact flag semantics and composition rules live in the [workflow](skills/docforge/_shared/workflows/README.md) and [shared flags](skills/docforge/_shared/flags.md).
+The exact flag semantics and composition rules live in the
+[workflow](skills/docforge/_shared/workflows/README.md) and
+[shared flags](skills/docforge/_shared/flags.md).
 
-## ▓▒░ INVENTORY ░▒▓
+## ██▓▒░ SAVE SYSTEM ░▒▓██
 
 [`skills/docforge/SKILL.md`](skills/docforge/SKILL.md) is the **required
 core bundle**: it carries the shared cartridge and the full dashboard
@@ -347,7 +395,7 @@ See
 and the thin entrypoint
 [`skills/docforge-dashboard/SKILL.md`](skills/docforge-dashboard/SKILL.md).
 
-## ▓▒░ SYSTEM REQUIREMENTS ░▒▓
+## ██▓▒░ SYSTEM REQUIREMENTS ░▒▓██
 
 - a compatible AI coding agent
 - `git`
@@ -358,7 +406,7 @@ and the thin entrypoint
 The agent picks the session engine from what is installed. Core tools use only
 the selected runtime's standard library or built-ins.
 
-## ▓▒░ MULTIPLAYER ░▒▓
+## ██▓▒░ MULTIPLAYER ░▒▓██
 
 Found a bug or missing rule? [Open an issue](https://github.com/jonaskahn/docforge/issues) with the request, actual output, and expected output.
 
@@ -366,7 +414,7 @@ To contribute, edit the relevant workflow, reference, template, schema, and
 Python/Node pair together under `skills/`, then
 [open a pull request](https://github.com/jonaskahn/docforge/pulls).
 
-## ▓▒░ CREDITS ░▒▓
+## ██▓▒░ CREDITS ░▒▓██
 
 SPDX-License-Identifier: MIT — [LICENSE](LICENSE)
 
