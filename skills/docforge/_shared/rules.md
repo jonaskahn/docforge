@@ -21,7 +21,7 @@ There is no runtime-precheck CLI. Once per Docforge session, the agent
 detects `PATH` and locks **one** engine for every Docforge tool call:
 
 1. `python3` (3.10+), else `python` (3.10+).
-2. Else `node` (18+), else `bun`, else `deno`.
+2. Else `node` (22+), else `bun`, else `deno`.
 3. If none are available, stop and ask the user to install one family.
 
 Do not switch engines mid-session. Prefer Python when both families work.

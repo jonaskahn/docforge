@@ -37,7 +37,7 @@ session, the agent detects what is on `PATH` and locks **one** engine for
 all Docforge tool calls until the session ends:
 
 1. `python3` if present and ≥ 3.10, else `python` if ≥ 3.10.
-2. Else `node` (18+), else `bun`, else `deno`.
+2. Else `node` (22+), else `bun`, else `deno`.
 3. If none work, stop and ask the user to install Python or a JS engine.
 
 State the chosen engine briefly (e.g. “using python3 for this session”),

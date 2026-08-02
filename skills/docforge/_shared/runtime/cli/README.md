@@ -15,7 +15,7 @@ agent probes the host once (`command -v` / equivalent) and **locks one
 engine for every Docforge tool call in that session**:
 
 1. Prefer Python: `python3`, else `python` (3.10+).
-2. Else JS: `node`, else `bun`, else `deno`.
+2. Else JS: `node` (22+), else `bun`, else `deno`.
 3. If none are available, stop and tell the user to install one family.
 
 Do not switch engines mid-session. Python and JS peers are equivalent.

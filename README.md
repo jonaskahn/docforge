@@ -66,7 +66,7 @@ because what good is a high score if nobody can see it?
 Prerequisites for the Agent Skills install path:
 
 - a compatible coding agent
-- Node.js 18+ with `npm`/`npx`
+- Node.js 22+ with `npm`/`npx`
 - `git`
 - network access
 
@@ -352,7 +352,7 @@ and the thin entrypoint
 - a compatible AI coding agent
 - `git`
 - a supported source of repository evidence
-- **one** tool runtime: Python 3.10+ **or** a JS engine (Node.js 18+, Bun, or Deno)
+- **one** tool runtime: Python 3.10+ **or** a JS engine (Node.js 22+, Bun, or Deno)
 - Node.js 22+ and `npm` **only** for `/docforge-dashboard` install/serve steps
 
 The agent picks the session engine from what is installed. Core tools use only
