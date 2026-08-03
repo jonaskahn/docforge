@@ -20,6 +20,9 @@ _Last reviewed: {{YYYY-MM-DD}}_
 
 ## Runtime dependencies
 
+_Ordered by criticality — the dependency whose failure or removal would hurt
+most goes first, not the alphabetically first package._
+
 | Package | Purpose | Licence | Version | Criticality | If it disappeared |
 |---|---|---|---|---|---|
 | {{name}} | {{why it is here}} | {{licence}} | {{range}} | {{high/medium/low}} | {{replacement path and effort}} |
@@ -29,6 +32,9 @@ _Last reviewed: {{YYYY-MM-DD}}_
 {{Summary rather than enumeration. Note anything unusual or licence-encumbered.}}
 
 ## External services
+
+_Repeat per service — direct integrations only, not every third-party call a
+dependency happens to make internally._
 
 ### {{Service name}}
 
@@ -51,6 +57,11 @@ _Last reviewed: {{YYYY-MM-DD}}_
 
 ## Generated inventory
 
-The full machine-readable inventory (SBOM) is produced by the pipeline and
-published at {{location}}. This document carries the judgement a generated file
-cannot: rationale, criticality and failure behaviour.
+The full machine-readable inventory is produced by the pipeline and published
+at {{location}} as a {{CycloneDX | SPDX}}-format SBOM — name which, since
+CycloneDX is built for vulnerability/dependency-risk tracking and SPDX for
+license/provenance, and they answer different questions. It carries the NTIA
+minimum fields: {{supplier, name, version, unique id (PURL/CPE/hash),
+dependency relationship, SBOM author, timestamp}}. This document carries the
+judgement a generated file cannot: rationale, criticality and failure
+behaviour — it does not restate the file's contents.

@@ -24,9 +24,12 @@ effort and sets honest expectations under review.
 
 ## Ceilings
 
-| Constraint | Limit | Why it exists | What lifting it would take |
-|---|---|---|---|
-| {{e.g. throughput}} | {{the ceiling}} | {{the design choice behind it}} | {{the change required}} |
+_A bound without a traceable source reads as an opinion, not a fact a
+reviewer can verify._
+
+| Constraint | Limit | Source | Why it exists | What lifting it would take |
+|---|---|---|---|---|
+| {{e.g. throughput}} | {{the ceiling}} | {{platform limit, regulation, contract, physics}} | {{the design choice behind it}} | {{the change required}} |
 
 ## Boundaries
 

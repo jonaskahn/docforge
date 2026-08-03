@@ -28,7 +28,11 @@ stateDiagram-v2
   Terminated --> [*]
 ```
 
+_Repeat per state — Launch, Active, Background, Terminated above._
+
 ## {{State}}
+
+**Owner:** {{accountable component or team for this state's behavior}}
 
 **Trigger:** {{what enters this state}}
 

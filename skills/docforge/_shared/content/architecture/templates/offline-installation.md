@@ -31,9 +31,13 @@ stateDiagram-v2
 
 **Cache contents:** {{what's cached}}
 
+**Update trigger:** {{when the cache refreshes — periodic, on-deploy, on-demand}}
+
 **Invalidation:** {{how stale cache is detected/cleared}}
 
 ## Offline boundary
+
+_One row per feature; leave a cell blank where a category doesn't apply._
 
 | Works offline | Degrades | Fails |
 |---|---|---|

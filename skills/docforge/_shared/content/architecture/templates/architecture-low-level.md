@@ -34,6 +34,9 @@ Component-level decomposition. Zooms into named blocks in
 
 ## Selected whiteboxes
 
+_Repeat per high-level block worth a component-level decomposition — not every block
+named in high-level.md needs one._
+
 ### {{High-level parent block}}
 
 **Motivation for decomposition:** {{what decision, review, diagnosis, or risk judgment this decomposition enables.}}
@@ -41,6 +44,9 @@ Component-level decomposition. Zooms into named blocks in
 **Allowed dependency direction:** {{direction and rationale.}}
 
 ## Components
+
+_Repeat per component inside this whitebox — the ones material to the decomposition's
+motivation above, not an exhaustive file listing._
 
 ### {{Component name}}
 
@@ -54,10 +60,9 @@ Component-level decomposition. Zooms into named blocks in
 - **Owns:** {{the data or responsibility that is exclusively its}}
 - **Invariant:** {{what is deliberately absent or always enforced — the fact a reader
   cannot recover by reading code, because it is the absence of something}}
-
-### `{{path/to/component}}/`
-
-{{...}}
+- **Failure boundary:** {{what this component contains when it fails — the error or
+  exception a caller must handle, and what happens to in-flight state on the way out}}
+- **Key paths:** `{{stable file/module path(s) that orient implementation work}}`
 
 ## Runtime scenario
 
@@ -92,6 +97,10 @@ The ones worth a full deep-dive get their own folder under
 | {{name}} | [concepts/{{slug}}/](concepts/{{slug}}/README.md) |
 
 ## Cross-cutting concerns
+
+_Rows below are the common cross-cutting concerns; add or drop rows to match what
+this repo actually has — a row with no evidenced path is deleted, not filled with
+`unknown`._
 
 | Concern | Where it lives | Notes |
 |---|---|---|

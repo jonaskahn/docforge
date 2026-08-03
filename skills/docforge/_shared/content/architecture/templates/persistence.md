@@ -23,6 +23,8 @@ erDiagram
   ENTITY1 ||--o{ ENTITY2 : "{{relationship}}"
 ```
 
+_Repeat per entity — the ones material to the storage model, not every table._
+
 ## {{Entity}}
 
 **Storage:** {{table/collection}} · **Key:** {{strategy}}
@@ -31,7 +33,7 @@ erDiagram
 
 ## Migrations
 
-**Mechanism:** {{tool}} · **Reversible:** {{yes/no}}
+**Mechanism:** {{tool}} · **Versioning:** {{scheme}} · **Reversible:** {{yes/no}}
 
 ## Transaction and consistency boundary
 
@@ -40,4 +42,5 @@ read-your-writes / none).}}
 
 ## Failure recovery
 
-{{What happens to a write in flight during a crash.}}
+{{What happens to a write in flight during a crash — one paragraph per entity
+whose behavior differs, or one shared statement if all entities behave alike.}}

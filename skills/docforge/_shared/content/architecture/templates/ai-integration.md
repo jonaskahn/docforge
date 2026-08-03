@@ -33,6 +33,14 @@ flowchart LR
 
 **Used as:** {{shown directly / drives an action / advisory only}}
 
+## Safety and evaluation
+
+**Safety controls:** {{content filtering, guardrails, human-in-the-loop gates
+— or `none`.}}
+
+**Evaluation evidence:** {{how this integration's behavior was tested before
+shipping — eval suite, red-team pass, manual review — or `unknown`.}}
+
 ## Failure and fallback
 
 {{Behavior when the provider is unavailable or returns low confidence.}}

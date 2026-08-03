@@ -18,6 +18,8 @@ docforge_provenance:
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
+_Repeat per job or trigger — the `##` block below._
+
 ## {{Job name}}
 
 **Trigger:** {{schedule / event / manual}}

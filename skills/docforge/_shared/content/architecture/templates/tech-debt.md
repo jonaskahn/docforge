@@ -24,9 +24,12 @@ its cost in behavioural terms — do not paste the offending code.
 
 ## Register
 
-| Item | What was deferred / shortcut taken | Why | Cost it imposes | Remediation | Tracking |
-|---|---|---|---|---|---|
-| {{name}} | {{the shortcut, described}} | {{deadline, unknown, dependency}} | {{who pays, how, when}} | {{what fixing it takes}} | {{tracker ref}} |
+_Ordered by the cost each item imposes if left untouched — not alphabetically,
+not by discovery date._
+
+| Item | Shortcut taken | Why | Evidence | Cost it imposes | Remediation | Tracking |
+|---|---|---|---|---|---|---|
+| {{name}} | {{the shortcut, in mechanism terms — not "reliability issues"}} | {{deliberate-and-prudent / inadvertent, plus the one-line reason}} | {{code, issue, test, or incident link}} | {{who pays, how, when}} | {{what fixing it takes}} | {{tracker ref}} |
 
 ## Notes
 

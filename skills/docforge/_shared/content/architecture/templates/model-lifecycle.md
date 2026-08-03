@@ -39,6 +39,18 @@ flowchart LR
 {{Training run → artifact provenance, so a production behavior traces back
 to a specific configuration.}}
 
+## Inference serving
+
+{{How the artifact is served — batch or online, latency/throughput envelope,
+and how a serving version maps back to a specific artifact.}}
+
+## Limitations
+
+{{Concise, evidenced deployment limitations — known failure modes, unsupported
+inputs, or conditions under which the output should not be trusted. Detailed
+evaluation numbers live in [model-card.md](model-card.md); this is the short,
+deployment-facing version.}}
+
 ## Drift monitoring
 
 **Signal watched:** {{metric}}

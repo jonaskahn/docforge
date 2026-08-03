@@ -18,6 +18,9 @@ docforge_provenance:
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
+_Repeat the `##` lineage block below per independent pipeline — trace one lineage
+per section, not one all-in-one diagram of everything that touches the data._
+
 ## {{Lineage name, e.g. Order event pipeline}}
 
 ```mermaid
@@ -36,6 +39,9 @@ flowchart LR
 ### {{Transformation name}}
 
 **Guarantees:** {{schema / ordering / completeness the next stage can rely on.}}
+
+**Checks:** {{validation performed before the guarantee is trusted — a schema
+check, a row-count assertion, a checksum — or `none`.}}
 
 Schema owned by: [data-types.md](data-types.md#{{anchor}})
 

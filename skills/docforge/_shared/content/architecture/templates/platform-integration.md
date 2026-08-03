@@ -18,6 +18,8 @@ docforge_provenance:
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
+_Repeat per OS service or platform adapter integrated._
+
 ## {{OS service / adapter}}
 
 **Used for:** {{purpose}}

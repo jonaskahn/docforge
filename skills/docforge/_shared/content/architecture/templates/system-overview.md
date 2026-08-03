@@ -18,7 +18,8 @@ docforge_provenance:
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
-{{One paragraph: the handful of major capabilities and how they hang together.}}
+{{One paragraph: the handful of major capabilities and how they hang together — the
+system as one box among the actors and boundary systems around it, not its internals.}}
 
 ```mermaid
 flowchart LR
@@ -27,6 +28,9 @@ flowchart LR
 ```
 
 ## Primary end-to-end path
+
+{{Pick the single journey that crosses the most capabilities — the one a newcomer
+should trace first, not just the simplest one.}}
 
 ```mermaid
 sequenceDiagram
@@ -40,6 +44,10 @@ sequenceDiagram
 ```
 
 ## Feature → owning flow → subsystem
+
+_One row per major capability — enough for a newcomer to find their way, not the
+full feature list. Every row must resolve to an existing flow document; an
+unresolved owner is labeled `unknown`, never left implicit._
 
 | Capability | Owning flow | Implementing subsystem |
 |---|---|---|

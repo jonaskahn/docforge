@@ -25,6 +25,9 @@ _Last reviewed: {{YYYY-MM-DD}}_
 
 ## Schema
 
+_This table is the source of truth for these fields unless a separate schema
+document owns them — then delete the table and link to that document instead._
+
 | Column | Type | Nullable | Description | PII |
 |---|---|---|---|---|
 | {{name}} | {{type}} | {{yes/no}} | {{meaning}} | {{none/direct/indirect}} |
@@ -45,7 +48,20 @@ denomination, timezone of timestamps, whether late data is restated or appended.
 Breaking changes ({{removing or retyping a column, changing grain or semantics}})
 are announced {{N}} {{days/weeks}} in advance via {{channel}}.
 
+## Producers
+
+| Producer | Owner | Write cadence / guarantee |
+|---|---|---|
+| {{producer}} | {{team/system}} | {{how often, and what it guarantees about each write}} |
+
 ## Known consumers
 
 | Consumer | Owner | What breaks if this changes |
 |---|---|---|
+| {{consumer}} | {{team/system}} | {{concrete failure, not "issues"}} |
+
+## Failure and recovery
+
+- **{{Bad write.}}** {{What is rejected or quarantined, and who is alerted.}}
+- **{{Missed refresh.}}** {{How staleness is detected and surfaced.}}
+- **{{Stale read.}}** {{What a consumer sees, and how it knows the data is stale.}}

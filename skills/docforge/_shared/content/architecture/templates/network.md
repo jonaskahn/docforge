@@ -24,6 +24,9 @@ flowchart LR
   Internal -->|"{{traffic}}"| Restricted["{{restricted zone}}"]
 ```
 
+_Repeat per boundary crossing — the ones that matter for trust-zone segmentation,
+not every open port._
+
 ## {{Boundary crossing}}
 
 **Traffic:** {{what crosses}} · **Purpose:** {{why}}
