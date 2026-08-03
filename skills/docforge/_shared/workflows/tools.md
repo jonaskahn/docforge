@@ -13,9 +13,12 @@ migrations,portfolio,validation,dashboard}/README.md`.
 ## Installation
 
 The cartridge may live in a **global** skill dir (`~/.agents/skills/docforge/_shared`,
-`~/.claude/skills/docforge/_shared`, or `~/.config/opencode/skills/docforge/_shared`)
-or be checked out **inside the repo** (`<repo>/skills/docforge/_shared`). Tools run
-with the cartridge root as the working directory.
+`~/.claude/skills/docforge/_shared`, or `~/.config/opencode/skills/docforge/_shared`),
+inside a **plugin root** (`<plugin-root>/skills/docforge/_shared`), or be
+checked out **inside the repo** (`<repo>/skills/docforge/_shared`). Use the
+same location-ordered lookup as the entrypoints: repo-local self-host first,
+then the plugin root, then the global dirs. Tools run with the cartridge root
+as the working directory.
 
 To make the plain documented invocations below work from the repo root
 without the cartridge checked out in-repo, link the runtime once (user-run,

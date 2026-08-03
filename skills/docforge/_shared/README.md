@@ -37,21 +37,23 @@ session engine; see [`rules.md`](rules.md) and [`workflows/tools.md`](workflows/
 
 ### Linking contract
 
-Every entrypoint that hands out this cartridge resolves it to an **absolute
-path at load time**, never a working-directory-relative one:
+Every entrypoint that hands out this cartridge anchors it to the cartridge
+root at load time, never to the session working directory:
 
-- Skill content (`skills/*/SKILL.md`) uses `${CLAUDE_SKILL_DIR}/_shared/…`
-  (`docforge`) or `${CLAUDE_SKILL_DIR}/../docforge/_shared/…` (the thin
-  entrypoints) — the absolute skill dir, for both plugin and Agent Skills
-  installs.
-- `rules.md`'s always-loaded path-anchoring rule makes every `./`/`../`
-  reference inside cartridge files resolve against the given absolute root.
-
-All entrypoints carry the fallback: if the literal `${CLAUDE_SKILL_DIR}`
-placeholder survives (older host), ask the user for the absolute cartridge
-root before following any cartridge link. Tests in `tests/test_structure.py`
-enforce the contract (placeholder targets resolve and no CWD-relative
-cartridge links appear in `skills/*/SKILL.md`).
+- Skill content (`skills/*/SKILL.md`) links relatively: `./_shared/…` for
+  `docforge`, `../docforge/_shared/…` for the thin entrypoints. The layout is
+  identical in every install mode — repo-local self-host, plugin root, or any
+  global skill dir — so the relative links resolve everywhere.
+- The entrypoints carry a location-ordered lookup rule (repo-local, plugin
+  root, then global skill dirs such as `~/.agents/skills`, `~/.claude/skills`,
+  `~/.config/opencode/skills`) that pins down the copy the host loaded;
+  `rules.md`'s always-loaded path-anchoring rule makes every `./`/`../`
+  reference inside cartridge files resolve against that root.
+- All entrypoints carry the fallback: if the cartridge cannot be located, ask
+  the user for the absolute cartridge root before following any cartridge
+  link. Tests in `tests/test_structure.py` enforce the contract (no
+  agent-specific placeholders in `skills/*/SKILL.md`, relative links resolve,
+  and no CWD-relative cartridge links appear in `skills/*/SKILL.md`).
 
 Entry skills: [`../SKILL.md`](../SKILL.md),
 [`../../docforge-revise/SKILL.md`](../../docforge-revise/SKILL.md),

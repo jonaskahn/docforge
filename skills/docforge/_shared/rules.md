@@ -5,15 +5,27 @@ Always load with either skill entrypoint. Procedural detail lives under
 
 ## Path anchoring
 
-The skill entrypoint hands this cartridge's absolute root to the session
-(`${CLAUDE_SKILL_DIR}/_shared` for `docforge`,
-`${CLAUDE_SKILL_DIR}/../docforge/_shared` for the thin entrypoints; plugin
-agents receive `${CLAUDE_PLUGIN_ROOT}/skills/docforge/_shared`). Resolve every
+The skill entrypoint hands this cartridge's root relative to its own SKILL.md:
+`./_shared` for `docforge`, `../docforge/_shared` for the thin entrypoints.
+Locate the copy of the entrypoint that the host loaded, then resolve every
 `./` and `../` reference inside cartridge files against that root, never the
 session working directory — the target repository does not contain the
-cartridge unless it is self-hosting it. If no absolute root was given, locate
-the cartridge (repo-local `skills/docforge/_shared`, the plugin install, or a
-global skill dir) before following any cartridge link, or ask the user.
+cartridge unless it is self-hosting it. Lookup order:
+
+1. **Repo-local self-host** — if the working repo contains
+   `skills/<entrypoint>/SKILL.md`, the cartridge is
+   `<repo>/skills/docforge/_shared`.
+2. **Plugin root** — a plugin install keeps the same layout:
+   `<plugin-root>/skills/docforge/_shared`.
+3. **Global skill dirs** — the running agent's own skill dir first, then the
+   shared standard set: `~/.agents/skills/docforge/_shared`,
+   `~/.claude/skills/docforge/_shared`,
+   `~/.config/opencode/skills/docforge/_shared`, plus any other skill dir the
+   running agent documents.
+
+Use the repo-local copy when the working repo self-hosts it; otherwise the
+global one. If no copy can be located, ask the user for the absolute cartridge
+root before following any cartridge link.
 
 ## Session tool runtime
 

@@ -8,31 +8,45 @@ description: Structural refresh of Docforge documentation — revise all, a docs
 Slash command: `/docforge-revise`. Thin entrypoint into the `docforge`
 skill — this skill has no runtime of its own. It requires the `docforge`
 skill to be installed and loads its shared cartridge:
-[`${CLAUDE_SKILL_DIR}/../docforge/_shared/`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/README.md>).
+[`../docforge/_shared/README.md`](../docforge/_shared/README.md).
 
-Cartridge root: `${CLAUDE_SKILL_DIR}/../docforge/_shared` (substituted at
-load — resolves to the docforge skill's `_shared`, whether installed as a
-plugin or via Agent Skills). Resolve every path inside loaded cartridge files
-against this root, never the working directory. If you see the literal
-`${CLAUDE_SKILL_DIR}` placeholder (older host), ask the user for the absolute
-cartridge root first.
+Cartridge root: `../docforge/_shared` relative to this SKILL.md — the
+`docforge` skill's `_shared`, whether installed as a plugin, via Agent Skills,
+or in a global skill dir. Locate the copy of this skill that the host loaded —
+never resolve against the session working directory. Check, in order:
+
+1. **Repo-local self-host** — if the working repo contains
+   `skills/docforge-revise/SKILL.md`, the cartridge is
+   `<repo>/skills/docforge/_shared`.
+2. **Plugin root** — a plugin install keeps the same layout:
+   `<plugin-root>/skills/docforge/_shared`.
+3. **Global skill dirs** — the running agent's own dir first, then the shared
+   standard set: `~/.agents/skills/docforge/_shared`,
+   `~/.claude/skills/docforge/_shared`,
+   `~/.config/opencode/skills/docforge/_shared`, plus any other skill dir the
+   running agent documents.
+
+Use the repo-local copy when the working repo self-hosts it; otherwise the
+global one. Resolve every path inside loaded cartridge files against this
+root, never the working directory. If no copy can be located,
+ask the user for the absolute cartridge root first.
 
 ## Load order
 
-1. [`${CLAUDE_SKILL_DIR}/../docforge/_shared/rules.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/rules.md>) — safety, graph precondition,
+1. [`../docforge/_shared/rules.md`](../docforge/_shared/rules.md) — safety, graph precondition,
    provider sufficiency, completion.
-2. [`${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md>) — `--plan-only`,
+2. [`../docforge/_shared/flags.md`](../docforge/_shared/flags.md) — `--plan-only`,
    `--auto-accept`.
-3. [`${CLAUDE_SKILL_DIR}/../docforge/_shared/retrieval.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/retrieval.md>) — catalog retrieval
+3. [`../docforge/_shared/retrieval.md`](../docforge/_shared/retrieval.md) — catalog retrieval
    protocol.
-4. Follow [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md>)
+4. Follow [`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md)
    for the full revise meaning and procedures.
 5. For audience confirm/add-more when rediscovering docs, use the Output
    audience rules in
-   [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/intake.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/intake.md>).
+   [`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md).
 
-Run tools from the cartridge root (`${CLAUDE_SKILL_DIR}/../docforge/_shared/`). Lock one session engine
-first; see [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/tools.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/tools.md>) for execution rules and CLI syntax.
+Run tools from the cartridge root (`../docforge/_shared/`). Lock one session engine
+first; see [`../docforge/_shared/workflows/tools.md`](../docforge/_shared/workflows/tools.md) for execution rules and CLI syntax.
 
 ## Arguments
 
@@ -45,9 +59,9 @@ first; see [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/tools.md`](<${CLA
 
 Before any migration, detection, or writing, revise stops and asks first. The
 question pack and stop-and-ask mechanics are owned by
-[`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/intake.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/intake.md>)
+[`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md)
 and
-[`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md>):
+[`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md):
 one confirmation covering Scope, Tier, Profiles, Output audience, and Execution
 mode, showing each persisted choice as the baseline, with `Change to <tier>`
 for tier and `Add` / `Remove` for profiles and audiences. Never proceed on
@@ -61,15 +75,15 @@ Before writing, revise displays an annotated plan tree (`add` / `update` /
 Same flags as `/docforge` (combinable with a scope argument), including
 `--no-dashboard` (skip the automatic dashboard build/serve at completion) and
 `--help` (print this command's purpose and full parameter reference from
-[`${CLAUDE_SKILL_DIR}/../docforge/_shared/help.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/help.md>) and stop). Detail:
-[`${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/flags.md>).
+[`../docforge/_shared/help.md`](../docforge/_shared/help.md) and stop). Detail:
+[`../docforge/_shared/flags.md`](../docforge/_shared/flags.md).
 
 Example: `/docforge-revise flow --plan-only`.
 
 ## Completion
 
 A revise run is complete only after the whole-tree gate
-([`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/validation.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/validation.md>))
+([`../docforge/_shared/workflows/validation.md`](../docforge/_shared/workflows/validation.md))
 passes and — unless the invocation included `--plan-only` or `--no-dashboard`
 — the dashboard has been started and its URL reported in the final response
 (`validation.md` §7 Dashboard auto-serve). Never finish a run with the docs
@@ -78,11 +92,11 @@ revised but the dashboard never started or its URL never shown.
 ## Not this command
 
 - Fresh-start documentation plan (no revise scope) → `/docforge`
-  ([`${CLAUDE_SKILL_DIR}/../docforge/SKILL.md`](<${CLAUDE_SKILL_DIR}/../docforge/SKILL.md>)).
+  ([`../docforge/SKILL.md`](../docforge/SKILL.md)).
 - Single named-document update/refresh → natural language under `/docforge`,
   staleness-first path in
-  [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md>)
+  [`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md)
   (not a full revise).
 - Read-only progress → plain language or `manage_manifest.{py,js} status`
   (no `--status` skill flag; scripts and README:
-  [`${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/manifest/README.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/runtime/manifest/README.md>)).
+  [`../docforge/_shared/runtime/manifest/README.md`](../docforge/_shared/runtime/manifest/README.md)).

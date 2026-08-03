@@ -18,15 +18,16 @@ from _support import ROOT, run
 SKILL_ROOT = ROOT / "skills" / "docforge"
 SHARED_ROOT = ROOT / "skills" / "docforge" / "_shared"
 
-PLACEHOLDER_LINK = re.compile(r"\[[^\]]*\]\(<(\$\{CLAUDE_(?:PLUGIN_ROOT|SKILL_DIR)\}[^>]+)>\)")
+AGENT_PLACEHOLDER = re.compile(r"\$\{CLAUDE_(?:PLUGIN_ROOT|SKILL_DIR)\}")
+LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
 
 class SkillContentTests(unittest.TestCase):
     def test_skill_md_routes_to_intake_workflow(self) -> None:
         """SKILL.md stays compact; the intake procedure itself lives in workflows/intake.md."""
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("${CLAUDE_SKILL_DIR}/_shared/workflows/intake.md", skill)
-        self.assertIn("${CLAUDE_SKILL_DIR}/_shared/rules.md", skill)
+        self.assertIn("./_shared/workflows/intake.md", skill)
+        self.assertIn("./_shared/rules.md", skill)
         self.assertNotIn("Ask exactly one applicable question at a time", skill)
         self.assertNotIn("[1] Starter", skill)
         self.assertNotIn("Reply with, for example: `2 R`", skill)
@@ -353,26 +354,41 @@ class SkillContentTests(unittest.TestCase):
             self.assertIn("../docforge/_shared", skill)
             self.assertIn("requires the `docforge`", skill)
 
-    def test_skill_md_links_resolve_via_skill_dir(self) -> None:
-        """Every cartridge link in the shipped SKILL.md files resolves against
-        ${CLAUDE_SKILL_DIR} (absolute skill dir), never against the session
-        working directory."""
+    def test_skill_md_links_resolve_relative_to_skill_dir(self) -> None:
+        """Every cartridge link in the shipped SKILL.md files is relative to
+        the SKILL.md's own directory (`./` or `../`), never CWD-relative or
+        agent-placeholder-relative; the lookup order and the ask-the-user
+        fallback are present."""
         for skill_dir in sorted((ROOT / "skills").glob("*")):
             skill = skill_dir / "SKILL.md"
             if not skill.is_file():
                 continue
             text = skill.read_text(encoding="utf-8")
-            self.assertIn("${CLAUDE_SKILL_DIR}", text)
+            self.assertNotRegex(text, AGENT_PLACEHOLDER)
             self.assertIn("ask the user for the absolute", text)
-            self.assertNotIn("](./", text)
-            self.assertNotIn("](../", text)
-            for link in PLACEHOLDER_LINK.findall(text):
+            self.assertIn("Repo-local self-host", text)
+            self.assertIn("Global skill dirs", text)
+            for link in LINK.findall(text):
                 self.assertTrue(
-                    link.startswith("${CLAUDE_SKILL_DIR}/"),
-                    f"{skill_dir.name}: unexpected placeholder {link}",
+                    link.startswith(("./", "../")),
+                    f"{skill_dir.name}: CWD-relative or non-relative link {link!r}",
                 )
-                target = (skill_dir / link.removeprefix("${CLAUDE_SKILL_DIR}/")).resolve()
+                target = (skill_dir / link).resolve()
                 self.assertTrue(target.is_file(), f"{skill_dir.name}: unresolved link {link}")
+
+    def test_skills_tree_has_no_agent_placeholders(self) -> None:
+        """No `${CLAUDE_SKILL_DIR}` / `${CLAUDE_PLUGIN_ROOT}` survives anywhere
+        under skills/ — the cartridge is host-neutral. `commands/` is the only
+        Claude-Code-only surface and keeps its plugin-root placeholders."""
+        offenders: list[str] = []
+        for path in (ROOT / "skills").rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix not in {".md", ".py", ".js"}:
+                continue
+            if AGENT_PLACEHOLDER.search(path.read_text(encoding="utf-8", errors="replace")):
+                offenders.append(str(path.relative_to(ROOT)))
+        self.assertEqual(offenders, [])
 
     def test_commands_resolve_via_plugin_root(self) -> None:
         """Slash commands reference skills and cartridge through
