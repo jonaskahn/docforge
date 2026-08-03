@@ -1,7 +1,9 @@
 # Parallel execution
 
-Parallel work is read-only evidence collection. The orchestrator owns planning,
-merging, document writes, and state transitions.
+Parallel work is read-only evidence collection, plus — at the orchestrator's
+discretion — artifact-only document writing by spawned sub-agents. The
+orchestrator owns planning, merging, manifest state, and final acceptance;
+workers never mutate the manifest.
 
 ## Safe fan-out
 
@@ -10,17 +12,25 @@ Fan out only across scopes that can be investigated independently:
 - functional areas with separate evidence questions;
 - distinct flow candidates;
 - child repositories;
-- independent audits of completed artifacts.
+- independent audits of completed artifacts;
+- independent documents in `write_order` whose target files do not collide
+  and whose ordering allows concurrency (never a child before the ancestor
+  index it must not race, and never two workers on the same file).
 
-Workers must not edit repository files. In particular, only the orchestrator
-mutates `.docforge/manifest.json`: manifest commands perform unlocked full-file
+Workers must not edit repository files except under the parallel-writing
+contract: a spawned writer may materialize and edit **only its own document
+artifact** (and may scaffold no shared ancestor index — the orchestrator does
+that serially before fan-out). In particular, only the orchestrator mutates
+`.docforge/manifest.json`: manifest commands perform unlocked full-file
 rewrites, so concurrent writers can silently lose state.
 
 Read-only discovery may run before the plan gate. No document writing starts
 until the complete tree and document cards pass that gate. Afterward, document
-writing follows `write_order` one document at a time. Manifest initialization,
+writing follows `write_order`; the orchestrator writes serially or spawns
+sub-agents for independent documents in parallel, and applies every status
+transition serially in both modes. Manifest initialization,
 dynamic additions, status changes, provenance synchronization, and audit
-recording are also serial orchestrator operations.
+recording are always serial orchestrator operations.
 
 ```mermaid
 flowchart TD
@@ -29,12 +39,13 @@ flowchart TD
     C --> D["Orchestrator merges and deduplicates"]
     D --> E["Apply manifest mutations serially"]
     E --> F["Display and pass plan gate"]
-    F --> G["Write next document in write_order"]
-    G --> H["Run independent read-only audit"]
-    H --> I["Record audit result serially"]
-    I --> J{"More documents"}
-    J -->|Yes| G
-    J -->|No| K["Run whole-tree gate"]
+    F --> G["Write next document in write_order — or spawn sub-agents for independent documents in parallel (artifacts only)"]
+    G --> H["Apply status transitions serially"]
+    H --> I["Run independent read-only audit"]
+    I --> J["Record audit result serially"]
+    J --> K{"More documents"}
+    K -->|Yes| G
+    K -->|No| L["Run whole-tree gate"]
 ```
 
 ## Result contract

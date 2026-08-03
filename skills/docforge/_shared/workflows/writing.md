@@ -25,7 +25,34 @@ with `--auto-accept`.
 
 ## 4. Write one document
 
-For the next document in `write_order`:
+### Parallel fan-out of independent documents
+
+When several pending documents are independent — no child-before-ancestor
+ordering (§6) and no shared target file with a sibling worker — the
+orchestrator may spawn sub-agents to write them in parallel. Spawn only when
+it genuinely helps (large batches, many small independent documents);
+otherwise keep the serial `write_order` loop. Contract
+([`../references/parallel-execution.md`](../references/parallel-execution.md)):
+
+- Before fan-out, the orchestrator scaffolds any shared ancestor indexes
+  serially (indexes may exist before their children, §6) and sets each
+  document `in_progress` serially.
+- Each worker receives its document card (route, `requires`, audience,
+  presentation), evidence budget, and one target artifact. It runs the
+  artifact portion of **Write one document** — route, materialize, re-ground,
+  provenance, mechanical lint — on **only its own artifact file**. It never
+  calls `manage_manifest` and never edits shared indexes, other documents, or
+  the manifest.
+- Each worker returns a result contract (see parallel-execution.md): claims
+  grounded with sources, unresolved gaps, lint findings, and any defect it
+  could not clear.
+
+After all workers return, the orchestrator merges, applies the status
+transitions (`in_progress` → `generated`) serially per returned artifact, then
+proceeds to the independent audit (§5), which may also run concurrently with
+serial recording.
+
+For the next document in `write_order` (serial mode):
 
 1. Check every capability in its `requires` list.
 2. Resolve its route in one call:

@@ -68,7 +68,11 @@ unless both were READY and the user chose a primary. Detail:
 2. Build and show the plan before writing. `--auto-accept` waives routine
    conversational pauses; see [`flags.md`](flags.md) for the explicit list of
    excluded side effects and mandatory safety gates.
-3. Write one document at a time, in catalog `write_order`.
+3. Write documents in catalog `write_order`. Independent documents may be
+   written concurrently by spawned sub-agents under the parallel-execution
+   contract ([`references/parallel-execution.md`](references/parallel-execution.md)):
+   workers edit only their own artifact files, and every manifest mutation
+   stays a serial orchestrator operation.
 4. Stamp provenance while writing (YAML provenance 2.0, byte one). Replace
    every scaffold token with concrete write metadata and source blobs.
 5. A writer never marks its own artifact complete; mechanical lint is
