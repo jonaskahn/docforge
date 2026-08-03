@@ -163,7 +163,7 @@ class ReadmeScaffoldTests(unittest.TestCase):
                 "# Architecture high level\n\nContent.\n", encoding="utf-8",
             )
             manifest = {
-                "version": "3.1",
+                "version": "3.2",
                 "generated_at": "2026-08-01T00:00:00+00:00",
                 "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],

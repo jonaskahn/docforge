@@ -10,7 +10,7 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
   presentation; recording audits → `manage_manifest`.
 - Checking whether written documents drifted from their source blobs →
   `check_staleness`.
-- Loading legacy state (manifest 3.0 / provenance 1.0 or pre-3.0 shapes) →
+- Loading legacy state (manifest 3.1 / 3.0 / provenance 1.0 or pre-3.0 shapes) →
   `migrate_metadata`.
 
 ## Scripts
@@ -19,7 +19,7 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
 |---|---|---|---|
 | `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `reconcile` / `finish` |
 | `check_staleness` | both | CLI | Provenance blob drift report; optional provenance sync |
-| `migrate_metadata` | both | CLI | Idempotent manifest 3.1 / provenance 2.0 upgrade |
+| `migrate_metadata` | both | CLI | Idempotent manifest 3.2 / provenance 2.0 upgrade |
 
 ## Details
 
@@ -59,7 +59,9 @@ into the manifest, and rewrite the manifest. Exit `0` clean, `1` stale/untracked
 python3 runtime/cli/python/migrate_metadata.py --repo <repo> [--manifest <path>] [--dry-run] [--report]
 ```
 
-Upgrades manifest 3.0 / provenance 1.0 to 3.1 / 2.0 and re-registers older
+Upgrades manifest 3.1 (or 3.0 / provenance 1.0) to 3.2 / 2.0 — seeding each
+document's catalog-owned `description` from the catalog `summary` — and
+re-registers older
 shapes; adopts legacy written documents, scaffolds incomplete provenance,
 clears failed audits, demotes incomplete written documents to `in_progress`.
 `--dry-run` is read-only; `--report` changes output format **without** making
@@ -76,5 +78,5 @@ the run read-only. Exit `1` on missing documents or failed conversion.
 ## Boundaries
 
 Consumes `common/` libraries (`_util`, `plan`, `provenance_frontmatter`) and
-`catalog/query_catalog`. The manifest schema (3.1) and flow-index schema (1.1)
+`catalog/query_catalog`. The manifest schema (3.2) and flow-index schema (1.1)
 are enforced by `validation/validate_metadata`.

@@ -20,6 +20,7 @@ class DashboardTemplateTests(unittest.TestCase):
     def test_next_config_is_static_export_ready(self) -> None:
         config = (TEMPLATE / "next.config.mjs").read_text(encoding="utf-8")
         self.assertIn("output: 'export'", config)
+        self.assertIn("trailingSlash: true", config)
 
     def test_search_route_pre_renders_static_index(self) -> None:
         route = (TEMPLATE / "app" / "api" / "search" / "route.ts").read_text(encoding="utf-8")

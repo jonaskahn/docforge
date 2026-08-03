@@ -189,7 +189,7 @@ PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 1. **PRECHECK** — confirm sufficient repository evidence.
 2. **ANALYZE** — read source, config, manifests, existing docs, CI, deployment files, git history, and child repositories.
 3. **PLAN** — choose a named tier and typed profiles, harvest a complete ranked
-   flow index, initialize manifest 3.1, then preview its exact tree.
+   flow index, initialize manifest 3.2, then preview its exact tree.
 4. **WRITE** — generate one document at a time in dependency order.
 5. **AUDIT** — run a recorded cold artifact-only pass; derivable gaps force a rewrite.
 6. **TRACK** — stamp section-level source paths and git blob hashes so later runs update only what drifted.

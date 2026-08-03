@@ -108,7 +108,7 @@ def ensure_gitignored_dir(path: Path) -> Path:
 def load_manifest(
     path: Path,
     *,
-    allowed_versions: Sequence[str] = ("3.1",),
+    allowed_versions: Sequence[str] = ("3.2", "3.1"),
     require_documents: bool = False,
     unsupported_hint: str = "run migrate_metadata.py to re-register legacy manifests",
 ) -> dict:

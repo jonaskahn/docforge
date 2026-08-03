@@ -310,11 +310,20 @@ def emit_yaml(provenance: dict) -> str:
     return "\n".join(lines)
 
 
-def emit_document_frontmatter(doc_id: str, title: str, provenance: dict) -> str:
-    """Emit MDX-compatible public identity plus private Docforge provenance."""
+def emit_document_frontmatter(
+    doc_id: str,
+    title: str,
+    provenance: dict,
+    description: str | None = None,
+) -> str:
+    """Emit MDX-compatible public identity (id, title, optional description)
+    plus private Docforge provenance."""
     if not doc_id or not title:
         raise YamlCodecError("document id and title must be non-empty")
-    lines = ["---", f"id: {quote_scalar(doc_id)}", f"title: {quote_scalar(title)}", "docforge_provenance:"]
+    lines = ["---", f"id: {quote_scalar(doc_id)}", f"title: {quote_scalar(title)}"]
+    if description is not None:
+        lines.append(f"description: {quote_scalar(description)}")
+    lines.append("docforge_provenance:")
     _emit_mapping(lines, provenance, PROVENANCE_KEY_ORDER, 2)
     lines.extend(["---", ""])
     return "\n".join(lines)

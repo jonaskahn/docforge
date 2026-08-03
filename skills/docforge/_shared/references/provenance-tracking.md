@@ -48,6 +48,13 @@ Markdown body after frontmatter (`sha256:<64 hex>`). Optional `review` records
 provider and `graph.flow` is `native`, `derived`, or `none`. `graph_snapshot`
 is not part of provenance 2.0.
 
+Written documents also carry **public** frontmatter above
+`docforge_provenance`: `id`, `title`, and `description` (a reader-facing
+one-liner of at most 160 characters). `description` is catalog-owned — seeded
+from the manifest (catalog `summary`) at init / migrate / reconcile and kept
+in sync with the manifest by the dashboard; lint rejects written documents
+without a non-empty description.
+
 Each section `id` is a Markdown heading anchor. Its sources use repository-
 relative file paths, a Git blob hash of the working-tree bytes, and one role:
 `code`, `config`, `manifest`, `doc`, `test`, or `history`. `unresolved` lists
@@ -99,8 +106,10 @@ node runtime/cli/js/migrate_metadata.js --repo <repo>
 
 The command is idempotent. It rewrites convertible frontmatter to YAML 2.0,
 preserves section evidence (inferring source `role` and adding empty
-`unresolved` when absent), migrates embedded manifest provenance objects, and
-bumps the manifest from `3.0` to `3.1`.
+`unresolved` when absent), migrates embedded manifest provenance objects,
+seeds each document's catalog-owned public `description` (from the catalog
+`summary`), and
+bumps the manifest from `3.1` (or `3.0`) to `3.2`.
 
 When frontmatter is missing or unparseable, conversion throws, or the result
 for a previously written document is still incomplete (scaffold tokens, empty

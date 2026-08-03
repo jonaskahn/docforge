@@ -29,6 +29,7 @@ const STATE_FILE = ".docforge-dashboard.json";
 const BASE_URL = "/docs";
 const DOC_PREFIX = "docs/";
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
+const FRONTMATTER_HEAD_BYTES = 64 * 1024;
 const ASSET_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".ico", ".bmp"];
 const ASSET_MAX_BYTES = 10 * 1024 * 1024;
 const SCHEMES = ["http://", "https://", "mailto:", "tel:", "//"];
@@ -65,16 +66,58 @@ function gitRemoteUrl(repo) {
 }
 
 function rootDocHasProvenance(repo, rel) {
-  const { raw } = splitFrontmatterRaw(fs.readFileSync(path.join(repo, rel), "utf8"));
-  if (!raw) return false;
+  const meta = fileMetadata(repo, rel);
+  return !!(meta && meta.provenance_schema === pf.SCHEMA_VERSION);
+}
+
+function readFrontmatterHead(target) {
+  // Read only the frontmatter block from the file head (bounded read; the
+  // body is never read). Returns { raw, bodyStart } or null when the file
+  // has no frontmatter. Falls back to a full read only when the frontmatter
+  // exceeds the head bound.
+  let head;
+  try {
+    const fd = fs.openSync(target, "r");
+    try {
+      const buffer = Buffer.alloc(FRONTMATTER_HEAD_BYTES);
+      const bytes = fs.readSync(fd, buffer, 0, FRONTMATTER_HEAD_BYTES, 0);
+      head = buffer.subarray(0, bytes);
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return null;
+  }
+  if (head.toString("utf8", 0, 4) !== "---\n") return null;
+  const marker = Buffer.from("\n---\n");
+  const end = head.indexOf(marker, 4);
+  if (end < 0) {
+    const split = pf.splitFrontmatter(fs.readFileSync(target, "utf8"));
+    if (split.raw == null) return null;
+    return { raw: split.raw, bodyStart: split.end };
+  }
+  return { raw: head.subarray(4, end).toString("utf8"), bodyStart: end + marker.length };
+}
+
+function fileMetadata(repo, rel) {
+  // Public metadata of a written document read from its frontmatter head
+  // only: id, title, description, and provenance schema. null when the file
+  // carries no parseable docforge frontmatter.
+  const head = readFrontmatterHead(path.join(repo, rel));
+  if (!head) return null;
   let data;
   try {
-    data = pf.parseYamlMapping(raw);
+    data = pf.parseYamlMapping(head.raw);
   } catch {
-    return false;
+    return null;
   }
   const provenance = data.docforge_provenance;
-  return !!(provenance && typeof provenance === "object" && provenance.schema === pf.SCHEMA_VERSION);
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    provenance_schema: provenance && typeof provenance === "object" ? provenance.schema : null,
+  };
 }
 
 function manifestProvenance(doc) {
@@ -175,6 +218,7 @@ function manifestProjection(manifest) {
       path: doc.path || "",
       status: doc.status || "",
       title: titleFor(doc),
+      description: doc.description || "",
       write_order: doc.write_order || 0,
       nav_order: doc.nav_order,
     }));
@@ -183,7 +227,7 @@ function manifestProjection(manifest) {
 function renderSignature(repo, manifest) {
   const records = [];
   for (const doc of manifestProjection(manifest)) {
-    records.push(`doc\x00${JSON.stringify(doc)}`);
+    records.push(`doc\x00${JSON.stringify(doc, Object.keys(doc).sort())}`);
   }
   for (const rel of treeFiles(repo)) {
     records.push(`file\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
@@ -240,8 +284,8 @@ function saveState(dashboard, state) {
   fs.writeFileSync(statePath(dashboard), dumpJson(state), "utf8");
 }
 
-function publicFrontmatter(doc, provenance) {
-  return pf.emitDocumentFrontmatter(doc.id, titleFor(doc), provenance);
+function publicFrontmatter(docId, title, provenance, description = null) {
+  return pf.emitDocumentFrontmatter(docId, title, provenance, description || null);
 }
 
 function splitFrontmatterRaw(text) {
@@ -257,15 +301,14 @@ function reconcileMetadata(repo, manifest, dryRun = false) {
     if (!p.startsWith(DOC_PREFIX) || !p.endsWith(".md")) continue;
     const target = path.join(repo, p);
     if (!fs.existsSync(target)) continue;
-    const text = fs.readFileSync(target, "utf8");
-    const { raw, body } = splitFrontmatterRaw(text);
-    if (raw == null) {
+    const head = readFrontmatterHead(target);
+    if (!head) {
       report.skipped.push({ doc: doc.id, detail: "no frontmatter" });
       continue;
     }
     let data;
     try {
-      data = pf.parseYamlMapping(raw);
+      data = pf.parseYamlMapping(head.raw);
     } catch (error) {
       report.errors.push({ doc: doc.id, detail: `unparseable frontmatter: ${error.message}` });
       continue;
@@ -277,9 +320,11 @@ function reconcileMetadata(repo, manifest, dryRun = false) {
     }
     const wantId = doc.id;
     const wantTitle = titleFor(doc);
+    const wantDescription = doc.description || "";
     const problems = [];
     if (data.id !== wantId) problems.push("id");
     if (data.title !== wantTitle) problems.push("title");
+    if ((data.description || "") !== wantDescription) problems.push("description");
     if (provenance.doc_id !== wantId) problems.push("provenance.doc_id");
     if (provenance.path !== p) problems.push("provenance.path");
     if (problems.length === 0) {
@@ -290,7 +335,12 @@ function reconcileMetadata(repo, manifest, dryRun = false) {
     if (!dryRun) {
       if (problems.includes("provenance.doc_id")) provenance.doc_id = wantId;
       if (problems.includes("provenance.path")) provenance.path = p;
-      fs.writeFileSync(target, publicFrontmatter(doc, provenance) + body, "utf8");
+      const split = pf.splitFrontmatter(fs.readFileSync(target, "utf8"));
+      fs.writeFileSync(
+        target,
+        publicFrontmatter(wantId, wantTitle, provenance, wantDescription) + split.body,
+        "utf8",
+      );
     }
   }
   report.counts = {
@@ -679,7 +729,8 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
     const [mdxBody] = convertBody(body, doc.source_path, ledger, assetsNeeded);
     const h1Title = firstH1Title(body);
     if (h1Title) doc.title = h1Title;
-    const content = publicFrontmatter(doc, provenance) + mdxBody;
+    const manifestDoc = doc.doc || {};
+    const content = publicFrontmatter(doc.doc_id, doc.title, provenance, manifestDoc.description) + mdxBody;
     const target = path.join(stageDocs, doc.output_path);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, content, "utf8");

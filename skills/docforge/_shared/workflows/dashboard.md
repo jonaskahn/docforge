@@ -31,7 +31,7 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan` and `start` require a manifest 3.1 (or 3.0, which
+`scan` and `start` require a manifest 3.2 (or 3.1, which
 `migrate_metadata.{py,js}` — see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md) —
 upgrades in place). When the preflight fails because
@@ -41,7 +41,7 @@ any other pre-3.0 shape), stop and present exactly these options before any
 write:
 
 1. **Revise all (recommended)** — run `/docforge-revise all`. Its
-   `migrate_metadata.{py,js}` step re-registers the legacy manifest as 3.1
+   `migrate_metadata.{py,js}` step re-registers the legacy manifest as 3.2
    (adopting
    written documents as `generated` with provenance 2.0, bodies preserved),
    then the revision re-grounds, lints, and audits the tree per
@@ -96,7 +96,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 -> INSTALL (if missing) -> EXPORT               (--export)
 ```
 
-- **Preflight:** repository, manifest 3.1 (or 3.0), and a readable `docs/` tree.
+- **Preflight:** repository, manifest 3.2 (or 3.1), and a readable `docs/` tree.
   When the manifest is a legacy pre-3.0 version (or any other unsupported
   version), apply the [Legacy manifest gate](#legacy-manifest-gate)
   before continuing. The
@@ -108,14 +108,21 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 - **Scan:** a read-only diagnostic pass over the manifest and tree (see
   [Scan: you should revise again](#scan-you-should-revise-again) below). `start`
   prints the findings and the recommendation up front; it does not hide them.
-- **Metadata reconcile:** ensures each written document's public `id` and
-  `title` frontmatter match the manifest and that `docforge_provenance.doc_id`
-  / `path` agree; bodies are preserved byte-for-byte. Idempotent and always
-  run (it is the dashboard's required input).
+- **Metadata reconcile:** ensures each written document's public `id`,
+  `title`, and `description` frontmatter match the manifest (missing
+  descriptions are added; descriptions are catalog-owned, seeded from the
+  catalog `summary` at init / migrate / reconcile) and that
+  `docforge_provenance.doc_id` / `path` agree; bodies are preserved
+  byte-for-byte. Idempotent and always run (it is the dashboard's required
+  input). Metadata is compared against the frontmatter head only — file
+  bodies are never read for reconcile, route planning, or navigation
+  ordering; they are read only for MDX conversion, asset copying, and link
+  validation.
 - **Signature:** two working-tree signatures decide what to rebuild:
   - `render_sig` — `docs/**/*.md[x]` paths and bytes (including images),
     included root-document bytes, and a manifest projection (`id`, `title`,
-    `path`, `status`, `write_order`, `nav_order`). Git `HEAD`, the flow
+    `description`, `path`, `status`, `write_order`, `nav_order`). Git `HEAD`,
+    the flow
     index, and the repository's package files are **not** part of it: they do
     not affect the rendered site, and unrelated changes must not trigger a
     rebuild.
@@ -147,9 +154,13 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
   background until `dashboard.{py,js} stop`.
 - **Export (`--export`):** instead of SERVE -> OPEN, the runtime runs
   `npm --prefix <dashboard> run build`. The generated app is a static-export
-  Next.js site (`output: 'export'`; search uses the statically pre-rendered
-  `staticGET` index), so `next build` emits **plain `.html` files** under
-  `<dashboard>/out/` — hostable at a domain root on GitHub Pages, S3, or any
+  Next.js site (`output: 'export'`, `trailingSlash: true`; search uses the
+  statically pre-rendered
+  `staticGET` index), so `next build` emits **`index.html` per page** under
+  `<dashboard>/out/` — `/docs` → `out/docs/index.html`, a page at
+  `/docs/a/b` → `out/docs/a/b/index.html`; never flat `docs.html` /
+  `<page>.html` files — hostable at a domain root on GitHub Pages, S3, or
+  any
   static file server. No server is started and no browser is opened. The
   export is skipped when the stored `export_sig` (render + shell signatures)
   matches and `out/` already contains HTML; the printed `<dashboard>/out`
@@ -246,13 +257,16 @@ When `start` (or `scan`) reports problems, the agent must:
 
 ## Conversion rules (deterministic, code-fence aware)
 
-- The public frontmatter (`id`, `docforge_provenance`) is re-emitted from the
-  manifest; the body is otherwise untouched except for the rules below.
+- The public frontmatter (`id`, `title`, `description`,
+  `docforge_provenance`) is re-emitted from the manifest; the body is
+  otherwise untouched except for the rules below.
 - The frontmatter `title` is the document's **first H1 heading** (markers
   like `[!toc]` / `[#custom-id]` and link/formatting syntax stripped) so
   titles are fully meaningful ("Documentation", not "Docs Index"); it falls
   back to the manifest title when a document has no H1. `meta.json` folder
-  titles inherit the same value.
+  titles inherit the same value. The frontmatter `description` (manifest /
+  catalog-owned, ≤ 160 chars) drives per-page `<meta name="description">`
+  and the `generateMetadata` output of the site.
 - Inside fenced code blocks and inline code, text is preserved verbatim.
 - Outside code, `<` `>` `{` `}` are escaped to HTML entities so typed
   `<UPPER_SNAKE_CASE>` tokens and literal braces can never be parsed as JSX

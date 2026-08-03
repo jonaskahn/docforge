@@ -36,7 +36,7 @@ TRANSITIONS = {
     "skipped": {"planned"},
 }
 TOOL_VERSION = GENERATOR_VERSION
-MANIFEST_VERSION = "3.1"
+MANIFEST_VERSION = "3.2"
 USER_CONFIRMED_TRIGGERS = {
     "new-trust-boundary", "per-interaction-review", "regulated-workload",
     "high-criticality", "new-external-integration", "new-data-classification",
@@ -201,6 +201,7 @@ def make_document(
     document = {
         "id": definition["id"],
         "title": detail.get("title") or definition["id"].replace("_", " ").replace("-", " ").title(),
+        "description": detail.get("summary") or "",
         "type": definition["type"],
         "path": definition["path"],
         "group": definition["group"],
@@ -517,6 +518,7 @@ def sync_contract_revisions(catalog: dict, docs: list[dict]) -> list[str]:
             continue
         detail = query_catalog.load_type(catalog_id)
         doc["title"] = detail.get("title") or doc["title"]
+        doc["description"] = detail.get("summary") or doc.get("description", "")
         doc["scaffold_template"] = detail["template_file"]
         doc["instruction_file"] = detail.get("instruction_file")
         doc["target_depth"] = detail.get("target_depth", doc["target_depth"])

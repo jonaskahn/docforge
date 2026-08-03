@@ -67,8 +67,15 @@ def validate() -> list[str]:
         errors.append("split catalog index.json is missing")
     if (metadata / "catalog.json").is_file():
         errors.append("obsolete monolith catalog.json remains; use .metadata/catalog/")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.1":
-        errors.append("manifest schema must require version 3.1")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.2":
+        errors.append("manifest schema must require version 3.2")
+    document_schema = (
+        manifest_schema.get("definitions", {})
+        .get("document", {})
+        .get("properties", {})
+    )
+    if "description" not in document_schema:
+        errors.append("manifest schema must define document.description")
     if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.1":
         errors.append("flow index schema must require version 1.1")
     flow_item = (

@@ -99,6 +99,9 @@ count_file.write_text(str(count), encoding="utf-8")
 index = out / "docs" / "index.html"
 index.parent.mkdir(parents=True, exist_ok=True)
 index.write_text(f"<html>export {count}</html>", encoding="utf-8")
+nested = out / "docs" / "architecture" / "constraints" / "index.html"
+nested.parent.mkdir(parents=True, exist_ok=True)
+nested.write_text(f"<html>nested {count}</html>", encoding="utf-8")
 """
 
 
@@ -172,6 +175,7 @@ def written_doc(doc_id: str, path: str, body: str, write_order: int = 10, nav_or
     document = {
         "id": doc_id,
         "title": doc_id.replace("_", " ").title(),
+        "description": f"Fixture description for {doc_id.replace('_', ' ')}.",
         "type": "generic",
         "path": path,
         "group": "architecture",
@@ -203,7 +207,7 @@ def seed_repo(repo: Path) -> None:
         written_doc("product_overview", "docs/product/overview.md", bodies["product_overview"], write_order=19),
     ]
     manifest = {
-        "version": "3.1",
+        "version": "3.2",
         "generated_at": "2026-08-01T00:00:00Z",
         "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {}},
         "discovery": [],
@@ -236,6 +240,7 @@ class DashboardStartTests(unittest.TestCase):
                     text = (repo / "docs" / "product" / "overview.md").read_text(encoding="utf-8")
                     self.assertTrue(text.startswith('---\nid: "product_overview"\n'))
                     self.assertIn('title: "Product Overview"', text)
+                    self.assertIn('description: "Fixture description for product overview."', text)
                     self.assertIn('# Overview\n\nBody.\n', text)
                     self.assertIn("converted 3 documents", result.stdout)
                     second = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", "--skip-install", env=env)
@@ -404,6 +409,7 @@ class DashboardBuildTests(unittest.TestCase):
                     text = output.read_text(encoding="utf-8")
                     self.assertTrue(text.startswith('---\nid: "architecture_constraints"\n'))
                     self.assertIn('title: "Constraints"', text)
+                    self.assertIn('description: "Fixture description for architecture constraints."', text)
                     self.assertIn("Owner is &lt;TEAM_OWNER&gt;", text)
                     self.assertIn("&#123;stay&#125;", text)
                     self.assertIn("const x = '<TEAM_OWNER> {not escaped}';", text)
@@ -607,6 +613,17 @@ class DashboardSignatureTests(unittest.TestCase):
             after = run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout
             self.assertNotEqual(before, SIG_RE.search(after).group(1))
 
+    def test_render_signature_changes_when_description_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_repo(repo)
+            before = SIG_RE.search(run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout).group(1)
+            manifest = load_manifest(repo)
+            manifest["documents"][0]["description"] = "A revised reader-facing description."
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            after = SIG_RE.search(run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout).group(1)
+            self.assertNotEqual(before, after)
+
     def test_render_signature_ignores_flow_index_and_root_package_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -673,6 +690,11 @@ class DashboardExportTests(unittest.TestCase):
                 self.assertNotIn("running in the background", first.stdout)
                 index = dashboard / "out" / "docs" / "index.html"
                 self.assertTrue(index.is_file(), "static export did not emit out/docs/index.html")
+                nested = dashboard / "out" / "docs" / "architecture" / "constraints" / "index.html"
+                self.assertTrue(nested.is_file(), "static export did not emit out/docs/architecture/constraints/index.html")
+                flat = [p.name for p in (dashboard / "out").rglob("*.html") if p.name not in {"index.html"}]
+                self.assertEqual(flat, [], f"export emitted flat html files: {flat}")
+                self.assertFalse((dashboard / "out" / "docs.html").exists(), "export must not emit docs.html")
                 self.assertEqual((dashboard / "out" / ".build-count").read_text(encoding="utf-8"), "1")
                 state = json.loads(state_path.read_text(encoding="utf-8"))
                 self.assertIn("export_sig", state)

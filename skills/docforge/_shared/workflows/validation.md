@@ -28,10 +28,13 @@ again ([`writing.md`](writing.md)).
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `3.1`; there is no secondary runtime state file.
-Manifest 3.0 and provenance 1.0 are migrated by `migrate_metadata.{py,js}`
+Its schema version is `3.2`; there is no secondary runtime state file.
+Manifest 3.1 (and 3.0 / provenance 1.0) are migrated by
+`migrate_metadata.{py,js}`
 (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
-resume, revision, or provenance synchronization. A legacy manifest of any
+resume, revision, or provenance synchronization — the 3.1 → 3.2 step seeds
+each document's catalog-owned `description` from the catalog `summary`. A
+legacy manifest of any
 pre-3.0 version (1.1 `project_context` / `document_groups`, 2.0 flat
 `documents` with overlays, or another shape) is re-registered by the same
 command: written documents are adopted as `generated` with provenance 2.0,

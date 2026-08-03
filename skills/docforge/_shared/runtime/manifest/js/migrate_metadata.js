@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 "use strict";
-/* Migrate Docforge manifest metadata to 3.1 / provenance 2.0 YAML.
+/* Migrate Docforge manifest metadata to 3.2 / provenance 2.0 YAML.
  *
- * Upgrades manifest 3.0 / provenance 1.0 (converting schema 1.0 and
- * schema-less legacy frontmatter, including pre-schema `doc` /
+ * Upgrades manifest 3.1 / provenance 2.0 (seeding each document's
+ * catalog-owned `description`) and manifest 3.0 / provenance 1.0 (converting
+ * schema 1.0 and schema-less legacy frontmatter, including pre-schema `doc` /
  * `graph_snapshot` shapes, while preserving section evidence), and
  * re-registers any older legacy manifest — 1.1 (`project_context` /
  * `document_groups`), 2.0 (flat `documents` with overlay profiles), or any
- * other pre-3.0 shape — as 3.1: written documents are adopted as `generated`
+ * other pre-3.0 shape — as 3.2: written documents are adopted as `generated`
  * with provenance 2.0, bodies preserved, and plan entries kept. When a
  * document cannot be converted to complete provenance 2.0 (missing or
  * unparseable frontmatter, conversion failure, or incomplete result for a
@@ -22,13 +23,14 @@ const pf = require("../../common/js/provenance_frontmatter.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 
-const MANIFEST_CURRENT = "3.1";
-const MANIFEST_LEGACY = "3.0";
+const MANIFEST_CURRENT = "3.2";
+const MANIFEST_LEGACY = "3.1";
+const MANIFEST_IN_PLACE = ["3.2", "3.1", "3.0"];
 const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
 const MANIFEST_LOAD = {
-  allowedVersions: [MANIFEST_CURRENT, MANIFEST_LEGACY],
+  allowedVersions: MANIFEST_IN_PLACE,
   unsupportedHint: "legacy manifests are re-registered by this command",
 };
 const LEGACY_TIER_MAP = { core: "spine", standard: "diligence", extended: "portfolio" };
@@ -343,13 +345,36 @@ function migrateDocumentFile(repo, doc, manifest, dryRun, requireComplete = null
   );
 }
 
+function seedDescriptions(docs, maps) {
+  const seeded = [];
+  for (const doc of docs || []) {
+    if (doc.description) continue;
+    const definition = matchDefinition(
+      maps,
+      String(doc.id || ""),
+      doc.type,
+      String(doc.path || ""),
+    );
+    const summary = (definition && definition.summary) || "";
+    if (typeof summary === "string" && summary) {
+      doc.description = summary;
+      seeded.push(String(doc.id || ""));
+    }
+  }
+  return seeded;
+}
+
 function migrateManifestObject(manifest, demoteIncomplete = false) {
   let changed = false;
-  if (manifest.version === MANIFEST_LEGACY) {
+  if (manifest.version === MANIFEST_LEGACY || manifest.version === "3.0") {
     manifest.version = MANIFEST_CURRENT;
     changed = true;
   }
-  for (const doc of manifest.documents || []) {
+  const docs = manifest.documents || [];
+  if (docs.some((doc) => !doc.description)) {
+    if (seedDescriptions(docs, loadCatalogMaps()).length) changed = true;
+  }
+  for (const doc of docs) {
     const provenance = doc.provenance;
     const defaults = migrationDefaults(doc, manifest);
     if (needsProvenanceMigration(provenance)) {
@@ -382,7 +407,7 @@ function migrate(repo, manifestPath, dryRun) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`manifest must be a JSON object: ${manifestPath}`);
   }
-  if (raw.version !== MANIFEST_CURRENT && raw.version !== MANIFEST_LEGACY) {
+  if (!MANIFEST_IN_PLACE.includes(raw.version)) {
     return migrateLegacy(repo, manifestPath, raw, dryRun);
   }
   const manifest = loadManifest(manifestPath, MANIFEST_LOAD);

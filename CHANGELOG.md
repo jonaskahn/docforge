@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased - Manifest 3.2 with document descriptions
+
+- Manifest schema bumped to `3.2`: every document entry gains a catalog-owned
+  `description` (≤ 160 chars), seeded from the catalog `summary` at init,
+  `migrate_metadata`, and `reconcile`.
+- Generated documents now carry public `description` frontmatter; the
+  dashboard reconciles it from the manifest, lints require a non-empty
+  description on written documents, and the site emits per-page
+  `<meta name="description">`.
+- `migrate_metadata` upgrades manifest 3.1 (and 3.0) to 3.2 in place, seeding
+  descriptions; any pre-3.0 shape is re-registered as 3.2.
+- The dashboard reads only each file's frontmatter head (never the body) for
+  metadata reconcile, route planning, and navigation ordering — bodies are
+  read only for MDX conversion and link validation.
+- `dashboard start --export` emits `index.html` per page (`trailingSlash`):
+  `/docs` → `out/docs/index.html`, a page at `/docs/a/b` →
+  `out/docs/a/b/index.html`; no more flat `docs.html` / `<page>.html`.
+
 ## 2.12.0 - Audience-aware presentation
 
 - Routes now resolve an audience-aware presentation policy and manifests retain

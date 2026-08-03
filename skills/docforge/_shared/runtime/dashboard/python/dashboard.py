@@ -58,6 +58,7 @@ STATE_FILE = ".docforge-dashboard.json"
 BASE_URL = "/docs"
 DOC_PREFIX = "docs/"
 WRITTEN = {"generated", "needs_review", "complete"}
+FRONTMATTER_HEAD_BYTES = 64 * 1024
 ASSET_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".ico", ".bmp"}
 ASSET_MAX_BYTES = 10 * 1024 * 1024
 LINK_RE = re.compile(r"(!?\[[^\]]*\])(\(([^)\s]+)(?:\s+[\"'][^\"']*[\"'])?\))")
@@ -96,16 +97,51 @@ def git_remote_url(repo: Path) -> str | None:
 
 
 def _root_doc_has_provenance(repo: Path, path: str) -> bool:
-    text = (repo / path).read_text(encoding="utf-8", errors="replace")
-    raw, _body, _end = split_frontmatter(text)
-    if raw is None:
-        return False
+    meta = file_metadata(repo, path)
+    return meta is not None and meta["provenance_schema"] == SCHEMA_VERSION
+
+
+def read_frontmatter_head(target: Path) -> tuple[str, int] | None:
+    """Read only a document's frontmatter block from the file head (bounded
+    read; the body is never read). Returns (raw, body_start) or None when the
+    file has no frontmatter. Falls back to a full read only when the
+    frontmatter exceeds the head bound."""
+    try:
+        with open(target, "rb") as handle:
+            head = handle.read(FRONTMATTER_HEAD_BYTES)
+    except OSError:
+        return None
+    if not head.startswith(b"---\n"):
+        return None
+    end = head.find(b"\n---\n", 4)
+    if end < 0:
+        text = target.read_text(encoding="utf-8", errors="replace")
+        raw, body, _end = split_frontmatter(text)
+        if raw is None:
+            return None
+        return raw, len(text) - len(body)
+    return head[4:end].decode("utf-8", errors="replace"), end + len("\n---\n")
+
+
+def file_metadata(repo: Path, rel: str) -> dict | None:
+    """Public metadata of a written document read from its frontmatter head
+    only: id, title, description, and provenance schema. None when the file
+    carries no parseable docforge frontmatter."""
+    result = read_frontmatter_head(repo / rel)
+    if result is None:
+        return None
+    raw, _body_start = result
     try:
         data = parse_yaml_mapping(raw)
     except Exception:  # noqa: BLE001 - treated as not docforge-managed
-        return False
+        return None
     provenance = data.get("docforge_provenance")
-    return isinstance(provenance, dict) and provenance.get("schema") == SCHEMA_VERSION
+    return {
+        "id": data.get("id"),
+        "title": data.get("title"),
+        "description": data.get("description"),
+        "provenance_schema": provenance.get("schema") if isinstance(provenance, dict) else None,
+    }
 
 
 def _manifest_provenance(doc: dict) -> bool:
@@ -196,14 +232,15 @@ def _sorted_template_files(template_dir: Path) -> list[Path]:
 
 def _manifest_projection(manifest: dict) -> list[dict]:
     """The manifest fields that affect rendered output: status, path, id,
-    title, write_order, and nav_order. Everything else (evidence, selection,
-    audit records, ...) does not change the site and must not trigger a
-    rebuild."""
+    title, description, write_order, and nav_order. Everything else (evidence,
+    selection, audit records, ...) does not change the site and must not
+    trigger a rebuild."""
     docs = []
     for doc in sorted(manifest.get("documents", []), key=lambda d: d.get("path", "")):
         entry = {
             "id": doc.get("id", ""),
             "title": title_for(doc),
+            "description": doc.get("description", ""),
             "path": doc.get("path", ""),
             "status": doc.get("status", ""),
             "write_order": doc.get("write_order", 0),
@@ -279,14 +316,19 @@ def save_state(dashboard: Path, state: dict) -> None:
     state_path(dashboard).write_text(dump_json(state), encoding="utf-8")
 
 
-def public_frontmatter(doc: dict, provenance: dict) -> str:
-    return emit_document_frontmatter(doc["id"], title_for(doc), provenance)
+def public_frontmatter(
+    doc_id: str,
+    title: str,
+    provenance: dict,
+    description: str | None = None,
+) -> str:
+    return emit_document_frontmatter(doc_id, title, provenance, description or None)
 
 
 def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dict:
     report = {"reconciled": [], "unchanged": [], "skipped": [], "errors": []}
     for doc in manifest.get("documents", []):
-        if doc.get("status") == "skipped":
+        if doc.get("status") == "skipped" or doc.get("provenance_mode") == "manifest":
             continue
         path = doc.get("path", "")
         if not path.startswith(DOC_PREFIX) or not path.endswith(".md"):
@@ -294,11 +336,11 @@ def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dic
         target = repo / path
         if not target.is_file():
             continue
-        text = target.read_text(encoding="utf-8", errors="replace")
-        raw, body, _end = split_frontmatter(text)
-        if raw is None:
+        head = read_frontmatter_head(target)
+        if head is None:
             report["skipped"].append({"doc": doc["id"], "detail": "no frontmatter"})
             continue
+        raw, _body_start = head
         try:
             data = parse_yaml_mapping(raw)
         except Exception as exc:  # noqa: BLE001 - report and continue
@@ -310,11 +352,14 @@ def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dic
             continue
         want_id = doc["id"]
         want_title = title_for(doc)
+        want_description = doc.get("description") or ""
         problems = []
         if data.get("id") != want_id:
             problems.append("id")
         if data.get("title") != want_title:
             problems.append("title")
+        if (data.get("description") or "") != want_description:
+            problems.append("description")
         if provenance.get("doc_id") != want_id:
             problems.append("provenance.doc_id")
         if provenance.get("path") != path:
@@ -328,7 +373,12 @@ def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dic
                 provenance["doc_id"] = want_id
             if "provenance.path" in problems:
                 provenance["path"] = path
-            target.write_text(public_frontmatter(doc, provenance) + body, encoding="utf-8")
+            text = target.read_text(encoding="utf-8", errors="replace")
+            _raw, body, _end = split_frontmatter(text)
+            target.write_text(
+                public_frontmatter(want_id, want_title, provenance, want_description) + body,
+                encoding="utf-8",
+            )
         report["reconciled"].append(entry)
     report["counts"] = {
         "reconciled": len(report["reconciled"]),
@@ -707,7 +757,13 @@ def convert_documents(repo: Path, manifest: dict, ledger: dict, stage_docs: Path
         if h1_title:
             doc["title"] = h1_title
         page = {"id": doc["doc_id"], "title": doc["title"]}
-        content = public_frontmatter(page, provenance) + mdx_body
+        manifest_doc = doc.get("doc") or {}
+        content = public_frontmatter(
+            page["id"],
+            page["title"],
+            provenance,
+            manifest_doc.get("description"),
+        ) + mdx_body
         target = stage_docs / doc["output_path"]
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")

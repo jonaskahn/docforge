@@ -11,8 +11,10 @@ under `<repo>/.docforge/dashboard/`.
   export (`next build` → `<dashboard>/out/`) instead of serving.
 - `template/` — the static Fumadocs application shell (Next.js 16, Fumadocs
   UI/MDX, Tailwind 4) copied into the dashboard directory; it is a
-  static-export app (`output: 'export'`, `staticGET` search index), so
-  `next build` emits plain `.html` files under `out/`. Its `README.md` is
+  static-export app (`output: 'export'`, `trailingSlash: true`, `staticGET`
+  search index), so
+  `next build` emits **`index.html` per page** under `out/` (`/docs` →
+  `out/docs/index.html`, never flat `docs.html`). Its `README.md` is
   part of the scaffolded site, not repository documentation. `app/icon.png`
   (the Docforge logo) is served automatically by Next.js as the site
   favicon; replace that file to rebrand.

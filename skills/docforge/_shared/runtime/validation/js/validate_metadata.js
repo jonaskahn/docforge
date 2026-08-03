@@ -67,8 +67,12 @@ function validate() {
   if (fs.existsSync(path.join(metadata, "catalog.json"))) {
     errors.push("obsolete monolith catalog.json remains; use .metadata/catalog/");
   }
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.1") {
-    errors.push("manifest schema must require version 3.1");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.2") {
+    errors.push("manifest schema must require version 3.2");
+  }
+  const documentSchema = ((((manifestSchema.definitions || {}).document || {}).properties) || {});
+  if (!("description" in documentSchema)) {
+    errors.push("manifest schema must define document.description");
   }
   if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.1") {
     errors.push("flow index schema must require version 1.1");

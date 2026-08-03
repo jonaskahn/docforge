@@ -185,8 +185,10 @@ dashboard.
 
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
-2. When the manifest needs migration, apply it: upgrade manifest 3.0 /
-   provenance 1.0 to 3.1 / 2.0, re-register any pre-3.0 shape as 3.1
+2. When the manifest needs migration, apply it: upgrade manifest 3.1 (or
+   3.0 / provenance 1.0) to 3.2 / 2.0 — seeding each document's
+   catalog-owned `description` from the catalog `summary` — and re-register
+   any pre-3.0 shape as 3.2
    (adopting legacy written documents as `generated` with provenance 2.0,
    demoting incomplete or unconvertible documents to `in_progress`), and
    print the migration report.
@@ -213,7 +215,7 @@ Flags combine with a scope argument, e.g.
 `migrate_metadata.{py,js}` also re-registers legacy manifests (any pre-3.0
 version —
 1.1 `project_context` / `document_groups`, 2.0 flat `documents` with
-overlays, or any other shape) as 3.1: written documents are adopted as
+overlays, or any other shape) as 3.2: written documents are adopted as
 `generated` with provenance 2.0 (bodies preserved) and plan entries are
 kept, so a revise run over an old manifest re-grounds and audits the adopted
 documents like any other written tree (steps 1 / 1a / 1b above). Adopted

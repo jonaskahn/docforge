@@ -1,4 +1,4 @@
-"""Manifest 3.1: tier/profile selection, status/audit transitions, provenance, migration."""
+"""Manifest 3.2: tier/profile selection, status/audit transitions, provenance, migration."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ class ManifestSelectionTests(unittest.TestCase):
                 result = initialize("py", repo, tier)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.1")
+                self.assertEqual(manifest["version"], "3.2")
                 self.assertEqual(manifest["project"]["tier"], tier)
                 self.assertEqual(
                     manifest["project"]["profiles"]["audiences"],
@@ -758,6 +758,57 @@ Body.
                 outputs.append(payload["defects"])
             self.assertEqual(outputs[0], outputs[1])
 
+    def test_lint_requires_public_description(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("evidence\n", encoding="utf-8")
+            value = provenance(
+                doc_id="subject", path="subject.md", tier="spine",
+                target_depth="reference", section_id="body",
+                source_path="source.txt", source_blob=blob_hash(source.read_bytes()),
+            )
+            missing = repo / "missing.md"
+            missing.write_text(markdown_with_provenance(value, "# Missing\n\nBody.\n"), encoding="utf-8")
+            long_doc = repo / "long.md"
+            long_text = markdown_with_provenance(value, "# Long\n\nBody.\n").replace(
+                "---\n",
+                f'---\ndescription: "{"x" * 200}"\n',
+                1,
+            )
+            long_doc.write_text(long_text, encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "lint_document", "--file", str(missing), "--json")
+                self.assertEqual(result.returncode, 1)
+                kinds = {item["kind"] for item in json.loads(result.stdout)["defects"]}
+                self.assertIn("missing description", kinds)
+
+                result = run(runtime, "lint_document", "--file", str(long_doc), "--json")
+                self.assertEqual(result.returncode, 1)
+                kinds = {item["kind"] for item in json.loads(result.stdout)["defects"]}
+                self.assertIn("long description", kinds)
+
+    def test_lint_accepts_described_document(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("evidence\n", encoding="utf-8")
+            value = provenance(
+                doc_id="subject", path="subject.md", tier="spine",
+                target_depth="reference", section_id="body",
+                source_path="source.txt", source_blob=blob_hash(source.read_bytes()),
+            )
+            subject = repo / "subject.md"
+            text = markdown_with_provenance(value, "# Subject\n\nBody.\n")
+            text = text.replace("---\n", '---\ndescription: "A valid description."\n', 1)
+            subject.write_text(text, encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "lint_document", "--file", str(subject), "--json")
+                payload = json.loads(result.stdout)
+                kinds = {item["kind"] for item in payload["defects"]}
+                self.assertNotIn("missing description", kinds)
+                self.assertNotIn("long description", kinds)
+
     def test_folder_only_promotion_is_audit_defect(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -1096,7 +1147,7 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertIn("# Broken", broken_text)
 
                 saved = load_manifest(repo)
-                self.assertEqual(saved["version"], "3.1")
+                self.assertEqual(saved["version"], "3.2")
                 self.assertEqual(saved["documents"][0]["provenance"]["schema"], "2.0")
                 self.assertIn("generator", saved["documents"][0]["provenance"])
                 self.assertEqual(saved["documents"][1]["provenance"]["schema"], "2.0")
@@ -1109,6 +1160,105 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertNotIn("FAILED  docs/broken.md", again.stdout)
                 self.assertNotIn("REGENERATED  docs/broken.md", again.stdout)
                 self.assertEqual(load_manifest(repo)["documents"][1]["status"], "in_progress")
+
+    def test_migrate_31_to_32_seeds_catalog_descriptions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            index = repo / "docs" / "README.md"
+            index.parent.mkdir(parents=True)
+            index.write_text(
+                "---\n" + json.dumps({"docforge_provenance": {
+                    "schema": "2.0", "doc_id": "docs_index", "path": "docs/README.md",
+                    "generated_at": "2026-08-01T00:00:00Z",
+                    "generator": {"name": "docforge", "version": "2.8.0"},
+                    "tier": "spine", "target_depth": "orientation",
+                    "graph": {"provider": "gitnexus", "flow": "native"},
+                    "sections": [{
+                        "id": "main",
+                        "sources": [{"path": "src/main.ts", "git_blob": blob_hash(b"evidence"), "role": "code"}],
+                        "unresolved": [],
+                    }],
+                }}, indent=2) + "\n---\n# Documentation\n\nBody.\n",
+                encoding="utf-8",
+            )
+            manifest = {
+                "version": "3.1",
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                    "shapes": [], "platforms": [], "frameworks": [],
+                    "concerns": [], "audiences": [],
+                }},
+                "discovery": [],
+                "documents": [{
+                    "id": "docs_index", "type": "docs-index", "path": "docs/README.md",
+                    "title": "Documentation", "status": "complete", "requires": [],
+                    "scaffold_template": "docs-index.template.md", "target_depth": "orientation",
+                    "write_order": 30, "provenance_mode": "sections", "audit_profile": "router",
+                    "provenance": {"sections": []}, "audit": None,
+                }],
+                "metadata": {},
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            for runtime in ("py", "js"):
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                migrated = load_manifest(repo)
+                self.assertEqual(migrated["version"], "3.2")
+                self.assertIn("description", migrated["documents"][0])
+                self.assertEqual(migrated["documents"][0]["description"], "Self-introduction to the documentation: what the repo is, who it serves, and the reader question each selected section answers")
+                self.assertEqual(migrated["documents"][0]["provenance"]["schema"], "2.0")
+
+                # Idempotent: a second run keeps the seeded description.
+                again = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
+                self.assertEqual(again.returncode, 0, again.stderr + again.stdout)
+                self.assertEqual(load_manifest(repo)["documents"][0]["description"], migrated["documents"][0]["description"])
+
+    def test_migrate_31_keeps_existing_description(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            readme = repo / "docs" / "README.md"
+            readme.parent.mkdir(parents=True)
+            readme.write_text(
+                markdown_with_provenance(
+                    provenance(
+                        doc_id="docs_index", path="docs/README.md", tier="spine",
+                        target_depth="orientation", section_id="main",
+                        source_path="src/main.ts", source_blob=blob_hash(b"evidence"),
+                    ),
+                    "# Documentation\n\nBody.\n",
+                ),
+                encoding="utf-8",
+            )
+            manifest = {
+                "version": "3.1",
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                    "shapes": [], "platforms": [], "frameworks": [],
+                    "concerns": [], "audiences": [],
+                }},
+                "discovery": [],
+                "documents": [{
+                    "id": "docs_index", "type": "docs-index", "path": "docs/README.md",
+                    "title": "Documentation", "description": "Writer-refined one-liner.",
+                    "status": "generated", "requires": [],
+                    "scaffold_template": "docs-index.template.md", "target_depth": "orientation",
+                    "write_order": 30, "provenance_mode": "sections", "audit_profile": "router",
+                    "provenance": {"sections": []}, "audit": None,
+                }],
+                "metadata": {},
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                migrated = load_manifest(repo)
+                self.assertEqual(migrated["version"], "3.2")
+                self.assertEqual(migrated["documents"][0]["description"], "Writer-refined one-liner.")
 
     def test_obsolete_schema_defect_names_migrate_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1282,7 +1432,7 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.1")
+                    self.assertEqual(manifest["version"], "3.2")
                     self.assertEqual(manifest["project"]["tier"], "spine")
                     self.assertEqual(manifest["project"]["profiles"]["audiences"], ["coding-agents"])
                     docs = {doc["id"]: doc for doc in manifest["documents"]}
@@ -1496,7 +1646,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.1")
+                    self.assertEqual(manifest["version"], "3.2")
                     self.assertEqual(manifest["project"]["tier"], "diligence")
                     self.assertEqual(manifest["project"]["name"], "legacy2")
                     self.assertEqual(manifest["project"]["profiles"]["shapes"], ["api-service"])
@@ -1545,7 +1695,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     report = json.loads(result.stdout)
                     self.assertIn("re-registered from 0.9", report["results"][0]["detail"])
                     out = load_manifest(repo)
-                    self.assertEqual(out["version"], "3.1")
+                    self.assertEqual(out["version"], "3.2")
                     overview = next(doc for doc in out["documents"] if doc["id"] == "product_overview")
                     self.assertEqual(
                         overview["selection"]["origins"],

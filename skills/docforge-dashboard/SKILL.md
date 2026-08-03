@@ -65,7 +65,7 @@ node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--
 | *(none)* | `dashboard.{py,js} start` (scripts and README: [`../docforge/_shared/runtime/dashboard/README.md`](../docforge/_shared/runtime/dashboard/README.md)): reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `--force` | Ignore signatures: always regenerate generated output (`content/docs`, assets, navigation, app shell), keeping `node_modules` |
 | `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server. On a legacy manifest, the metadata dry-run is the `migrate_metadata.{py,js} --dry-run` preview (see [`../docforge/_shared/runtime/manifest/README.md`](../docforge/_shared/runtime/manifest/README.md)) |
-| `--export` | Build the static HTML export instead of serving: same preflight/scan/reconcile, then `next build` emits plain `.html` files under `<dashboard>/out/` for static hosting (GitHub Pages, S3, …) at a domain root. No server, no browser. Only `/docforge-dashboard` has this flag |
+| `--export` | Build the static HTML export instead of serving: same preflight/scan/reconcile, then `next build` emits **`index.html` per page** under `<dashboard>/out/` (`/docs` → `out/docs/index.html`; never flat `docs.html`) for static hosting (GitHub Pages, S3, …) at a domain root. No server, no browser. Only `/docforge-dashboard` has this flag |
 | `--auto-accept` | Skip the revise-vs-render prompt and routine pauses; never authorizes npm install of new packages without its own confirmation gate (see [`../docforge/_shared/flags.md`](../docforge/_shared/flags.md)) |
 | `--help` | Print this command's purpose and full parameter reference — [`../docforge/_shared/help.md`](../docforge/_shared/help.md) — then stop; run no workflow |
 
@@ -88,7 +88,7 @@ none of them.
 - **Legacy manifest** — a pre-3.0 `.docforge/manifest.json` (1.1
   `project_context` / `document_groups`, 2.0 flat `documents`, or any other
   legacy shape) stops with a three-option gate: revise all, update metadata
-  only (`migrate_metadata` re-registers **any** legacy version as 3.1), or
+  only (`migrate_metadata` re-registers **any** legacy version as 3.2), or
   stop. `--plan-only` runs the `migrate_metadata.{py,js} --dry-run` preview.
 - **Scan** — findings (missing metadata, incomplete documents, stale sources,
   broken links, untracked `docs/` files) print in full and recommend

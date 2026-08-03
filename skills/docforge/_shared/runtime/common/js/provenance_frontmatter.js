@@ -262,9 +262,13 @@ function emitYaml(provenance) {
   return lines.join("\n");
 }
 
-function emitDocumentFrontmatter(docId, title, provenance) {
+function emitDocumentFrontmatter(docId, title, provenance, description = null) {
   if (!docId || !title) throw new YamlCodecError("document id and title must be non-empty");
-  const lines = ["---", `id: ${quoteScalar(docId)}`, `title: ${quoteScalar(title)}`, "docforge_provenance:"];
+  const lines = ["---", `id: ${quoteScalar(docId)}`, `title: ${quoteScalar(title)}`];
+  if (description !== null && description !== undefined) {
+    lines.push(`description: ${quoteScalar(description)}`);
+  }
+  lines.push("docforge_provenance:");
   emitMapping(lines, provenance, PROVENANCE_KEY_ORDER, 2);
   lines.push("---", "");
   return lines.join("\n");

@@ -40,6 +40,7 @@ const { visiblePresentationDefects } = require("../../common/js/markdown_fences.
 const SCAFFOLD_RE = /\{\{.*?\}\}/g;
 const TOKEN_RE = /<[A-Z][A-Z0-9_]*>/g;
 const HEADING_RE = /^(#{1,6})\s+(.*\S)\s*$/;
+const DESCRIPTION_LIMIT = 160;
 const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
 // A backtick-quoted path ending in .md — a candidate cross-reference that
 // should be an actual link, not bare text naming the file.
@@ -194,12 +195,39 @@ function provenanceDefects(filePath, text) {
   return defects;
 }
 
+function publicMetadataDefects(filePath, text) {
+  // Public frontmatter contract for written documents: a non-empty
+  // `description` of at most 160 characters.
+  if (MARKDOWN_EXCEPTIONS.has(path.basename(filePath))) return [];
+  const split = pf.splitFrontmatter(text);
+  if (split.raw == null) return [];
+  let data;
+  try {
+    data = pf.parseYamlMapping(split.raw);
+  } catch {
+    return [];
+  }
+  const description = data.description;
+  if (typeof description !== "string" || !description.trim()) {
+    return [{ kind: "missing description", line: 1, detail: "public description is required" }];
+  }
+  if (description.length > DESCRIPTION_LIMIT) {
+    return [{
+      kind: "long description",
+      line: 1,
+      detail: `description exceeds ${DESCRIPTION_LIMIT} characters`,
+    }];
+  }
+  return [];
+}
+
 function checkDocument(filePath, requireHeadings) {
   const text = fs.readFileSync(filePath, "utf8");
   const lines = text.split("\n");
   const defects = [];
   const tokens = [];
   defects.push(...provenanceDefects(filePath, text));
+  defects.push(...publicMetadataDefects(filePath, text));
   defects.push(...illustrationDefects(text));
   const parsed = pf.parseFrontmatter(text);
   const targetDepth = parsed.provenance && typeof parsed.provenance === "object"

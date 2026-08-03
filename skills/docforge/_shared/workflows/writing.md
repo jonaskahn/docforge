@@ -18,7 +18,7 @@ validates illustration budgets and presentation-safe fences.
 When the user chooses Resume in intake or asks to continue an incomplete
 documentation run: run `migrate_metadata.{py,js}` when needed (see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md)), load the
-version-3.1
+version-3.2
 manifest, and continue the first non-complete, non-skipped document in write
 order. Then follow **Write one document** below for that document. May combine
 with `--auto-accept`.
@@ -86,7 +86,10 @@ For the next document in `write_order` (serial mode):
    markers and provenance tokens, and stamp complete provenance 2.0. The writer
    gathers, verifies, and stamps all candidate `path` / `role` / `git_blob`
    evidence inline:
-
+   - Every written document emits the public frontmatter `id`, `title`, and
+     `description` (a reader-facing one-liner, ≤ 160 chars, seeded from the
+     catalog `summary` in the manifest) plus `docforge_provenance`; lint
+     enforces a non-empty description for written documents.
    - One provenance `sections[]` entry per Markdown heading that makes claims;
      `id` is that heading's anchor.
     - Each claim records at least one repository-relative `path` with `role`

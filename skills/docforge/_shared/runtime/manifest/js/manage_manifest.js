@@ -22,7 +22,7 @@ const TRANSITIONS = {
   skipped: new Set(["planned"]),
 };
 const TOOL_VERSION = pf.GENERATOR_VERSION;
-const MANIFEST_VERSION = "3.1";
+const MANIFEST_VERSION = "3.2";
 const USER_CONFIRMED_TRIGGERS = new Set([
   "new-trust-boundary", "per-interaction-review", "regulated-workload",
   "high-criticality", "new-external-integration", "new-data-classification",
@@ -144,6 +144,7 @@ function makeDocument(definition, origins, evidence = [], catalogId = null, audi
   const document = {
     id: definition.id,
     title: detail.title || definition.id.replace(/[-_]/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
+    description: detail.summary || "",
     type: definition.type,
     path: definition.path,
     group: definition.group,
@@ -425,6 +426,7 @@ function syncContractRevisions(catalog, docs) {
     if (catalogId === null) continue;
     const detail = queryCatalog.loadType(catalogId);
     doc.title = detail.title || doc.title;
+    doc.description = detail.summary || doc.description || "";
     doc.scaffold_template = detail.template_file;
     doc.instruction_file = detail.instruction_file === undefined ? null : detail.instruction_file;
     if (detail.target_depth !== undefined) doc.target_depth = detail.target_depth;

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Migrate Docforge manifest metadata to 3.1 / provenance 2.0 YAML.
+"""Migrate Docforge manifest metadata to 3.2 / provenance 2.0 YAML.
 
-Upgrades manifest 3.0 / provenance 1.0 (converting schema 1.0 and schema-less
+Upgrades manifest 3.1 / provenance 2.0 (seeding each document's catalog-owned
+`description`) and manifest 3.0 / provenance 1.0 (converting schema 1.0 and
+schema-less
 legacy frontmatter, including pre-schema `doc` / `graph_snapshot` shapes,
 while preserving section evidence), and re-registers any older legacy
 manifest — 1.1 (`project_context` / `document_groups`), 2.0 (flat
-`documents` with overlay profiles), or any other pre-3.0 shape — as 3.1:
+`documents` with overlay profiles), or any other pre-3.0 shape — as 3.2:
 written documents are adopted as `generated` with provenance 2.0, bodies
 preserved, and plan entries kept. When a document cannot be converted to
 complete provenance 2.0 (missing or unparseable frontmatter, conversion
@@ -39,13 +41,14 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-MANIFEST_CURRENT = "3.1"
-MANIFEST_LEGACY = "3.0"
+MANIFEST_CURRENT = "3.2"
+MANIFEST_LEGACY = "3.1"
+MANIFEST_IN_PLACE = ("3.2", "3.1", "3.0")
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
 MANIFEST_LOAD = {
-    "allowed_versions": (MANIFEST_CURRENT, MANIFEST_LEGACY),
+    "allowed_versions": MANIFEST_IN_PLACE,
     "unsupported_hint": "legacy manifests are re-registered by this command",
 }
 LEGACY_TIER_MAP = {"core": "spine", "standard": "diligence", "extended": "portfolio"}
@@ -375,12 +378,44 @@ def migrate_document_file(
     )
 
 
+def seed_descriptions(
+    docs: list[dict],
+    by_id: dict[str, dict],
+    by_type: dict[str, list[dict]],
+    by_path: dict[str, dict],
+) -> list[str]:
+    """Seed catalog-owned `description` (the catalog `summary`) on documents
+    that lack one; existing values are never overwritten."""
+    seeded: list[str] = []
+    for doc in docs:
+        if doc.get("description"):
+            continue
+        definition = match_definition(
+            by_id,
+            by_type,
+            by_path,
+            str(doc.get("id") or ""),
+            doc.get("type"),
+            str(doc.get("path") or ""),
+        )
+        summary = (definition or {}).get("summary")
+        if isinstance(summary, str) and summary:
+            doc["description"] = summary
+            seeded.append(str(doc.get("id") or ""))
+    return seeded
+
+
 def migrate_manifest_object(manifest: dict, *, demote_incomplete: bool = False) -> bool:
     changed = False
-    if manifest.get("version") == MANIFEST_LEGACY:
+    if manifest.get("version") in {MANIFEST_LEGACY, "3.0"}:
         manifest["version"] = MANIFEST_CURRENT
         changed = True
-    for doc in manifest.get("documents", []):
+    docs = manifest.get("documents", [])
+    if any(not doc.get("description") for doc in docs):
+        by_id, by_type, by_path = load_catalog_maps()
+        if seed_descriptions(docs, by_id, by_type, by_path):
+            changed = True
+    for doc in docs:
         provenance = doc.get("provenance")
         defaults = migration_defaults(doc, manifest)
         if needs_provenance_migration(provenance):
@@ -409,7 +444,7 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
     if not isinstance(data, dict):
         raise ValueError(f"manifest must be a JSON object: {manifest_path}")
     version = data.get("version")
-    if version not in {MANIFEST_CURRENT, MANIFEST_LEGACY}:
+    if version not in set(MANIFEST_IN_PLACE):
         return migrate_legacy(repo, manifest_path, data, dry_run)
     manifest = load_manifest(manifest_path, **MANIFEST_LOAD)
     reports: list[dict] = []

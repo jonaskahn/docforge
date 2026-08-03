@@ -46,6 +46,8 @@ from runtime.common.python.provenance_frontmatter import (
     SCAFFOLD_TOKEN,
     SOURCE_ROLES,
     parse_frontmatter as codec_parse_frontmatter,
+    parse_yaml_mapping,
+    split_frontmatter,
 )
 from runtime.common.python.evidence_locators import validate_locators
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
@@ -55,6 +57,7 @@ from runtime.common.python.markdown_fences import visible_presentation_defects
 SCAFFOLD_RE = re.compile(r"\{\{.*?\}\}")
 TOKEN_RE = re.compile(r"<[A-Z][A-Z0-9_]*>")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
+DESCRIPTION_LIMIT = 160
 # Markdown links whose target is not a URL, mailto, or pure in-page anchor.
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 # A backtick-quoted path ending in .md — a candidate cross-reference that
@@ -223,12 +226,33 @@ def provenance_defects(path: Path, text: str) -> list[dict]:
     return defects
 
 
+def public_metadata_defects(path: Path, text: str) -> list[dict]:
+    """Public frontmatter contract for written documents: a non-empty
+    `description` of at most 160 characters."""
+    if path.name in MARKDOWN_EXCEPTIONS:
+        return []
+    raw, _body, _end = split_frontmatter(text)
+    if raw is None:
+        return []
+    try:
+        data = parse_yaml_mapping(raw)
+    except Exception:  # noqa: BLE001 - provenance defects report parsing already
+        return []
+    description = data.get("description")
+    if not isinstance(description, str) or not description.strip():
+        return [{"kind": "missing description", "line": 1, "detail": "public description is required"}]
+    if len(description) > DESCRIPTION_LIMIT:
+        return [{"kind": "long description", "line": 1, "detail": f"description exceeds {DESCRIPTION_LIMIT} characters"}]
+    return []
+
+
 def lint_document(path: Path, require_headings: list[str]) -> dict:
     text = path.read_text(encoding="utf-8", errors="ignore")
     lines = text.split("\n")
     defects: list[dict] = []
     tokens: list[str] = []
     defects.extend(provenance_defects(path, text))
+    defects.extend(public_metadata_defects(path, text))
     defects.extend(illustration_defects(text))
     _state, provenance, _end = codec_parse_frontmatter(text)
     target_depth = provenance.get("target_depth", "deep-dive") if isinstance(provenance, dict) else "deep-dive"
