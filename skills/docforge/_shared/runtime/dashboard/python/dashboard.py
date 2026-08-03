@@ -878,6 +878,26 @@ def node_major() -> int:
         return 0
 
 
+def build_dashboard(dashboard: Path) -> None:
+    """Static HTML export: `next build` emits plain .html files under `out/`
+    (the app is a static-export Next.js app, `output: 'export'`)."""
+    env = dict(os.environ, NEXT_TELEMETRY_DISABLED="1")
+    try:
+        subprocess.run(
+            ["npm", "--prefix", str(dashboard), "run", "build"],
+            cwd=str(dashboard),
+            env=env,
+            check=True,
+            timeout=1200,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise ValueError(f"dashboard export failed (exit {exc.returncode}); see the dashboard directory for logs") from exc
+
+
+def export_signature(render_sig: str, shell_sig: str) -> str:
+    return sha256_bytes(f"{render_sig}\n{shell_sig}".encode("utf-8"))
+
+
 def ensure_dependencies(dashboard: Path, repo: Path) -> None:
     if node_major() < 22:
         raise ValueError("dashboard requires Node.js 22 or newer; install it before running /docforge-dashboard")
@@ -1082,6 +1102,8 @@ def _stage_build(dashboard: Path, repo: Path, manifest: dict, template_dir: Path
 
 
 def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:
+    if args.export and args.port:
+        raise ValueError("--export cannot be combined with --port")
     render_sig = render_signature(args.repo, manifest)
     shell_sig = shell_signature(template_dir, args.repo, manifest)
     if args.plan_only:
@@ -1117,9 +1139,9 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
     state = load_state(dashboard)
     built = (dashboard / "content" / "docs" / "index.mdx").is_file()
     needs_render = args.force or state.get("render_sig") != render_sig or state.get("shell_sig") != shell_sig or not built
+    new_state = dict(state)
     if needs_render:
         result = _stage_build(dashboard, args.repo, manifest, template_dir, args.force)
-        new_state = dict(state)
         new_state.update({
             "schema": STATE_SCHEMA,
             "dashboard": str(dashboard.resolve()),
@@ -1134,6 +1156,25 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
 
     if not args.skip_install and not (dashboard / "node_modules").is_dir():
         ensure_dependencies(dashboard, args.repo)
+
+    if args.export:
+        export_sig = export_signature(render_sig, shell_sig)
+        out_dir = dashboard / "out"
+        has_output = out_dir.is_dir() and any(out_dir.rglob("*.html"))
+        needs_export = args.force or new_state.get("export_sig") != export_sig or not has_output
+        if needs_export:
+            build_dashboard(dashboard)
+            new_state.update({
+                "schema": STATE_SCHEMA,
+                "dashboard": str(dashboard.resolve()),
+                "export_sig": export_sig,
+                "exported_at": now_iso(),
+            })
+            save_state(dashboard, new_state)
+            print(f"exported: {out_dir}")
+        else:
+            print(f"export up to date: {out_dir}")
+        return 0
 
     server = ensure_server(dashboard, args.port)
     print(f"dashboard: {server['url']} (reused={server['reused']})")
@@ -1213,6 +1254,7 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--no-open", action="store_true", help="do not open the browser after serving")
     start.add_argument("--skip-install", action="store_true", help="do not run npm install when dependencies are missing")
     start.add_argument("--port", type=int, default=0, help="port (default: auto)")
+    start.add_argument("--export", action="store_true", help="build the static HTML export into out/ instead of starting the dev server")
     sub.add_parser("status", parents=[common], help="dashboard existence, render signature match, server state")
     sub.add_parser("stop", parents=[common], help="stop the dashboard dev server")
     return parser

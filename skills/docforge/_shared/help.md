@@ -57,14 +57,15 @@ a documentation source; the source of truth stays `docs/` Markdown and
 | *(none)* | Scan diagnostics → `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `--force` | Ignore signatures: always regenerate generated output, keeping `node_modules` |
 | `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server |
+| `--export` | Build the static HTML export instead of serving: same preflight/scan/reconcile, then `next build` emits plain `.html` files under `<dashboard>/out/` for static hosting (GitHub Pages, S3, …) at a domain root. No server, no browser. Only `/docforge-dashboard` has this parameter |
 | `--auto-accept` | Skip the revise-vs-render prompt and routine pauses; never authorizes npm install of new packages without its own confirmation gate |
 | `--help` | Show this reference and stop |
 
 Subcommands: `scan` (read-only diagnostics: missing metadata, incomplete or
 missing documents, stale provenance sources, broken links, untracked `docs/`
 files; exits 1 when anything is found — "you should revise again"), `start`
-(build-if-changed → serve → open), `status` (read-only state), `stop` (shut
-down the detached dev server).
+(build-if-changed → serve → open, or `--export` → static HTML export),
+`status` (read-only state), `stop` (shut down the detached dev server).
 
 A legacy manifest (any pre-3.0 version — 1.1 `project_context` /
 `document_groups`, 2.0 flat `documents` with overlays, or another shape)

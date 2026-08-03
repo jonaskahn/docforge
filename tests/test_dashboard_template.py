@@ -17,6 +17,16 @@ TEMPLATE = ROOT / "skills" / "docforge" / "_shared" / "runtime" / "dashboard" / 
 
 
 class DashboardTemplateTests(unittest.TestCase):
+    def test_next_config_is_static_export_ready(self) -> None:
+        config = (TEMPLATE / "next.config.mjs").read_text(encoding="utf-8")
+        self.assertIn("output: 'export'", config)
+
+    def test_search_route_pre_renders_static_index(self) -> None:
+        route = (TEMPLATE / "app" / "api" / "search" / "route.ts").read_text(encoding="utf-8")
+        self.assertIn("staticGET", route)
+        self.assertIn("export const revalidate = false", route)
+        self.assertNotIn("async GET(", route)
+
     def test_docs_layout_uses_fumadocs_glass_layout(self) -> None:
         layout = (TEMPLATE / "app" / "docs" / "layout.tsx").read_text(encoding="utf-8")
         self.assertIn("fumadocs-ui/layouts/glass", layout)

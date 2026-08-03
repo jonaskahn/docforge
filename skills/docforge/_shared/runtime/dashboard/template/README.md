@@ -13,6 +13,9 @@ the `/docforge-dashboard` skill.
 - The app shell (`app/`, `lib/`, `components/`, `package.json`,
   `next.config.mjs`, …) is copied from the Docforge skill template and only
   changes when the template version changes.
+- The app is a static-export Next.js app (`output: 'export'`): `next build`
+  emits plain `.html` files under `out/` for static hosting (GitHub Pages, S3,
+  …) at a domain root. Local preview still runs `next dev`.
 - Delete this directory to discard the dashboard; `/docforge-dashboard`
   rebuilds it from scratch.
 

@@ -51,11 +51,11 @@ engine first; see
 ```sh
 # After locking python3 for this session:
 python3 runtime/cli/python/dashboard.py scan --repo <repo> [--json]
-python3 runtime/cli/python/dashboard.py start --repo <repo> [--force] [--plan-only] [--no-open]
+python3 runtime/cli/python/dashboard.py start --repo <repo> [--force] [--plan-only] [--no-open] [--export]
 
 # After locking node instead:
 node runtime/cli/js/dashboard.js scan --repo <repo> [--json]
-node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--no-open]
+node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--no-open] [--export]
 ```
 
 ## `/docforge-dashboard`
@@ -65,13 +65,15 @@ node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--
 | *(none)* | `dashboard.{py,js} start` (scripts and README: [`../docforge/_shared/runtime/dashboard/README.md`](../docforge/_shared/runtime/dashboard/README.md)): reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `--force` | Ignore signatures: always regenerate generated output (`content/docs`, assets, navigation, app shell), keeping `node_modules` |
 | `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server. On a legacy manifest, the metadata dry-run is the `migrate_metadata.{py,js} --dry-run` preview (see [`../docforge/_shared/runtime/manifest/README.md`](../docforge/_shared/runtime/manifest/README.md)) |
+| `--export` | Build the static HTML export instead of serving: same preflight/scan/reconcile, then `next build` emits plain `.html` files under `<dashboard>/out/` for static hosting (GitHub Pages, S3, …) at a domain root. No server, no browser. Only `/docforge-dashboard` has this flag |
 | `--auto-accept` | Skip the revise-vs-render prompt and routine pauses; never authorizes npm install of new packages without its own confirmation gate (see [`../docforge/_shared/flags.md`](../docforge/_shared/flags.md)) |
 | `--help` | Print this command's purpose and full parameter reference — [`../docforge/_shared/help.md`](../docforge/_shared/help.md) — then stop; run no workflow |
 
 Subcommands: `scan` (read-only diagnostics: missing metadata, incomplete or
 missing documents, stale provenance sources, broken links, untracked `docs/`
-files), `start` (build-if-changed → serve → open), `status` (read-only
-state), `stop` (shut down the background dev server). See
+files), `start` (build-if-changed → serve → open, or `--export` → static HTML
+export), `status` (read-only state), `stop` (shut down the background dev
+server). See
 [`../docforge/_shared/workflows/dashboard.md`](../docforge/_shared/workflows/dashboard.md)
 for the full lifecycle and isolation rules.
 

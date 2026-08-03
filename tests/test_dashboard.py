@@ -82,6 +82,39 @@ http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 """
 
 
+EXPORT_NPM = """#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+args = sys.argv[1:]
+if "build" not in args:
+    sys.exit(1)
+prefix = args[args.index("--prefix") + 1]
+out = Path(prefix) / "out"
+out.mkdir(parents=True, exist_ok=True)
+count_file = out / ".build-count"
+count = int(count_file.read_text(encoding="utf-8")) if count_file.is_file() else 0
+count += 1
+count_file.write_text(str(count), encoding="utf-8")
+index = out / "docs" / "index.html"
+index.parent.mkdir(parents=True, exist_ok=True)
+index.write_text(f"<html>export {count}</html>", encoding="utf-8")
+"""
+
+
+def fake_npm_export_env() -> tuple[dict[str, str], Path]:
+    """Fake `npm run build`: writes `out/docs/index.html` and records how many
+    times the export build actually ran."""
+    root = Path(tempfile.mkdtemp(prefix="docforge-fake-npm-export-"))
+    bin_dir = root / "bin"
+    bin_dir.mkdir()
+    npm = bin_dir / "npm"
+    npm.write_text(EXPORT_NPM, encoding="utf-8")
+    npm.chmod(0o755)
+    env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ.get("PATH", ""))
+    return env, root
+
+
 def fake_npm_env() -> tuple[dict[str, str], Path]:
     root = Path(tempfile.mkdtemp(prefix="docforge-fake-npm-"))
     bin_dir = root / "bin"
@@ -621,6 +654,77 @@ class DashboardServerTests(unittest.TestCase):
                     self.assertNotIn("port", state)
                 finally:
                     stop_dashboard(runtime, repo)
+
+
+class DashboardExportTests(unittest.TestCase):
+    def test_export_builds_static_output_and_is_idempotent(self) -> None:
+        env, _bin = fake_npm_export_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                dashboard = repo / ".docforge" / "dashboard"
+                state_path = dashboard / ".docforge-dashboard.json"
+                first = run_dashboard(runtime, "start", "--repo", str(repo), "--export", "--skip-install", env=env)
+                self.assertEqual(first.returncode, 0, first.stderr)
+                self.assertIn("exported:", first.stdout)
+                self.assertIn("converted 3 documents", first.stdout)
+                self.assertNotIn("running in the background", first.stdout)
+                index = dashboard / "out" / "docs" / "index.html"
+                self.assertTrue(index.is_file(), "static export did not emit out/docs/index.html")
+                self.assertEqual((dashboard / "out" / ".build-count").read_text(encoding="utf-8"), "1")
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+                self.assertIn("export_sig", state)
+                self.assertIn("exported_at", state)
+                self.assertNotIn("pid", state)
+
+                second = run_dashboard(runtime, "start", "--repo", str(repo), "--export", "--skip-install", env=env)
+                self.assertEqual(second.returncode, 0, second.stderr)
+                self.assertIn("export up to date:", second.stdout)
+                self.assertEqual((dashboard / "out" / ".build-count").read_text(encoding="utf-8"), "1", "export rebuilt when nothing changed")
+
+    def test_export_force_rebuilds(self) -> None:
+        env, _bin = fake_npm_export_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                dashboard = repo / ".docforge" / "dashboard"
+                first = run_dashboard(runtime, "start", "--repo", str(repo), "--export", "--skip-install", env=env)
+                self.assertEqual(first.returncode, 0, first.stderr)
+                forced = run_dashboard(runtime, "start", "--repo", str(repo), "--export", "--force", "--skip-install", env=env)
+                self.assertEqual(forced.returncode, 0, forced.stderr)
+                self.assertIn("exported:", forced.stdout)
+                self.assertEqual((dashboard / "out" / ".build-count").read_text(encoding="utf-8"), "2")
+
+    def test_export_plan_only_is_dry(self) -> None:
+        env, _bin = fake_npm_export_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                dashboard = repo / ".docforge" / "dashboard"
+                result = run_dashboard(runtime, "start", "--repo", str(repo), "--export", "--plan-only", env=env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("metadata (dry-run)", result.stdout)
+                self.assertIn("render_sig:", result.stdout)
+                self.assertFalse((dashboard / "out").exists(), "plan-only wrote the export")
+                self.assertFalse((dashboard / ".docforge-dashboard.json").exists(), "plan-only wrote state")
+
+    def test_export_conflicts_with_port(self) -> None:
+        env, _bin = fake_npm_export_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                result = run_dashboard(runtime, "start", "--repo", str(repo), "--export", "--port", "4321", "--skip-install", env=env)
+                self.assertEqual(result.returncode, 1, result.stdout)
+                self.assertIn("--export cannot be combined with --port", result.stderr)
+                self.assertFalse((repo / ".docforge" / "dashboard" / "out").exists())
 
 
 class DashboardScanTests(unittest.TestCase):

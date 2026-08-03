@@ -7,9 +7,12 @@ under `<repo>/.docforge/dashboard/`.
 - `python/dashboard.py` / `js/dashboard.js` — Python and Node peers of the
   `scan` / `start` / `status` / `stop` CLI (see
   [`workflows/dashboard.md`](../../workflows/dashboard.md) for the lifecycle,
-  flags, and isolation rules).
+  flags, and isolation rules). `start --export` builds the static HTML
+  export (`next build` → `<dashboard>/out/`) instead of serving.
 - `template/` — the static Fumadocs application shell (Next.js 16, Fumadocs
-  UI/MDX, Tailwind 4) copied into the dashboard directory; its `README.md` is
+  UI/MDX, Tailwind 4) copied into the dashboard directory; it is a
+  static-export app (`output: 'export'`, `staticGET` search index), so
+  `next build` emits plain `.html` files under `out/`. Its `README.md` is
   part of the scaffolded site, not repository documentation. `app/icon.png`
   (the Docforge logo) is served automatically by Next.js as the site
   favicon; replace that file to rebrand.

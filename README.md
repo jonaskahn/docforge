@@ -310,6 +310,7 @@ before the command or before a required scope argument):
 | `/docforge-revise flow --plan-only` | Revise analysis only (no body writes) |
 | `/docforge-dashboard` | `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `/docforge-dashboard --plan-only` | Preflight, metadata dry-run, signatures, and route plan only |
+| `/docforge-dashboard --export` | Build the static HTML export (`next build` → `<dashboard>/out/`) instead of serving; host it at a domain root on GitHub Pages / S3 |
 
 ### CHEAT CODES (FLAGS)
 

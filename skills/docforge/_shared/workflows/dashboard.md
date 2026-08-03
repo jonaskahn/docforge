@@ -1,7 +1,7 @@
 # Dashboard
 
 Owns: the dashboard capability of the `docforge` skill — `dashboard.{py,js}
-start`,
+start` (serve or `--export`), `scan`,
 `status`, and `stop`; the generated Fumadocs application under
 `<repo>/.docforge/dashboard/`; metadata reconciliation for public frontmatter;
 MDX conversion; route planning; navigation generation; validation; and the
@@ -77,8 +77,8 @@ apply.
 python3 runtime/cli/python/dashboard.py scan --repo <repo> [--json]
 node runtime/cli/js/dashboard.js scan --repo <repo> [--json]
 
-python3 runtime/cli/python/dashboard.py start --repo <repo> [--force] [--plan-only] [--no-open] [--skip-install] [--port N]
-node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--no-open] [--skip-install] [--port N]
+python3 runtime/cli/python/dashboard.py start --repo <repo> [--force] [--plan-only] [--no-open] [--skip-install] [--port N] [--export]
+node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--no-open] [--skip-install] [--port N] [--export]
 
 python3 runtime/cli/python/dashboard.py status --repo <repo> [--json]
 node runtime/cli/js/dashboard.js status --repo <repo> [--json]
@@ -92,7 +92,8 @@ lifecycle:
 
 ```text
 PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
--> INSTALL (if missing) -> SERVE -> OPEN
+-> INSTALL (if missing) -> SERVE -> OPEN        (default)
+-> INSTALL (if missing) -> EXPORT               (--export)
 ```
 
 - **Preflight:** repository, manifest 3.1 (or 3.0), and a readable `docs/` tree.
@@ -144,6 +145,16 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
   (`open` / `xdg-open`; never fails the run). `--no-open` skips this.
 - `start` exits after the server is healthy; the server keeps running in the
   background until `dashboard.{py,js} stop`.
+- **Export (`--export`):** instead of SERVE -> OPEN, the runtime runs
+  `npm --prefix <dashboard> run build`. The generated app is a static-export
+  Next.js site (`output: 'export'`; search uses the statically pre-rendered
+  `staticGET` index), so `next build` emits **plain `.html` files** under
+  `<dashboard>/out/` — hostable at a domain root on GitHub Pages, S3, or any
+  static file server. No server is started and no browser is opened. The
+  export is skipped when the stored `export_sig` (render + shell signatures)
+  matches and `out/` already contains HTML; the printed `<dashboard>/out`
+  path is the deployable artifact. `--export` cannot be combined with
+  `--port`.
 
 `--plan-only` performs the preflight, metadata reconcile **dry-run**, both
 signatures, and the route plan only: no writes, no install, no server. It

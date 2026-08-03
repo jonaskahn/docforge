@@ -880,6 +880,22 @@ function nodeMajor() {
   }
 }
 
+function buildDashboard(dashboard) {
+  const result = spawnSync("npm", ["--prefix", dashboard, "run", "build"], {
+    cwd: dashboard,
+    stdio: "inherit",
+    timeout: 1200000,
+    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
+  });
+  if (result.status !== 0) {
+    throw new Error(`dashboard export failed (exit ${result.status}); see the dashboard directory for logs`);
+  }
+}
+
+function exportSignature(renderSig, shellSig) {
+  return sha256Bytes(`${renderSig}\n${shellSig}`);
+}
+
 function ensureDependencies(dashboard, repo) {
   if (nodeMajor() < 22) {
     throw new Error("dashboard requires Node.js 22 or newer; install it before running /docforge-dashboard");
@@ -1104,6 +1120,9 @@ function stageBuild(dashboard, repo, manifest, templateDir, force) {
 }
 
 async function cmdStart(args, dashboard, manifest, templateDir) {
+  if (args.export && args.port) {
+    throw new Error("--export cannot be combined with --port");
+  }
   const shellSig = shellSignature(templateDir, args.repo, manifest);
   let renderSig = renderSignature(args.repo, manifest);
   if (args.plan_only) {
@@ -1142,16 +1161,16 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
   const state = loadState(dashboard);
   const built = fs.existsSync(path.join(dashboard, "content", "docs", "index.mdx"));
   const needsRender = args.force || state.render_sig !== renderSig || state.shell_sig !== shellSig || !built;
+  const newState = { ...state };
   if (needsRender) {
     const result = stageBuild(dashboard, args.repo, manifest, templateDir, args.force);
-    const newState = {
-      ...state,
+    Object.assign(newState, {
       schema: STATE_SCHEMA,
       dashboard: path.resolve(dashboard),
       render_sig: renderSig,
       shell_sig: shellSig,
       built_at: nowIso(),
-    };
+    });
     saveState(dashboard, newState);
     console.log(`converted ${result.converted.length} documents; copied ${result.copied.length} assets`);
   } else {
@@ -1160,6 +1179,27 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
 
   if (!args.skip_install && !fs.existsSync(path.join(dashboard, "node_modules"))) {
     ensureDependencies(dashboard, args.repo);
+  }
+
+  if (args.export) {
+    const exportSig = exportSignature(renderSig, shellSig);
+    const outDir = path.join(dashboard, "out");
+    const hasOutput = fs.existsSync(outDir) && fs.readdirSync(outDir, { recursive: true }).some((f) => f.endsWith(".html"));
+    const needsExport = args.force || newState.export_sig !== exportSig || !hasOutput;
+    if (needsExport) {
+      buildDashboard(dashboard);
+      Object.assign(newState, {
+        schema: STATE_SCHEMA,
+        dashboard: path.resolve(dashboard),
+        export_sig: exportSig,
+        exported_at: nowIso(),
+      });
+      saveState(dashboard, newState);
+      console.log(`exported: ${outDir}`);
+    } else {
+      console.log(`export up to date: ${outDir}`);
+    }
+    return 0;
   }
 
   const server = await ensureServer(dashboard, args.port);
@@ -1239,6 +1279,7 @@ function parseArgs(argv) {
     no_open: false,
     skip_install: false,
     port: 0,
+    export: false,
   };
   const positional = [];
   for (let i = 0; i < argv.length; i += 1) {
@@ -1252,6 +1293,7 @@ function parseArgs(argv) {
     else if (arg === "--no-open") args.no_open = true;
     else if (arg === "--skip-install") args.skip_install = true;
     else if (arg === "--port") args.port = parseInt(argv[++i], 10) || 0;
+    else if (arg === "--export") args.export = true;
     else if (arg.startsWith("-")) throw new Error(`unknown flag: ${arg}`);
     else positional.push(arg);
   }
@@ -1317,6 +1359,7 @@ module.exports = {
   gitRemoteUrl,
   titleFor,
   sha256Bytes,
+  buildDashboard,
 };
 
 if (require.main === module) {
