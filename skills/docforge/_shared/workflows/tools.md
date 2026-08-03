@@ -109,11 +109,11 @@ from the absolute cartridge root with `query_catalog --validate`,
 - `dashboard.{py,js}`: `scan` (read-only diagnostics: missing metadata,
   incomplete/missing docs, source drift, broken links, untracked `docs/`
   files), `start` (scan → reconcile metadata → rebuild generated
-  output when the working-tree signature changed → serve → open), `status`,
-  `stop`. The dev server runs detached. See
+  output when the working-tree signature changed → serve → open), `export`
+  (same pipeline, then `next build` the static HTML export into `out/`),
+  `status`, `stop`. The dev server runs detached. See
   [`../workflows/dashboard.md`](../workflows/dashboard.md) for the lifecycle
-  and flags (`--force`, `--plan-only`, `--no-open`, `--skip-install`,
-  `--port`).
+  and flags (`--force`, `--plan-only`, `--no-open`, `--port`).
 - Graph adapters, readers, derivation, document lint, and child-repository
   discovery retain paired contracts.
 

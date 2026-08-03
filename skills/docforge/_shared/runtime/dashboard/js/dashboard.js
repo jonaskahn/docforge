@@ -22,7 +22,7 @@ const path = require("path");
 const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 
-const TOOL_VERSION = "2.13.0";
+const TOOL_VERSION = "2.13.1";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";
@@ -1170,27 +1170,22 @@ function stageBuild(dashboard, repo, manifest, templateDir, force) {
   }
 }
 
-async function cmdStart(args, dashboard, manifest, templateDir) {
-  if (args.export && args.port) {
-    throw new Error("--export cannot be combined with --port");
+function planOnly(args, manifest, renderSig, shellSig) {
+  const metadataReport = reconcileMetadata(args.repo, manifest, true);
+  const routePlan = plan(args.repo, manifest);
+  console.log(`metadata (dry-run): ${metadataReport.counts.reconciled} to reconcile, ${metadataReport.counts.unchanged} unchanged, ${metadataReport.counts.errors} errors`);
+  for (const page of routePlan.pages) {
+    console.log(`  ${page.doc_id.padEnd(32)} ${page.source_path.padEnd(48)} -> ${page.url}`);
   }
-  const shellSig = shellSignature(templateDir, args.repo, manifest);
-  let renderSig = renderSignature(args.repo, manifest);
-  if (args.plan_only) {
-    const metadataReport = reconcileMetadata(args.repo, manifest, true);
-    const routePlan = plan(args.repo, manifest);
-    console.log(`metadata (dry-run): ${metadataReport.counts.reconciled} to reconcile, ${metadataReport.counts.unchanged} unchanged, ${metadataReport.counts.errors} errors`);
-    for (const page of routePlan.pages) {
-      console.log(`  ${page.doc_id.padEnd(32)} ${page.source_path.padEnd(48)} -> ${page.url}`);
-    }
-    console.log(`${routePlan.pages.length} pages in ${routePlan.folder_count} folders; ${routePlan.problems.length} problems`);
-    for (const problem of routePlan.problems) console.log(`  problem: ${problem}`);
-    console.log(`render_sig: ${renderSig}`);
-    console.log(`shell_sig: ${shellSig}`);
-    const ok = routePlan.problems.length === 0 && metadataReport.counts.errors === 0;
-    return ok ? 0 : 1;
-  }
+  console.log(`${routePlan.pages.length} pages in ${routePlan.folder_count} folders; ${routePlan.problems.length} problems`);
+  for (const problem of routePlan.problems) console.log(`  problem: ${problem}`);
+  console.log(`render_sig: ${renderSig}`);
+  console.log(`shell_sig: ${shellSig}`);
+  const ok = routePlan.problems.length === 0 && metadataReport.counts.errors === 0;
+  return ok ? 0 : 1;
+}
 
+function prepareDashboard(args, dashboard, manifest, templateDir, renderSig, shellSig, force) {
   const metadataReport = reconcileMetadata(args.repo, manifest);
   console.log(`metadata: ${metadataReport.counts.reconciled} reconciled, ${metadataReport.counts.unchanged} unchanged`);
   const scanResult = scan(args.repo, manifest);
@@ -1211,10 +1206,10 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
 
   const state = loadState(dashboard);
   const built = fs.existsSync(path.join(dashboard, "content", "docs", "index.mdx"));
-  const needsRender = args.force || state.render_sig !== renderSig || state.shell_sig !== shellSig || !built;
+  const needsRender = force || state.render_sig !== renderSig || state.shell_sig !== shellSig || !built;
   const newState = { ...state };
   if (needsRender) {
-    const result = stageBuild(dashboard, args.repo, manifest, templateDir, args.force);
+    const result = stageBuild(dashboard, args.repo, manifest, templateDir, force);
     Object.assign(newState, {
       schema: STATE_SCHEMA,
       dashboard: path.resolve(dashboard),
@@ -1228,35 +1223,50 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
     console.log("signature unchanged: dashboard is up to date");
   }
 
-  if (!args.skip_install && !fs.existsSync(path.join(dashboard, "node_modules"))) {
+  if (!fs.existsSync(path.join(dashboard, "node_modules"))) {
     ensureDependencies(dashboard, args.repo);
   }
+  return { newState, renderSig };
+}
 
-  if (args.export) {
-    const exportSig = exportSignature(renderSig, shellSig);
-    const outDir = path.join(dashboard, "out");
-    const hasOutput = fs.existsSync(outDir) && fs.readdirSync(outDir, { recursive: true }).some((f) => f.endsWith(".html"));
-    const needsExport = args.force || newState.export_sig !== exportSig || !hasOutput;
-    if (needsExport) {
-      buildDashboard(dashboard);
-      Object.assign(newState, {
-        schema: STATE_SCHEMA,
-        dashboard: path.resolve(dashboard),
-        export_sig: exportSig,
-        exported_at: nowIso(),
-      });
-      saveState(dashboard, newState);
-      console.log(`exported: ${outDir}`);
-    } else {
-      console.log(`export up to date: ${outDir}`);
-    }
-    return 0;
+async function cmdStart(args, dashboard, manifest, templateDir) {
+  const shellSig = shellSignature(templateDir, args.repo, manifest);
+  const renderSig = renderSignature(args.repo, manifest);
+  if (args.plan_only) {
+    return planOnly(args, manifest, renderSig, shellSig);
   }
+  prepareDashboard(args, dashboard, manifest, templateDir, renderSig, shellSig, args.force);
 
   const server = await ensureServer(dashboard, args.port);
   console.log(`dashboard: ${server.url} (reused=${server.reused})`);
   if (!args.no_open) openBrowser(server.url);
   console.log("dashboard server running in the background; stop it with `dashboard stop`");
+  return 0;
+}
+
+async function cmdExport(args, dashboard, manifest, templateDir) {
+  const shellSig = shellSignature(templateDir, args.repo, manifest);
+  const prepared = prepareDashboard(args, dashboard, manifest, templateDir, renderSignature(args.repo, manifest), shellSig, false);
+  const renderSig = prepared.renderSig;
+  const newState = prepared.newState;
+
+  const exportSig = exportSignature(renderSig, shellSig);
+  const outDir = path.join(dashboard, "out");
+  const hasOutput = fs.existsSync(outDir) && fs.readdirSync(outDir, { recursive: true }).some((f) => f.endsWith(".html"));
+  const needsExport = newState.export_sig !== exportSig || !hasOutput;
+  if (needsExport) {
+    buildDashboard(dashboard);
+    Object.assign(newState, {
+      schema: STATE_SCHEMA,
+      dashboard: path.resolve(dashboard),
+      export_sig: exportSig,
+      exported_at: nowIso(),
+    });
+    saveState(dashboard, newState);
+    console.log(`exported: ${outDir}`);
+  } else {
+    console.log(`export up to date: ${outDir}`);
+  }
   return 0;
 }
 
@@ -1328,9 +1338,7 @@ function parseArgs(argv) {
     force: false,
     plan_only: false,
     no_open: false,
-    skip_install: false,
     port: 0,
-    export: false,
   };
   const positional = [];
   for (let i = 0; i < argv.length; i += 1) {
@@ -1342,14 +1350,15 @@ function parseArgs(argv) {
     else if (arg === "--force") args.force = true;
     else if (arg === "--plan-only") args.plan_only = true;
     else if (arg === "--no-open") args.no_open = true;
-    else if (arg === "--skip-install") args.skip_install = true;
     else if (arg === "--port") args.port = parseInt(argv[++i], 10) || 0;
-    else if (arg === "--export") args.export = true;
     else if (arg.startsWith("-")) throw new Error(`unknown flag: ${arg}`);
     else positional.push(arg);
   }
-  if (positional.length !== 1) throw new Error("expected exactly one subcommand: start, status, stop");
+  if (positional.length !== 1) throw new Error("expected exactly one subcommand: scan, start, export, status, stop");
   args.command = positional[0];
+  if (args.command === "export" && (args.force || args.plan_only || args.no_open || args.port)) {
+    throw new Error("export takes no flags; run `dashboard export --repo <repo>`");
+  }
   return args;
 }
 
@@ -1369,7 +1378,7 @@ async function main() {
   args.dashboard = dashboard;
   const templateDir = path.join(fs.realpathSync(__dirname), "..", "template");
   let manifest = {};
-  if (args.command === "start" || args.command === "status" || args.command === "scan") {
+  if (args.command === "start" || args.command === "export" || args.command === "status" || args.command === "scan") {
     try {
       manifest = loadManifest(manifestPath);
     } catch (error) {
@@ -1382,6 +1391,8 @@ async function main() {
         return await cmdScan(args, manifest);
       case "start":
         return await cmdStart(args, dashboard, manifest, templateDir);
+      case "export":
+        return await cmdExport(args, dashboard, manifest, templateDir);
       case "status":
         return await cmdStatus(args, dashboard, manifest, templateDir);
       case "stop":

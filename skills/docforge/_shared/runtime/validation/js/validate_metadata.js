@@ -13,7 +13,7 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.13.0";
+const CATALOG_VERSION = "2.13.1";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
@@ -24,7 +24,7 @@ const PUBLIC_CONTRACTS = {
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
   query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route"],
   generate_indexes: ["--write", "--check"],
-  dashboard: ["start", "status", "stop", "--force", "--plan-only", "--no-open", "--skip-install", "--port"],
+  dashboard: ["start", "export", "status", "stop", "--force", "--plan-only", "--no-open", "--port"],
 };
 
 function validate() {

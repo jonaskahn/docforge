@@ -5,9 +5,9 @@ Implementation behind the public `dashboard` launcher pair in
 under `<repo>/.docforge/dashboard/`.
 
 - `python/dashboard.py` / `js/dashboard.js` — Python and Node peers of the
-  `scan` / `start` / `status` / `stop` CLI (see
+  `scan` / `start` / `export` / `status` / `stop` CLI (see
   [`workflows/dashboard.md`](../../workflows/dashboard.md) for the lifecycle,
-  flags, and isolation rules). `start --export` builds the static HTML
+  flags, and isolation rules). `export` builds the static HTML
   export (`next build` → `<dashboard>/out/`) instead of serving.
 - `template/` — the static Fumadocs application shell (Next.js 16, Fumadocs
   UI/MDX, Tailwind 4) copied into the dashboard directory; it is a
@@ -25,7 +25,7 @@ The runtime consumes the shared codec/util (`runtime.common.python.*` /
 ## Where invoked
 
 - [`workflows/dashboard.md`](../../workflows/dashboard.md) — full lifecycle
-  (scan / start / status / stop).
+  (scan / start / export / status / stop).
 - [`workflows/validation.md`](../../workflows/validation.md) — post-run
   verification step.
 - `skills/docforge-dashboard/SKILL.md` — the thin optional dashboard

@@ -51,7 +51,7 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-TOOL_VERSION = "2.13.0"
+TOOL_VERSION = "2.13.1"
 TEMPLATE_VERSION = "1"
 STATE_SCHEMA = 1
 STATE_FILE = ".docforge-dashboard.json"
@@ -1157,25 +1157,24 @@ def _stage_build(dashboard: Path, repo: Path, manifest: dict, template_dir: Path
         raise
 
 
-def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:
-    if args.export and args.port:
-        raise ValueError("--export cannot be combined with --port")
-    render_sig = render_signature(args.repo, manifest)
-    shell_sig = shell_signature(template_dir, args.repo, manifest)
-    if args.plan_only:
-        metadata_report = reconcile_metadata(args.repo, manifest, dry_run=True)
-        route_plan = plan(args.repo, manifest)
-        print(f"metadata (dry-run): {metadata_report['counts']['reconciled']} to reconcile, {metadata_report['counts']['unchanged']} unchanged, {metadata_report['counts']['errors']} errors")
-        for page in route_plan["pages"]:
-            print(f"  {page['doc_id']:<32} {page['source_path']:<48} -> {page['url']}")
-        print(f"{len(route_plan['pages'])} pages in {route_plan['folder_count']} folders; {len(route_plan['problems'])} problems")
-        for problem in route_plan["problems"]:
-            print(f"  problem: {problem}")
-        print(f"render_sig: {render_sig}")
-        print(f"shell_sig: {shell_sig}")
-        ok = not route_plan["problems"] and metadata_report["counts"]["errors"] == 0
-        return 0 if ok else 1
+def _plan_only(args: argparse.Namespace, manifest: dict, render_sig: str, shell_sig: str) -> int:
+    metadata_report = reconcile_metadata(args.repo, manifest, dry_run=True)
+    route_plan = plan(args.repo, manifest)
+    print(f"metadata (dry-run): {metadata_report['counts']['reconciled']} to reconcile, {metadata_report['counts']['unchanged']} unchanged, {metadata_report['counts']['errors']} errors")
+    for page in route_plan["pages"]:
+        print(f"  {page['doc_id']:<32} {page['source_path']:<48} -> {page['url']}")
+    print(f"{len(route_plan['pages'])} pages in {route_plan['folder_count']} folders; {len(route_plan['problems'])} problems")
+    for problem in route_plan["problems"]:
+        print(f"  problem: {problem}")
+    print(f"render_sig: {render_sig}")
+    print(f"shell_sig: {shell_sig}")
+    ok = not route_plan["problems"] and metadata_report["counts"]["errors"] == 0
+    return 0 if ok else 1
 
+
+def _prepare(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path, render_sig: str, shell_sig: str, force: bool) -> tuple[dict, str]:
+    """Shared `start`/`export` pipeline: scan, metadata reconcile, signature,
+    build-if-changed, install-if-missing. Returns (new_state, render_sig)."""
     metadata_report = reconcile_metadata(args.repo, manifest)
     print(f"metadata: {metadata_report['counts']['reconciled']} reconciled, {metadata_report['counts']['unchanged']} unchanged")
     scan_result = scan(args.repo, manifest)
@@ -1194,10 +1193,10 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
 
     state = load_state(dashboard)
     built = (dashboard / "content" / "docs" / "index.mdx").is_file()
-    needs_render = args.force or state.get("render_sig") != render_sig or state.get("shell_sig") != shell_sig or not built
+    needs_render = force or state.get("render_sig") != render_sig or state.get("shell_sig") != shell_sig or not built
     new_state = dict(state)
     if needs_render:
-        result = _stage_build(dashboard, args.repo, manifest, template_dir, args.force)
+        result = _stage_build(dashboard, args.repo, manifest, template_dir, force)
         new_state.update({
             "schema": STATE_SCHEMA,
             "dashboard": str(dashboard.resolve()),
@@ -1210,33 +1209,48 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
     else:
         print("signature unchanged: dashboard is up to date")
 
-    if not args.skip_install and not (dashboard / "node_modules").is_dir():
+    if not (dashboard / "node_modules").is_dir():
         ensure_dependencies(dashboard, args.repo)
 
-    if args.export:
-        export_sig = export_signature(render_sig, shell_sig)
-        out_dir = dashboard / "out"
-        has_output = out_dir.is_dir() and any(out_dir.rglob("*.html"))
-        needs_export = args.force or new_state.get("export_sig") != export_sig or not has_output
-        if needs_export:
-            build_dashboard(dashboard)
-            new_state.update({
-                "schema": STATE_SCHEMA,
-                "dashboard": str(dashboard.resolve()),
-                "export_sig": export_sig,
-                "exported_at": now_iso(),
-            })
-            save_state(dashboard, new_state)
-            print(f"exported: {out_dir}")
-        else:
-            print(f"export up to date: {out_dir}")
-        return 0
+    return new_state, render_sig
+
+
+def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:
+    render_sig = render_signature(args.repo, manifest)
+    shell_sig = shell_signature(template_dir, args.repo, manifest)
+    if args.plan_only:
+        return _plan_only(args, manifest, render_sig, shell_sig)
+    _prepare(args, dashboard, manifest, template_dir, render_sig, shell_sig, args.force)
 
     server = ensure_server(dashboard, args.port)
     print(f"dashboard: {server['url']} (reused={server['reused']})")
     if not args.no_open:
         open_browser(server["url"])
     print("dashboard server running in the background; stop it with `dashboard stop`")
+    return 0
+
+
+def cmd_export(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:
+    render_sig = render_signature(args.repo, manifest)
+    shell_sig = shell_signature(template_dir, args.repo, manifest)
+    new_state, render_sig = _prepare(args, dashboard, manifest, template_dir, render_sig, shell_sig, False)
+
+    export_sig = export_signature(render_sig, shell_sig)
+    out_dir = dashboard / "out"
+    has_output = out_dir.is_dir() and any(out_dir.rglob("*.html"))
+    needs_export = new_state.get("export_sig") != export_sig or not has_output
+    if needs_export:
+        build_dashboard(dashboard)
+        new_state.update({
+            "schema": STATE_SCHEMA,
+            "dashboard": str(dashboard.resolve()),
+            "export_sig": export_sig,
+            "exported_at": now_iso(),
+        })
+        save_state(dashboard, new_state)
+        print(f"exported: {out_dir}")
+    else:
+        print(f"export up to date: {out_dir}")
     return 0
 
 
@@ -1296,7 +1310,7 @@ def cmd_stop(args: argparse.Namespace, dashboard: Path) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="dashboard", description="Docforge dashboard: build-if-changed, serve, open")
+    parser = argparse.ArgumentParser(prog="dashboard", description="Docforge dashboard: build-if-changed, serve, or export")
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--repo", default=".", help="repository root (default: current directory)")
     common.add_argument("--manifest", default=None, help="manifest path (default: <repo>/.docforge/manifest.json)")
@@ -1308,9 +1322,8 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--force", action="store_true", help="rebuild generated output even when the signature is unchanged")
     start.add_argument("--plan-only", action="store_true", help="reconcile dry-run, signatures, and route plan only; no writes, no server")
     start.add_argument("--no-open", action="store_true", help="do not open the browser after serving")
-    start.add_argument("--skip-install", action="store_true", help="do not run npm install when dependencies are missing")
     start.add_argument("--port", type=int, default=0, help="port (default: auto)")
-    start.add_argument("--export", action="store_true", help="build the static HTML export into out/ instead of starting the dev server")
+    sub.add_parser("export", parents=[common], help="reconcile, rebuild when changed, then `next build` the static HTML export into out/")
     sub.add_parser("status", parents=[common], help="dashboard existence, render signature match, server state")
     sub.add_parser("stop", parents=[common], help="stop the dashboard dev server")
     return parser
@@ -1326,7 +1339,7 @@ def main(argv: list[str] | None = None) -> int:
     args.manifest = manifest_path
     args.dashboard = dashboard
     template_dir = Path(__file__).resolve().parent.parent / "template"
-    if args.command in {"start", "status", "scan"}:
+    if args.command in {"start", "export", "status", "scan"}:
         try:
             manifest = load_manifest(manifest_path)
         except ValueError as exc:
@@ -1338,6 +1351,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_scan(args, manifest)
         if args.command == "start":
             return cmd_start(args, dashboard, manifest, template_dir)
+        if args.command == "export":
+            return cmd_export(args, dashboard, manifest, template_dir)
         if args.command == "status":
             return cmd_status(args, dashboard, manifest, template_dir)
         if args.command == "stop":

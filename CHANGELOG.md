@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.13.1 - Dashboard `export` subcommand
+
+- The static HTML export is now its own standalone `dashboard export`
+  subcommand (`dashboard export --repo <repo>`) instead of
+  `dashboard start --export`. It runs the same preflight/scan/reconcile/
+  signature pipeline as `start`, then `next build` emits `index.html` per
+  page under `<dashboard>/out/`; it takes no flags (`start` no longer
+  accepts `--export`).
+- `--skip-install` is gone: `start` and `export` always install the
+  dashboard's npm dependencies when `node_modules` is missing.
+
 ## 2.13.0 - Manifest 3.2 with document descriptions
 
 - Manifest schema bumped to `3.2`: every document entry gains a catalog-owned

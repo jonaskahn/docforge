@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill cartridge that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-2.13.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
+  [![Version](https://img.shields.io/badge/version-2.13.1-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 
@@ -300,7 +300,7 @@ before the command or before a required scope argument):
 | `/docforge-revise flow --plan-only` | Revise analysis only (no body writes) |
 | `/docforge-dashboard` | `dashboard start`: reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `/docforge-dashboard --plan-only` | Preflight, metadata dry-run, signatures, and route plan only |
-| `/docforge-dashboard --export` | Build the static HTML export (`next build` → `<dashboard>/out/`) instead of serving; host it at a domain root on GitHub Pages / S3 |
+| `/docforge-dashboard export` | Build the static HTML export (`next build` → `<dashboard>/out/`); host it at a domain root on GitHub Pages / S3 |
 
 ### CHEAT CODES (FLAGS)
 
@@ -308,7 +308,7 @@ Shared flags on both commands: `--plan-only` (analyze / dry-run tree only),
 `--auto-accept` (skip routine pauses after scope confirm),
 `--no-dashboard` (skip the automatic dashboard build/serve at completion).
 `/docforge-dashboard` shares the same flags plus its own runtime CLI
-subcommands (`dashboard start | status | stop`).
+subcommands (`dashboard scan | start | export | status | stop`).
 
 `--help` on any of the three commands prints that command's purpose and full
 parameter reference (canonical text in

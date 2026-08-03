@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.13.0",
+  "version": "2.13.1",
   "category": "engineering",
   "purpose": "Engineering practices: conventions, testing, and tech debt.",
   "source": "../../index.json",

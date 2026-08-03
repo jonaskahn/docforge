@@ -1,7 +1,7 @@
 # Dashboard
 
 Owns: the dashboard capability of the `docforge` skill — `dashboard.{py,js}
-start` (serve or `--export`), `scan`,
+start` (serve), `export` (static HTML export), `scan`,
 `status`, and `stop`; the generated Fumadocs application under
 `<repo>/.docforge/dashboard/`; metadata reconciliation for public frontmatter;
 MDX conversion; route planning; navigation generation; validation; and the
@@ -77,8 +77,11 @@ apply.
 python3 runtime/cli/python/dashboard.py scan --repo <repo> [--json]
 node runtime/cli/js/dashboard.js scan --repo <repo> [--json]
 
-python3 runtime/cli/python/dashboard.py start --repo <repo> [--force] [--plan-only] [--no-open] [--skip-install] [--port N] [--export]
-node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--no-open] [--skip-install] [--port N] [--export]
+python3 runtime/cli/python/dashboard.py start --repo <repo> [--force] [--plan-only] [--no-open] [--port N]
+node runtime/cli/js/dashboard.js start --repo <repo> [--force] [--plan-only] [--no-open] [--port N]
+
+python3 runtime/cli/python/dashboard.py export --repo <repo>
+node runtime/cli/js/dashboard.js export --repo <repo>
 
 python3 runtime/cli/python/dashboard.py status --repo <repo> [--json]
 node runtime/cli/js/dashboard.js status --repo <repo> [--json]
@@ -87,13 +90,13 @@ python3 runtime/cli/python/dashboard.py stop --repo <repo>
 node runtime/cli/js/dashboard.js stop --repo <repo>
 ```
 
-`start` is the single entrypoint. It is idempotent and performs this
+`start` and `export` are the entrypoints. Both are idempotent and share this
 lifecycle:
 
 ```text
 PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
--> INSTALL (if missing) -> SERVE -> OPEN        (default)
--> INSTALL (if missing) -> EXPORT               (--export)
+-> INSTALL (if missing) -> SERVE -> OPEN        (start)
+-> INSTALL (if missing) -> EXPORT               (export)
 ```
 
 - **Preflight:** repository, manifest 3.2 (or 3.1), and a readable `docs/` tree.
@@ -141,7 +144,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
   `node_modules`.
 - **Install (when missing):** `npm install` runs only when the dashboard has
   no `node_modules` / lockfile yet. Later runs reuse the installed
-  dependencies (`--skip-install` disables this step).
+  dependencies; dependencies are always installed when missing.
 - **Serve:** binds `127.0.0.1` to a free port (or `--port N`) and starts
   `npm --prefix <dashboard> run dev -- -H 127.0.0.1 -p <port>` as a
   **detached background server**, records `pid` / `port` / `url` in
@@ -152,7 +155,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
   (`open` / `xdg-open`; never fails the run). `--no-open` skips this.
 - `start` exits after the server is healthy; the server keeps running in the
   background until `dashboard.{py,js} stop`.
-- **Export (`--export`):** instead of SERVE -> OPEN, the runtime runs
+- **Export (`export`):** instead of SERVE -> OPEN, the runtime runs
   `npm --prefix <dashboard> run build`. The generated app is a static-export
   Next.js site (`output: 'export'`, `trailingSlash: true`; search uses the
   statically pre-rendered
@@ -164,8 +167,8 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
   static file server. No server is started and no browser is opened. The
   export is skipped when the stored `export_sig` (render + shell signatures)
   matches and `out/` already contains HTML; the printed `<dashboard>/out`
-  path is the deployable artifact. `--export` cannot be combined with
-  `--port`.
+  path is the deployable artifact. `export` takes no flags: it is invoked
+  as `dashboard.{py,js} export --repo <repo>`.
 
 `--plan-only` performs the preflight, metadata reconcile **dry-run**, both
 signatures, and the route plan only: no writes, no install, no server. It
@@ -186,12 +189,13 @@ short grace period) and clears the PID/port state.
 
 ## When the build fails: revise before the dashboard
 
-A `start` that cannot build is a **docs problem, not a view problem**: route
+A `start` or `export` that cannot build is a **docs problem, not a view
+problem**: route
 plan problems, conversion failures, and validation errors (links, anchors,
 coverage, assets) exit `1` before install/serve/open, the previous dashboard
 is left untouched, and the dev server is never started.
 
-When `start` fails, the agent must:
+When `start` or `export` fails, the agent must:
 
 1. Present every error exactly as printed (route plan problems, conversion
    errors, validation errors). Never summarize away a failing check.

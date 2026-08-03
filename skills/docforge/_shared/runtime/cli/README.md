@@ -64,7 +64,7 @@ Always put the command/subcommand before flags (e.g.
 | `lint_document` | Mechanical document lint |
 | `lint_agents_kernel` | AGENTS.md / agent-kernel lint |
 | `discover_child_repos` | Portfolio child-repository discovery |
-| `dashboard` | `scan` / `start` / `status` / `stop` for the local Fumadocs site |
+| `dashboard` | `scan` / `start` / `export` / `status` / `stop` for the local Fumadocs site |
 | `graph_source_codegraph` / `graph_source_gitnexus` | Per-provider `detect` readiness probes |
 | `graph_source_gitnexus_reader` | Offline LadybugDB inventory reader |
 | `graph_source_registry` / `graph_source_understand_anything` / `graph_storage` | Library-only (no useful standalone CLI) |
