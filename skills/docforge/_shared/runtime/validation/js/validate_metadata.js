@@ -13,7 +13,7 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.12.0";
+const CATALOG_VERSION = "2.13.0";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],

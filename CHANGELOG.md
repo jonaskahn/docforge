@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - Manifest 3.2 with document descriptions
+## 2.13.0 - Manifest 3.2 with document descriptions
 
 - Manifest schema bumped to `3.2`: every document entry gains a catalog-owned
   `description` (≤ 160 chars), seeded from the catalog `summary` at init,

@@ -6,7 +6,7 @@
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
   <p>An Agent Skill cartridge that designs, writes, audits, and maintains documentation grounded in the actual source.</p>
 
-  [![Version](https://img.shields.io/badge/version-2.11.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
+  [![Version](https://img.shields.io/badge/version-2.13.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 
@@ -14,21 +14,6 @@
 </div>
 
 ---
-
-## ██▓▒░ TITLE SCREEN ░▒▓██
-
-```text
-          ██████╗  ██████╗  ██████╗ ███████╗ ██████╗ ██████╗  ██████╗ ███████╗
-          ██╔══██╗██╔═══██╗██╔════╝ ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██╔════╝
-          ██║  ██║██║   ██║██║      █████╗  ██║   ██║██████╔╝██║  ███╗█████╗
-          ██║  ██║██║   ██║██║      ██╔══╝  ██║   ██║██╔══██╗██║   ██║██╔══╝
-          ██████╔╝╚██████╔╝╚██████╗ ██║     ╚██████╔╝██║  ██║╚██████╔╝███████╗
-          ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚══════╝
-```
-
-```text
-HIGH SCORE : 2.11.0      CREDITS   : ∞      PLAYER 1 : YOUR REPO
-```
 
 Welcome to Docforge — the source-grounded documentation cartridge for AI
 coding agents. Created by [Jonas Kahn](https://github.com/jonaskahn), it is
@@ -276,6 +261,11 @@ Continue? Insert the next repository.
 The generated dashboard is not a beige HTML museum. It runs the Fumadocs Glass
 layout under a **Liquid Glass / Aero-inspired "liquid docs" theme** — the
 cabinet's attract mode after a run:
+
+<p align="center">
+  <img src="assests/demo-01.png" alt="Docforge dashboard preview (dark mode)" width="400" />
+  <img src="assests/demo-02.png" alt="Docforge dashboard preview (light mode)" width="400" />
+</p>
 
 - **Glass on the navigation layer only.** Sidebar, header controls, mobile
   drawer, and compact TOC float as frosted panels over a cool ambient
