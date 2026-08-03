@@ -1,6 +1,6 @@
 ---
 name: docforge-dashboard
-description: Local Fumadocs dashboard for Docforge documentation — reconcile metadata, convert docs/ Markdown to MDX, and serve a generated site at /docs without touching the repository's package files.
+description: Previews the written docs as a local, browsable site — rebuilds only what changed, never touches the repo's package files.
 ---
 
 If the invocation arguments contain `--help` (or the user asks what this

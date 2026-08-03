@@ -1,6 +1,6 @@
 ---
 name: docforge-dashboard
-description: Local Fumadocs dashboard for Docforge documentation — start, stop, or check the generated site at /docs. Thin entrypoint into the Docforge cartridge.
+description: Previews the written docs as a local, browsable site — rebuilds only what changed, never touches the repo's package files.
 ---
 
 # Docforge Dashboard

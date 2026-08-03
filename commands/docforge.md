@@ -1,6 +1,6 @@
 ---
 name: docforge
-description: Catalog-driven repository documentation with bounded repository-evidence retrieval, manifest metadata, independent audits, and equivalent Python/Node tools.
+description: Writes new repository documentation from source-code evidence — catalog-driven, provenance-tracked, and independently audited.
 ---
 
 If the invocation arguments contain `--help` (or the user asks what this

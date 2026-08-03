@@ -28,7 +28,8 @@ Natural-language update / refresh of a named document uses the same command
 
 Purpose: structural refresh of the repository documentation — revise all, a
 docs area, or the flow index, with the same catalog, manifest, provenance,
-and audit discipline as `/docforge`.
+and audit discipline as `/docforge`. A bare invocation migrates manifest
+metadata only (no scope question, no writing).
 
 | Parameter | Meaning |
 |---|---|

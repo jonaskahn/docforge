@@ -1,6 +1,6 @@
 ---
 name: docforge-revise
-description: Structural refresh of Docforge documentation — revise all, a docs area, or flows. Accepts --plan-only and --auto-accept. Shares the Docforge cartridge.
+description: Refreshes documentation Docforge already wrote — the whole tree, one area, or flows; a bare run only syncs manifest metadata.
 ---
 
 # Docforge Revise
