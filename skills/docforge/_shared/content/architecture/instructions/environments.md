@@ -12,8 +12,7 @@ what must be true before a change moves from one environment to the next,
 and who owns that gate.
 
 State configuration ownership per environment — which team or system
-controls each environment's config — so a reader knows where to change a
-value rather than guessing. Keep deployment procedure out; this document
+controls each environment's config. Keep deployment procedure out; this document
 describes what differs, [deployment.md](deployment.md) describes how to
 ship into it.
 

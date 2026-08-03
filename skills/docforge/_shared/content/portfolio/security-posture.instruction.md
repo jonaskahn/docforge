@@ -18,8 +18,7 @@ covers, and which don't have it yet — a coverage table, not a narrative.
 For operational coupling: name the shared operational dependency (a queue,
 a shared datastore, a shared on-call rotation) and what happens across the
 portfolio when it degrades. Never repeat member-level detail that adds no
-cross-repo information — that repetition is exactly what this document
-type exists to avoid.
+cross-repo information.
 
 Every shared control, gap, or coupling row names assessed repositories, status
 (`covered`, `absent`, `not applicable`, or `unknown`), evidence and as-of date,

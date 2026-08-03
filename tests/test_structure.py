@@ -162,10 +162,12 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("passes the whole-tree gate", workflow)
         self.assertIn("`--auto-accept` does not waive this", workflow)
         thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("## Validation failure", thin)
-        self.assertIn("is **not** opened", thin)
+        # Thin entrypoint delegates the full procedure to workflows/dashboard.md
+        # and carries only a pointer-level summary of the build-failure gate.
+        self.assertIn("## Preflight gates", thin)
+        self.assertIn("**not** opened", thin)
         self.assertIn("`/docforge-revise`", thin)
-        self.assertIn("`--auto-accept` never skips this", thin)
+        self.assertIn("`--auto-accept` bypasses", thin)
 
     def test_dashboard_scan_suggests_revision_before_open(self) -> None:
         """The dashboard scans for missing metadata, broken links, stale
@@ -179,9 +181,11 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("`scan` exits `1`", workflow)
         self.assertIn("never a summary that\n   hides a finding", workflow)
         thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("## Scan first: you should revise again", thin)
-        self.assertIn("you should revise again", thin)
+        # Thin entrypoint summarizes the scan gate and points at the workflow owner.
+        self.assertIn("## Preflight gates", thin)
+        self.assertIn("**Scan**", thin)
         self.assertIn("`/docforge-revise`", thin)
+        self.assertIn("clean scan means ready", thin)
         help_text = (SHARED_ROOT / "help.md").read_text(encoding="utf-8")
         self.assertIn("`scan` (read-only diagnostics", help_text)
 
@@ -199,10 +203,13 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("for **any** legacy version", workflow)
         self.assertNotIn("Legacy manifest gate (v1.1)", workflow)
         thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("## Legacy manifest gate", thin)
-        self.assertIn("**Revise all (recommended)**", thin)
-        self.assertIn("**Update metadata only**", thin)
-        self.assertIn("**Stop**", thin)
+        # Thin entrypoint summarizes the three-option legacy gate; the full
+        # option text lives in workflows/dashboard.md (asserted above).
+        self.assertIn("## Preflight gates", thin)
+        self.assertIn("**Legacy manifest**", thin)
+        self.assertIn("three-option gate", thin)
+        self.assertIn("revise all", thin)
+        self.assertIn("update metadata", thin)
         self.assertIn("any** legacy version", thin)
         self.assertNotIn("Legacy manifest gate (v1.1)", thin)
 

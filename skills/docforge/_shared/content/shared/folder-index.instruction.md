@@ -26,8 +26,7 @@ children the way a reader would want to navigate them (most-orienting first),
 not alphabetically. Never link a document that wasn't selected or hasn't been
 written yet; an index promising a future document is worse than no link at all,
 because it breaks trust in every other link on the page. When the manifest
-changes which children are selected, regenerate the index in the same pass — a
-stale index is a defect, not a lag.
+changes which children are selected, regenerate the index in the same pass.
 
 A section README may mention a project-level fact to give context, but only
 when it links immediately to the child document that owns that fact. It never

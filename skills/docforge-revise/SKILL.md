@@ -43,17 +43,15 @@ first; see [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/tools.md`](<${CLA
 | `/docforge-revise <area>` | Scoped revise (architecture, flows, operations, …) |
 | `/docforge-revise all` | Full-tree revise |
 
-Before any migration, detection, or writing, revise always stops and asks first,
-using the question pack owned by
-[`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/intake.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/intake.md>).
-Present the discovery brief and question set in one response: Scope, Tier,
-Profiles (shape / platform / framework / concern), Output audience, and
-Execution mode. For every persisted manifest choice, display the current value
-or values as the baseline. Offer `Change to <tier>` alternatives for tier, and
-only `Add <value>` / `Remove <value>` actions for profiles and audiences; never
-offer a `Keep` option or require re-selecting current values. Fresh detection
-is a recommended `Add` action. Show the confirmation summary and wait for
-explicit confirmation before continuing; never proceed on silent defaults.
+Before any migration, detection, or writing, revise stops and asks first. The
+question pack and stop-and-ask mechanics are owned by
+[`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/intake.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/intake.md>)
+and
+[`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/revision.md>):
+one confirmation covering Scope, Tier, Profiles, Output audience, and Execution
+mode, showing each persisted choice as the baseline, with `Change to <tier>`
+for tier and `Add` / `Remove` for profiles and audiences. Never proceed on
+silent defaults.
 
 Before writing, revise displays an annotated plan tree (`add` / `update` /
 `rewrite` / `unchanged` / `skip`), including the `Flows:` mapping.

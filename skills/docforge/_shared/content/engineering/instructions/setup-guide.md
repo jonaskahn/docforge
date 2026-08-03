@@ -20,5 +20,4 @@ observable success signal — the exact output or state a reader checks before m
 a paragraph of explanation. Introduce configuration immediately before it is needed, not as
 a wall of settings up front. Put common recovery steps beside the failure they fix, keyed by
 the symptom the reader is looking at, not by cause. Finish with the smallest useful
-verification and a short "what next" — never end on a command with no way to tell whether it
-worked.
+verification and a short "what next."

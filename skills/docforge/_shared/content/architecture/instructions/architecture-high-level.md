@@ -15,8 +15,7 @@ business capability it owns. Move from context to blocks to communication and bo
 that order — a reader should be able to draw the box diagram from the prose alone. Add a
 visual only when it clarifies relationships among three or more blocks. Name responsibilities with
 strong verbs ("owns," "validates," "routes"), not passive nouns ("handling,"
-"management"). Put invariants in a visually distinct section — a reader skimming for "what
-must always be true" should not have to parse prose to find it. This document is stable by
+"management"). Put invariants in a visually distinct section. This document is stable by
 design: a claim a routine refactor would falsify is written too close to the code and
 belongs in low-level.md. Finish with links to low-level detail, decisions, and operational
 consequences — rationale lives in decisions, not here.

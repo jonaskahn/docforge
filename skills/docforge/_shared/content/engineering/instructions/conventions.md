@@ -21,4 +21,4 @@ within each, order by how often a contributor collides with it, not by
 when it was adopted. State the consequence of not following the
 convention (a failing lint rule, a rejected review) where one exists; a
 convention with a real enforcement consequence reads as a rule, one
-without reads as a suggestion — be accurate about which this is.
+without reads as a suggestion.

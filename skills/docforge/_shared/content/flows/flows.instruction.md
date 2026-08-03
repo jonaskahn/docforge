@@ -11,14 +11,13 @@ slug and `display_name` in `.docforge/flow-index.json` must match that outcome
 read as prose: a start event, an end event, and gateways only where the process
 actually branches.
 
-Open with trigger, actors, and result — the start event, the lanes involved, the end event —
-in one short paragraph. Number the happy path in plain language, one step per action, one
-idea per sentence. Put branches immediately after the step that creates them, not gathered
-at the end; a branch orphaned from its trigger step reads as a separate flow. Add a visual
-once the flow passes about four steps or has any branch, within the central complexity
-budget. Split interactions that exceed that budget into linked sub-flows. End with failures and
-recovery, keeping shared business rules linked rather than duplicated — a rule referenced by
-three flows lives once, in the rule's own document.
+Open with trigger, actors, and result in one short paragraph. Number the happy path in
+plain language, one step per action, one idea per sentence. Put branches immediately
+after the step that creates them, not gathered at the end; a branch orphaned from its
+trigger step reads as a separate flow. Add a visual once the flow passes about four steps
+or has any branch, within the central complexity budget. Split interactions that exceed
+that budget into linked sub-flows. End with failures and recovery, keeping shared
+business rules linked rather than duplicated.
 
 ## Illustration
 
@@ -29,8 +28,7 @@ three flows lives once, in the rule's own document.
   that selects them; for a sequence diagram, the actors as participants and each call as a
   labeled arrow, in the order they actually occur.
 - **Trigger:** once the happy path passes about four steps, or as soon as any branch exists —
-  per [`illustration.md`](../../references/illustration.md)'s deep-dive budget (at most 3
-  illustrations, at most 12 elements per illustration).
+  per [`illustration.md`](../../references/illustration.md)'s deep-dive budget.
 
 ## Connections
 

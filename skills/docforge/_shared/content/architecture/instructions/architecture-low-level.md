@@ -10,9 +10,8 @@ adjacent dependencies in that order. Add a sequence diagram only when the reader
 follow who calls whom across components; use prose and a record-layout fence when the point
 is the shape of data rather than call order. Skip the visual when prose alone does not force
 a reader to reconstruct a multi-step interaction. Write invariants as absence-based facts a reader cannot
-recover by reading code ("never retries a non-idempotent write") — the same discipline the
-scaffold's own Invariant field asks for. Close each section with the stable file/module
-paths that orient implementation work.
+recover by reading code ("never retries a non-idempotent write"). Close each section with
+the stable file/module paths that orient implementation work.
 
 `arch_low_level` is a component zoom-in and must trace each component to a
 high-level block. `concept` is a durable subsystem topic: define its

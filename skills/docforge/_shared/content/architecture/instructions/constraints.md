@@ -10,8 +10,7 @@ choice this team made and could unmake; a constraint is not.
 This document is the one place hard, externally imposed, immovable bounds
 live. Do not let a fixable shortcut drift in here disguised as a constraint,
 and do not let a user-visible accepted limitation hide here instead of in
-`limitations-register` — a reviewer scanning constraints for "what can never
-change" should not have to filter out items that could, with effort, change.
+`limitations-register`.
 
 ## Illustration
 
@@ -20,7 +19,7 @@ change" should not have to filter out items that could, with effort, change.
 - **Renders:** nothing beyond the table; add prose only where a single bound
   needs more than one sentence of consequence.
 - **Trigger:** never for a diagram — reference-adjacent lookup content per
-  [`illustration.md`](../../../references/illustration.md) stays tabular.
+  [`illustration.md`](../../../references/illustration.md).
 
 ## Connections
 

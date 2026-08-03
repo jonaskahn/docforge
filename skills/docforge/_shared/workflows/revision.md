@@ -176,7 +176,7 @@ directly with `scaffold_docs.{py,js} --dry-run --revise`.
 | Flag | Effect on revise |
 |---|---|
 | `--plan-only` | Run migrate, staleness sync, detect/catalog, suitable-missing-audiences prompt, and show the structure update / dry-run tree; stop before writing or re-grounding document bodies |
-| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, manifest initialization, root `README.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](flags.md)) |
+| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, manifest initialization, root `README.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](../flags.md)) |
 
 Flags combine with a scope argument, e.g.
 `/docforge-revise flow --plan-only`.

@@ -7,10 +7,8 @@ system.
 For the hardware map: one row per board or peripheral — protocol, memory
 and power budget, and failure mode when absent or faulted. For firmware
 lifecycle: state boot and update states in order, and what happens on a
-failed update (does it roll back, brick, or retry) — the update-failure
-behavior is the single fact a reader most needs before trusting an OTA
-process. Avoid generic component-datasheet prose; describe this
-repository's actual configuration.
+failed update (does it roll back, brick, or retry). Avoid generic
+component-datasheet prose; describe this repository's actual configuration.
 
 The hardware map is reference-grade: identify the stable board or peripheral
 revision, interface role, unit-qualified memory and power limits, and the

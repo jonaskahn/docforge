@@ -9,8 +9,7 @@ Trace the full lifecycle in order: dataset lineage, training/evaluation,
 artifact packaging, inference serving, drift monitoring, ownership. For
 dataset lineage, borrow the Datasheets for Datasets discipline (Gebru et
 al., 2018): where the data came from, what it excludes, and known biases
-or gaps — a model whose training data lineage is "internal dataset" gives
-a reader nothing to evaluate. State the artifact's provenance (which
+or gaps. State the artifact's provenance (which
 training run produced the deployed version) so a reader can trace a
 production behavior back to a specific training configuration.
 

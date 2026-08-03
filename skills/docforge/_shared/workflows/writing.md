@@ -111,9 +111,8 @@ passing `cold-pass` audit record.
 
 After writing, start a separate cold, artifact-only pass with only the artifact,
 its catalog contract, target depth, relevant quality checks, and cited sources;
-do not carry over writer reasoning. For the `agents-kernel` output, its
-mechanical gate is `lint_agents_kernel.{py,js}`, not `lint_document.{py,js}`.
-Record
+do not carry over writer reasoning (mechanical lint, including the
+`agents-kernel` carve-out, is step 6 above — not part of this pass). Record
 `mode: cold-pass`. Mechanical checks alone never produce a completion verdict.
 Full audit procedure:
 [`../references/document-audit.md`](../references/document-audit.md).

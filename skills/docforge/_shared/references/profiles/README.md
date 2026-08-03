@@ -22,25 +22,6 @@ selection, terminology, and reader expectations.
 - Documenting embedded or IoT firmware → [shape-embedded-iot.md](shape-embedded-iot.md)
 - Documenting a blockchain smart-contract system → [shape-smart-contract.md](shape-smart-contract.md)
 
-## Contents
-
-- [audience-business-analysts.md](audience-business-analysts.md)
-- [audience-product-owners.md](audience-product-owners.md)
-- [audience-coding-agents.md](audience-coding-agents.md)
-- [audience-operators.md](audience-operators.md)
-- [audience-security-reviewers.md](audience-security-reviewers.md)
-- [shape-api-service.md](shape-api-service.md)
-- [shape-web-app.md](shape-web-app.md)
-- [shape-library-sdk.md](shape-library-sdk.md)
-- [shape-data-pipeline.md](shape-data-pipeline.md)
-- [shape-infrastructure-platform.md](shape-infrastructure-platform.md)
-- [shape-mobile-app.md](shape-mobile-app.md)
-- [shape-desktop-app.md](shape-desktop-app.md)
-- [shape-cli-tui.md](shape-cli-tui.md)
-- [shape-game.md](shape-game.md)
-- [shape-embedded-iot.md](shape-embedded-iot.md)
-- [shape-smart-contract.md](shape-smart-contract.md)
-
 ## Boundaries
 
 Canonical profile IDs, aliases, and detection signals live in

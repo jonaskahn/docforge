@@ -15,8 +15,7 @@ action, not a soft rewrite into something the evidence happens to support.
 Group by the area under diligence (architecture, security, operations,
 dependencies) so a reader assessing one dimension doesn't have to scan the
 whole table. Never render a verdict — pass/fail, safe/unsafe — this
-document maps evidence and gaps; the verdict is the reader's to make from
-what's here.
+document maps evidence and gaps.
 
 ## Illustration
 

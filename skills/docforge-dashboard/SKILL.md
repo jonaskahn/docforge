@@ -61,52 +61,26 @@ state), `stop` (shut down the background dev server). See
 [`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md>)
 for the full lifecycle and isolation rules.
 
-## Legacy manifest gate
+## Preflight gates
 
-When the preflight fails because `.docforge/manifest.json` carries an older
-legacy manifest version (1.1 `project_context` / `document_groups`, 2.0 flat
-`documents` with overlays, or any other pre-3.0 shape), stop and present
-exactly these options before any write:
+`start` runs three gates before it opens the dashboard; the full procedure and
+exact wording are owned by
+[`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md>),
+which this entrypoint's load order already pulls in. `--auto-accept` bypasses
+none of them.
 
-1. **Revise all (recommended)** — run `/docforge-revise all`; its
-   `migrate_metadata.{py,js}` step re-registers the manifest as 3.1 and the
-   revision
-   re-grounds and audits the tree, then `dashboard.{py,js} start` again.
-2. **Update metadata only** — run
-   `migrate_metadata.{py,js} --repo <repo> --report` to re-register the
-   manifest
-   without revising content, then re-run `dashboard.{py,js} scan` / `start`.
-   This
-   path works for **any** legacy version — nothing is hard-coded to one
-   shape.
-3. **Stop** — make no changes; the dashboard is not opened and no previous
-   build is presented as current.
-
-`--plan-only` runs the `migrate_metadata.{py,js} --dry-run` preview instead of
-writing. `--auto-accept` never bypasses this gate. Full detail:
-[`${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md`](<${CLAUDE_SKILL_DIR}/../docforge/_shared/workflows/dashboard.md>).
-
-## Scan first: you should revise again
-
-Every `/docforge-dashboard` run starts with the diagnostic scan (also printed
-by `start` before it builds). If the scan reports problems — missing
-metadata, incomplete or missing documents, stale sources, broken links,
-untracked `docs/` files — do not silently open the dashboard: present the
-full findings and tell the user **you should revise again**, recommending
-`/docforge-revise` (scoped to the failing documents or `all`), and ask
-whether to run the revision now. `--auto-accept` still prints the findings
-and the recommendation before proceeding. A clean scan means the
-documentation is ready to render.
-
-## Validation failure
-
-If `dashboard.{py,js} start` fails (route plan problems, conversion errors, or
-validation errors), the dashboard is **not** opened and the previous build
-must not be presented as current. Show every error, then ask the user to
-**revise the documentation first** — `/docforge-revise` (scoped to the
-failing area, or `all`) — and only re-run `dashboard.{py,js} start` after the
-revision passes the whole-tree gate. `--auto-accept` never skips this
-request.
+- **Legacy manifest** — a pre-3.0 `.docforge/manifest.json` (1.1
+  `project_context` / `document_groups`, 2.0 flat `documents`, or any other
+  legacy shape) stops with a three-option gate: revise all, update metadata
+  only (`migrate_metadata` re-registers **any** legacy version as 3.1), or
+  stop. `--plan-only` runs the `migrate_metadata.{py,js} --dry-run` preview.
+- **Scan** — findings (missing metadata, incomplete documents, stale sources,
+  broken links, untracked `docs/` files) print in full and recommend
+  `/docforge-revise` before the dashboard is trusted; a clean scan means ready
+  to render.
+- **Build failure** — a failed `start` is **not** opened and no previous build
+  is presented as current; revise first, then re-run once the whole-tree gate
+  passes.
 
 ## Not this command
 

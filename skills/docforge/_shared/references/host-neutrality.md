@@ -1,8 +1,12 @@
 # Host neutrality
 
-Documentation outlives the platform it was written on. Repos migrate between GitHub, GitLab, Gitea, Forgejo, Bitbucket, Azure Repos, SourceHut and bare self-hosted remotes; monorepos get split; companies get acquired and consolidate onto whatever the acquirer runs. Prose that names a forge is prose that will be wrong, and the wrongness is scattered across dozens of files where nobody will find it.
-
-The strategy is not to avoid forge features — they are useful — but to **confine forge-specific knowledge to a small number of declared locations** so migration is a bounded task.
+This file owns neutral vocabulary and forge-confinement. Generated prose must
+not name a specific forge platform (GitHub, GitLab, Gitea, Forgejo, Bitbucket,
+Azure Repos, SourceHut, or a self-hosted remote): documentation outlives the
+platform it was written on, and repos migrate, split, or get acquired onto a
+different one. The strategy is not to avoid forge features — they are useful
+— but to **confine forge-specific knowledge to a small number of declared
+locations** so migration is a bounded task.
 
 ## Vocabulary
 

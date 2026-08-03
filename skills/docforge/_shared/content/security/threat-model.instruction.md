@@ -17,7 +17,7 @@ of privilege) to every bounded element using the canonical applicability map.
 Each applicable matrix cell is `N/A`, `examined-none-found`, or a threat ID.
 
 For each threat, give exactly one response — mitigate, eliminate, transfer,
-or accept — tied to a control a reader could actually test, not a hope.
+or accept — tied to a control a reader could actually test.
 An accepted risk needs a decision link, rationale, review condition, and
 evidenced owner. `None accepted based on available evidence` is valid. Link
 data classifications to [data-handling.md](data-handling.md) rather than

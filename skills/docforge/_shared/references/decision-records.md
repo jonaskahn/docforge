@@ -1,14 +1,16 @@
 # Decision records
 
-A codebase shows what was built. It never shows what was considered and rejected, which constraint forced an awkward choice, or which decision is safe to revisit. That knowledge lives in people's heads until they leave, at which point teams re-litigate settled questions or — worse — quietly undo a decision whose reasoning nobody recorded.
-
-Decision records fix this cheaply. They are the single highest-value addition for both new-engineer onboarding and technical due diligence, because both audiences are asking the same question: *why is it like this?*
+This file owns why a decision deserves a durable record, where it lives, and
+its template. Decision records capture what was considered and rejected, the
+constraint that forced a choice, and whether it is safe to revisit — the
+highest-value addition for onboarding and diligence, since both ask *why is
+it like this?*
 
 ## Where and how
 
-`docs/architecture/decisions/NNNN-kebab-slug.md`, numbered from 0001, append-only. The folder README carries the index.
-
-Some teams name the folder `decisions/` rather than `adr/` because the acronym means nothing to a business reader who lands there during a review. That is the naming used here.
+`docs/architecture/decisions/NNNN-kebab-slug.md`, numbered from 0001,
+append-only, named `decisions/` (not `adr/`, which means nothing to a
+business reader). The folder README carries the index.
 
 ## Template
 
@@ -44,11 +46,16 @@ dependency's end of life, a team-size change. This turns a historical artifact
 into an operational trigger.
 ```
 
-The "Revisit if" section is not in the classic templates and is worth adding. Without it, decisions calcify: nobody knows whether a five-year-old choice is still load-bearing or merely undisturbed.
+Include "Revisit if": without it, nobody can tell whether an old choice is
+still load-bearing or merely undisturbed. In larger orgs, add **Consulted**
+(two-way input) and **Informed** (told one-way) split out from Deciders, and a
+**Confirmation** line naming the lint rule, architecture test, or review gate
+that verifies compliance — only when they carry weight beyond Deciders alone.
 
-This template carries Nygard's five canonical parts (title, status, context, decision, consequences) in the fuller MADR shape (problem statement, considered options, named trade-offs). Two MADR fields are worth adding in larger orgs where a decision touches many teams: **Consulted** (who gave two-way input) and **Informed** (who was told one-way), split out from Deciders; and, where a decision needs enforcement, a **Confirmation** line stating how compliance is verified (a lint rule, an architecture test, a review gate). Add them when they carry weight; omit them when Deciders already says everything.
-
-**An ADR is not a design doc.** An ADR records one decision *already made*, compactly and immutably — it is a durable maintenance artifact. A design doc or RFC is a forward-looking, pre-implementation proposal spanning a whole feature, written to drive discussion before building. This skill documents the system as shipped (see the "document what runs, not aspiration" anti-pattern), so it produces ADRs — the record of what was chosen — not design docs. A live design proposal, if one exists, is the *source* you backfill an ADR from once the decision lands, not a document the tree carries.
+An ADR records one decision already made, compactly and immutably; it is not
+a forward-looking design doc or RFC. Produce ADRs — the shipped decision, not
+the proposal — and backfill one from a design doc once the decision lands,
+rather than carrying the proposal itself in the tree.
 
 ## What deserves a record
 

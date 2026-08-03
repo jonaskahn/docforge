@@ -7,8 +7,7 @@ matrix to `browser-support` instead of reproducing it here.
 One row per component: responsibility, how it composes with others
 (slots, children, props contract), and the token/theme it consumes rather
 than hardcodes. Never substitute a screenshot gallery for the composition
-contract; a reader integrating a component needs the contract, not a
-picture of it.
+contract.
 
 ## Illustration
 

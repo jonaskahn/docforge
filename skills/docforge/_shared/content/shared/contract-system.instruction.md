@@ -14,13 +14,10 @@ prose cannot carry cleanly; otherwise tables and prose.
 For contract-system: name every contract, its storage layout at the level
 a reader needs (not a field-by-field dump), which authorities can call its
 privileged functions, which network(s) it is deployed to, and its upgrade
-boundary — immutable, proxy-upgradeable, or governance-gated, stated
-plainly, since this is the single fact that most changes a reader's trust
-model. For economic-invariants: state each invariant as a fact that must
+boundary — immutable, proxy-upgradeable, or governance-gated — stated
+plainly. For economic-invariants: state each invariant as a fact that must
 always hold ("total minted never exceeds total collateral locked"), then
-what mechanism enforces it and what would have to fail for it to break —
-an invariant with no enforcement mechanism named is a hope, not a
-guarantee.
+what mechanism enforces it and what would have to fail for it to break.
 
 Never render an unsupported audit verdict ("this contract is safe"); state
 evidence and accepted residual risk instead, the same discipline

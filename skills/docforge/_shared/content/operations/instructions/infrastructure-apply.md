@@ -9,13 +9,10 @@ better together than duplicated.
 for state ownership and locking, prose for drift and recovery.
 
 State who or what may run apply, and what gate stands between plan and
-apply (review, approval, CI check) — plan/apply safety means naming the
-thing that stops an unreviewed change, not just describing the happy path.
-For state: name where it lives, the locking mechanism that prevents
-concurrent writers, and who owns it. State drift explicitly: how it's
-detected, and what the recovery procedure is when actual infrastructure
-diverges from recorded state — drift left undetected is the failure mode
-this document exists to prevent.
+apply (review, approval, CI check). For state: name where it lives, the
+locking mechanism that prevents concurrent writers, and who owns it. State
+drift explicitly: how it's detected, and what the recovery procedure is
+when actual infrastructure diverges from recorded state.
 
 Never include a credential or an unverified destructive command; every
 apply-adjacent command shown here must be one a reader could safely run

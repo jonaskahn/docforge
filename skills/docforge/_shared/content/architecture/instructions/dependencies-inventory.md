@@ -7,8 +7,7 @@ assumption as unknown; do not turn package metadata into an operational claim.
 Lead with a compact risk-oriented table, ordered by criticality — the dependency whose
 failure or removal would hurt most goes first, not the alphabetically first package. Keep an
 "if it disappeared" column (or equivalent prose): it forces concentration-risk assessment
-that a plain package list hides. Always include licence for every direct dependency — a
-copyleft surprise in a proprietary product is the kind of finding that stops a review.
+that a plain package list hides. Always include licence for every direct dependency.
 Give short integration notes only for dependencies whose failure or replacement changes
 system behavior; a pinned linting tool doesn't need a paragraph.
 
@@ -18,10 +17,10 @@ replacement effort — in prose beside it, not squeezed into a table cell. Autom
 exhaustive inventory; hand-write only direct dependencies and assessment. When pointing to
 the generated machine-readable inventory, name what kind it is: a CycloneDX-style SBOM
 (component graph, built for vulnerability and dependency-risk tracking) answers different
-questions than an SPDX-style one (license and provenance focus) — say which, so a reader
-knows what the generated file can and can't tell them. Prefer SBOMs that carry the NTIA
-minimum fields (supplier, name, version, unique id such as PURL/CPE/hash, dependency
-relationship, SBOM author, timestamp). This document carries the judgment a generated file
+questions than an SPDX-style one (license and provenance focus) — say which.
+Prefer SBOMs that carry the NTIA minimum fields (supplier, name, version, unique
+id such as PURL/CPE/hash, dependency relationship, SBOM author, timestamp).
+This document carries the judgment a generated file
 cannot; it does not restate the file's contents.
 
 ## Illustration

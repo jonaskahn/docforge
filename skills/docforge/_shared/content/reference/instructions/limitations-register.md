@@ -20,8 +20,7 @@ sections — a boundary test decides which, not a judgment call:
 
 Within an entry, state trigger, impact, workaround, and evidence in that consistent order.
 State impact in the reader's terms — "imports over 2 GB fail," not "the buffer is bounded
-at 2 GB." Always give the workaround where one exists; a limitation without one reads as a
-wall. Distinguish deliberate trade-offs from accidental gaps: a bound with stated reasoning
+at 2 GB." Always give the workaround where one exists. Distinguish deliberate trade-offs from accidental gaps: a bound with stated reasoning
 reads as judgment; the same bound unexplained reads as an oversight. Use frank language; do
 not soften impact, and do not turn a remediation hope into a current fact — "not currently
 planned" is honest, "coming soon" is a promise this document cannot keep. Date the review:

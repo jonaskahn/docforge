@@ -2,8 +2,7 @@
 
 Open with the dataset's identity: what real-world or system entity it
 represents and the guarantee it exists to provide. Name every producer and
-every consumer explicitly — a dataset with an undocumented consumer is a
-change nobody can safely make. State schema ownership (which document or
+every consumer explicitly. State schema ownership (which document or
 schema file is the source of truth for fields, so this document links
 rather than repeats them), freshness and retention (how current the data is
 guaranteed to be and how long it is kept), and failure/recovery (what
@@ -24,8 +23,7 @@ every row can be trusted without re-verification.
 - **Trigger:** an `erDiagram` only past two or more related datasets with a
   durable relationship — per
   [`illustration.md`](../../../references/illustration.md)'s reference-depth
-  guidance (tables first; one relationship diagram only when fields cannot
-  express it).
+  guidance.
 
 ## Connections
 

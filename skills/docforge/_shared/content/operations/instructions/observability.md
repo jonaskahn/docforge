@@ -18,8 +18,6 @@ intent actually is — "page someone" versus "log for later" are different
 severities and must read as different.
 
 Correlation matters as much as the raw signal: state how a reader moves
-from an alert to the request/trace that caused it — a signal with no
-correlation path is a number nobody can act on. Close with blind spots
+from an alert to the request/trace that caused it. Close with blind spots
 named honestly: what this system cannot currently observe, not just what
-it can. An observability document with no blind-spot section reads as
-either complete or dishonest; state which.
+it can.

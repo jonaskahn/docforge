@@ -8,8 +8,7 @@ This is the router for the whole flow layer, not a flow itself: a reader
 scans it to decide which flow to open, or whether a candidate they expected
 even surfaced. Group rows by family (or "Ungrouped") and sort by priority
 within a group, main before deferred. State the status vocabulary once at the
-top — `main` / `deferred` / `placeholder` / `documented` / `skipped` — so the
-table itself needs no legend repeated per row.
+top: `main` / `deferred` / `placeholder` / `documented` / `skipped`.
 
 Every row must trace to an evidenced candidate; never add a row for a
 heuristic guess or an invented execution order. `standalone` rows get their
@@ -21,11 +20,9 @@ here; those belong solely to the `flow` document once it exists.
 
 ## Illustration
 
-- **Form:** Markdown table only — this is a reference/orientation document,
-  and a routing table is the reader's fastest path to the flow they want.
+- **Form:** Markdown table only.
 - **Renders:** nothing beyond the table; do not add a relationship diagram
-  even for a large flow set, since the table's columns already express
-  status, role, area, confidence, and reach without ambiguity.
+  even for a large flow set.
 - **Trigger:** never — orientation depth caps this document at prose plus
   the table itself, per [`illustration.md`](../../references/illustration.md).
 

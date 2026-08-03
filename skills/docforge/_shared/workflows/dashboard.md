@@ -187,7 +187,7 @@ When `start` fails, the agent must:
 
 `--auto-accept` does not waive this: a failed build is never opened, and the
 revise request is still asked (like other mandatory safety gates in
-[`flags.md`](flags.md)).
+[`flags.md`](../flags.md)).
 
 ## Scan: you should revise again
 
@@ -344,7 +344,7 @@ The Fumadocs application shell is copied from the cartridge template
 
 ## Flags
 
-Same flags as `/docforge` (see [`flags.md`](flags.md)):
+Same flags as `/docforge` (see [`flags.md`](../flags.md)):
 
 - `--plan-only`: preflight, metadata dry-run, signatures, and route plan
   only; no conversion, no install, no server. On a legacy manifest, the

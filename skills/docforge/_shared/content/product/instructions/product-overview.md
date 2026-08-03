@@ -15,8 +15,7 @@ list: a press-release-style opening, then FAQ-depth answers. Order matters:
    product to do (Jobs-to-be-Done phrasing: "when X happens, this lets you Y") rather than a
    persona bio.
 2. The main capabilities as outcomes the reader gets, not modules the team built.
-3. Boundaries and explicit non-goals, stated as plainly as the capabilities — a non-goal
-   that reads like an apology has failed at its job.
+3. Boundaries and explicit non-goals, stated as plainly as the capabilities.
 4. Links out: flows for behavior depth, capability and reference material for detail.
 
 Avoid implementation vocabulary unless it is part of the product's contract with its users.

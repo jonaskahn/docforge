@@ -24,19 +24,6 @@ concern; workflows link here instead of repeating the rule.
 - "Why record a decision, and where?" → [decision-records.md](decision-records.md)
 - "What does the portfolio tier add across repositories?" → [portfolio.md](portfolio.md)
 
-## Contents
-
-- [graph/](graph/README.md) — provider selection, per-provider reads, flow derivation.
-- [profiles/](profiles/README.md) — audience and shape guides.
-- [docs-tree.md](docs-tree.md), [depth-and-audience.md](depth-and-audience.md),
-  [discovery-gate.md](discovery-gate.md), [source-analysis.md](source-analysis.md),
-  [parallel-execution.md](parallel-execution.md), [document-audit.md](document-audit.md),
-   [document-composition.md](document-composition.md), [model-depth-ladders.md](model-depth-ladders.md), [quality-bar.md](quality-bar.md),
-  [provenance-tracking.md](provenance-tracking.md), [illustration.md](illustration.md),
-  [host-neutrality.md](host-neutrality.md), [decision-records.md](decision-records.md),
-   [portfolio.md](portfolio.md), [code-presentation.md](code-presentation.md),
-   [evidence-presentation.md](evidence-presentation.md)
-
 ## Boundaries
 
 Owned prose only — no catalog data, no per-document-type contracts (those

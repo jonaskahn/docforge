@@ -151,10 +151,8 @@ Present a human-readable plan before writing. It must contain:
    [`../runtime/graph/README.md`](../runtime/graph/README.md)), current/stale
    state, native or provisional
    flow status, and manifest/history evidence available. Name **only** providers
-   that `precheck_graph.{py,js}` reported READY. Understand Anything, GitNexus, and
-   CodeGraph are equally trusted for `code_graph` when ready; never imply that
-   only UA/GitNexus count. Do not list absent competitors. Never echo the
-   UA → GitNexus → derive priority list as if multiple sources were present.
+   that `precheck_graph.{py,js}` reported READY, per the provider sufficiency
+   rule ([`../rules.md`](../rules.md)); do not list absent competitors.
 2. **Scope decision** — chosen tier, each profile, depth, and one evidence-based
    sentence explaining why it applies.
 3. **Exact tree** — every static and discovered dynamic path from the manifest;

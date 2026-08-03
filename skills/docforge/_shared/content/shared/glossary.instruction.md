@@ -4,8 +4,7 @@ Covers both `glossary` (repository-scoped) and `portfolio_glossary`
 (cross-repo) — same litmus, different scope.
 
 One term, one precise definition, one link to the document that owns
-deeper explanation of it — a glossary entry that re-explains the concept
-in full duplicates that owning document and will drift from it. If a term
+deeper explanation of it. If a term
 means something different in casual team usage than in the code, define
 the code's meaning and note the discrepancy in one clause; don't silently
 pick one.

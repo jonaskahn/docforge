@@ -18,8 +18,7 @@ the clean path. Keep the UI component inventory out; that's
 - **Form:** a Mermaid `stateDiagram-v2` for launch/active/background/terminated
   states.
 - **Renders:** the named lifecycle states and what triggers each transition.
-- **Trigger:** always for this document type — the lifecycle inherently
-  branches — within
+- **Trigger:** always for this document type, within
   [`illustration.md`](../../../references/illustration.md)'s 8-state limit.
 
 ## Connections

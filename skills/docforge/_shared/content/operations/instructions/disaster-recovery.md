@@ -10,11 +10,9 @@ label untested paths and unknown objectives explicitly.
 an ordered command list — this is a runbook shape, not a diagram.
 
 State RTO (how long recovery may take) and RPO (how much data loss is
-acceptable) per scenario, as numbers, not aspirations — an unevidenced
-target is worse than an honestly wide one. Give explicit stop conditions:
-what state means "recovery is failing, escalate" versus "keep going" — a
-recovery procedure with no stop condition risks compounding the original
-failure. Order recovery steps by dependency, not by convenience; a
+acceptable) per scenario, as numbers, not aspirations. Give explicit stop
+conditions: what state means "recovery is failing, escalate" versus "keep
+going." Order recovery steps by dependency, not by convenience; a
 downstream service brought up before its data store is not actually
 recovered.
 
