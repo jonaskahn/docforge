@@ -88,10 +88,15 @@ before moving on.
 ## Questions revise asks
 
 Revise always **stops and asks first**, using the interactive question pack owned by
-[`intake.md`](intake.md) — never proceed on silent defaults. Before migration, detection, or writing,
+[`intake.md`](intake.md) — never proceed on silent defaults. A **bare**
+`/docforge-revise` is the one exception: it is metadata-only migration and
+asks nothing (see Commands below). For every other revise invocation, before
+migration, detection, or writing,
 revise presents a discovery brief and one combined question set ([`intake.md`](intake.md)):
 
-1. **Scope** — `flow`, `<area>`, or `all` (pre-checked from invocation).
+1. **Scope** — `flow`, `<area>`, or `all` (pre-checked from invocation; asked
+   only for natural-language revise requests, never for a bare
+   `/docforge-revise`).
 2. **Tier** — display the manifest tier and offer only `Change to <tier>` alternatives.
 3. **Profiles** — shape, platform, framework, concern: display each current
    selection and offer `Add` / `Remove` actions; fresh detections are recommended
@@ -167,9 +172,33 @@ directly with `scaffold_docs.{py,js} --dry-run --revise`.
 
 | Invocation | Behavior |
 |---|---|
-| `/docforge-revise` | Ask which scope: `all`, `<area>`, or `flow` |
+| `/docforge-revise` | **Metadata-only migration**: upgrade the manifest to current schema/version via `migrate_metadata.{py,js}`. No scope question, no detection, no writing, no dashboard (see below) |
 | `/docforge-revise all` / `/docforge-revise <area>` | Run `migrate_metadata.{py,js}` when needed, then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. If the manifest has no audiences, run the full audience multi-select. |
 | `/docforge-revise flow` | Full flow pipeline (see below) |
+
+### Bare `/docforge-revise` — metadata-only migration
+
+A bare `/docforge-revise` (no scope argument) is the cheap, quiet path: it
+only migrates/upgrades manifest metadata. It asks no questions, does no
+detection or rediscovery, writes no documents, and never starts the
+dashboard.
+
+1. Run the read-only preview:
+   `migrate_metadata.{py,js} --repo <repo> --dry-run`.
+2. When the manifest needs migration, apply it: upgrade manifest 3.0 /
+   provenance 1.0 to 3.1 / 2.0, re-register any pre-3.0 shape as 3.1
+   (adopting legacy written documents as `generated` with provenance 2.0,
+   demoting incomplete or unconvertible documents to `in_progress`), and
+   print the migration report.
+3. When the manifest is already current, report that nothing needed
+   migrating and stop — optionally point at the scoped invocations
+   (`/docforge-revise all`, `<area>`, `flow`) for a structural refresh.
+
+`--plan-only` runs only step 1 and never applies; `--auto-accept` and
+`--no-dashboard` have no effect on this path (there are no pauses and no
+dashboard). `migrate_metadata.{py,js}` is idempotent — re-running over an
+up-to-date manifest is a clean no-op (scripts and README:
+[`../runtime/manifest/README.md`](../runtime/manifest/README.md)).
 
 #### Flags (same as `/docforge`)
 

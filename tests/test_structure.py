@@ -237,15 +237,22 @@ class SkillContentTests(unittest.TestCase):
             self.assertIn("--help", (skill_dir / "SKILL.md").read_text(encoding="utf-8"))
 
     def test_revision_scope_order_is_flow_area_all(self) -> None:
-        """The revise scope question presents flow, then <area>, then all."""
+        """The revise scope question presents flow, then <area>, then all;
+        a bare /docforge-revise is metadata-only migration, not a scope ask."""
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
         scope_line = next(
             line for line in revision.splitlines() if line.strip().startswith("1. **Scope**")
         )
         self.assertLess(scope_line.index("flow"), scope_line.index("<area>"))
         self.assertLess(scope_line.index("<area>"), scope_line.index("all"))
+        self.assertIn("never for a bare", revision)
         revise = (ROOT / "skills" / "docforge-revise" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("Ask which scope: `flow`, `<area>`, or `all`", revise)
+        self.assertIn("Metadata-only: migrate/upgrade the manifest metadata", revise)
+        self.assertIn("`migrate_metadata.{py,js}`", revise)
+        self.assertNotIn("Ask which scope", revise)
+        bare = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        self.assertIn("## Commands", bare)
+        self.assertIn("### Bare `/docforge-revise` — metadata-only migration", bare)
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
         self.assertIn("`/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`", intake)
 

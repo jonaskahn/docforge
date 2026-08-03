@@ -52,12 +52,16 @@ first; see [`../docforge/_shared/workflows/tools.md`](../docforge/_shared/workfl
 
 | Invocation | Behavior |
 |---|---|
-| `/docforge-revise` | Ask which scope: `flow`, `<area>`, or `all` |
+| `/docforge-revise` | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (`--dry-run` preview first, apply only when needed). No scope question, no detection, no writing, no dashboard |
 | `/docforge-revise flow` | Full flow pipeline |
 | `/docforge-revise <area>` | Scoped revise (architecture, flows, operations, …) |
 | `/docforge-revise all` | Full-tree revise |
 
-Before any migration, detection, or writing, revise stops and asks first. The
+A bare `/docforge-revise` asks nothing and writes nothing — it only brings
+the manifest metadata up to date (see
+[`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md),
+Bare `/docforge-revise`). Before any migration, detection, or writing, every
+scoped revise stops and asks first. The
 question pack and stop-and-ask mechanics are owned by
 [`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md)
 and

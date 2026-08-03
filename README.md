@@ -303,6 +303,7 @@ before the command or before a required scope argument):
 |---|---|
 | `/docforge` | Fresh start: intake, plan, or write |
 | `/docforge --plan-only` | Plan / dry-run tree only |
+| `/docforge-revise` | Migrate/upgrade manifest metadata only (`migrate_metadata`); no scope question, no writing |
 | `/docforge-revise all` | Full-tree structural refresh |
 | `/docforge-revise <area>` | Scoped revise (e.g. architecture) |
 | `/docforge-revise flow` | Full flow harvest → organize → derive → write |

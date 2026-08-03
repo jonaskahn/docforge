@@ -32,7 +32,7 @@ and audit discipline as `/docforge`.
 
 | Parameter | Meaning |
 |---|---|
-| *(none)* | Ask which scope: `flow`, `<area>`, or `all` |
+| *(none)* | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (dry-run preview first, apply only when needed); no scope question, no detection, no writing, no dashboard |
 | `flow` | Full flow pipeline (harvest, rank, organization, provisional derivation) |
 | `<area>` | Scoped revise of one docs area (architecture, flows, operations, …) |
 | `all` | Full-tree revise |
