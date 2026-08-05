@@ -35,14 +35,19 @@ otherwise keep the serial `write_order` loop. Contract
 ([`../references/parallel-execution.md`](../references/parallel-execution.md)):
 
 - Before fan-out, the orchestrator scaffolds any shared ancestor indexes
-  serially (indexes may exist before their children, §6) and sets each
-  document `in_progress` serially.
+  serially (indexes may exist before their children, §6), sets each document
+  `in_progress` serially, and ensures `manifest["graph"]` is locked — self-healing
+  with `set-graph --repo <repo>` first if it is somehow still absent. A worker
+  never calls `precheck_graph` or `set-graph` itself and never selects or
+  relocks a provider.
 - Each worker receives its document card (route, `requires`, audience,
-  presentation), evidence budget, and one target artifact. It runs the
-  artifact portion of **Write one document** — route, materialize, re-ground,
-  provenance, mechanical lint — on **only its own artifact file**. It never
-  calls `manage_manifest` and never edits shared indexes, other documents, or
-  the manifest.
+  presentation), evidence budget, one target artifact, and the session's
+  locked graph provider/flow (`manifest["graph"]`, read-only). It runs the
+  artifact portion of **Write one document** — route, materialize, re-ground
+  (native provider first, whole-file read last, per step 4 above), provenance,
+  mechanical lint — on **only its own artifact file**. It never calls
+  `manage_manifest` and never edits shared indexes, other documents, or the
+  manifest.
 - Each worker returns a result contract (see parallel-execution.md): claims
   grounded with sources, unresolved gaps, lint findings, and any defect it
   could not clear.
@@ -83,9 +88,30 @@ For the next document in `write_order` (serial mode):
    ```
 
 4. Set it `in_progress`, re-ground every required claim, replace all scaffold
-   markers and provenance tokens, and stamp complete provenance 2.0. The writer
-   gathers, verifies, and stamps all candidate `path` / `role` / `git_blob`
-   evidence inline:
+   markers and provenance tokens, and stamp complete provenance 2.0. Re-ground
+   in this order — native tool first, whole-file read last:
+   1. Read the session's locked provider from `manifest["graph"]`
+      (`.docforge/manifest.json`). Never re-detect and never re-ask; it was
+      locked once, automatically, by `manage_manifest.{py,js} init` (see
+      [`../references/graph/graph-sources.md`](../references/graph/graph-sources.md)
+      "Session persistence").
+   2. If `graph` is absent (a manifest from before this convention, or a
+      resumed run), self-heal once with
+      `manage_manifest.{py,js} set-graph --repo <repo>` (no other flags —
+      automatic, registry-priority pick), then continue.
+   3. Dispatch the evidence question for each required claim through that
+      provider's native interface first — `graph-sources.md`'s dispatch table
+      (`codegraph_explore`, the GitNexus MCP tools/resources, or the relevant
+      Understand Anything skill).
+   4. Escalate to a direct file read only when the native query's returned
+      evidence does not cover the claim, following the bounded ladder in
+      [`../references/source-analysis.md`](../references/source-analysis.md):
+      targeted symbol/region read, then keyword search within the candidate
+      set, then whole-file only under its listed narrow conditions, then git
+      history last. Never open a whole file as the first move.
+
+   The writer gathers, verifies, and stamps all candidate `path` / `role` /
+   `git_blob` evidence inline:
    - Every written document emits the public frontmatter `id`, `title`, and
      `description` (a reader-facing one-liner, ≤ 160 chars, seeded from the
      catalog `summary` in the manifest) plus `docforge_provenance`; lint

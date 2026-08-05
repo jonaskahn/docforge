@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -20,6 +21,30 @@ SHARED_ROOT = ROOT / "skills" / "docforge" / "_shared"
 
 AGENT_PLACEHOLDER = re.compile(r"\$\{CLAUDE_(?:PLUGIN_ROOT|SKILL_DIR)\}")
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+
+
+class CatalogFormAllowlistTests(unittest.TestCase):
+    def test_dominant_form_allowlist_matches_across_schema_python_js(self) -> None:
+        """The dominant_form allowlist is intentionally duplicated in three
+        places (JSON Schema enum, Python set, JS set) for validation speed at
+        each call site; this test is the guard against them drifting apart."""
+        schema = json.loads((SHARED_ROOT / ".metadata" / "catalog-schema.json").read_text(encoding="utf-8"))
+        schema_forms = set(schema["definitions"]["document"]["properties"]["dominant_form"]["enum"])
+
+        from runtime.catalog.python.query_catalog import ALLOWED_DOMINANT_FORMS as py_forms
+
+        node = subprocess.run(
+            [
+                "node", "-e",
+                "const m=require(process.argv[1]); console.log(JSON.stringify([...m.ALLOWED_DOMINANT_FORMS]));",
+                str(SHARED_ROOT / "runtime" / "catalog" / "js" / "query_catalog.js"),
+            ],
+            text=True, capture_output=True, check=True,
+        )
+        js_forms = set(json.loads(node.stdout))
+
+        self.assertEqual(schema_forms, py_forms)
+        self.assertEqual(py_forms, js_forms)
 
 
 class SkillContentTests(unittest.TestCase):
@@ -102,6 +127,55 @@ class SkillContentTests(unittest.TestCase):
     def test_planning_workflow_never_writes_against_stale_tree(self) -> None:
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
         self.assertIn("Never write against an undisplayed manifest\nrevision", planning)
+
+    def test_planning_workflow_locks_graph_provider_via_init(self) -> None:
+        planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
+        init_pos = planning.index("manage_manifest.py init")
+        lock_pos = planning.index("`init` locks the graph provider into the manifest")
+        self.assertLess(init_pos, lock_pos, "graph-provider note must follow the init command block")
+        self.assertIn("--graph-provider", planning)
+
+    def test_writing_workflow_links_graph_retrieval_policy(self) -> None:
+        writing = (SHARED_ROOT / "workflows" / "writing.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "[`../references/graph/graph-sources.md`](../references/graph/graph-sources.md)",
+            writing,
+        )
+        self.assertIn(
+            "[`../references/source-analysis.md`](../references/source-analysis.md)",
+            writing,
+        )
+        self.assertIn("native tool first, whole-file read last", writing)
+        self.assertIn("Never re-detect and never re-ask", writing)
+
+    def test_writing_workflow_parallel_workers_never_select_provider(self) -> None:
+        writing = (SHARED_ROOT / "workflows" / "writing.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "never calls `precheck_graph` or `set-graph` itself and never selects or\n  relocks a provider",
+            writing,
+        )
+        self.assertIn("locked graph provider/flow (`manifest[\"graph\"]`, read-only)", writing)
+
+    def test_parallel_execution_denies_worker_provider_selection(self) -> None:
+        parallel = (SHARED_ROOT / "references" / "parallel-execution.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "a worker never calls `precheck_graph` or `set-graph` and never",
+            parallel,
+        )
+
+    def test_rules_documents_graph_provider_persistence(self) -> None:
+        rules = (SHARED_ROOT / "rules.md").read_text(encoding="utf-8")
+        self.assertIn("## Graph provider persistence", rules)
+        self.assertIn("not re-selected mid-session without\n`set-graph --force`", rules)
+
+    def test_graph_sources_documents_automatic_locking(self) -> None:
+        graph_sources = (SHARED_ROOT / "references" / "graph" / "graph-sources.md").read_text(encoding="utf-8")
+        self.assertIn("## Session persistence", graph_sources)
+        self.assertIn(
+            "locks the selected provider into the manifest\nautomatically",
+            graph_sources,
+        )
+        self.assertIn("registry-priority pick", graph_sources)
 
     def test_revision_workflow_enforces_current_template(self) -> None:
         """Revise rewrites documents whose structure/format/content deviates

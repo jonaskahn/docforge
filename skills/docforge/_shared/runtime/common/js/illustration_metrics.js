@@ -22,7 +22,12 @@ function illustrationDefects(text, targetDepth) {
       if (kind === "stateDiagram") defects.push({ kind: "deprecated state diagram", line: block.line, detail: "use stateDiagram-v2" });
       if (content.some((row) => /(?:^|\s)(?:style|classDef|click)\b/.test(row))) defects.push({ kind: "invalid mermaid", line: block.line, detail: "forbidden directive" });
       if (kind === "sequenceDiagram") { const participants = content.filter((row) => row.startsWith("participant ")).length; const messages = content.filter((row) => /(?:->>|-->>)/.test(row)).length; if (participants > 5 || messages > 12) defects.push({ kind: "illustration budget", line: block.line, detail: "sequence exceeds 5 participants or 12 messages" }); }
-      elements = content.slice(1).filter((row) => CONNECTOR.test(row) || /^(participant |state |    )/.test(row)).length;
+      if (kind === "journey") { const sections = content.filter((row) => row.startsWith("section ")).length; if (sections > 4) defects.push({ kind: "illustration budget", line: block.line, detail: "journey exceeds 4 sections" }); }
+      if (kind === "journey" || kind === "timeline") {
+        elements = content.slice(1).filter((row) => row && row !== "title" && !/^(title |section )/.test(row)).length;
+      } else {
+        elements = content.slice(1).filter((row) => CONNECTOR.test(row) || /^(participant |state |    )/.test(row)).length;
+      }
     } else elements = content.filter((row) => !CONNECTOR.test(row)).length;
     if (elements > maxElements) defects.push({ kind: "illustration budget", line: block.line, detail: `${elements} elements exceeds ${maxElements}` });
   }

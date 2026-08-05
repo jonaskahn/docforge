@@ -13,8 +13,17 @@ visual.
 - Use a Markdown table for enumerable facts with stable, repeated fields.
 - Use an ASCII `text` fence for directory trees, layered stacks, record
   layouts, and timelines.
+- Use an ASCII `text` fence for a short linear flow (at most four steps, no
+  branch) when the reader's question is only what happens, in order, and a
+  full diagram would add chrome without adding information; promote to
+  Mermaid once a branch appears.
 - Use a Mermaid `flowchart` for branching choices or relationship maps.
 - Use a Mermaid `sequenceDiagram` when order across actors or systems matters.
+- Use a Mermaid `journey` when the reader's question is how effort or
+  satisfaction changes across an end-to-end process for one actor, not just
+  the order of steps.
+- Use a Mermaid `timeline` when the reader's question is what happened, or
+  will happen, in calendar order, not in step or actor order.
 - Use a Mermaid `stateDiagram-v2` for lifecycle states and transitions.
 - Use a Mermaid `erDiagram` for durable data relationships.
 
@@ -43,7 +52,7 @@ only when lookup fields cannot express the relationship clearly. Router
 documents use prose and links. Split any illustration that exceeds
 its bound into linked views with one stated question each. A sequence diagram
 also has at most 5 participants; a state diagram at most 8 named states; an ER
-diagram at most 8 entities.
+diagram at most 8 entities; a journey diagram at most 4 sections.
 
 ## Mermaid constraints
 
@@ -92,3 +101,14 @@ connectors must come from the fixed set above.
 
 Follow the fence with a sentence explaining what the grouping reveals; do not
 assume indentation alone communicates ownership or runtime boundaries.
+
+```text
+{{trigger event}}
+├─ {{condition A}} ──> {{step}} ──> {{outcome A}}
+└─ {{condition B}} ──> {{step}} ──> {{outcome B}}
+```
+
+Follow the fence with a sentence stating that a single trigger fans out to
+these outcomes and nothing branches further; a second-level branch, or a step
+that needs to name which actor performs it, is the signal to promote to a
+Mermaid flowchart or sequenceDiagram instead.

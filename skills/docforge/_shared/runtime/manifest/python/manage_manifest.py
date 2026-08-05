@@ -22,6 +22,8 @@ from runtime.common.python.plan import plan_lines
 from runtime.catalog.python.detect_profiles import detect as detect_profiles
 from runtime.common.python.provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 from runtime.catalog.python import query_catalog
+from runtime.graph.python.graph_source_registry import SOURCES as GRAPH_SOURCES, resolve_all_ready, resolve_first_ready
+from runtime.graph.python.precheck_graph import report_flow_graph
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 MANIFEST_REL = Path(".docforge/manifest.json")
@@ -335,6 +337,30 @@ def selected_static_documents(
     return sorted(selected, key=lambda item: (item["write_order"], item["path"], item["id"]))
 
 
+def resolve_graph_lock(repo: Path, provider: str | None) -> dict | None:
+    """Resolve the graph provider to lock: `provider` if given (validated
+    against the registry and current readiness), else the highest-priority
+    ready source (registry order — the same order --auto-accept already uses).
+    Returns None when nothing is ready. Raises ValueError for an invalid or
+    not-ready explicit `provider`."""
+    if provider:
+        known = {source["name"] for source in GRAPH_SOURCES}
+        if provider not in known:
+            raise ValueError(
+                f"unknown graph provider: {provider}; expected one of: {', '.join(sorted(known))}"
+            )
+        ready_names = {source["name"] for source, _ in resolve_all_ready(repo, "code_graph")}
+        if provider not in ready_names:
+            raise ValueError(f"graph provider {provider} is not ready in this repo")
+        chosen = provider
+    else:
+        source, _ = resolve_first_ready(repo, "code_graph")
+        if source is None:
+            return None
+        chosen = source["name"]
+    return {"provider": chosen, "flow": report_flow_graph(repo), "locked_at": now_iso()}
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     if args.obsolete_overlay:
         return fail(
@@ -371,8 +397,18 @@ def cmd_init(args: argparse.Namespace) -> int:
         "documents": docs,
         "metadata": {},
     }
+    try:
+        graph_lock = resolve_graph_lock(args.repo, args.graph_provider)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    if graph_lock is not None:
+        manifest["graph"] = graph_lock
     save_manifest(args.repo, manifest)
     print(f"Wrote {path} — tier {args.tier}, {len(docs)} static documents planned.")
+    if graph_lock is not None:
+        print(f"Locked graph provider: {graph_lock['provider']} (flow: {graph_lock['flow']})")
+    else:
+        print("No graph provider ready yet — run `set-graph` once a code graph is built.")
     print()
     for line in plan_lines(args.repo, manifest, args.repo / ".docforge" / "flow-index.json"):
         print(line)
@@ -753,6 +789,9 @@ def cmd_status(args: argparse.Namespace) -> int:
     for dimension in PROFILE_DIMENSIONS:
         values = ", ".join(project["profiles"][dimension]) or "none"
         print(f"  {dimension}: {values}")
+    graph = manifest.get("graph")
+    if graph:
+        print(f"  graph: {graph['provider']} (flow: {graph['flow']})")
     print()
     for doc in manifest["documents"]:
         verdict = doc["audit"]["verdict"] if doc.get("audit") else "-"
@@ -765,6 +804,35 @@ def cmd_status(args: argparse.Namespace) -> int:
         f"generated={counts['generated']} needs_review={counts['needs_review']} "
         f"complete={counts['complete']} skipped={counts['skipped']}"
     )
+    return 0
+
+
+def cmd_set_graph(args: argparse.Namespace) -> int:
+    try:
+        manifest = load_manifest(manifest_path(args.repo), unsupported_hint=MANIFEST_HINT)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    try:
+        lock = resolve_graph_lock(args.repo, args.provider)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    if lock is None:
+        return fail("no graph provider is ready in this repo", 2)
+    existing = manifest.get("graph")
+    if existing and existing["provider"] != lock["provider"] and not args.force:
+        return fail(
+            f"graph provider is locked to {existing['provider']} for this session "
+            f"(locked_at {existing['locked_at']}); pass --force to relock to {lock['provider']}",
+            2,
+        )
+    verb = "Locked"
+    if existing:
+        verb = "Updated" if existing["provider"] == lock["provider"] else "Relocked"
+        if existing["provider"] == lock["provider"]:
+            lock["locked_at"] = existing["locked_at"]
+    manifest["graph"] = lock
+    save_manifest(args.repo, manifest)
+    print(f"{verb} graph provider: {lock['provider']} (flow: {lock['flow']})")
     return 0
 
 
@@ -797,6 +865,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--overlay", dest="obsolete_overlay", action="append", default=[], help=argparse.SUPPRESS)
     init.add_argument("--name")
     init.add_argument("--force", action="store_true")
+    init.add_argument("--graph-provider")
     init.set_defaults(func=cmd_init)
 
     add = sub.add_parser("add")
@@ -835,6 +904,12 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status")
     add_repo(status)
     status.set_defaults(func=cmd_status)
+
+    set_graph = sub.add_parser("set-graph")
+    add_repo(set_graph)
+    set_graph.add_argument("--provider")
+    set_graph.add_argument("--force", action="store_true")
+    set_graph.set_defaults(func=cmd_set_graph)
 
     reconcile = sub.add_parser("reconcile")
     add_repo(reconcile)

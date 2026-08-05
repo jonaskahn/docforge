@@ -52,7 +52,17 @@ def illustration_defects(text: str, target_depth: str) -> list[dict]:
                 messages = sum(1 for row in content if re.search(r"(?:->>|-->>)", row))
                 if participants > 5 or messages > 12:
                     defects.append({"kind": "illustration budget", "line": line, "detail": "sequence exceeds 5 participants or 12 messages"})
-            elements = sum(1 for row in content[1:] if CONNECTOR.search(row) or row.startswith(("participant ", "state ", "    ")))
+            if kind == "journey":
+                sections = sum(1 for row in content if row.startswith("section "))
+                if sections > 4:
+                    defects.append({"kind": "illustration budget", "line": line, "detail": "journey exceeds 4 sections"})
+            if kind in {"journey", "timeline"}:
+                elements = sum(
+                    1 for row in content[1:]
+                    if row and row != "title" and not row.startswith(("title ", "section "))
+                )
+            else:
+                elements = sum(1 for row in content[1:] if CONNECTOR.search(row) or row.startswith(("participant ", "state ", "    ")))
         else:
             elements = sum(1 for row in content if not CONNECTOR.search(row))
         if elements > max_elements:

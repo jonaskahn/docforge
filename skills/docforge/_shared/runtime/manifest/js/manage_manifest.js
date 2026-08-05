@@ -9,6 +9,8 @@ const { planLines } = require("../../common/js/plan.js");
 const { detect: detectProfiles } = require("../../catalog/js/detect_profiles.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
+const { SOURCES: GRAPH_SOURCES, resolveAllReady, resolveFirstReady } = require("../../graph/js/graph_source_registry.js");
+const { reportFlowGraph } = require("../../graph/js/precheck_graph.js");
 
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const FLOW_INDEX_REL = path.join(".docforge", "flow-index.json");
@@ -252,17 +254,18 @@ function selectedStaticDocuments(catalog, repo, tier, profiles) {
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "reconcile", "finish"]);
+  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence"]);
   const boolean = new Set(["force", "keep-tmp", "reset"]);
   const allowed = {
-    init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force"]),
+    init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force", "graph-provider"]),
     add: new Set(["repo", "type", "id", "path", "title", "evidence"]),
     set: new Set(["repo", "id", "status"]),
     presentation: new Set(["repo", "id", "primary-audience", "code", "related-docs", "repository-paths", "reset"]),
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
+    "set-graph": new Set(["repo", "provider", "force"]),
     reconcile: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience"]),
     finish: new Set(["repo", "keep-tmp"]),
   }[command];
@@ -286,6 +289,22 @@ function parseArgs(argv) {
 }
 function required(args, names) {
   for (const name of names) if (!args[name]) throw new Error(`missing required option: --${name.replace(/_/g, "-")}`);
+}
+function resolveGraphLock(repo, provider) {
+  if (provider) {
+    const known = new Set(GRAPH_SOURCES.map((s) => s.name));
+    if (!known.has(provider)) {
+      throw new Error(`unknown graph provider: ${provider}; expected one of: ${[...known].sort().join(", ")}`);
+    }
+    const readyNames = new Set(resolveAllReady(repo, "code_graph").map(([s]) => s.name));
+    if (!readyNames.has(provider)) {
+      throw new Error(`graph provider ${provider} is not ready in this repo`);
+    }
+    return { provider, flow: reportFlowGraph(repo), locked_at: nowIso() };
+  }
+  const [source] = resolveFirstReady(repo, "code_graph");
+  if (!source) return null;
+  return { provider: source.name, flow: reportFlowGraph(repo), locked_at: nowIso() };
 }
 function cmdInit(args) {
   required(args, ["repo", "tier"]);
@@ -319,13 +338,56 @@ function cmdInit(args) {
     documents: docs,
     metadata: {},
   };
+  let graphLock;
+  try {
+    graphLock = resolveGraphLock(args.repo, args.graph_provider);
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  if (graphLock) manifest.graph = graphLock;
   saveManifest(args.repo, manifest);
   console.log(`Wrote ${target} — tier ${args.tier}, ${docs.length} static documents planned.`);
+  if (graphLock) {
+    console.log(`Locked graph provider: ${graphLock.provider} (flow: ${graphLock.flow})`);
+  } else {
+    console.log("No graph provider ready yet — run `set-graph` once a code graph is built.");
+  }
   console.log("");
   for (const line of planLines(args.repo, manifest, path.join(args.repo, ".docforge", "flow-index.json"))) {
     console.log(line);
   }
   return 0;
+}
+function cmdSetGraph(args) {
+  required(args, ["repo"]);
+  try {
+    const manifest = loadManifest(manifestPath(args.repo), { unsupportedHint: MANIFEST_HINT });
+    let lock;
+    try {
+      lock = resolveGraphLock(args.repo, args.provider);
+    } catch (error) {
+      return fail(error.message, 2);
+    }
+    if (!lock) return fail("no graph provider is ready in this repo", 2);
+    const existing = manifest.graph;
+    if (existing && existing.provider !== lock.provider && !args.force) {
+      return fail(
+        `graph provider is locked to ${existing.provider} for this session (locked_at ${existing.locked_at}); pass --force to relock to ${lock.provider}`,
+        2,
+      );
+    }
+    let verb = "Locked";
+    if (existing) {
+      verb = existing.provider === lock.provider ? "Updated" : "Relocked";
+      if (existing.provider === lock.provider) lock.locked_at = existing.locked_at;
+    }
+    manifest.graph = lock;
+    saveManifest(args.repo, manifest);
+    console.log(`${verb} graph provider: ${lock.provider} (flow: ${lock.flow})`);
+    return 0;
+  } catch (error) {
+    return fail(error.message, 2);
+  }
 }
 function dynamicDefinition(catalog, typeName) {
   const matches = catalog.documents.filter((item) => item.selection.mode === "dynamic" && item.type === typeName);
@@ -637,6 +699,9 @@ function cmdStatus(args) {
     for (const dimension of PROFILE_DIMENSIONS) {
       console.log(`  ${dimension}: ${project.profiles[dimension].join(", ") || "none"}`);
     }
+    if (manifest.graph) {
+      console.log(`  graph: ${manifest.graph.provider} (flow: ${manifest.graph.flow})`);
+    }
     console.log();
     for (const doc of manifest.documents) {
       const verdict = doc.audit ? doc.audit.verdict : "-";
@@ -664,7 +729,7 @@ function cmdFinish(args) {
   return 0;
 }
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | finish --repo <path> [--keep-tmp]");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;
@@ -677,7 +742,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, reconcile: cmdReconcile, finish: cmdFinish }[args.command](args);
+    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

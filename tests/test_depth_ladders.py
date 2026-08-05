@@ -37,6 +37,53 @@ class DepthLadderTests(unittest.TestCase):
         document = "```mermaid\nflowchart TD\nA --> B\n```\n"
         self.assertTrue(illustration_defects(document, "router"))
 
+    def test_illustration_journey_exceeds_section_budget(self) -> None:
+        document = (
+            "```mermaid\njourney\n"
+            + "".join(f"    section Phase {i}\n      Step: 3: User\n" for i in range(5))
+            + "```\n"
+        )
+        defects = illustration_defects(document, "deep-dive")
+        self.assertTrue(any(d["detail"] == "journey exceeds 4 sections" for d in defects))
+
+    def test_illustration_timeline_elements_are_counted_toward_budget(self) -> None:
+        """A timeline block used to pass through as ~0 elements because the
+        generic counter only recognized connector arrows and participant/state
+        lines; timeline's `period : event` lines must count as real elements."""
+        document = (
+            "```mermaid\ntimeline\n    title Milestones\n"
+            + "".join(f"    Year {2000 + i} : Event {i}\n" for i in range(6))
+            + "```\n"
+        )
+        defects = illustration_defects(document, "orientation")
+        self.assertTrue(
+            any(d["kind"] == "illustration budget" and "elements exceeds 5" in d["detail"] for d in defects)
+        )
+
+    def test_illustration_metrics_journey_timeline_runtime_parity(self) -> None:
+        document = (
+            "```mermaid\njourney\n"
+            + "".join(f"    section Phase {i}\n      Step: 3: User\n" for i in range(5))
+            + "```\n"
+            "```mermaid\ntimeline\n    title Rollout\n"
+            + "".join(f"    Year {2000 + i} : Event {i}\n" for i in range(13))
+            + "```\n"
+        )
+        py_defects = illustration_defects(document, "deep-dive")
+        self.assertTrue(py_defects, "expected both the journey and timeline defects to fire")
+        node = subprocess.run(
+            [
+                "node", "-e",
+                "const m=require(process.argv[1]); "
+                "console.log(JSON.stringify(m.illustrationDefects(process.argv[2], process.argv[3])));",
+                str(CLI_JS.parent.parent / "common" / "js" / "illustration_metrics.js"),
+                document,
+                "deep-dive",
+            ],
+            text=True, capture_output=True, check=True,
+        )
+        self.assertEqual(py_defects, json.loads(node.stdout))
+
     def test_reconcile_applies_revise_pack_answers_with_runtime_parity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             results = {}

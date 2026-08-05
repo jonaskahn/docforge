@@ -96,7 +96,8 @@ node runtime/cli/js/manage_manifest.js init \
   --platform macos \
   --framework swiftui --framework appkit \
   --concern accessibility \
-  --audience coding-agents
+  --audience coding-agents \
+  --graph-provider <id-only-if-intake-asked-and-the-user-chose-one>
 
 python3 runtime/cli/python/manage_manifest.py add \
 node runtime/cli/js/manage_manifest.js add \
@@ -111,6 +112,15 @@ node runtime/cli/js/scaffold_docs.js \
 # deno run -A runtime/cli/js/scaffold_docs.js \
   --repo <repo> --manifest <repo>/.docforge/manifest.json --dry-run
 ```
+
+`init` locks the graph provider into the manifest as part of this same call —
+automatically, in registry-priority order, unless `--graph-provider` carries an
+explicit choice from intake's "several ready providers" question. Omit the
+flag whenever that question didn't fire (no separate locking step in the
+common case). See
+[`../references/graph/graph-sources.md`](../references/graph/graph-sources.md)
+"Session persistence" for the mechanics every later step, including spawned
+parallel writers, relies on.
 
 The dry run is the exact active manifest tree and prints, for every selected
 document, its group/type, target depth, required evidence, selection origin,

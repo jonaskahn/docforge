@@ -78,6 +78,35 @@ class RuntimeParityTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 result = run(runtime, "precheck_graph", "--repo", tmp, "--need", "domain")
                 self.assertEqual(result.returncode, 2)
+                result = run(runtime, "manage_manifest", "set-graph", "--repo", tmp, "--wat")
+                self.assertEqual(result.returncode, 2)
+
+    def test_set_graph_and_init_graph_provider_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            py_repo, js_repo = Path(tmp) / "py", Path(tmp) / "js"
+            for repo in (py_repo, js_repo):
+                repo.mkdir()
+                (repo / ".gitnexus").mkdir()
+                (repo / ".gitnexus" / "lbug").write_bytes(b"fixture")
+            manifests = {}
+            for runtime, repo in (("py", py_repo), ("js", js_repo)):
+                result = initialize(runtime, repo, "spine")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                manifest = load_manifest(repo)
+                manifest["generated_at"] = "<TIME>"
+                manifest["metadata"]["last_updated"] = "<TIME>"
+                manifest["graph"]["locked_at"] = "<TIME>"
+                manifest["project"]["root"] = "<REPO>"
+                manifest["project"]["name"] = "<NAME>"
+                manifests[runtime] = manifest
+            self.assertEqual(manifests["py"], manifests["js"])
+            for runtime, repo in (("py", py_repo), ("js", js_repo)):
+                result = run(
+                    runtime, "manage_manifest", "set-graph", "--repo", str(repo),
+                    "--provider", "bogus",
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("unknown graph provider", result.stderr)
 
     def test_agent_settings_merge_and_local_ignore_are_safe(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

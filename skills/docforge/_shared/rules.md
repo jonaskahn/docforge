@@ -48,6 +48,16 @@ selected document lists `flow_graph` in `requires`; check with `--need flow`
 before writing the first such document. Detail:
 [`workflows/planning.md`](workflows/planning.md).
 
+## Graph provider persistence
+
+The graph provider is locked into `manifest["graph"]` once — automatically, by
+`manage_manifest.{py,js} init` — and every sub-agent for the rest of the
+session, including a spawned parallel writer, reads that lock instead of
+re-detecting or re-asking. It is not re-selected mid-session without
+`set-graph --force`. Detail:
+[`references/graph/graph-sources.md`](references/graph/graph-sources.md)
+"Session persistence", [`workflows/writing.md`](workflows/writing.md).
+
 ## Provider sufficiency rule
 
 One readable `code_graph` is enough. Understand Anything, GitNexus, and

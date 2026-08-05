@@ -79,9 +79,12 @@ from the absolute cartridge root with `query_catalog --validate`,
   `--check`). `--check` exits `1` without writing when generated output is
   stale.
 - `manage_manifest.{py,js}`: `init`, `add`, `set`, `presentation`, `audit`,
-  `status`, and `reconcile`. `presentation` persists a per-document reader
-  policy override and invalidates audited output only when its effective
-  presentation changes.
+  `status`, `set-graph`, and `reconcile`. `presentation` persists a
+  per-document reader policy override and invalidates audited output only
+  when its effective presentation changes. `init`'s optional `--graph-provider`
+  threads through an explicit provider choice from intake; `set-graph`
+  (auto-detecting when `--provider` is omitted) locks or self-heals
+  `manifest["graph"]` outside of `init`.
 - `detect_profiles.{py,js}`: read-only shape/platform/framework/concern
   recommendations with strong/weak match strength, cue bags, and
   `confirmed|candidate` confidence; `--emit-gate-pack` for agent intake.

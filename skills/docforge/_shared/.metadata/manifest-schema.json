@@ -58,9 +58,20 @@
       }
     },
     "documents": {"type": "array", "items": {"$ref": "#/definitions/document"}},
-    "metadata": {"type": "object"}
+    "metadata": {"type": "object"},
+    "graph": {"$ref": "#/definitions/graph"}
   },
   "definitions": {
+    "graph": {
+      "type": "object",
+      "required": ["provider", "flow", "locked_at"],
+      "properties": {
+        "provider": {"type": "string", "minLength": 1},
+        "flow": {"enum": ["native", "derived", "none"]},
+        "locked_at": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
     "origin": {
       "type": "object",
       "required": ["kind", "id"],

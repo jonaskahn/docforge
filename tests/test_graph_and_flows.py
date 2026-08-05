@@ -8,9 +8,26 @@ import unittest
 from pathlib import Path
 
 from _support import initialize, load_manifest, normalized, run, write_flow_index
+from runtime.graph.python.graph_source_registry import SOURCES as GRAPH_SOURCES
 
 
 class GraphProviderTests(unittest.TestCase):
+    def test_set_graph_accepts_every_registered_provider_name(self) -> None:
+        """A provider name is only ever rejected as `unknown` when it truly
+        isn't in the registry — this loop stays valid without editing if a
+        4th source is ever added to graph_source_registry.py/.js."""
+        names = [source["name"] for source in GRAPH_SOURCES]
+        self.assertGreaterEqual(len(names), 1)
+        for runtime_name in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime_name, repo, "spine").returncode, 0)
+                for name in names:
+                    result = run(
+                        runtime_name, "manage_manifest", "set-graph", "--repo", str(repo),
+                        "--provider", name,
+                    )
+                    self.assertNotIn("unknown graph provider", result.stderr)
     def test_missing_native_and_derived_graph_states(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

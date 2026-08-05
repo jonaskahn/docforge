@@ -22,7 +22,12 @@ contract: a spawned writer may materialize and edit **only its own document
 artifact** (and may scaffold no shared ancestor index — the orchestrator does
 that serially before fan-out). In particular, only the orchestrator mutates
 `.docforge/manifest.json`: manifest commands perform unlocked full-file
-rewrites, so concurrent writers can silently lose state.
+rewrites, so concurrent writers can silently lose state. This includes the
+graph provider: a worker never calls `precheck_graph` or `set-graph` and never
+selects or relocks a provider — it consumes the provider/flow already locked
+into `manifest["graph"]` and handed to it in its document card (see
+[`../workflows/writing.md`](../workflows/writing.md)'s fan-out contract and
+[`graph/graph-sources.md`](graph/graph-sources.md) "Session persistence").
 
 Read-only discovery may run before the plan gate. No document writing starts
 until the complete tree and document cards pass that gate. Afterward, document

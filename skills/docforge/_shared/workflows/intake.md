@@ -165,7 +165,13 @@ Ask only what remains unresolved, in this order:
    only those providers. With no ready provider, explain setup paths and their
    approval requirements. With exactly one ready provider, record it as the
    proposed source and skip this question; include it in the final confirmation
-   so the user can still ask to compare or change it.
+   so the user can still ask to compare or change it. When the user picks among
+   several ready providers here, carry that id into `planning.md`'s `init` call
+   as `--graph-provider`, so it is locked into the manifest for the whole
+   session — not narrated only (see
+   [`../references/graph/graph-sources.md`](../references/graph/graph-sources.md)
+   "Session persistence"). With exactly one ready provider, omit the flag; `init`
+   locks it automatically.
 6. **Execution mode.** Required whenever the action will plan or write (new
    plan, plan-only, or resume writing). Only Status, staleness-only, or
    revise-flow inventory paths may omit it when no further tree pauses will

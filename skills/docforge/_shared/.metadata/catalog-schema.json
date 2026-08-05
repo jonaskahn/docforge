@@ -131,7 +131,7 @@
         "audit_profile": {"type": "string"},
         "dominant_form": {
           "type": ["string", "null"],
-            "enum": ["table", "flowchart", "sequenceDiagram", "stateDiagram-v2", "erDiagram", null]
+            "enum": ["table", "flowchart", "sequenceDiagram", "stateDiagram-v2", "erDiagram", "journey", "timeline", null]
         },
         "schema_min": {"type": "string"},
         "model_depth": {

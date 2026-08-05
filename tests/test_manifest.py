@@ -1719,5 +1719,135 @@ class ManifestV20MigrationTests(unittest.TestCase):
             self.assertEqual(py_manifest, js_manifest)
 
 
+class GraphProviderLockTests(unittest.TestCase):
+    def test_init_leaves_graph_absent_when_nothing_ready(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = initialize(runtime, repo, "spine")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("No graph provider ready yet", result.stdout)
+                self.assertNotIn("graph", load_manifest(repo))
+
+    def test_init_auto_locks_the_one_ready_provider(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                (repo / ".gitnexus").mkdir()
+                (repo / ".gitnexus" / "lbug").write_bytes(b"fixture")
+                result = initialize(runtime, repo, "spine")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("Locked graph provider: gitnexus", result.stdout)
+                graph = load_manifest(repo)["graph"]
+                self.assertEqual(graph["provider"], "gitnexus")
+                self.assertEqual(graph["flow"], "native")
+                self.assertTrue(graph["locked_at"])
+
+    def test_init_graph_provider_flag_overrides_registry_priority(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                (repo / ".gitnexus").mkdir()
+                (repo / ".gitnexus" / "lbug").write_bytes(b"fixture")
+                (repo / ".codegraph").mkdir()
+                (repo / ".codegraph" / "codegraph.db").write_bytes(b"fixture")
+                result = run(
+                    runtime, "manage_manifest", "init", "--repo", str(repo), "--tier", "spine",
+                    "--graph-provider", "codegraph",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(load_manifest(repo)["graph"]["provider"], "codegraph")
+
+    def test_set_graph_persists_across_status_mutation(self) -> None:
+        """Regression: save_manifest() wholesale-rewrites `metadata` on every
+        save; `graph` is a sibling top-level key and must survive untouched."""
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                (repo / ".gitnexus").mkdir()
+                (repo / ".gitnexus" / "lbug").write_bytes(b"fixture")
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                graph_before = load_manifest(repo)["graph"]
+                doc_id = load_manifest(repo)["documents"][0]["id"]
+                result = run(
+                    runtime, "manage_manifest", "set", "--repo", str(repo),
+                    "--id", doc_id, "--status", "in_progress",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(load_manifest(repo)["graph"], graph_before)
+
+    def test_set_graph_self_heals_missing_graph(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                self.assertNotIn("graph", load_manifest(repo))
+                (repo / ".gitnexus").mkdir()
+                (repo / ".gitnexus" / "lbug").write_bytes(b"fixture")
+                result = run(runtime, "manage_manifest", "set-graph", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(load_manifest(repo)["graph"]["provider"], "gitnexus")
+
+    def test_set_graph_rejects_unknown_provider(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                result = run(
+                    runtime, "manage_manifest", "set-graph", "--repo", str(repo),
+                    "--provider", "bogus",
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("unknown graph provider", result.stderr)
+
+    def test_set_graph_same_provider_updates_flow_keeps_locked_at(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                (repo / ".gitnexus").mkdir()
+                (repo / ".gitnexus" / "lbug").write_bytes(b"fixture")
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                locked_at = load_manifest(repo)["graph"]["locked_at"]
+                result = run(
+                    runtime, "manage_manifest", "set-graph", "--repo", str(repo),
+                    "--provider", "gitnexus",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                graph = load_manifest(repo)["graph"]
+                self.assertEqual(graph["locked_at"], locked_at)
+                self.assertEqual(graph["flow"], "native")
+
+    def test_set_graph_rejects_provider_switch_without_force(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                (repo / ".gitnexus").mkdir()
+                (repo / ".gitnexus" / "lbug").write_bytes(b"fixture")
+                (repo / ".codegraph").mkdir()
+                (repo / ".codegraph" / "codegraph.db").write_bytes(b"fixture")
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                self.assertEqual(load_manifest(repo)["graph"]["provider"], "gitnexus")
+                blocked = run(
+                    runtime, "manage_manifest", "set-graph", "--repo", str(repo),
+                    "--provider", "codegraph",
+                )
+                self.assertEqual(blocked.returncode, 2)
+                self.assertIn("--force", blocked.stderr)
+                self.assertEqual(load_manifest(repo)["graph"]["provider"], "gitnexus")
+                forced = run(
+                    runtime, "manage_manifest", "set-graph", "--repo", str(repo),
+                    "--provider", "codegraph", "--force",
+                )
+                self.assertEqual(forced.returncode, 0, forced.stderr)
+                self.assertEqual(load_manifest(repo)["graph"]["provider"], "codegraph")
+
+    def test_set_graph_before_init_fails(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = run(runtime, "manage_manifest", "set-graph", "--repo", str(repo))
+                self.assertEqual(result.returncode, 2)
+
+
 if __name__ == "__main__":
     unittest.main()

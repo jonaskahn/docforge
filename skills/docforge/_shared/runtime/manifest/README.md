@@ -17,7 +17,7 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
 
 | Script | js/py | Kind | Purpose |
 |---|---|---|---|
-| `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `reconcile` / `finish` |
+| `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `reconcile` / `finish` |
 | `check_staleness` | both | CLI | Provenance blob drift report; optional provenance sync |
 | `migrate_metadata` | both | CLI | Idempotent manifest 3.2 / provenance 2.0 upgrade |
 
@@ -31,12 +31,13 @@ python3 runtime/cli/python/manage_manifest.py <subcommand> --repo <repo> ...
 
 | Subcommand | Writes | Notes |
 |---|---|---|
-| `init --tier <tier> [--shape|--platform|--framework|--concern|--audience ...]` | `.docforge/manifest.json`, `.gitignore`, `tmp/`, `audits/`, scratch deps | `--force` replaces an existing manifest |
+| `init --tier <tier> [--shape|--platform|--framework|--concern|--audience ...] [--graph-provider <id>]` | `.docforge/manifest.json`, `.gitignore`, `tmp/`, `audits/`, scratch deps | `--force` replaces an existing manifest; auto-locks the graph provider (registry-priority order) unless `--graph-provider` names an explicit choice |
 | `add --type --id --path [--title] [--evidence ...]` | manifest (+ `.docforge/flow-index.json` for flows) | validates tier, profiles, path, uniqueness, evidence |
 | `set --id --status` | manifest | completion requires a recorded PASS audit |
 | `presentation --id ... [--reset]` | manifest | demotes written docs to `in_progress` when output policy changed |
 | `audit --id --mode cold-pass --verdict PASS\|FAIL --report <path>` | manifest | requires status `generated`; FAIL → `needs_review` |
-| `status` | none | read-only report |
+| `status` | none | read-only report; includes the locked graph provider when set |
+| `set-graph [--provider <id>] [--force]` | manifest | locks/self-heals `manifest["graph"]`; auto-picks the highest-priority ready source when `--provider` is omitted; switching an already-locked provider requires `--force` |
 | `reconcile [--tier ...]` | manifest | re-runs static selection, preserves dynamic/written docs, demotes drift |
 | `finish [--keep-tmp]` | `.docforge/.gitignore` | deletes `tmp/` and `scratch/` contents unless kept |
 

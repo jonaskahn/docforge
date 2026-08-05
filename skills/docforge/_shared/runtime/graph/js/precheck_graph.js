@@ -227,4 +227,8 @@ function main() {
   return 1;
 }
 
-process.exit(main());
+module.exports = { main, reportFlowGraph };
+
+if (require.main === module) {
+  process.exitCode = main();
+}

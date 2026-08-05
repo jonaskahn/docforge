@@ -79,8 +79,11 @@ explicit compare/switch request or all-provider diagnostics.
 
 If several are ready, use unselected ready sources as corroboration only when
 useful. Under `--auto-accept`, select the first ready provider in registry
-order, state the choice, and continue. Never merge incompatible provider
-schemas into a synthetic “master graph.”
+order, state the choice, and continue — this is the same registry-priority
+pick `init` locks in automatically (see "Session persistence" below); under
+`--auto-accept` there is no explicit choice to thread through as
+`--graph-provider`. Never merge incompatible provider schemas into a synthetic
+“master graph.”
 
 GitNexus with a readable `.gitnexus/lbug` and indexed Process nodes supplies
 both `code_graph` and native `flow_graph`; neither Understand Anything nor
@@ -90,6 +93,33 @@ with a readable `.codegraph/codegraph.db` (and a session-wired
 Anything or GitNexus indexes must not appear in that plan. Do not invent a
 combined “Understand Anything + GitNexus” readiness claim unless both were
 actually READY and the user selected a primary.
+
+## Session persistence
+
+`manage_manifest.{py,js} init` locks the selected provider into the manifest
+automatically, as part of the same write that creates it — no separate command
+in the common path. With no `--graph-provider` flag, it auto-picks the
+highest-priority ready source in registry order (the same order
+`--auto-accept` already uses above); pass `--graph-provider <id>` only when
+this file's `## Selection` question above was actually asked and answered
+(several sources ready, user chose one). Either way the resolved `flow`
+(`native` / `derived` / `none`) is computed and stored alongside it — never a
+flag.
+
+Every later step reads the lock from `manifest["graph"]` and never re-runs
+`precheck_graph.{py,js}` or re-asks the user — including a freshly spawned
+parallel document-writer, which never goes through `## Selection` itself (see
+[`../parallel-execution.md`](../parallel-execution.md) and
+[`../../workflows/writing.md`](../../workflows/writing.md)). A manifest missing
+`graph` (written before this convention existed, or resumed from one) self-heals
+via `manage_manifest.{py,js} set-graph --repo <repo>` with no other flags —
+same automatic, registry-priority pick.
+
+Switching the locked provider mid-session requires
+`set-graph --provider <id> --force`; without `--force` it fails loudly rather
+than silently changing what a parallel worker relied on. Relocking is a
+deliberate action for a fresh planning pass, never something the writing loop
+does on its own.
 
 ## Preparation and authority
 

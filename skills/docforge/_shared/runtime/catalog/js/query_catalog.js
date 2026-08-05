@@ -20,6 +20,8 @@ const ALLOWED_DOMINANT_FORMS = new Set([
   "sequenceDiagram",
   "erDiagram",
   "stateDiagram-v2",
+  "journey",
+  "timeline",
 ]);
 const TARGET_DEPTHS = new Set(["orientation", "deep-dive", "reference", "router"]);
 const MODEL_DEPTHS = {
@@ -788,6 +790,7 @@ module.exports = {
   CATALOG_VERSION,
   PRESENTATION_VALUES,
   GROUP_SUMMARIES,
+  ALLOWED_DOMINANT_FORMS,
 };
 
 if (require.main === module) {

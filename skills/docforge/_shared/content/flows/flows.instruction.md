@@ -23,10 +23,13 @@ business rules linked rather than duplicated.
 
 - **Form:** Mermaid `flowchart` when the reader's question is "what are the branches and
   where do they go"; Mermaid `sequenceDiagram` when it is "in what order do the actors talk
-  to each other" — pick one, never both for the same flow.
+  to each other"; Mermaid `journey` when it is "how did the experience feel across the
+  process for a given actor" (effort or satisfaction per step) — pick exactly one form,
+  never more than one, for the same flow.
 - **Renders:** for a flowchart, each gateway and its outcomes, labeled with the condition
   that selects them; for a sequence diagram, the actors as participants and each call as a
-  labeled arrow, in the order they actually occur.
+  labeled arrow, in the order they actually occur; for a journey, the steps grouped into
+  sections by phase, each step scored 1-5 with the actor who experiences it.
 - **Trigger:** once the happy path passes about four steps, or as soon as any branch exists —
   per [`illustration.md`](../../references/illustration.md)'s deep-dive budget.
 

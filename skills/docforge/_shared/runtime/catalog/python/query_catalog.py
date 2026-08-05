@@ -23,6 +23,8 @@ ALLOWED_DOMINANT_FORMS = {
     "sequenceDiagram",
     "erDiagram",
     "stateDiagram-v2",
+    "journey",
+    "timeline",
 }
 TARGET_DEPTHS = {"orientation", "deep-dive", "reference", "router"}
 MODEL_DEPTHS = {
