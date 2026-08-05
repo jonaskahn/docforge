@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.14.0 - Deeper source grounding, graph provider session lock
+
+- The graph provider is now locked into the manifest once, automatically, by
+  `manage_manifest.{py,js} init` (registry-priority pick; pass
+  `--graph-provider <id>` to thread an explicit intake choice). Every later
+  step — including spawned parallel writers — reads that lock from
+  `manifest["graph"]` instead of re-detecting or re-asking; a manifest missing
+  the lock self-heals via the new `set-graph` subcommand
+  (`--provider`/`--force` to switch), and `status` reports the locked
+  provider and flow.
+- Writers re-ground required claims deeper: native graph-provider interface
+  first, whole-file reads last, following the bounded source-analysis ladder;
+  parallel workers receive the locked provider read-only and never call
+  `precheck_graph` or `set-graph` themselves.
+- Illustrations gain Mermaid `journey` (≤ 4 sections) and `timeline` forms,
+  an ASCII fan-out ladder example, and matching `illustration_metrics`
+  budgets in both runtimes.
+- New tests for manifest `set-graph`, depth ladders, graph/flows, structure,
+  and CLI parity.
+
 ## 2.13.1 - Dashboard `export` subcommand
 
 - The static HTML export is now its own standalone `dashboard export`

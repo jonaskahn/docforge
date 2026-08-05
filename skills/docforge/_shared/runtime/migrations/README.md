@@ -30,7 +30,7 @@ python3 runtime/cli/python/split_catalog.py [--dry-run]
 
 Rewrites `.metadata/catalog/index.json`, `types/*.json`, and `profiles/*.json`
 with a hard-coded catalog version **2.4.0**. The current catalog requires
-**2.13.1** — running it against the current tree would regress the catalog
+**2.14.0** — running it against the current tree would regress the catalog
 version and shape. Use only to reproduce the original migration.
 
 ### `split_document_catalog`
