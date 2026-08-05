@@ -67,9 +67,10 @@ question pack and stop-and-ask mechanics are owned by
 and
 [`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md):
 one confirmation covering Scope, Tier, Profiles, Output audience, and Execution
-mode, showing each persisted choice as the baseline, with `Change to <tier>`
-for tier and `Add` / `Remove` for profiles and audiences. Never proceed on
-silent defaults.
+mode, but scaled to what is actually unresolved or changed — each dimension
+shows either its persisted value as an unchanged baseline fact, or, only when
+it actually has a delta or a requested change, a `Change to <tier>` /
+`Add` / `Remove` control. Never proceed on silent defaults.
 
 Before writing, revise displays an annotated plan tree (`add` / `update` /
 `rewrite` / `unchanged` / `skip`), including the `Flows:` mapping.

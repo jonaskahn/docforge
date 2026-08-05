@@ -93,26 +93,47 @@ before moving on.
 
 ## Questions revise asks
 
-Revise always **stops and asks first**, using the interactive question pack owned by
-[`intake.md`](intake.md) — never proceed on silent defaults. A **bare**
-`/docforge-revise` is the one exception: it is metadata-only migration and
-asks nothing (see Commands below). For every other revise invocation, before
-migration, detection, or writing,
-revise presents a discovery brief and one combined question set ([`intake.md`](intake.md)):
+Revise always **stops and asks first** — never proceed on silent defaults. A
+**bare** `/docforge-revise` is the one exception: it is metadata-only
+migration and asks nothing (see Commands below). For every other revise
+invocation, before migration, detection, or writing, revise presents a
+discovery brief and a question set that is **delta-aware**, not a reflexive
+full re-ask of every dimension on every run — [`intake.md`](intake.md)'s
+Scope intake owns the exact per-dimension rule:
 
 1. **Scope** — `flow`, `<area>`, or `all` (pre-checked from invocation; asked
    only for natural-language revise requests, never for a bare
    `/docforge-revise`).
-2. **Tier** — display the manifest tier and offer only `Change to <tier>` alternatives.
-3. **Profiles** — shape, platform, framework, concern: display each current
-   selection and offer `Add` / `Remove` actions; fresh detections are recommended
-   `Add` actions.
-4. **Output audience** — display current audiences and offer `Add` / `Remove`
-   actions; suitable missing audiences are recommended `Add` actions with unlock
-   reasons (see [`intake.md`](intake.md)).
-5. **Execution mode** — review or Auto-accept.
+2. **Tier** — asked only when the invocation requests a tier change, the
+   manifest has no tier, or detection surfaces evidence the current tier no
+   longer fits; when asked, display the manifest tier and
+   offer only `Change to <tier>` alternatives.
+   No delta and no requested change means state the current tier as
+   unchanged in the confirmation summary instead.
+3. **Profiles** — shape, platform, framework, concern: asked only for
+   dimensions with an actual delta (a fresh detection not already selected,
+   or a requested change); when asked, display each current selection and
+   offer `Add` / `Remove` actions, with fresh detections as recommended `Add`
+   actions. A dimension with no delta is reported unchanged, not
+   re-presented.
+4. **Output audience** — asked only when there are suitable missing
+   audiences (step 3a) or a requested change; when asked, display current
+   audiences and offer `Add` / `Remove` actions, with suitable missing
+   audiences as recommended `Add` actions with unlock reasons (see
+   [`intake.md`](intake.md)). No delta means state the current audiences as
+   unchanged instead.
+5. **Execution mode** — review or Auto-accept; always asked unless the
+   invocation already supplies `--plan-only` / `--auto-accept`, since this
+   governs the current run and is never read off the manifest.
 
-Display one confirmation summary ([`intake.md`](intake.md)) and wait for explicit confirmation before continuing.
+When Tier, Profiles, and Output audience all resolve with no delta and no
+requested change, revise skips their controls entirely and shows one
+confirmation summary with the unchanged baseline plus Scope (if it was
+ambiguous) and Execution mode. This still requires explicit confirmation — it
+answers only what is actually in question instead of every dimension on every
+run. Display one confirmation summary ([`intake.md`](intake.md)), covering
+every dimension whether changed or unchanged, and wait for explicit
+confirmation before continuing.
 
 ### Applying the answers to the manifest
 

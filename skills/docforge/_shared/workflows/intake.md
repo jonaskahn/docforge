@@ -74,8 +74,9 @@ combined answer syntax.
 
 ### Revise selection changes
 
-For a revise that re-asks persisted manifest choices, show the current manifest
-value or values above each control as the baseline. Do not present a `Keep`
+For a dimension being re-asked because it has a delta or a requested change,
+show the current manifest value or values above each control as the baseline.
+Do not present a `Keep`
 choice, and do not make the user re-select values that are already selected.
 Instead, controls represent only requested changes:
 
@@ -190,20 +191,42 @@ Ask only what remains unresolved, in this order:
 Collect the applicable answers as one response. If the user supplied one or
 more choices in the original request, retain them and include only unresolved
 questions in the intake. For Resume or Status, omit tier, audience, and shape
-questions that the existing manifest already resolves. For
-`/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`, or
-any revise that rediscovers docs, always stop and present the full question
-pack owned by `intake.md` exactly like a fresh start — Scope, Tier, Profiles
-(shape / platform / framework / concern), Output audience, and Execution mode
-— with the manifest's current values displayed as the baseline. Use the
-change-only controls in **Revise selection changes**: `Change to` for tier and
-`Add` / `Remove` for every profile dimension and output audience; show fresh
-detection as recommended `Add` actions. Never proceed on silent defaults;
-collect the requested changes in one response, show the confirmation summary,
-and wait for explicit confirmation before continuing. If the reply leaves a
-material choice missing or ambiguous — including Output audience or Execution
-mode when required — ask one concise follow-up containing only those unresolved
-choices.
+questions that the existing manifest already resolves.
+
+For `/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`,
+or any revise that rediscovers docs, always stop and ask before migration,
+detection, or writing — but scale the pack to what is actually unresolved or
+changed, never a reflexive full re-ask of every dimension on every run:
+
+- **Execution mode** (and **Scope**, when the invocation is ambiguous) is
+  always asked — these govern this run and are never read off the manifest.
+- **Tier** is asked only when the invocation requests a tier change, the
+  manifest has no tier, or detection surfaces evidence the current tier no
+  longer fits (for example, newly evidenced profiles that unlock a higher
+  tier). No such reason means state the current tier as unchanged instead of
+  presenting a control.
+- **Profiles** (shape / platform / framework / concern) are asked only for
+  dimensions with an actual delta: a fresh detection not already selected, or
+  a change the user requested. A dimension with no new candidates and no
+  requested change is reported unchanged, not re-presented.
+- **Output audience** is asked only when there are suitable missing
+  audiences or the user requested a change. No delta means state the current
+  audiences as unchanged instead.
+
+When Tier, Profiles, and Output audience all resolve with no delta and no
+requested change, skip their controls and show one confirmation summary with
+that unchanged baseline plus Scope (if it was ambiguous) and Execution mode —
+still an explicit confirmation, not a silent default, just scoped to what is
+actually in question. When any of them does have a delta or a requested
+change, use the change-only controls in **Revise selection changes**
+(`Change to` for tier, `Add` / `Remove` for profiles and output audience) for
+those dimensions only, and show the rest as plain baseline facts in the same
+confirmation summary — with the manifest's current values displayed as the
+baseline throughout. Never proceed on silent defaults; collect the requested
+changes in one response, show the confirmation summary, and wait for explicit
+confirmation before continuing. If the reply leaves a material choice missing
+or ambiguous — including Output audience or Execution mode when required —
+ask one concise follow-up containing only those unresolved choices.
 
 After resolving the answers, display one confirmation summary containing the
 action, tier, every selected profile dimension, every selected audience,

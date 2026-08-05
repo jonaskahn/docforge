@@ -124,6 +124,23 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("offer only `Change to <tier>` alternatives", revision)
         self.assertIn("offer `Add` / `Remove` actions", revision)
 
+    def test_revision_questions_are_delta_aware_not_a_reflexive_full_ask(self) -> None:
+        """Revise scales its question pack to what actually changed instead
+        of always re-asking Tier/Profiles/Output audience on every run."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        self.assertIn("**delta-aware**", revision)
+        self.assertIn("asked only when the invocation requests a tier change", revision)
+        self.assertIn("asked only for\n   dimensions with an actual delta", revision)
+        self.assertIn("skips their controls entirely", revision)
+        self.assertNotIn("exactly like a fresh start", revision)
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn("never a reflexive full re-ask of every dimension on every run", intake)
+        self.assertIn(
+            "`/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`",
+            intake,
+        )
+        self.assertNotIn("exactly like a fresh start", intake)
+
     def test_planning_workflow_never_writes_against_stale_tree(self) -> None:
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
         self.assertIn("Never write against an undisplayed manifest\nrevision", planning)
