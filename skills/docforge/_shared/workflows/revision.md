@@ -74,7 +74,13 @@ A template rewrite runs in one pass per document:
    [`../runtime/documents/README.md`](../runtime/documents/README.md)), never
    the old one.
 2. Migrate still-valid prose into the matching new sections; drop obsolete
-   sections and outdated formats; adopt every new required section.
+   sections and outdated formats; adopt every new required section. When a
+   dropped section held an illustration that no longer fits the new
+   template's illustration budget, check
+   [`../references/illustration.md`](../references/illustration.md)'s
+   table-vs-diagram guidance before treating its information as obsolete —
+   recasting the same facts as a table in the matching new section is a valid
+   migration outcome, not just verbatim-move-or-drop.
 3. Re-ground the rewritten document from evidence (one section per claim
    heading), replace scaffold markers and typed tokens, then run the
    mechanical gate (`lint_document.{py,js}` with the contract's

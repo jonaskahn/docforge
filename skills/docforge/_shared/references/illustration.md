@@ -50,9 +50,15 @@ important rules, inputs/outputs, and common failures.
 Reference documents normally use tables. Add one relationship illustration
 only when lookup fields cannot express the relationship clearly. Router
 documents use prose and links. Split any illustration that exceeds
-its bound into linked views with one stated question each. A sequence diagram
-also has at most 5 participants; a state diagram at most 8 named states; an ER
-diagram at most 8 entities; a journey diagram at most 4 sections.
+its bound into linked views with one stated question each. Before splitting
+or dropping an over-budget illustration, check whether its content is
+actually enumerable, independent, stable-field data — a roster of named
+items with repeated attributes and no real sequence or branching between
+them — rather than a flow or relationship; that shape belongs in a table
+under "Choose the smallest useful form" instead, which carries no
+illustration-budget cost at all. A sequence diagram also has at most 5
+participants; a state diagram at most 8 named states; an ER diagram at most
+8 entities; a journey diagram at most 4 sections.
 
 ## Mermaid constraints
 

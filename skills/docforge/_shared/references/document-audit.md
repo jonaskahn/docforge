@@ -11,7 +11,9 @@ Start a separate cold artifact-only pass after writing. Review only:
 - target depth;
 - applicable quality checks;
 - sources cited by validated provenance 2.0, after the mechanical gate has
-  confirmed concrete metadata, source blobs, and heading-matched sections.
+  confirmed concrete metadata, source blobs, and heading-matched sections;
+- for a template rewrite or revision only, the document's prior committed
+  version, solely to check illustration continuity (see Verdict).
 
 Do not include writer reasoning or draft conversation. Record
 `mode: cold-pass`.
@@ -25,7 +27,10 @@ defects, and disposition, shaped by
 - `PASS`: every must-present element is supported, the keep-out boundary holds,
   depth and mode fit, and mechanical checks pass.
 - `FAIL`: at least one derivable gap, unsupported claim, structural defect, or
-  unresolved non-external placeholder remains.
+  unresolved non-external placeholder remains — including a template rewrite
+  or revision that dropped an illustration relative to its prior committed
+  version without its facts surviving in prose or table form elsewhere in the
+  document, and without those facts being genuinely superseded or incorrect.
 
 Atomic external values may remain as typed `<UPPER_SNAKE_CASE>` tokens. A
 derivable gap may not be waived to a human.
