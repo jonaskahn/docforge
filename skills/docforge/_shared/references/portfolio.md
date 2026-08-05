@@ -17,12 +17,15 @@ node runtime/cli/js/discover_child_repos.js --root <parent-repository>
 ```
 
 The result contains the parent, declared submodules, and detected nested
-repositories not declared as submodules. A detected member always needs an
-explicit inclusion decision; do not assume it is either in or out of scope.
+repositories not declared as submodules, each tagged with its own tier
+(`spine`, `diligence`, `portfolio`, or none) read from its own manifest. A
+detected member always needs an explicit inclusion decision; do not assume
+it is either in or out of scope.
 
 For every included repository:
 
-1. Check for a version-3.2 manifest and the selected baseline documents.
+1. Check for a version-3.2 manifest, its tier, and the selected baseline
+   documents.
 2. Run staleness checks for an existing baseline.
 3. Build a missing Spine or Diligence baseline before representing the member
    as reviewed.
@@ -32,6 +35,21 @@ For every included repository:
 Prioritize undeclared detected members, customer-facing surfaces, and high-risk
 dependencies. Never silently backfill a blind spot: the inventory should show
 that it was found and how it was resolved.
+
+## Readiness gate
+
+Once inclusion is settled, check every included member's tier before
+building anything under `docs-portfolio/`:
+
+- If every included member is already at Diligence or Portfolio, the
+  collection already qualifies — state that plainly and proceed.
+- If any included member is below Diligence (Spine-only, or not generated
+  at all), do not build the Portfolio layer yet. Name the lagging member(s)
+  by path and direct the user to bring each to Diligence with its own
+  separate, ordinary docforge run first — one repository at a time, never a
+  combined pass — then re-run discovery. This is the repo-run-level version
+  of the same per-document, no-bulk-dump cadence Docforge already follows
+  inside a single repository.
 
 ## Cross-repository artifacts
 
@@ -49,7 +67,13 @@ automatic inference across siblings is deferred.
   dependencies (with coupling type and mapping/heuristic resolution),
   protocols, and important cross-repository flows. Optional identity mapping
   lives at `.metadata/portfolio/repo-identity.json` (see schema in the skill
-  metadata); without it, edges resolve heuristically or are omitted.
+  metadata); without it, edges resolve heuristically or are omitted. A
+  cross-repo flow row is always two single-repo-grounded claims — each
+  side's own flow document, itself grounded by that repo's own locked graph
+  provider — joined by that same mapping/heuristic boundary match. Docforge
+  never builds or requires a graph spanning repositories; see
+  [`graph-sources.md`](graph/graph-sources.md)'s rule against synthesizing a
+  combined "master graph," which applies here too.
 - `security-posture.md` summarizes cross-cutting identity, secrets, encryption,
   network, dependency, logging, incident, and disclosure controls, linking to
   member evidence.

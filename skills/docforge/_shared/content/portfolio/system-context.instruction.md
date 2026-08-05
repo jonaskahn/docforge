@@ -18,6 +18,17 @@ each, linking to each repo's owning flow document rather than re-deriving
 the flow. This document orients a reader new to the whole portfolio, not a
 reader already working inside one member.
 
+Identify which flows cross a repo boundary in the first place the same
+mechanical way dependency edges are identified — never by querying a graph
+across repositories, since no such graph exists: `flow_edges` from
+`discover_child_repos` resolves them in order — (1) an explicit `flows` row
+in `.metadata/portfolio/repo-identity.json` (`resolution: mapping`); (2) a
+literal signature match between one member's own exposed entry point
+(`.docforge/flow-index.json`'s `entry_ref.signature`, e.g. `"POST /orders"`)
+and another member's own recorded flow evidence (`resolution: heuristic`);
+(3) no match — omit, never invent a cross-repo flow. Keep heuristic rows
+visually distinct, same as dependency edges.
+
 Before drawing the flowchart, resolve directed dependency edges between
 members using this order: (1) `.metadata/portfolio/repo-identity.json`
 mapping when present (`resolution: mapping`); (2) convention match of a

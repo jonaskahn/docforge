@@ -96,11 +96,22 @@ function findNestedRepos(root, excludes) {
   return found;
 }
 
-function docforgeStatus(repoPath) {
+function readManifestTier(repoPath) {
+  const target = path.join(repoPath, ".docforge", "manifest.json");
+  if (!exists(target)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(target, "utf8"));
+    return (data.project && data.project.tier) || null;
+  } catch {
+    return null;
+  }
+}
+
+function docforgeStatus(repoPath, tier) {
   const arch = path.join(repoPath, "docs", "architecture");
   const hasOverview = exists(path.join(arch, "high-level.md")) || exists(path.join(arch, "overview.md"));
   const hasManifest = exists(path.join(repoPath, ".docforge", "manifest.json"));
-  if (hasManifest) return "docforge baseline + provenance";
+  if (hasManifest) return tier ? `docforge baseline + provenance (tier: ${tier})` : "docforge baseline + provenance";
   if (hasOverview) return "docforge baseline present (no provenance manifest yet)";
   return "none — needs generation";
 }
@@ -204,6 +215,118 @@ function resolveDependencyEdges(root, members) {
   return edges;
 }
 
+function loadFlowSignatures(repoPath) {
+  const target = path.join(repoPath, ".docforge", "flow-index.json");
+  if (!exists(target)) return [];
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(target, "utf8"));
+  } catch {
+    return [];
+  }
+  const signatures = [];
+  for (const flow of data.flows || []) {
+    const entryRef = flow.entry_ref || {};
+    if (entryRef.kind && entryRef.signature) {
+      signatures.push({ kind: entryRef.kind, signature: entryRef.signature });
+    }
+  }
+  return signatures;
+}
+
+function loadFlowEvidenceText(repoPath) {
+  const target = path.join(repoPath, ".docforge", "flow-index.json");
+  if (!exists(target)) return "";
+  try {
+    const data = JSON.parse(fs.readFileSync(target, "utf8"));
+    return JSON.stringify(data.flows || []);
+  } catch {
+    return "";
+  }
+}
+
+function loadRepoIdentityFlows(root) {
+  const target = path.join(root, ".metadata", "portfolio", "repo-identity.json");
+  if (!exists(target)) return [];
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(target, "utf8"));
+  } catch {
+    return [];
+  }
+  const edges = [];
+  for (const row of data.flows || []) {
+    let repoId = row.repo_id;
+    let counterpart = row.counterpart_repo_id;
+    const channel = row.channel || {};
+    const signature = channel.signature;
+    if (!(repoId && counterpart && signature)) continue;
+    if (row.role === "consumer") {
+      [repoId, counterpart] = [counterpart, repoId];
+    }
+    edges.push({ repo: repoId, counterpart, channel });
+  }
+  return edges;
+}
+
+function resolveFlowEdges(root, members) {
+  const memberDirs = members
+    .filter((item) => item.membership !== "parent" && isDir(item.path))
+    .map((item) => item.path);
+
+  const signaturesByRepo = new Map();
+  const evidenceByRepo = new Map();
+  for (const memberPath of memberDirs) {
+    const repoId = path.basename(memberPath);
+    signaturesByRepo.set(repoId, loadFlowSignatures(memberPath));
+    evidenceByRepo.set(repoId, loadFlowEvidenceText(memberPath));
+  }
+
+  const edges = [];
+  const seen = new Set();
+
+  for (const row of loadRepoIdentityFlows(root)) {
+    const { repo: repoId, counterpart, channel } = row;
+    const signature = channel.signature;
+    const key = `${repoId}|${counterpart}|${signature}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    edges.push({
+      repo: repoId,
+      counterpart,
+      channel_kind: channel.kind,
+      signature,
+      resolution: "mapping",
+    });
+  }
+
+  for (const [ownerId, signatures] of signaturesByRepo.entries()) {
+    for (const sig of signatures) {
+      const signature = sig.signature;
+      for (const [callerId, evidenceText] of evidenceByRepo.entries()) {
+        if (callerId === ownerId) continue;
+        if (signature && evidenceText.includes(signature)) {
+          const key = `${callerId}|${ownerId}|${signature}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          edges.push({
+            repo: callerId,
+            counterpart: ownerId,
+            channel_kind: sig.kind,
+            signature,
+            resolution: "heuristic",
+          });
+        }
+      }
+    }
+  }
+
+  edges.sort((a, b) =>
+    `${a.repo}:${a.counterpart}:${a.signature}`.localeCompare(`${b.repo}:${b.counterpart}:${b.signature}`),
+  );
+  return edges;
+}
+
 function parseArgs(argv) {
   const args = { exclude: [], json: false };
   for (let i = 0; i < argv.length; i++) {
@@ -221,7 +344,12 @@ function main() {
     console.error("usage: discover_child_repos.js --root <path> [--exclude <name>]... [--json]");
     return 2;
   }
-  const root = path.resolve(args.root);
+  let root = path.resolve(args.root);
+  try {
+    root = fs.realpathSync(root);
+  } catch {
+    // Fall through with the unresolved absolute path; the isDir check below reports it.
+  }
   if (!isDir(root)) {
     console.error(`Not a directory: ${root}`);
     return 2;
@@ -232,27 +360,40 @@ function main() {
   const declaredPaths = new Set(Object.keys(declared).map((p) => path.join(root, p)));
   const detected = nested.filter((p) => !declaredPaths.has(p));
 
-  const collection = [{ path: root, membership: "parent", status: docforgeStatus(root) }];
+  const rootTier = readManifestTier(root);
+  const collection = [
+    { path: root, membership: "parent", status: docforgeStatus(root, rootTier), tier: rootTier },
+  ];
   for (const [relPath, meta] of Object.entries(declared)) {
     const full = path.join(root, relPath);
+    let tier = null;
+    let status = "not checked out locally";
+    if (exists(full)) {
+      tier = readManifestTier(full);
+      status = docforgeStatus(full, tier);
+    }
     collection.push({
       path: full,
       membership: "declared (submodule)",
       submodule_name: meta.name,
       submodule_url: meta.url,
-      status: exists(full) ? docforgeStatus(full) : "not checked out locally",
+      status,
+      tier,
     });
   }
   for (const full of detected) {
+    const tier = readManifestTier(full);
     collection.push({
       path: full,
       membership: "detected — NOT in .gitmodules",
-      status: docforgeStatus(full),
+      status: docforgeStatus(full, tier),
+      tier,
     });
   }
 
   const needsGeneration = collection.filter((c) => c.status.startsWith("none"));
   const dependencyEdges = resolveDependencyEdges(root, collection);
+  const flowEdges = resolveFlowEdges(root, collection);
 
   if (args.json) {
     console.log(
@@ -262,6 +403,7 @@ function main() {
           collection,
           needs_generation: needsGeneration.map((c) => c.path),
           dependency_edges: dependencyEdges,
+          flow_edges: flowEdges,
         },
         null,
         2,
@@ -288,6 +430,14 @@ function main() {
     for (const edge of dependencyEdges) {
       console.log(
         `  - ${edge.repo} → ${edge.depends_on} (${edge.coupling_type}, ${edge.resolution})`,
+      );
+    }
+  }
+  if (flowEdges.length) {
+    console.log(`\n${flowEdges.length} flow edge(s):`);
+    for (const edge of flowEdges) {
+      console.log(
+        `  - ${edge.repo} → ${edge.counterpart} (${edge.channel_kind}: ${edge.signature}, ${edge.resolution})`,
       );
     }
   }

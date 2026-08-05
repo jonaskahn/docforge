@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["version", "packages"],
   "properties": {
-    "version": {"const": "1.0"},
+    "version": {"enum": ["1.0", "1.1"]},
     "packages": {
       "type": "array",
       "items": {
@@ -32,6 +32,46 @@
               "provisions-for",
               "deploys-into"
             ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "flows": {
+      "type": "array",
+      "description": "Declared cross-repo flow-boundary edges (added in 1.1); a mapping row here always outranks heuristic signature matching against each member's own flow-index.json.",
+      "items": {
+        "type": "object",
+        "required": ["repo_id", "role", "channel", "counterpart_repo_id"],
+        "properties": {
+          "repo_id": {
+            "type": "string",
+            "description": "Member repo id as used in repo-inventory"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["producer", "consumer"],
+            "description": "producer: repo_id calls counterpart_repo_id over this channel. consumer: counterpart_repo_id calls repo_id."
+          },
+          "channel": {
+            "type": "object",
+            "required": ["kind", "signature"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["http", "queue", "schedule", "cli", "ui", "internal"],
+                "description": "Matches flow-index.json's entry_ref.kind vocabulary"
+              },
+              "signature": {
+                "type": "string",
+                "description": "Matches flow-index.json's entry_ref.signature, e.g. \"POST /orders\""
+              }
+            },
+            "additionalProperties": false
+          },
+          "counterpart_repo_id": {
+            "type": "string",
+            "description": "The other member repo id in this flow boundary"
           }
         },
         "additionalProperties": false

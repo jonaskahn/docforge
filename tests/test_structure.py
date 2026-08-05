@@ -194,6 +194,33 @@ class SkillContentTests(unittest.TestCase):
         )
         self.assertIn("registry-priority pick", graph_sources)
 
+    def test_portfolio_reference_gates_on_member_tier_readiness(self) -> None:
+        portfolio = (SHARED_ROOT / "references" / "portfolio.md").read_text(encoding="utf-8")
+        self.assertIn("## Readiness gate", portfolio)
+        self.assertIn("Name the lagging member(s)", portfolio)
+        self.assertIn("one repository at a time, never a", portfolio)
+
+    def test_portfolio_reference_never_requires_a_cross_repo_graph(self) -> None:
+        portfolio = (SHARED_ROOT / "references" / "portfolio.md").read_text(encoding="utf-8")
+        self.assertIn("never builds or requires a graph spanning repositories", portfolio)
+
+    def test_system_context_instruction_resolves_flow_edges_mechanically(self) -> None:
+        instruction = (SHARED_ROOT / "content" / "portfolio" / "system-context.instruction.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("`flow_edges` from\n`discover_child_repos` resolves them in order", instruction)
+        self.assertIn("(3) no match — omit, never invent a cross-repo flow.", instruction)
+
+    def test_intake_workflow_gates_portfolio_tier_on_member_readiness(self) -> None:
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn("nested `.git` directory (a candidate\nmulti-repo workspace)", intake)
+        self.assertIn("Portfolio readiness, only when nested repos were detected", intake)
+        self.assertIn("nested repos were detected during discovery:", intake)
+        self.assertIn(
+            "needs its own separate Diligence run first, rather than listing Portfolio",
+            intake,
+        )
+
     def test_revision_workflow_enforces_current_template(self) -> None:
         """Revise rewrites documents whose structure/format/content deviates
         from the current template instead of preserving the old structure."""

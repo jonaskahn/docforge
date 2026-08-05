@@ -40,6 +40,13 @@ do not ask the user to choose among absent providers. This read-only provider
 selection is not permission to build, refresh, install, or configure
 anything.
 
+When the repository root contains any nested `.git` directory (a candidate
+multi-repo workspace), also run the read-only `discover_child_repos.{py,js}`
+(see [`../references/portfolio.md`](../references/portfolio.md)) to learn
+each detected member's own tier. This is discovery only — it does not decide
+inclusion or offer Portfolio by itself; it makes the fact available to the
+discovery brief and the tier question below.
+
 ## Discovery brief
 
 After safe discovery (and the discovery gate when `needs_gate`), and **before**
@@ -55,6 +62,9 @@ asking any scope questions, present a short discovery brief:
 - Existing documentation note when `docs/` (or equivalent) is already present,
   with a brief evidence note such as an API schema, web framework manifest,
   library package manifest, pipeline configuration, or infrastructure files.
+- Portfolio readiness, only when nested repos were detected: name each
+  detected member and its tier, and state plainly whether every member is
+  already at Diligence or higher.
 
 Do not initialize a manifest, scaffold files, or ask for side-effect approval
 in the brief. Open the scope question pack in the same turn when the host
@@ -107,10 +117,16 @@ Ask only what remains unresolved, in this order:
    Natural-language **update** / **refresh** of a named document routes to
    [`revision.md`](revision.md) (staleness-first), not a full rewrite.
 2. **Documentation tier.** For a new or plan-only scope, offer Spine
-   (essential repository documentation), Diligence (Spine plus flows, risks,
-   security, operations, dependencies, and ADRs), Portfolio (Diligence plus
-   `docs-portfolio/` diligence views), or a grounded recommendation that
-   Docforge will explain after inspection.
+   (essential repository documentation) and Diligence (Spine plus flows,
+   risks, security, operations, dependencies, and ADRs) always, or a grounded
+   recommendation that Docforge will explain after inspection. Offer
+   Portfolio (Diligence plus `docs-portfolio/` diligence views) only when
+   nested repos were detected during discovery: if every included member is
+   already at Diligence or higher, offer it normally and say why it
+   qualifies; otherwise name the lagging member(s) and explain that each
+   needs its own separate Diligence run first, rather than listing Portfolio
+   as a normal choice (see [`../references/portfolio.md`](../references/portfolio.md)
+   "Readiness gate").
 3. **Repository profiles.** Require one multi-select per applicable dimension
    (shapes, platforms, frameworks, concerns): a native multi-select or lettered
    multi-select with **recommended** options pre-checked and **also possible**

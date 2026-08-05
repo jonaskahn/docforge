@@ -76,11 +76,25 @@ def find_nested_repos(root: Path, excludes: set) -> list:
     return found
 
 
-def docforge_status(repo_path: Path) -> str:
+def read_manifest_tier(repo_path: Path) -> str | None:
+    """Best-effort read of project.tier from .docforge/manifest.json."""
+    path = repo_path / ".docforge" / "manifest.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data.get("project", {}).get("tier")
+
+
+def docforge_status(repo_path: Path, tier: str | None = None) -> str:
     arch = repo_path / "docs" / "architecture"
     has_overview = (arch / "high-level.md").exists() or (arch / "overview.md").exists()
     has_manifest = (repo_path / ".docforge" / "manifest.json").exists()
     if has_manifest:
+        if tier:
+            return f"docforge baseline + provenance (tier: {tier})"
         return "docforge baseline + provenance"
     if has_overview:
         return "docforge baseline present (no provenance manifest yet)"
@@ -199,6 +213,126 @@ def resolve_dependency_edges(root: Path, members: list[dict]) -> list[dict]:
     return edges
 
 
+def load_flow_signatures(repo_path: Path) -> list[dict]:
+    """A member's own exposed flow entry points, read from its own already
+    materialized .docforge/flow-index.json — never a fresh graph query."""
+    path = repo_path / ".docforge" / "flow-index.json"
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    signatures = []
+    for flow in data.get("flows", []):
+        entry_ref = flow.get("entry_ref") or {}
+        kind = entry_ref.get("kind")
+        signature = entry_ref.get("signature")
+        if kind and signature:
+            signatures.append({"kind": kind, "signature": signature})
+    return signatures
+
+
+def load_flow_evidence_text(repo_path: Path) -> str:
+    """Searchable text of a member's own flow evidence, for heuristic
+    boundary matching against a sibling's exposed entry-point signature."""
+    path = repo_path / ".docforge" / "flow-index.json"
+    if not path.is_file():
+        return ""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    return json.dumps(data.get("flows", []))
+
+
+def load_repo_identity_flows(root: Path) -> list[dict]:
+    """Directed (repo -> counterpart) rows from the optional `flows` array in
+    repo-identity.json; a `consumer`-role row is normalized to the same
+    caller -> callee direction as a `producer`-role row."""
+    path = root / ".metadata" / "portfolio" / "repo-identity.json"
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    edges = []
+    for row in data.get("flows", []):
+        repo_id = row.get("repo_id")
+        counterpart = row.get("counterpart_repo_id")
+        channel = row.get("channel") or {}
+        signature = channel.get("signature")
+        if not (repo_id and counterpart and signature):
+            continue
+        if row.get("role") == "consumer":
+            repo_id, counterpart = counterpart, repo_id
+        edges.append({"repo": repo_id, "counterpart": counterpart, "channel": channel})
+    return edges
+
+
+def resolve_flow_edges(root: Path, members: list[dict]) -> list[dict]:
+    """Resolve directed cross-repo flow-boundary edges: an explicit mapping
+    row first, then a heuristic signature match against each member's own
+    flow-index.json. Never invents an edge without one of these two signals,
+    and never queries a graph across repo boundaries — flow-index.json is
+    already materialized by that member's own Diligence run."""
+    member_dirs = [
+        Path(item["path"])
+        for item in members
+        if item.get("membership") != "parent" and Path(item["path"]).is_dir()
+    ]
+
+    signatures_by_repo: dict[str, list[dict]] = {}
+    evidence_by_repo: dict[str, str] = {}
+    for path in member_dirs:
+        repo_id = path.name
+        signatures_by_repo[repo_id] = load_flow_signatures(path)
+        evidence_by_repo[repo_id] = load_flow_evidence_text(path)
+
+    edges: list[dict] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    for row in load_repo_identity_flows(root):
+        repo_id = row["repo"]
+        counterpart = row["counterpart"]
+        channel = row["channel"]
+        signature = channel.get("signature")
+        key = (repo_id, counterpart, signature)
+        if key in seen:
+            continue
+        seen.add(key)
+        edges.append({
+            "repo": repo_id,
+            "counterpart": counterpart,
+            "channel_kind": channel.get("kind"),
+            "signature": signature,
+            "resolution": "mapping",
+        })
+
+    for owner_id, signatures in signatures_by_repo.items():
+        for sig in signatures:
+            signature = sig["signature"]
+            for caller_id, evidence_text in evidence_by_repo.items():
+                if caller_id == owner_id:
+                    continue
+                if signature and signature in evidence_text:
+                    key = (caller_id, owner_id, signature)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    edges.append({
+                        "repo": caller_id,
+                        "counterpart": owner_id,
+                        "channel_kind": sig["kind"],
+                        "signature": signature,
+                        "resolution": "heuristic",
+                    })
+
+    edges.sort(key=lambda row: (row["repo"], row["counterpart"], row["signature"]))
+    return edges
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, required=True)
@@ -216,31 +350,43 @@ def main():
     declared_paths = {root / p for p in declared}
     detected = [p for p in nested if p not in declared_paths]
 
+    root_tier = read_manifest_tier(root)
     collection = [{
         "path": str(root),
         "membership": "parent",
-        "status": docforge_status(root),
+        "status": docforge_status(root, root_tier),
+        "tier": root_tier,
     }]
 
     for rel_path, meta in declared.items():
         full = root / rel_path
+        if full.exists():
+            tier = read_manifest_tier(full)
+            status = docforge_status(full, tier)
+        else:
+            tier = None
+            status = "not checked out locally"
         collection.append({
             "path": str(full),
             "membership": "declared (submodule)",
             "submodule_name": meta.get("name"),
             "submodule_url": meta.get("url"),
-            "status": docforge_status(full) if full.exists() else "not checked out locally",
+            "status": status,
+            "tier": tier,
         })
 
     for full in detected:
+        tier = read_manifest_tier(full)
         collection.append({
             "path": str(full),
             "membership": "detected — NOT in .gitmodules",
-            "status": docforge_status(full),
+            "status": docforge_status(full, tier),
+            "tier": tier,
         })
 
     needs_generation = [c for c in collection if c["status"].startswith("none")]
     dependency_edges = resolve_dependency_edges(root, collection)
+    flow_edges = resolve_flow_edges(root, collection)
 
     if args.json:
         print(json.dumps({
@@ -248,6 +394,7 @@ def main():
             "collection": collection,
             "needs_generation": [c["path"] for c in needs_generation],
             "dependency_edges": dependency_edges,
+            "flow_edges": flow_edges,
         }, indent=2))
         return
 
@@ -271,6 +418,14 @@ def main():
             print(
                 f"  - {edge['repo']} → {edge['depends_on']} "
                 f"({edge['coupling_type']}, {edge['resolution']})"
+            )
+
+    if flow_edges:
+        print(f"\n{len(flow_edges)} flow edge(s):")
+        for edge in flow_edges:
+            print(
+                f"  - {edge['repo']} → {edge['counterpart']} "
+                f"({edge['channel_kind']}: {edge['signature']}, {edge['resolution']})"
             )
 
 
