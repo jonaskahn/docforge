@@ -5,6 +5,7 @@
 const fs = require("fs");
 const path = require("path");
 const manifestDeps = require("../../common/js/manifest_deps.js");
+const detectProfiles = require("../../catalog/js/detect_profiles.js");
 
 const DEFAULT_EXCLUDES = new Set([".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build"]);
 const IGNORED_WALK = new Set([
@@ -394,6 +395,7 @@ function main() {
   const needsGeneration = collection.filter((c) => c.status.startsWith("none"));
   const dependencyEdges = resolveDependencyEdges(root, collection);
   const flowEdges = resolveFlowEdges(root, collection);
+  const rootProfileEvidence = detectProfiles.detect(root);
 
   if (args.json) {
     console.log(
@@ -404,6 +406,7 @@ function main() {
           needs_generation: needsGeneration.map((c) => c.path),
           dependency_edges: dependencyEdges,
           flow_edges: flowEdges,
+          root_profile_evidence: rootProfileEvidence,
         },
         null,
         2,
@@ -413,6 +416,9 @@ function main() {
   }
 
   console.log(`Repo collection under ${root}\n`);
+  if (rootProfileEvidence.length === 0) {
+    console.log("Root profile evidence: none — this repository has no source of its own to graph.\n");
+  }
   for (const c of collection) {
     const flag = c.status.startsWith("none") ? "  <-- needs docforge generation before diligence" : "";
     console.log(`[${c.membership}] ${c.path}\n    status: ${c.status}${flag}\n`);

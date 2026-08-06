@@ -26,12 +26,16 @@ KNOWN_GRAPH_DIRS = (".ua", ".understand-anything", ".gitnexus", ".codegraph", ".
 
 
 def find_graph_file(repo: Path, candidates: list[str]) -> Path | None:
-    """Search the repo root, then every ancestor up to (and including) the
-    git root, for the first candidate relative path that exists as a file.
+    """Search the repo root, then every ancestor up to the project root
+    (a .git or .docforge directory), for the first candidate relative path
+    that exists as a file.
 
     Graphs live at $PROJECT_ROOT/...; if --repo points at a subdirectory, a
     direct lookup would falsely report "not found" even though the file
-    exists at the root, so climb until a .git directory is reached.
+    exists at the root, so climb until the project root is reached. A
+    .docforge directory counts too, not just .git, so a repository root with
+    no git of its own still stops the climb instead of searching unrelated
+    ancestor directories.
     """
     base = repo.resolve()
     for current in (base, *base.parents):
@@ -39,8 +43,8 @@ def find_graph_file(repo: Path, candidates: list[str]) -> Path | None:
             candidate = current / relative_path
             if candidate.is_file():
                 return candidate
-        if (current / ".git").exists():
-            break  # reached the repo root; do not climb past it
+        if (current / ".git").exists() or (current / ".docforge").exists():
+            break  # reached the project root; do not climb past it
     return None
 
 
@@ -70,7 +74,7 @@ def list_known_graph_dirs(repo: Path) -> None:
                 print(f"  {name}/ exists at {relative_display_path(directory, repo)} — contains: "
                       f"{', '.join(names) or '(empty)'}")
                 listed = True
-        if (current / ".git").exists():
+        if (current / ".git").exists() or (current / ".docforge").exists():
             break
     if listed:
         print("  Diagnose: python runtime/cli/python/diagnose_graphs.py --repo . --verbose")

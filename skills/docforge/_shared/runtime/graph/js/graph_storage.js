@@ -52,8 +52,11 @@ function parents(dir) {
   return out;
 }
 
-// Search the repo root, then every ancestor up to (and including) the git
-// root, for the first candidate relative path that exists as a file.
+// Search the repo root, then every ancestor up to the project root (a .git
+// or .docforge directory), for the first candidate relative path that
+// exists as a file. A .docforge directory counts too, not just .git, so a
+// repository root with no git of its own still stops the climb instead of
+// searching unrelated ancestor directories.
 function findGraphFile(repo, candidates) {
   const base = path.resolve(repo);
   for (const current of [base, ...parents(base)]) {
@@ -61,7 +64,7 @@ function findGraphFile(repo, candidates) {
       const candidate = path.join(current, relativePath);
       if (isFile(candidate)) return candidate;
     }
-    if (fs.existsSync(path.join(current, ".git"))) break;
+    if (fs.existsSync(path.join(current, ".git")) || fs.existsSync(path.join(current, ".docforge"))) break;
   }
   return null;
 }
@@ -93,7 +96,7 @@ function listKnownGraphDirs(repo) {
         listed = true;
       }
     }
-    if (fs.existsSync(path.join(current, ".git"))) break;
+    if (fs.existsSync(path.join(current, ".git")) || fs.existsSync(path.join(current, ".docforge"))) break;
   }
   if (listed) {
     console.log("  Diagnose: node runtime/cli/js/diagnose_graphs.js --repo . --verbose");

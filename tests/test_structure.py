@@ -221,6 +221,65 @@ class SkillContentTests(unittest.TestCase):
             intake,
         )
 
+    def test_intake_goal_question_never_conflates_root_with_member_state(self) -> None:
+        """The Goal question sits right below the Portfolio-readiness bullet
+        in the same discovery brief; it must anchor to the root's own
+        manifest state and explicitly rule out borrowing a member's."""
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Base this only on the repository root's own manifest\n   state",
+            intake,
+        )
+        self.assertIn(
+            "never on a detected member's\n   manifest or tier from the Portfolio-readiness bullet",
+            intake,
+        )
+
+    def test_intake_re_verifies_discovery_before_finalizing_tier(self) -> None:
+        """detect_profiles and the nested-.git check are a paired discovery
+        step; if repository state changes mid-session (e.g. a directory that
+        was empty gains real code), intake must re-run both and refresh the
+        brief before Tier is finalized, not carry forward a stale brief."""
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Treat `detect_profiles` and the nested-`.git` check as one paired discovery\nstep",
+            intake,
+        )
+        self.assertIn(
+            "Never\nfinalize Tier from a brief the repository has since outgrown.",
+            intake,
+        )
+
+    def test_rules_states_portfolio_collection_exception_for_code_graph(self) -> None:
+        """A pure collection root (no source of its own) must not be
+        session-blocked by the universal code-graph precondition once every
+        included member already holds its own Diligence-or-higher baseline."""
+        rules = (SHARED_ROOT / "rules.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "**Portfolio-collection exception, root only:**",
+            rules,
+        )
+        self.assertIn(
+            "This\nnever waives the precondition for a member repository",
+            rules,
+        )
+
+    def test_planning_workflow_defers_code_graph_block_for_portfolio_collection_root(self) -> None:
+        planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
+        precheck_pos = planning.index("precheck_graph.py --repo <repo> --need code")
+        exception_pos = planning.index("Portfolio-collection exception")
+        self.assertLess(precheck_pos, exception_pos)
+        self.assertIn("root_profile_evidence", planning)
+        self.assertIn(
+            "This exception never applies to a member repository",
+            planning,
+        )
+
+    def test_writing_workflow_never_self_heals_graph_on_a_portfolio_collection_root(self) -> None:
+        writing = (SHARED_ROOT / "workflows" / "writing.md").read_text(encoding="utf-8")
+        self.assertIn("Portfolio-collection root", writing)
+        self.assertIn("do not self-heal or retry", writing)
+
     def test_revision_workflow_enforces_current_template(self) -> None:
         """Revise rewrites documents whose structure/format/content deviates
         from the current template instead of preserving the old structure."""

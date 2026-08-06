@@ -79,6 +79,51 @@ class GraphProviderTests(unittest.TestCase):
                 outputs.append(normalized(precheck.stdout, [repo]))
             self.assertEqual(outputs[0], outputs[1])
 
+    def test_non_git_root_does_not_leak_ancestor_graph(self) -> None:
+        """A .docforge-marked root with no .git of its own must stop the
+        upward graph search there — it must not pick up an unrelated graph
+        sitting in some ancestor directory (e.g. a parent workspace folder)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            ancestor = Path(tmp)
+            (ancestor / ".ua").mkdir()
+            (ancestor / ".ua" / "knowledge-graph.json").write_text("{}\n", encoding="utf-8")
+            project = ancestor / "project"
+            (project / ".docforge").mkdir(parents=True)
+            for runtime in ("py", "js"):
+                result = run(runtime, "precheck_graph", "--repo", str(project), "--need", "code")
+                self.assertEqual(result.returncode, 1, result.stdout)
+                self.assertIn("MISSING  code graph", result.stdout)
+
+    def test_precheck_graph_still_reports_blocked_for_a_pure_collection_root(self) -> None:
+        """precheck_graph.py never gains a tier-aware bypass or flag; the
+        Portfolio-collection exception (rules.md/planning.md) is entirely an
+        agent-followed workflow decision gated on discover_child_repos'
+        root_profile_evidence, never a flag on this script."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "svc-a" / ".git").mkdir(parents=True)
+            (root / "svc-b" / ".git").mkdir(parents=True)
+            for runtime in ("py", "js"):
+                result = run(runtime, "precheck_graph", "--repo", str(root), "--need", "code")
+                self.assertEqual(result.returncode, 1, result.stdout)
+                self.assertIn("BLOCKED", result.stdout)
+
+    def test_git_root_climb_from_subdirectory_still_finds_graph(self) -> None:
+        """Pre-existing behavior is unchanged: invoking from a subdirectory
+        of a real git repo still climbs up to .git and finds the graph at
+        the root."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / ".git").mkdir()
+            (repo / ".ua").mkdir()
+            (repo / ".ua" / "knowledge-graph.json").write_text("{}\n", encoding="utf-8")
+            sub = repo / "src" / "nested"
+            sub.mkdir(parents=True)
+            for runtime in ("py", "js"):
+                result = run(runtime, "precheck_graph", "--repo", str(sub), "--need", "code")
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertIn("READY", result.stdout)
+
 
 class FlowIndexTests(unittest.TestCase):
     def test_flow_index_groups_processes_and_matches_runtime_peers(self) -> None:

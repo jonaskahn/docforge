@@ -13,7 +13,9 @@ them.
 ## Capabilities
 
 - `code_graph`: structure, symbols, modules, layers, calls, imports, and
-  dependency edges. This is universal.
+  dependency edges. This is universal for a repository that has source of its
+  own — see [`../../rules.md`](../../rules.md) "Code-graph precondition" for
+  the narrow Portfolio-collection-root exception when it does not.
 - `flow_graph`: actors, triggers, ordered business steps, decisions, and
   outcomes. This is required only by selected catalog documents that list it.
 

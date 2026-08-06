@@ -258,6 +258,40 @@ class ProfileSelectionTests(unittest.TestCase):
                         outputs.append(normalized(result.stdout, [repo]))
                     self.assertEqual(outputs[0], outputs[1])
 
+    def test_nested_repo_boundary_excludes_child_evidence(self) -> None:
+        """A subdirectory that is itself a separate git repository (its own
+        .git) is a distinct project — its source and declared dependencies
+        must not be blended into the parent's own profile evidence.
+        Regression: profile detection previously walked straight into nested
+        repos, misattributing their entire stack to the parent."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "pyproject.toml").write_text(
+                '[project]\nname = "root"\ndependencies = ["django>=5.0"]\n',
+                encoding="utf-8",
+            )
+            nested = repo / "cadence"
+            (nested / ".git").mkdir(parents=True)
+            (nested / "pyproject.toml").write_text(
+                '[project]\nname = "cadence"\ndependencies = ["fastapi>=0.100"]\n',
+                encoding="utf-8",
+            )
+            outputs = []
+            for runtime in ("py", "js"):
+                result = run(runtime, "detect_profiles", "--repo", str(repo), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                payload = json.loads(result.stdout)
+                detected = {(item["dimension"], item["id"]) for item in payload["detections"]}
+                self.assertIn(("frameworks", "django"), detected)
+                self.assertNotIn(("frameworks", "fastapi"), detected)
+                for item in payload["detections"]:
+                    self.assertFalse(
+                        any(evidence.startswith("cadence/") for evidence in item["evidence"]),
+                        f"{runtime}: nested repo evidence leaked into {item['dimension']}/{item['id']}",
+                    )
+                outputs.append(normalized(result.stdout, [repo]))
+            self.assertEqual(outputs[0], outputs[1])
+
     def test_weak_vs_strong_signal_confidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

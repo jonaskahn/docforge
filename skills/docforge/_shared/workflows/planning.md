@@ -15,6 +15,27 @@ python3 runtime/cli/python/precheck_graph.py --repo <repo> --need code
 node runtime/cli/js/precheck_graph.js --repo <repo> --need code
 ```
 
+**Portfolio-collection exception (root only, never a member).** When this
+repository root has at least one nested `.git` directory, run (or reuse
+intake's already-run result of) `discover_child_repos.{py,js} --root <repo>
+--json` and read its `root_profile_evidence` field. A BLOCKED result above is
+not yet a session-blocking failure when `root_profile_evidence` is empty —
+`detect_profiles` found no shape, platform, framework, or concern evidence for
+the root itself, so there is no source of its own for any provider to graph.
+Carry this forward without stopping the session; the exception only takes
+effect once Step 2 confirms `portfolio` as the tier **and** the Readiness gate
+([`../references/portfolio.md`](../references/portfolio.md) "Readiness gate")
+confirms every included member already holds its own graph-grounded
+Diligence-or-higher baseline. Once both hold, report the root's own code graph
+as **N/A — no source of its own** instead of BLOCKED, and continue. If tier
+instead resolves to `spine` or `diligence` for this root, if any included
+member fails the Readiness gate, or if `root_profile_evidence` is non-empty,
+BLOCKED stands exactly as before: tell the user which source to build a code
+graph with and do not analyze or write anything for this repository until one
+exists. This exception never applies to a member repository — every included
+member still needed its own real code graph to reach Diligence in the first
+place.
+
 A flow graph is required only when a selected manifest document lists
 `flow_graph` in `requires`. Before writing the first such document, run:
 

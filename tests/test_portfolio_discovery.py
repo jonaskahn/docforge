@@ -175,6 +175,52 @@ class FlowEdgeResolutionTests(unittest.TestCase):
                 self.assertEqual(json.loads(result.stdout)["flow_edges"], [])
 
 
+class RootProfileEvidenceTests(unittest.TestCase):
+    """discover_child_repos surfaces root_profile_evidence so the workflow
+    layer can tell a genuine zero-source collection root apart from a root
+    that has its own real source (the Portfolio-collection precheck
+    exception is gated on this field being empty)."""
+
+    def test_pure_collection_root_reports_empty_root_profile_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            make_repo(root, "svc-a")
+            make_repo(root, "svc-b")
+            for runtime in ("py", "js"):
+                result = run(runtime, "discover_child_repos", "--root", str(root), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["root_profile_evidence"], [])
+
+    def test_root_with_its_own_source_reports_non_empty_root_profile_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "pyproject.toml").write_text(
+                '[project]\nname = "root"\ndependencies = ["django>=5.0"]\n', encoding="utf-8",
+            )
+            make_repo(root, "svc-a")
+            for runtime in ("py", "js"):
+                result = run(runtime, "discover_child_repos", "--root", str(root), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                ids = {(i["dimension"], i["id"]) for i in json.loads(result.stdout)["root_profile_evidence"]}
+                self.assertIn(("frameworks", "django"), ids)
+
+    def test_root_profile_evidence_excludes_member_source(self) -> None:
+        """Mirrors test_profiles.py::test_nested_repo_boundary_excludes_child_evidence
+        for this caller — a member's own stack must never leak into
+        root_profile_evidence, or the precheck exception could misfire on a
+        root that actually has real code hiding behind a nested repo."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            member = make_repo(root, "svc-a")
+            (member / "pyproject.toml").write_text(
+                '[project]\nname = "svc-a"\ndependencies = ["fastapi>=0.100"]\n', encoding="utf-8",
+            )
+            for runtime in ("py", "js"):
+                result = run(runtime, "discover_child_repos", "--root", str(root), "--json")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["root_profile_evidence"], [])
+
+
 class PortfolioDiscoveryParityTests(unittest.TestCase):
     def test_py_and_js_outputs_are_structurally_identical(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

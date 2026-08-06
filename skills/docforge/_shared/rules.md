@@ -45,7 +45,18 @@ Detail: [`workflows/tools.md`](workflows/tools.md),
 A code graph is required before any analysis or writing; run
 `precheck_graph.{py,js} --need code`. A flow graph is required only when a
 selected document lists `flow_graph` in `requires`; check with `--need flow`
-before writing the first such document. Detail:
+before writing the first such document.
+
+**Portfolio-collection exception, root only:** when the session's confirmed
+tier is `portfolio`, the repository root's own `detect_profiles` evidence is
+empty (no source of its own to graph — see `discover_child_repos.{py,js}`'s
+`root_profile_evidence` field), and every included member already holds its
+own graph-grounded Diligence-or-higher baseline (the Readiness gate in
+[`references/portfolio.md`](references/portfolio.md)), the root's own
+BLOCKED code-graph result is not a session-blocking failure — record it as
+"no source of its own" and continue with the `docs-portfolio/` layer. This
+never waives the precondition for a member repository, and never applies when
+the root shows any profile evidence at all. Detail:
 [`workflows/planning.md`](workflows/planning.md).
 
 ## Graph provider persistence

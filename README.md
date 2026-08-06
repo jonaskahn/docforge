@@ -390,7 +390,10 @@ and the thin entrypoint
 ## ██▓▒░ SYSTEM REQUIREMENTS ░▒▓██
 
 - a compatible AI coding agent
-- `git`
+- `git` — for git-history evidence and for graph providers that use it
+  internally (e.g. GitNexus staleness checks); the repository being
+  documented does not itself need to be a git repository, only a
+  `.docforge/` manifest directory once initialized
 - a supported source of repository evidence
 - **one** tool runtime: Python 3.10+ **or** a JS engine (Node.js 22+, Bun, or Deno)
 - Node.js 22+ and `npm` **only** for `/docforge-dashboard` install/serve steps

@@ -47,6 +47,15 @@ each detected member's own tier. This is discovery only — it does not decide
 inclusion or offer Portfolio by itself; it makes the fact available to the
 discovery brief and the tier question below.
 
+Treat `detect_profiles` and the nested-`.git` check as one paired discovery
+step: never refresh one without the other. If repository state changes
+materially after this pass but before the Tier question is finalized — a
+directory that was empty gains real content, the user says code is coming
+and later confirms it has arrived, or any other change that could alter
+profile evidence or nested-repo membership — re-run this whole discovery
+step and refresh the discovery brief before asking or re-asking Tier. Never
+finalize Tier from a brief the repository has since outgrown.
+
 ## Discovery brief
 
 After safe discovery (and the discovery gate when `needs_gate`), and **before**
@@ -56,7 +65,11 @@ asking any scope questions, present a short discovery brief:
   include its tier, typed profiles, and incomplete count).
 - Code-graph readiness: name each ready provider, or state that none are ready
   and that setup will be offered only if graph source is unresolved — never a
-  choice among absent providers.
+  choice among absent providers. When the root itself shows zero profile
+  evidence and nested repos were detected (see Portfolio readiness below),
+  state plainly that the root has no source of its own to graph — this is
+  expected for a pure collection root, not a setup gap — and do not offer
+  graph setup for the root.
 - **Recommended** vs **also possible** profile rows for shapes, platforms,
   frameworks, and concerns, each with a one-line evidence or gate reason.
 - Existing documentation note when `docs/` (or equivalent) is already present,
@@ -103,8 +116,12 @@ wait for the user's explicit confirmation before reconciling the manifest.
 
 Ask only what remains unresolved, in this order:
 
-1. **Goal or action.** For a repository without a manifest, offer creating a
-   new documentation plan or planning without writing. When a manifest exists,
+1. **Goal or action.** Base this only on the repository root's own manifest
+   state — the discovery brief's first bullet — never on a detected member's
+   manifest or tier from the Portfolio-readiness bullet; those describe
+   collection members, not this session's target. For a repository without a
+   manifest, offer creating a new documentation plan or planning without
+   writing. When a manifest exists,
    also offer resuming it (plain language / intake goal →
    [`writing.md`](writing.md); no `--resume` flag), checking status or
    staleness (read-only; no `--status` flag — use plain language or

@@ -116,6 +116,32 @@ class CatalogRecordTests(unittest.TestCase):
                 # must not linger in a migrated record.
                 self.assertNotIn("scaffold_template", detail, entry["id"])
 
+    def test_portfolio_documents_never_require_a_code_graph(self) -> None:
+        """references/portfolio.md: 'Docforge never builds or requires a
+        graph spanning repositories.' Every docs-portfolio/* record's craft
+        resolves cross-repo evidence from member manifests/flow-index files,
+        never a code_graph capability."""
+        for entry in self.index["document_types"]:
+            if entry["path"].split("/")[0] != "docs-portfolio":
+                continue
+            detail = json.loads((CATALOG_DIR / entry["record"]).read_text(encoding="utf-8"))
+            with self.subTest(id=entry["id"]):
+                self.assertNotIn("code_graph", detail.get("requires", []))
+
+    def test_five_corrected_portfolio_records_keep_only_evidenced_capabilities(self) -> None:
+        expected = {
+            "portfolio_system_context": ["manifests"],
+            "portfolio_glossary": ["manifests"],
+            "portfolio_security": ["manifests"],
+            "portfolio_operations": ["manifests"],
+            "portfolio_readme": ["git_history"],
+        }
+        by_id = {entry["id"]: entry for entry in self.index["document_types"]}
+        for doc_id, requires in expected.items():
+            detail = json.loads((CATALOG_DIR / by_id[doc_id]["record"]).read_text(encoding="utf-8"))
+            with self.subTest(id=doc_id):
+                self.assertEqual(detail["requires"], requires)
+
     def test_query_catalog_validate_passes_on_both_runtimes(self) -> None:
         for runtime in ("py", "js"):
             result = run(runtime, "query_catalog", "--validate")

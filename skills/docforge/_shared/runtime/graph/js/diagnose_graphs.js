@@ -91,6 +91,8 @@ function parents(dir) {
   return out;
 }
 
+// Search upward for graph file from repo root to the project root (a .git
+// or .docforge directory).
 function findGraph(repo, candidates) {
   const base = path.resolve(repo);
   for (const cur of [base, ...parents(base)]) {
@@ -98,7 +100,7 @@ function findGraph(repo, candidates) {
       const p = path.join(cur, rel);
       if (isFile(p)) return p;
     }
-    if (fs.existsSync(path.join(cur, ".git"))) break;
+    if (fs.existsSync(path.join(cur, ".git")) || fs.existsSync(path.join(cur, ".docforge"))) break;
   }
   return null;
 }

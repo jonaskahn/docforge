@@ -104,6 +104,11 @@ def cue_for_signal(signal: dict, relative: str = "") -> str:
 
 
 def inventory(repo: Path) -> list[tuple[str, Path]]:
+    """Collect files under `repo` for profile-signal matching. Stops short of
+    a nested repository's own contents — a subdirectory that is itself a
+    separate git repository (its own .git dir or file, the same marker a
+    submodule worktree uses) is a distinct project; its source must not be
+    blended into this repo's own profile evidence."""
     found: list[tuple[str, Path]] = []
 
     def walk(directory: Path) -> None:
@@ -113,6 +118,9 @@ def inventory(repo: Path) -> list[tuple[str, Path]]:
             if path.name in IGNORED or path.is_symlink():
                 continue
             if path.is_dir():
+                git_marker = path / ".git"
+                if git_marker.is_dir() or git_marker.is_file():
+                    continue  # nested repo boundary; its evidence is its own
                 walk(path)
             elif path.is_file():
                 found.append((path.relative_to(repo).as_posix(), path))

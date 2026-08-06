@@ -39,7 +39,8 @@ otherwise keep the serial `write_order` loop. Contract
   `in_progress` serially, and ensures `manifest["graph"]` is locked — self-healing
   with `set-graph --repo <repo>` first if it is somehow still absent. A worker
   never calls `precheck_graph` or `set-graph` itself and never selects or
-  relocks a provider.
+  relocks a provider. On a Portfolio-collection root, an absent lock is
+  expected and is never self-healed.
 - Each worker receives its document card (route, `requires`, audience,
   presentation), evidence budget, one target artifact, and the session's
   locked graph provider/flow (`manifest["graph"]`, read-only). It runs the
@@ -59,7 +60,10 @@ serial recording.
 
 For the next document in `write_order` (serial mode):
 
-1. Check every capability in its `requires` list.
+1. Check every capability in its `requires` list. On a Portfolio-collection
+   root (see [`../rules.md`](../rules.md) "Code-graph precondition"), a
+   `code_graph` requirement is already resolved as "no source of its own" —
+   never retry the graph gate or self-heal for that reason alone.
 2. Resolve its route in one call:
 
    ```sh
@@ -95,10 +99,12 @@ For the next document in `write_order` (serial mode):
       locked once, automatically, by `manage_manifest.{py,js} init` (see
       [`../references/graph/graph-sources.md`](../references/graph/graph-sources.md)
       "Session persistence").
-   2. If `graph` is absent (a manifest from before this convention, or a
-      resumed run), self-heal once with
+   2. If `graph` is absent because no provider is ready **and this is not a
+      Portfolio-collection root**, self-heal once with
       `manage_manifest.{py,js} set-graph --repo <repo>` (no other flags —
-      automatic, registry-priority pick), then continue.
+      automatic, registry-priority pick), then continue. On a
+      Portfolio-collection root, `graph` legitimately stays absent for this
+      repository; do not self-heal or retry.
    3. Dispatch the evidence question for each required claim through that
       provider's native interface first — `graph-sources.md`'s dispatch table
       (`codegraph_explore`, the GitNexus MCP tools/resources, or the relevant

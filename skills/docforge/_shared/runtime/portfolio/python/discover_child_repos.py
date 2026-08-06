@@ -22,6 +22,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from runtime.catalog.python import detect_profiles
 from runtime.common.python import manifest_deps
 
 DEFAULT_EXCLUDES = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build"}
@@ -387,6 +388,7 @@ def main():
     needs_generation = [c for c in collection if c["status"].startswith("none")]
     dependency_edges = resolve_dependency_edges(root, collection)
     flow_edges = resolve_flow_edges(root, collection)
+    root_profile_evidence = detect_profiles.detect(root)
 
     if args.json:
         print(json.dumps({
@@ -395,10 +397,13 @@ def main():
             "needs_generation": [c["path"] for c in needs_generation],
             "dependency_edges": dependency_edges,
             "flow_edges": flow_edges,
+            "root_profile_evidence": root_profile_evidence,
         }, indent=2))
         return
 
     print(f"Repo collection under {root}\n")
+    if not root_profile_evidence:
+        print("Root profile evidence: none — this repository has no source of its own to graph.\n")
     for c in collection:
         flag = "  <-- needs docforge generation before diligence" if c["status"].startswith("none") else ""
         print(f"[{c['membership']}] {c['path']}\n    status: {c['status']}{flag}\n")

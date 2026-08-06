@@ -13,7 +13,6 @@
   },
   "instruction_file": "content/portfolio/security-posture.instruction.md",
   "requires": [
-    "code_graph",
     "manifests"
   ],
   "target_depth": "deep-dive",

@@ -59,14 +59,15 @@ DB_NOTES = {
 
 
 def find_graph(repo: Path, candidates: list[str]) -> Path | None:
-    """Search upward for graph file from repo root to git root."""
+    """Search upward for graph file from repo root to the project root (a
+    .git or .docforge directory)."""
     base = repo.resolve()
     for current in (base, *base.parents):
         for relative_path in candidates:
             candidate = current / relative_path
             if candidate.is_file():
                 return candidate
-        if (current / ".git").exists():
+        if (current / ".git").exists() or (current / ".docforge").exists():
             break
     return None
 

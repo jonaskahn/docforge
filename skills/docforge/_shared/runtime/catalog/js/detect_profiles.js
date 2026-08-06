@@ -74,6 +74,11 @@ function cueForSignal(signal, relative) {
   }
   return "path:unknown";
 }
+// Collect files under `repo` for profile-signal matching. Stops short of a
+// nested repository's own contents — a subdirectory that is itself a
+// separate git repository (its own .git dir or file, the same marker a
+// submodule worktree uses) is a distinct project; its source must not be
+// blended into this repo's own profile evidence.
 function inventory(repo) {
   const found = [];
   function walk(directory) {
@@ -81,7 +86,11 @@ function inventory(repo) {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => compareText(a.name, b.name))) {
       if (IGNORED.has(entry.name)) continue;
       const target = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(target);
+      if (entry.isDirectory()) {
+        const gitMarker = path.join(target, ".git");
+        if (fs.existsSync(gitMarker)) continue; // nested repo boundary; its evidence is its own
+        walk(target);
+      }
       else if (entry.isFile()) found.push([path.relative(repo, target).split(path.sep).join("/"), target]);
       if (found.length >= MAX_FILES) return;
     }

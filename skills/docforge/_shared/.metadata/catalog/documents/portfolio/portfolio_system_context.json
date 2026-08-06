@@ -13,7 +13,7 @@
   },
   "instruction_file": "content/portfolio/system-context.instruction.md",
   "requires": [
-    "code_graph"
+    "manifests"
   ],
   "target_depth": "deep-dive",
   "write_order": 102,

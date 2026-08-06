@@ -21,8 +21,8 @@
  *
  * If --graph is omitted, the graph is located at the repository root by
  * searching the known JSON store locations (`.ua/`, legacy
- * `.understand-anything/`) up every parent to the git root, so it works when
- * invoked from a subdirectory.
+ * `.understand-anything/`) up every parent to the project root (a `.git` or
+ * `.docforge` directory), so it works when invoked from a subdirectory.
  *
  * Node.js built-ins only. Output is an inventory to verify, not finished prose.
  */
@@ -47,6 +47,8 @@ function parents(dir) {
   return out;
 }
 
+// Search the CWD and every ancestor up to the project root (a .git or
+// .docforge directory).
 function findDefaultGraph(start) {
   const base = path.resolve(start || process.cwd());
   for (const cur of [base, ...parents(base)]) {
@@ -54,7 +56,7 @@ function findDefaultGraph(start) {
       const candidate = path.join(cur, rel);
       if (isFile(candidate)) return candidate;
     }
-    if (fs.existsSync(path.join(cur, ".git"))) break;
+    if (fs.existsSync(path.join(cur, ".git")) || fs.existsSync(path.join(cur, ".docforge"))) break;
   }
   return null;
 }

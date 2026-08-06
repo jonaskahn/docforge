@@ -22,7 +22,8 @@ Typical use:
 
 If --graph is omitted, the graph is located at the repository root by searching
 the known JSON store locations (`.ua/`, legacy `.understand-anything/`) up every
-parent to the git root, so it works when invoked from a subdirectory.
+parent to the project root (a `.git` or `.docforge` directory), so it works
+when invoked from a subdirectory.
 
 Standard library only. Output is an inventory to verify, not finished prose.
 """
@@ -48,7 +49,7 @@ def find_default_graph(start: Path | None = None) -> Path | None:
     The graph lives at the project root ($PROJECT_ROOT/.ua/knowledge-graph.json).
     When invoked from a subdirectory a plain CWD-relative lookup reports "not
     found" even though the file exists at the root, so search the CWD and every
-    ancestor up to (and including) the git root or the filesystem root.
+    ancestor up to the project root (a .git or .docforge directory).
     """
     start = (start or Path.cwd()).resolve()
     for base in (start, *start.parents):
@@ -56,8 +57,8 @@ def find_default_graph(start: Path | None = None) -> Path | None:
             candidate = base / rel
             if candidate.is_file():
                 return candidate
-        if (base / ".git").exists():
-            break  # reached the repo root; do not climb past it
+        if (base / ".git").exists() or (base / ".docforge").exists():
+            break  # reached the project root; do not climb past it
     return None
 
 # Candidate key names, in preference order. The pipeline's schema may evolve or

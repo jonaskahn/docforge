@@ -13,7 +13,6 @@
   },
   "instruction_file": "content/shared/folder-index.instruction.md",
   "requires": [
-    "code_graph",
     "git_history"
   ],
   "target_depth": "orientation",
