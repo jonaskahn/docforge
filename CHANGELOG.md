@@ -1,6 +1,22 @@
 # Changelog
 
-## 2.15.0 - Deeper source grounding, graph provider session lock
+## 2.15.0 - Cosmetic-drift detection via normalized and range evidence hashes
+
+- Provenance schema 2.1 adds optional per-source evidence hashes:
+  `git_blob_normalized` (CRLF/CR -> LF, trailing whitespace and blank-line
+  normalization) and `evidence_range` + `range_blob` (1-indexed inclusive
+  line-span hash), both emitted by the writers and enforced by the schema.
+- `check_staleness` now classifies each cited source as fresh, cosmetic
+  (whitespace/EOL-only drift or an untouched cited span), or stale instead
+  of a binary blob match, so line-ending and whitespace churn no longer
+  block a doc as stale; missing files and malformed blobs stay blocking.
+- Dashboard `start`/`export` short-circuit on scan findings before staging a
+  build, and both runtimes gained the `hash_evidence` CLI for hashing a file
+  or line range with raw/normalized/range variants.
+- New Python/JS parity tests for cosmetic classification, evidence hash
+  normalization, and evidence locators.
+
+## 2.14.0 - Deeper source grounding, graph provider session lock
 
 - The graph provider is now locked into the manifest once, automatically, by
   `manage_manifest.{py,js} init` (registry-priority pick; pass
