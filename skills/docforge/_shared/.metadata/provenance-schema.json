@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Docforge Provenance 2.0",
+  "title": "Docforge Provenance 2.1",
   "type": "object",
   "required": ["schema", "doc_id", "path", "generated_at", "generator", "tier", "target_depth", "graph", "sections"],
   "properties": {
-    "schema": {"const": "2.0"},
+    "schema": {"enum": ["2.0", "2.1"]},
     "doc_id": {"type": "string", "minLength": 1},
     "path": {"type": "string", "minLength": 1},
     "generated_at": {"type": "string", "minLength": 1},
@@ -70,9 +70,24 @@
               "properties": {
                 "path": {"type": "string", "minLength": 1},
                 "git_blob": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                "git_blob_normalized": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                "evidence_range": {
+                  "type": "object",
+                  "required": ["start", "end"],
+                  "properties": {
+                    "start": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+                    "end": {"type": "string", "pattern": "^[1-9][0-9]*$"}
+                  },
+                  "additionalProperties": false
+                },
+                "range_blob": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
                 "role": {"enum": ["code", "config", "manifest", "doc", "test", "history"]}
               },
-              "additionalProperties": false
+              "additionalProperties": false,
+              "dependencies": {
+                "evidence_range": ["range_blob"],
+                "range_blob": ["evidence_range"]
+              }
             }
           },
           "unresolved": {"type": "array", "items": {"type": "string"}}

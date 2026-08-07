@@ -12,6 +12,7 @@ they exist to be imported, not executed.
 - Planning manifest document actions → `plan`.
 - Linting documents → `evidence_locators`, `illustration_metrics`,
   `markdown_fences`.
+- Classifying a source's drift (fresh / cosmetic / stale) → `evidence_hash`.
 - Extracting declared dependencies from package manifests → `manifest_deps`.
 - Mapping provenance 2.0 to PROV relations → `prov_projection`.
 - Naming special outputs that bypass normal provenance → `special_files`.
@@ -23,6 +24,7 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | Script | Purpose | Read-only? |
 |---|---|---|
 | `_util` | JSON/error/manifest helpers, `.docforge/.gitignore` and `tmp/`/`scratch/` cleanup | mixes — mutates `.docforge` state |
+| `evidence_hash` | Raw/normalized/range-scoped blob hashing and fresh/cosmetic/stale classification | yes |
 | `evidence_locators` | Validate `path#Lx-Ly @ <git-blob>` locators against files and provenance | yes |
 | `illustration_metrics` | Enforce Mermaid/ASCII illustration budgets per target depth | yes |
 | `manifest_deps` | Extract dependency names + own-package identities from manifests (9 ecosystems) | yes |
@@ -46,6 +48,10 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 - `manifest_deps` — `normalize`, `extract_dependencies(files)`,
   `extract_package_identities(files)`; 1 MiB manifest cap; npm, Composer, pip,
   Cargo, Go, Ruby, Maven/Gradle, NuGet, pub.
+- `evidence_hash` — `raw_blob_hash`, `git_blob_for_path`, `normalized_blob_hash`,
+  `range_blob_hash`, `classify_source(source, current_bytes)` returning
+  `missing`/`fresh`/`cosmetic`/`stale`. No git dependency; normalization is
+  whitespace/EOL-only (no comment stripping).
 - `evidence_locators` — `validate_locators(document, text=None)`; defects for
   path escape, missing source, stale blob, invalid range, unknown heading,
   provenance mismatch.
@@ -68,11 +74,11 @@ consumers:
 
 - `documents/` — `_util`, `plan`, `special_files`, `provenance_frontmatter`,
   `evidence_locators`, `illustration_metrics`, `markdown_fences`.
-- `manifest/` — `_util`, `plan`, `provenance_frontmatter`.
+- `manifest/` — `_util`, `plan`, `provenance_frontmatter`, `evidence_hash`.
 - `validation/` — `_util`, `provenance_frontmatter`, `special_files`.
 - `catalog/` — `manifest_deps` (via `detect_profiles`).
 - `portfolio/` — `manifest_deps` (via `discover_child_repos`).
-- `dashboard/` — `_util`, `provenance_frontmatter`.
+- `dashboard/` — `_util`, `provenance_frontmatter`, `evidence_hash`.
 - `graph/` — `_util` (via `graph_storage`).
 
 ## Boundaries

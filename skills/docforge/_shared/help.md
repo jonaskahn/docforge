@@ -61,16 +61,20 @@ a documentation source; the source of truth stays `docs/` Markdown and
 | `--help` | Show this reference and stop |
 
 Subcommands: `scan` (read-only diagnostics: missing metadata, incomplete or
-missing documents, stale provenance sources, broken links, untracked `docs/`
-files; exits 1 when anything is found — "you should revise again"), `start`
-(build-if-changed → serve → open), `export` (build-if-changed → static HTML
-export: `next build` emits `index.html` per page under `<dashboard>/out/`
-for static hosting (GitHub Pages, S3, …) at a domain root; no server, no
-browser; takes no flags), `status` (read-only state), `stop` (shut down the
-detached dev server).
+missing documents, stale provenance sources, broken links, route-plan
+problems, untracked `docs/` files — each tagged blocking or advisory; exits 1
+when anything is found — "you should revise again"), `start` (build-if-changed
+→ serve → open, stopping before build on any blocking finding), `export`
+(build-if-changed → static HTML export: `next build` emits `index.html` per
+page under `<dashboard>/out/` for static hosting (GitHub Pages, S3, …) at a
+domain root; no server, no browser; takes no flags), `status` (read-only
+state), `stop` (shut down the detached dev server).
 
 A legacy manifest (any pre-3.0 version — 1.1 `project_context` /
-`document_groups`, 2.0 flat `documents` with overlays, or another shape)
-fails preflight with a three-option gate — revise all, update metadata only
-(`migrate_metadata` re-registers it as 3.2 for any legacy version), or stop;
-see `workflows/dashboard.md`.
+`document_groups`, 2.0 flat `documents` with overlays, or another shape) is
+auto-migrated to 3.2 by `start`/`export` (never a stop-and-ask gate:
+`migrate_metadata` is safe, idempotent, re-registers any legacy version, and
+never touches document bodies — the migration is always printed).
+`--plan-only` runs the `migrate_metadata --dry-run` preview instead of
+migrating; `scan`/`status` stay strictly read-only and never migrate. See
+`workflows/dashboard.md`.

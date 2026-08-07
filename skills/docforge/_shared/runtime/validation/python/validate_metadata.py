@@ -10,7 +10,12 @@ import sys
 from pathlib import Path
 
 from runtime.common.python._util import read_json
-from runtime.common.python.provenance_frontmatter import PROVENANCE_FIELDS, SCHEMA_VERSION, parse_frontmatter
+from runtime.common.python.provenance_frontmatter import (
+    PROVENANCE_FIELDS,
+    SCHEMA_VERSION,
+    SUPPORTED_SCHEMA_VERSIONS,
+    parse_frontmatter,
+)
 from runtime.common.python.special_files import SPECIAL_DOC_SOURCES
 from . import generate_indexes
 from runtime.catalog.python import query_catalog
@@ -25,6 +30,7 @@ PUBLIC_CONTRACTS = {
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
     "check_staleness": ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
+    "hash_evidence": ["--repo", "--path", "--range", "--json"],
     "flow_index": ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
     "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
     "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route"],
@@ -57,8 +63,9 @@ def validate() -> list[str]:
         errors.append("provenance-schema.json is missing")
     else:
         provenance_schema = read_json(provenance_schema_path)
-        if provenance_schema.get("properties", {}).get("schema", {}).get("const") != SCHEMA_VERSION:
-            errors.append("provenance schema must require schema 2.0")
+        schema_versions = set(provenance_schema.get("properties", {}).get("schema", {}).get("enum", []))
+        if schema_versions != set(SUPPORTED_SCHEMA_VERSIONS):
+            errors.append(f"provenance schema must allow exactly {', '.join(sorted(SUPPORTED_SCHEMA_VERSIONS))}")
     if catalog.get("version") != CATALOG_VERSION:
         errors.append(f"catalog version must be {CATALOG_VERSION}")
     if catalog_schema.get("properties", {}).get("version", {}).get("const") != CATALOG_VERSION:
@@ -195,7 +202,7 @@ def validate() -> list[str]:
         if not isinstance(generator, dict) or not {"name", "version"} <= set(generator):
             errors.append(f"{template.name}: provenance frontmatter is missing generator")
         if provenance.get("schema") != SCHEMA_VERSION or "graph_snapshot" in provenance:
-            errors.append(f"{template.name}: provenance frontmatter must use schema 2.0")
+            errors.append(f"{template.name}: provenance frontmatter must use schema {SCHEMA_VERSION}")
     cli_py = SKILL_ROOT / "runtime" / "cli" / "python"
     cli_js = SKILL_ROOT / "runtime" / "cli" / "js"
     # One-shot migration helpers; not part of the dual-runtime public surface.

@@ -150,7 +150,7 @@ function provenanceDefects(filePath, text) {
       }
     }
   }
-  if (missing.length || invalid.length || provenance.schema !== "2.0" || "graph_snapshot" in provenance) {
+  if (missing.length || invalid.length || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema) || "graph_snapshot" in provenance) {
     const detail = [...missing, ...invalid.map((item) => `non-concrete ${item}`)].join(", ")
       || "invalid schema or obsolete graph_snapshot";
     defects.push({ kind: "missing provenance", line: 1, detail });

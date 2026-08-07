@@ -345,50 +345,59 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**not** opened", thin)
         self.assertIn("`/docforge-revise`", thin)
-        self.assertIn("`--auto-accept` bypasses", thin)
+        self.assertIn("`--auto-accept` never suppresses", thin)
 
     def test_dashboard_scan_suggests_revision_before_open(self) -> None:
         """The dashboard scans for missing metadata, broken links, stale
-        sources, and untracked docs; findings trigger a "you should revise
-        again" recommendation before the dashboard is trusted."""
+        sources, route-plan problems, and untracked docs; every finding is
+        tagged blocking or advisory, and findings trigger a "you should
+        revise again" recommendation before the dashboard is trusted. Only a
+        blocking finding stops `start`/`export` before a build is attempted;
+        advisory-only findings still let the dashboard render."""
         workflow = (SHARED_ROOT / "workflows" / "dashboard.md").read_text(encoding="utf-8")
         self.assertIn("## Scan: you should revise again", workflow)
         self.assertIn("**you should revise again**", workflow)
         self.assertIn("**metadata**", workflow)
         self.assertIn("**broken_link**", workflow)
+        self.assertIn("**route_plan**", workflow)
+        self.assertIn("`blocking: true/false`", workflow)
         self.assertIn("`scan` exits `1`", workflow)
-        self.assertIn("never a summary that\n   hides a finding", workflow)
+        self.assertIn("never a summary that hides a finding", workflow)
         thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
         # Thin entrypoint summarizes the scan gate and points at the workflow owner.
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**Scan**", thin)
         self.assertIn("`/docforge-revise`", thin)
-        self.assertIn("clean scan means ready", thin)
+        self.assertIn("blocking or advisory", thin)
+        self.assertIn("still let the dashboard render", thin)
         help_text = (SHARED_ROOT / "help.md").read_text(encoding="utf-8")
         self.assertIn("`scan` (read-only diagnostics", help_text)
 
     def test_dashboard_legacy_manifest_gate(self) -> None:
-        """A legacy manifest (any pre-3.0 version) stops the dashboard with a
-        three-option gate: revise all, update metadata only
-        (migrate_metadata), or stop."""
+        """A legacy manifest (any pre-3.0 version) is auto-migrated by
+        `start`/`export` -- never a stop-and-ask gate, since the metadata
+        migration is safe and non-destructive -- while `scan`/`status` stay
+        strictly read-only and never migrate. `--plan-only` previews the
+        migration instead of applying it."""
         workflow = (SHARED_ROOT / "workflows" / "dashboard.md").read_text(encoding="utf-8")
         self.assertIn("## Legacy manifest gate", workflow)
-        self.assertIn("**Revise all (recommended)**", workflow)
-        self.assertIn("**Update metadata only**", workflow)
-        self.assertIn("**Stop**", workflow)
-        self.assertIn("`--auto-accept` never bypasses this gate", workflow)
+        self.assertIn("auto-migrate it instead of stopping to ask", workflow)
+        self.assertIn("never rewritten", workflow)
+        self.assertIn("stay strictly read-only: they never migrate", workflow)
         self.assertIn("`migrate_metadata.{py,js} --dry-run`", workflow)
-        self.assertIn("for **any** legacy version", workflow)
+        self.assertIn("--plan-only preview (no writes)", workflow)
         self.assertNotIn("Legacy manifest gate (v1.1)", workflow)
+        # Core docforge must never reference its thin sibling entrypoints.
+        self.assertNotIn("docforge-revise/SKILL.md", workflow)
+        self.assertNotIn("../docforge-revise", workflow)
         thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
-        # Thin entrypoint summarizes the three-option legacy gate; the full
-        # option text lives in workflows/dashboard.md (asserted above).
+        # Thin entrypoint summarizes the auto-migration behavior; the full
+        # wording lives in workflows/dashboard.md (asserted above).
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**Legacy manifest**", thin)
-        self.assertIn("three-option gate", thin)
-        self.assertIn("revise all", thin)
-        self.assertIn("update metadata", thin)
-        self.assertIn("any** legacy version", thin)
+        self.assertIn("auto-migrated to 3.2 automatically, never a stop-and-ask", thin)
+        self.assertIn("never migrate", thin)
+        self.assertNotIn("three-option gate", thin)
         self.assertNotIn("Legacy manifest gate (v1.1)", thin)
 
     def test_help_supported_by_all_entrypoints(self) -> None:

@@ -24,6 +24,7 @@ from _support import (
     blob_hash,
     load_manifest,
     markdown_with_provenance,
+    normalized_blob_hash,
     provenance,
 )
 
@@ -550,29 +551,36 @@ class DashboardBuildTests(unittest.TestCase):
                     stop_dashboard(runtime, repo)
 
     def test_unresolved_internal_markdown_link_fails_validation(self) -> None:
+        # Broken internal links are `broken_link` scan findings, always
+        # blocking: `start` now short-circuits on the scan result before
+        # ever attempting a build, so this fails fast via scan, not via a
+        # convert/validate crash.
         env, _bin = fake_npm_env()
         with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            manifest = load_manifest(repo)
-            doc = written_doc(
-                "architecture_extras", "docs/architecture/extras.md",
-                "# Extras\n\nSee [missing](../missing.md).\n", write_order=8,
-            )
-            manifest["documents"].append(doc)
-            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            (repo / "docs" / "architecture" / "extras.md").write_text(
-                markdown_with_provenance(doc["provenance"], "# Extras\n\nSee [missing](../missing.md).\n"),
-                encoding="utf-8",
-            )
-            try:
-                result = run_dashboard("py", "start", "--repo", str(repo), "--no-open", env=env)
-                self.assertEqual(result.returncode, 1)
-                self.assertIn("unresolved internal link", result.stdout + result.stderr)
-                self.assertIn("dashboard was NOT opened", result.stdout + result.stderr)
-                self.assertIn("/docforge-revise", result.stdout + result.stderr)
-            finally:
-                stop_dashboard("py", repo)
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                manifest = load_manifest(repo)
+                doc = written_doc(
+                    "architecture_extras", "docs/architecture/extras.md",
+                    "# Extras\n\nSee [missing](../missing.md).\n", write_order=8,
+                )
+                manifest["documents"].append(doc)
+                (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                (repo / "docs" / "architecture" / "extras.md").write_text(
+                    markdown_with_provenance(doc["provenance"], "# Extras\n\nSee [missing](../missing.md).\n"),
+                    encoding="utf-8",
+                )
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertIn("[broken_link] (blocking)", result.stdout + result.stderr)
+                    self.assertIn("scan found blocking problems", result.stdout + result.stderr)
+                    self.assertIn("dashboard was NOT opened", result.stdout + result.stderr)
+                    self.assertIn("/docforge-revise", result.stdout + result.stderr)
+                finally:
+                    stop_dashboard(runtime, repo)
 
     def test_start_force_rebuilds_even_when_unchanged(self) -> None:
         env, _bin = fake_npm_env()
@@ -593,25 +601,31 @@ class DashboardBuildTests(unittest.TestCase):
                 stop_dashboard("py", repo)
 
     def test_failed_conversion_leaves_previous_dashboard_untouched(self) -> None:
+        # A doc/*.md doc with no frontmatter is a `metadata` scan finding,
+        # blocking because the doc is included: `start` short-circuits on
+        # scan before staging anything, so `.staging` is never even created.
         env, _bin = fake_npm_env()
         with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            try:
-                first = run_dashboard("py", "start", "--repo", str(repo), "--no-open", env=env)
-                self.assertEqual(first.returncode, 0, first.stderr)
-                index = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
-                self.assertTrue(index.is_file())
-                (repo / "docs" / "product" / "overview.md").write_text("# Broken\n\nNo frontmatter.\n", encoding="utf-8")
-                broken = run_dashboard("py", "start", "--repo", str(repo), "--no-open", env=env)
-                self.assertEqual(broken.returncode, 1)
-                self.assertIn("has no frontmatter", broken.stdout + broken.stderr)
-                self.assertIn("dashboard was NOT opened", broken.stdout + broken.stderr)
-                self.assertIn("/docforge-revise", broken.stdout + broken.stderr)
-                self.assertTrue(index.is_file(), "previous dashboard must survive a failed conversion")
-                self.assertFalse((repo / ".docforge" / "dashboard" / "content" / ".staging").exists())
-            finally:
-                stop_dashboard("py", repo)
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                try:
+                    first = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
+                    self.assertEqual(first.returncode, 0, first.stderr)
+                    index = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
+                    self.assertTrue(index.is_file())
+                    (repo / "docs" / "product" / "overview.md").write_text("# Broken\n\nNo frontmatter.\n", encoding="utf-8")
+                    broken = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
+                    self.assertEqual(broken.returncode, 1)
+                    self.assertIn("[metadata] (blocking)", broken.stdout + broken.stderr)
+                    self.assertIn("scan found blocking problems", broken.stdout + broken.stderr)
+                    self.assertIn("dashboard was NOT opened", broken.stdout + broken.stderr)
+                    self.assertIn("/docforge-revise", broken.stdout + broken.stderr)
+                    self.assertTrue(index.is_file(), "previous dashboard must survive a failed conversion")
+                    self.assertFalse((repo / ".docforge" / "dashboard" / "content" / ".staging").exists())
+                finally:
+                    stop_dashboard(runtime, repo)
 
 
 class DashboardSignatureTests(unittest.TestCase):
@@ -803,21 +817,84 @@ class DashboardScanTests(unittest.TestCase):
                 self.assertIn("you should revise again", result.stdout)
                 for kind in ("broken_link", "incomplete", "drift", "metadata", "untracked"):
                     self.assertIn(f"[{kind}]", result.stdout)
+                for kind in ("broken_link", "metadata"):
+                    self.assertIn(f"[{kind}] (blocking)", result.stdout)
+                for kind in ("incomplete", "drift", "untracked"):
+                    self.assertIn(f"[{kind}]", result.stdout)
+                    self.assertNotIn(f"[{kind}] (blocking)", result.stdout)
+                json_result = run_dashboard(runtime, "scan", "--repo", str(repo), "--json")
+                payload = json.loads(json_result.stdout)
+                self.assertTrue(payload["blocking"])
+                by_kind = {}
+                for problem in payload["problems"]:
+                    by_kind.setdefault(problem["kind"], []).append(problem["blocking"])
+                self.assertTrue(all(by_kind["broken_link"]))
+                self.assertTrue(all(by_kind["metadata"]))
+                for kind in ("incomplete", "drift", "untracked"):
+                    self.assertFalse(any(by_kind[kind]))
+
+    def test_scan_suppresses_cosmetic_only_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                src = repo / "src"
+                src.mkdir()
+                # Keep seed_repo's own 3 documents FRESH (they cite src/main.ts
+                # with git_blob = blob_hash(b"evidence") and no normalized hash).
+                (src / "main.ts").write_bytes(b"evidence")
+                # A separate source, cited by one new document, isolates the
+                # cosmetic-drift assertion from the pre-existing fixtures.
+                original = b"one\ntwo\n"
+                (src / "extra.ts").write_bytes(original)
+                value = provenance(
+                    doc_id="product_drift", path="docs/product/drift.md", tier="spine",
+                    target_depth="orientation", section_id="main",
+                    source_path="src/extra.ts", source_blob=blob_hash(original),
+                    normalized_blob=normalized_blob_hash(original),
+                )
+                doc = {
+                    "id": "product_drift", "title": "Product Drift",
+                    "description": "Fixture description for product drift.",
+                    "type": "generic", "path": "docs/product/drift.md", "group": "product",
+                    "selection": {"origins": [{"kind": "dynamic", "id": "generic"}], "evidence": []},
+                    "status": "generated", "requires": [], "scaffold_template": "unused",
+                    "target_depth": "orientation", "write_order": 21,
+                    "provenance_mode": "sections", "audit_profile": "standard",
+                    "provenance": value, "audit": None,
+                }
+                manifest = load_manifest(repo)
+                manifest["documents"].append(doc)
+                (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                target = repo / doc["path"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(markdown_with_provenance(value, "# Drift\n"), encoding="utf-8")
+                # Whitespace/EOL-only change relative to git_blob; git_blob_normalized still matches.
+                (src / "extra.ts").write_bytes(b"one\r\ntwo  \r\n")
+                result = run_dashboard(runtime, "scan", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertNotIn("[drift]", result.stdout)
 
     def test_start_reports_scan_findings_before_building(self) -> None:
+        # `untracked` is advisory-only (never blocking): `start` still
+        # builds and serves, it just prints the finding and the suggestion.
         env, _bin = fake_npm_env()
         with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            seed_repo(repo)
-            (repo / "docs" / "product" / "untracked.md").write_text("# Untracked\n", encoding="utf-8")
-            try:
-                result = run_dashboard("py", "start", "--repo", str(repo), "--no-open", env=env)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn("you should revise again", result.stdout)
-                self.assertIn("[untracked]", result.stdout)
-                self.assertIn("converted 3 documents", result.stdout)
-            finally:
-                stop_dashboard("py", repo)
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                (repo / "docs" / "product" / "untracked.md").write_text("# Untracked\n", encoding="utf-8")
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("you should revise again", result.stdout)
+                    self.assertIn("[untracked]", result.stdout)
+                    self.assertNotIn("[untracked] (blocking)", result.stdout)
+                    self.assertIn("converted 3 documents", result.stdout)
+                finally:
+                    stop_dashboard(runtime, repo)
 
 
 if __name__ == "__main__":

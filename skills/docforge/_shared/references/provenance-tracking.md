@@ -10,7 +10,7 @@ provenance 2.0:
 ```yaml
 ---
 docforge_provenance:
-  schema: "2.0"
+  schema: "2.1"
   doc_id: "architecture_constraints"
   path: "docs/architecture/constraints.md"
   generated_at: "2026-07-27T09:12:44Z"
@@ -29,6 +29,11 @@ docforge_provenance:
       sources:
         - path: "src/server.js"
           git_blob: "3b18e512dba79e4c8300dd08aeb37f8e728b8dad"
+          git_blob_normalized: "9af3c1de1b6f0a7c4e2d8b5f0163a2c9e8d7f4b1"
+          evidence_range:
+            start: "40"
+            end: "58"
+          range_blob: "c81e728d9d4c2f636f067f89cc14862c6c47f4b7"
           role: "code"
       unresolved: []
 ---
@@ -37,7 +42,8 @@ docforge_provenance:
 The codec in `runtime/cli/python/provenance_frontmatter.py` / `runtime/cli/js/provenance_frontmatter.js` owns emit and parse. It
 writes a deterministic YAML subset: 2-space indent, fixed key order, and every
 scalar double-quoted. It rejects anchors, aliases, block scalars, multi-document
-markers, and non-empty flow collections. `schema` is always `2.0`.
+markers, and non-empty flow collections. `schema` is `2.0` or `2.1`; new
+writes stamp `2.1`, and existing `2.0` documents never need to change.
 
 `doc_id` and `path` identify the manifest entry. `generated_at` and optional
 `git_commit` identify the write activity. `generator.name` and
@@ -59,6 +65,18 @@ Each section `id` is a Markdown heading anchor. Its sources use repository-
 relative file paths, a Git blob hash of the working-tree bytes, and one role:
 `code`, `config`, `manifest`, `doc`, `test`, or `history`. `unresolved` lists
 typed external tokens intentionally retained in that section.
+
+Optional per-source `git_blob_normalized` is a whitespace/line-ending-
+normalized whole-file blob hash (`^[0-9a-f]{40}$`); optional `evidence_range`
+(`{start, end}`, 1-indexed inclusive) plus `range_blob` scope a source to a
+specific line span. Both exist purely so `check_staleness` can prove a raw
+blob mismatch is cosmetic rather than a real change — see "Staleness results"
+below. Stamp both with `hash_evidence.{py,js}` (see
+[`../runtime/manifest/README.md`](../runtime/manifest/README.md)), never by
+hand: unlike `git_blob`, which matches ubiquitous `git hash-object`, these two
+have no standard-tool equivalent, so an ad hoc reimplementation risks quietly
+diverging from what `check_staleness` recomputes later. Malformed values are
+treated as absent, never as a lint defect.
 
 ### Deterministic PROV core projection
 
@@ -158,7 +176,9 @@ silently skips malformed frontmatter.
 - `unknown section`: a section id does not match a Markdown heading anchor.
 
 Written documents also fail when any required top-level value is absent,
-tokenized, or inconsistent with the manifest.
+tokenized, or inconsistent with the manifest. `git_blob_normalized`,
+`evidence_range`, and `range_blob` are optional per source; a malformed value
+is treated as absent rather than a defect.
 
 ## Staleness results
 
@@ -166,15 +186,21 @@ tokenized, or inconsistent with the manifest.
 - `PARTIAL` with `STALE`: a source's current blob differs.
 - `PARTIAL` with `MISSING`: a recorded source is absent.
 - `PARTIAL` with `NO_BLOB`: a source has no valid recorded blob.
+- `PARTIAL` with `COSMETIC`: a source's raw blob differs, but its recorded
+  `git_blob_normalized` or `range_blob` still matches the current file — the
+  cited content is unchanged (whitespace/EOL reflow, or an edit outside the
+  cited range). Non-blocking: it does not force re-grounding, and it never
+  blocks `check_staleness`'s exit code.
 - `UNPARSEABLE`: document frontmatter cannot be parsed during synchronization.
 - `UNTRACKED`: provenance is missing, empty, or legacy.
 
 Use `--document <id|path>` to limit sync and the report to one manifest entry,
 and `--section <id>` to filter sections. Single-document update / refresh
 follows the staleness-first path in
-[`../workflows/revision.md`](../workflows/revision.md): preserve `FRESH`
-sections, re-ground only `PARTIAL` ones, and fully rewrite only when the
-document is `UNTRACKED` **or its structure / format / content deviates from
-the current template** (revise's template-conformance rule). A missing source
-remains a review signal because the behavior may have moved; do not delete
-the documented claim automatically.
+[`../workflows/revision.md`](../workflows/revision.md): preserve `FRESH` and
+`COSMETIC` sections, re-ground only the blocking `PARTIAL` (`STALE` /
+`MISSING` / `NO_BLOB`) ones, and fully rewrite only when the document is
+`UNTRACKED` **or its structure / format / content deviates from the current
+template** (revise's template-conformance rule). A missing source remains a
+review signal because the behavior may have moved; do not delete the
+documented claim automatically.

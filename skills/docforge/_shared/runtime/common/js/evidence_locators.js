@@ -1,10 +1,10 @@
 "use strict";
 /** Validate immutable implementation evidence locators in generated Markdown. */
 
-const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const pf = require("./provenance_frontmatter.js");
+const { lineCount, rangeBlobHash, rawBlobHash } = require("./evidence_hash.js");
 
 const LOCATOR = /([A-Za-z0-9][A-Za-z0-9_./-]*)#L([1-9]\d*)-L([1-9]\d*) @ ([0-9a-f]{40})/g;
 const HEADING = /^(#{1,6})\s+(.*\S)\s*$/;
@@ -49,9 +49,12 @@ function validateLocators(document, text = null) {
       if (path.posix.isAbsolute(rel) || rel.split("/").includes("..")) { defects.push({ kind: "evidence path escape", line: lineNumber, detail: rel }); continue; }
       const target = path.resolve(repo, ...rel.split("/"));
       if (!fs.existsSync(target) || !fs.statSync(target).isFile() || !(target === repo || target.startsWith(`${repo}${path.sep}`))) { defects.push({ kind: "evidence source missing", line: lineNumber, detail: rel }); continue; }
-      const bytes = fs.readFileSync(target); const expected = crypto.createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`, "ascii"), bytes])).digest("hex");
-      if (digest !== expected) defects.push({ kind: "stale evidence blob", line: lineNumber, detail: rel });
-      if (end < start || end > bytes.toString("utf8").split(/\r?\n/).length) defects.push({ kind: "invalid evidence range", line: lineNumber, detail: `${rel}#L${start}-L${end}` });
+      const bytes = fs.readFileSync(target);
+      const wholeFile = rawBlobHash(bytes);
+      const scoped = rangeBlobHash(bytes, start, end);
+      if (digest !== wholeFile && digest !== scoped) defects.push({ kind: "stale evidence blob", line: lineNumber, detail: rel });
+      const count = lineCount(bytes);
+      if (end < start || count === null || end > count) defects.push({ kind: "invalid evidence range", line: lineNumber, detail: `${rel}#L${start}-L${end}` });
       const heading = [...headings].reverse().find(([headingLine]) => headingLine <= lineNumber);
       if (!heading) defects.push({ kind: "unknown evidence heading", line: lineNumber, detail: rel });
       else if (!(sourcePairs.get(heading[1]) || new Set()).has(`${rel}\0${digest}`)) defects.push({ kind: "evidence provenance mismatch", line: lineNumber, detail: rel });

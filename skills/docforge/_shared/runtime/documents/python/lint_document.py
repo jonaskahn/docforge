@@ -45,6 +45,7 @@ from runtime.common.python.provenance_frontmatter import (
     PROVENANCE_FIELDS,
     SCAFFOLD_TOKEN,
     SOURCE_ROLES,
+    SUPPORTED_SCHEMA_VERSIONS,
     parse_frontmatter as codec_parse_frontmatter,
     parse_yaml_mapping,
     split_frontmatter,
@@ -177,7 +178,7 @@ def provenance_defects(path: Path, text: str) -> list[dict]:
             or not graph[key]
             or SCAFFOLD_TOKEN.fullmatch(graph[key])
         )
-    if missing or invalid or provenance.get("schema") != "2.0" or "graph_snapshot" in provenance:
+    if missing or invalid or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS or "graph_snapshot" in provenance:
         detail = ", ".join(missing + [f"non-concrete {item}" for item in invalid])
         defects.append({
             "kind": "missing provenance", "line": 1,

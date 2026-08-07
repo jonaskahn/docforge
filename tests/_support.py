@@ -115,6 +115,28 @@ def blob_hash(content: bytes) -> str:
     return hashlib.sha1(f"blob {len(content)}\0".encode("ascii") + content).hexdigest()
 
 
+def normalized_blob_hash(content: bytes) -> str:
+    """Independent reimplementation of evidence_hash's normalization (CRLF/CR
+    -> LF, trailing whitespace stripped per line, trailing blank lines
+    dropped) — deliberately not importing the runtime module, so tests treat
+    it as a black box rather than asserting self-consistency."""
+    text = re.sub(rb"\r\n|\r", b"\n", content).decode("utf-8")
+    lines = [line.rstrip(" \t") for line in text.split("\n")]
+    while lines and lines[-1] == "":
+        lines.pop()
+    normalized_bytes = b"" if not lines else ("\n".join(lines) + "\n").encode("utf-8")
+    return blob_hash(normalized_bytes)
+
+
+def range_blob_hash(content: bytes, start: int, end: int) -> str:
+    """Independent reimplementation of evidence_hash's 1-indexed inclusive
+    line-range hashing."""
+    lines = re.sub(rb"\r\n|\r", b"\n", content).decode("utf-8").split("\n")
+    if lines and lines[-1] == "" and content.endswith((b"\n", b"\r")):
+        lines.pop()
+    return blob_hash("\n".join(lines[start - 1:end]).encode("utf-8"))
+
+
 def provenance(
     *,
     doc_id: str,
@@ -125,7 +147,18 @@ def provenance(
     source_path: str,
     source_blob: str,
     role: str = "code",
+    normalized_blob: str | None = None,
+    evidence_range: tuple[int, int] | None = None,
+    range_blob: str | None = None,
 ) -> dict:
+    source = {"path": source_path, "git_blob": source_blob}
+    if normalized_blob is not None:
+        source["git_blob_normalized"] = normalized_blob
+    if evidence_range is not None:
+        source["evidence_range"] = {"start": str(evidence_range[0]), "end": str(evidence_range[1])}
+    if range_blob is not None:
+        source["range_blob"] = range_blob
+    source["role"] = role
     return {
         "schema": "2.0",
         "doc_id": doc_id,
@@ -137,7 +170,7 @@ def provenance(
         "graph": {"provider": "gitnexus", "flow": "native"},
         "sections": [{
             "id": section_id,
-            "sources": [{"path": source_path, "git_blob": source_blob, "role": role}],
+            "sources": [source],
             "unresolved": [],
         }],
     }

@@ -56,6 +56,7 @@ Always put the command/subcommand before flags (e.g.
 | `manage_manifest` | `init` / `add` / `set` / `presentation` / `status` / `audit` / `reconcile` / `finish` |
 | `scaffold_docs` | Dry-run tree, one-document materialize, manifest audit |
 | `check_staleness` | Provenance blob drift + optional sync |
+| `hash_evidence` | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one source |
 | `migrate_metadata` | Idempotent metadata / provenance upgrade |
 | `flow_index` | Harvest / revise / organize / render flow matrix |
 | `derive_flow_graph` | Provisional flow-graph prepare/write |

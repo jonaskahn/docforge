@@ -226,7 +226,7 @@ function provenanceDefects(repo, doc, text, tier) {
   if (!generator || typeof generator !== "object" || !("name" in generator) || !("version" in generator)) {
     missing.push("generator.name/version");
   }
-  if (missing.length || provenance.schema !== "2.0" || "graph_snapshot" in provenance) {
+  if (missing.length || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema) || "graph_snapshot" in provenance) {
     const detail = missing.length ? missing.join(", ") : "invalid schema or obsolete graph_snapshot";
     result["missing provenance"].push(`${doc.path}: ${detail}`);
   }

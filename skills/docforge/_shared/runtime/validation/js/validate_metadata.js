@@ -20,6 +20,7 @@ const PUBLIC_CONTRACTS = {
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
+  hash_evidence: ["--repo", "--path", "--range", "--json"],
   flow_index: ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
   query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route"],
@@ -53,8 +54,11 @@ function validate() {
     errors.push("provenance-schema.json is missing");
   } else {
     const provenanceSchema = readJson(provenanceSchemaPath);
-    if ((((provenanceSchema.properties || {}).schema || {}).const) !== pf.SCHEMA_VERSION) {
-      errors.push("provenance schema must require schema 2.0");
+    const schemaVersions = new Set((((provenanceSchema.properties || {}).schema || {}).enum) || []);
+    const supported = pf.SUPPORTED_SCHEMA_VERSIONS;
+    const sameSet = schemaVersions.size === supported.size && [...supported].every((v) => schemaVersions.has(v));
+    if (!sameSet) {
+      errors.push(`provenance schema must allow exactly ${[...supported].sort().join(", ")}`);
     }
   }
   if (catalog.version !== CATALOG_VERSION) errors.push(`catalog version must be ${CATALOG_VERSION}`);
@@ -198,7 +202,7 @@ function validate() {
       errors.push(`${name}: provenance frontmatter is missing generator`);
     }
     if (provenance.schema !== pf.SCHEMA_VERSION || "graph_snapshot" in provenance) {
-      errors.push(`${name}: provenance frontmatter must use schema 2.0`);
+      errors.push(`${name}: provenance frontmatter must use schema ${pf.SCHEMA_VERSION}`);
     }
   }
   const cliPy = path.join(SKILL_ROOT, "runtime", "cli", "python");

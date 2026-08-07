@@ -83,24 +83,31 @@ for the full lifecycle and isolation rules.
 
 ## Preflight gates
 
-`start` runs three gates before it opens the dashboard; the full procedure and
-exact wording are owned by
+`start` runs three preflight checks before it opens the dashboard; the full
+procedure and exact wording are owned by
 [`../docforge/_shared/workflows/dashboard.md`](../docforge/_shared/workflows/dashboard.md),
-which this entrypoint's load order already pulls in. `--auto-accept` bypasses
-none of them.
+which this entrypoint's load order already pulls in.
 
 - **Legacy manifest** — a pre-3.0 `.docforge/manifest.json` (1.1
   `project_context` / `document_groups`, 2.0 flat `documents`, or any other
-  legacy shape) stops with a three-option gate: revise all, update metadata
-  only (`migrate_metadata` re-registers **any** legacy version as 3.2), or
-  stop. `--plan-only` runs the `migrate_metadata.{py,js} --dry-run` preview.
+  legacy shape) is auto-migrated to 3.2 automatically, never a stop-and-ask
+  gate: `migrate_metadata` (**any** legacy version, re-registered) is
+  idempotent and only ever touches the manifest and document frontmatter,
+  never bodies. The migration is always printed, never silent. `--plan-only`
+  runs the `migrate_metadata.{py,js} --dry-run` preview instead of migrating;
+  `scan`/`status` stay strictly read-only and never migrate.
 - **Scan** — findings (missing metadata, incomplete documents, stale sources,
-  broken links, untracked `docs/` files) print in full and recommend
-  `/docforge-revise` before the dashboard is trusted; a clean scan means ready
-  to render.
+  broken links, route-plan problems, untracked `docs/` files) print in full
+  and recommend `/docforge-revise`, each tagged blocking or advisory. A
+  blocking finding (broken links, route-plan problems, or metadata errors on
+  an included document) stops `start` before any build is attempted;
+  advisory-only findings (or a clean scan) still let the dashboard render.
 - **Build failure** — a failed `start` is **not** opened and no previous build
   is presented as current; revise first, then re-run once the whole-tree gate
   passes.
+
+`--auto-accept` never suppresses the scan or build-failure findings above —
+the recommendation to revise is never silent.
 
 ## Not this command
 

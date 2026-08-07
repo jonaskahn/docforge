@@ -14,7 +14,8 @@ import json
 import re
 from typing import Any
 
-SCHEMA_VERSION = "2.0"
+SCHEMA_VERSION = "2.1"
+SUPPORTED_SCHEMA_VERSIONS = frozenset({"2.0", "2.1"})
 LEGACY_SCHEMA = "1.0"
 GENERATOR_NAME = "docforge"
 GENERATOR_VERSION = "2.8.0"
@@ -38,7 +39,10 @@ PROVENANCE_KEY_ORDER = [
 GENERATOR_KEY_ORDER = ["name", "version"]
 GRAPH_KEY_ORDER = ["provider", "flow"]
 SECTION_KEY_ORDER = ["id", "sources", "unresolved"]
-SOURCE_KEY_ORDER = ["path", "git_blob", "role"]
+SOURCE_KEY_ORDER = [
+    "path", "git_blob", "git_blob_normalized", "evidence_range", "range_blob", "role",
+]
+EVIDENCE_RANGE_KEY_ORDER = ["start", "end"]
 REVIEW_KEY_ORDER = ["mode", "verdict", "report"]
 
 
@@ -133,10 +137,32 @@ def normalize_sections(sections: Any) -> list[dict]:
                 blob = source.get("git_blob")
                 if not isinstance(path, str) or not path or not isinstance(blob, str) or not blob:
                     continue
+                entry: dict[str, Any] = {"path": path, "git_blob": blob}
+                normalized_blob = source.get("git_blob_normalized")
+                if isinstance(normalized_blob, str) and BLOB.fullmatch(normalized_blob):
+                    entry["git_blob_normalized"] = normalized_blob
+                evidence_range = source.get("evidence_range")
+                range_blob = source.get("range_blob")
+                if (
+                    isinstance(evidence_range, dict)
+                    and isinstance(evidence_range.get("start"), str)
+                    and evidence_range["start"].isdigit()
+                    and evidence_range["start"] != "0"
+                    and isinstance(evidence_range.get("end"), str)
+                    and evidence_range["end"].isdigit()
+                    and int(evidence_range["end"]) >= int(evidence_range["start"])
+                    and isinstance(range_blob, str) and BLOB.fullmatch(range_blob)
+                ):
+                    entry["evidence_range"] = {
+                        "start": evidence_range["start"],
+                        "end": evidence_range["end"],
+                    }
+                    entry["range_blob"] = range_blob
                 role = source.get("role")
                 if role not in SOURCE_ROLES:
                     role = infer_source_role(path)
-                sources.append({"path": path, "git_blob": blob, "role": role})
+                entry["role"] = role
+                sources.append(entry)
         unresolved = section.get("unresolved")
         normalized.append({
             "id": str(section.get("id") or "main"),
@@ -161,7 +187,7 @@ def migrate_v1_to_v2(
         raise YamlCodecError("provenance must be an object")
     defaults = defaults if isinstance(defaults, dict) else {}
     schema = provenance.get("schema")
-    if schema == SCHEMA_VERSION and "generator" in provenance:
+    if schema in SUPPORTED_SCHEMA_VERSIONS and "generator" in provenance:
         migrated = dict(provenance)
         if isinstance(migrated.get("sections"), list):
             migrated["sections"] = normalize_sections(migrated["sections"])
@@ -282,10 +308,28 @@ def _emit_mapping(lines: list[str], mapping: dict, key_order: list[str], indent:
                                                 continue
                                             nested_bullet = "- " if nested_first else "  "
                                             nested_first = False
-                                            lines.append(
-                                                f"{prefix}      {nested_bullet}{nested_key}: "
-                                                f"{quote_scalar(str(nested[nested_key]))}"
-                                            )
+                                            nested_value = nested[nested_key]
+                                            if isinstance(nested_value, dict):
+                                                lines.append(
+                                                    f"{prefix}      {nested_bullet}{nested_key}:"
+                                                )
+                                                sub_order = (
+                                                    EVIDENCE_RANGE_KEY_ORDER
+                                                    if nested_key == "evidence_range"
+                                                    else list(nested_value.keys())
+                                                )
+                                                for sub_key in sub_order:
+                                                    if sub_key not in nested_value:
+                                                        continue
+                                                    lines.append(
+                                                        f"{prefix}          {sub_key}: "
+                                                        f"{quote_scalar(str(nested_value[sub_key]))}"
+                                                    )
+                                            else:
+                                                lines.append(
+                                                    f"{prefix}      {nested_bullet}{nested_key}: "
+                                                    f"{quote_scalar(str(nested_value))}"
+                                                )
                                     else:
                                         lines.append(
                                             f"{prefix}      - {quote_scalar(str(nested))}"
@@ -482,7 +526,7 @@ def parse_frontmatter(text: str) -> tuple[str, dict | None, int]:
         return "missing", None, end
     if "schema" not in provenance:
         return "legacy", provenance, end
-    if provenance.get("schema") != SCHEMA_VERSION or "tool_version" in provenance:
+    if provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS or "tool_version" in provenance:
         return "obsolete", provenance, end
     return "ok", provenance, end
 

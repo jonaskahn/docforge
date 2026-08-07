@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 from pathlib import Path
 
 from runtime.common.python.provenance_frontmatter import parse_frontmatter
+from runtime.common.python.evidence_hash import line_count, range_blob_hash, raw_blob_hash
 
 LOCATOR_RE = re.compile(r"(?P<path>[A-Za-z0-9][A-Za-z0-9_./-]*)#L(?P<start>[1-9]\d*)-L(?P<end>[1-9]\d*) @ (?P<blob>[0-9a-f]{40})")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
@@ -74,10 +74,12 @@ def validate_locators(document: Path, text: str | None = None) -> list[dict]:
                 defects.append({"kind": "evidence source missing", "line": line_number, "detail": rel})
                 continue
             actual = target.read_bytes()
-            expected = hashlib.sha1(f"blob {len(actual)}\0".encode("ascii") + actual).hexdigest()
-            if digest != expected:
+            whole_file = raw_blob_hash(actual)
+            scoped = range_blob_hash(actual, start, end)
+            if digest != whole_file and digest != scoped:
                 defects.append({"kind": "stale evidence blob", "line": line_number, "detail": rel})
-            if end < start or end > len(actual.splitlines()):
+            count = line_count(actual)
+            if end < start or count is None or end > count:
                 defects.append({"kind": "invalid evidence range", "line": line_number, "detail": f"{rel}#L{start}-L{end}"})
             heading = next((anchor for heading_line, anchor in reversed(headings) if heading_line <= line_number), None)
             if heading is None:

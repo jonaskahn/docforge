@@ -128,6 +128,21 @@ For the next document in `write_order` (serial mode):
      (`code`, `config`, `manifest`, `doc`, `test`, or `history`) and
      `git_blob` = the SHA-1 of `blob <len>\0` + file bytes (same value as
       `git hash-object <path>` and `check_staleness.{py,js}`'s blob helper).
+   - Always additionally stamp `git_blob_normalized` — the same blob-style
+     SHA-1 but over the file's bytes after normalizing line endings
+     (CRLF/CR -> LF), stripping trailing whitespace per line, and stripping
+     trailing blank lines at EOF; omit the field only when the file is not
+     UTF-8 text. When a claim cites a specific line range rather than the
+     whole file, also record `evidence_range: {start, end}` (1-indexed,
+     inclusive, same convention as the `path#Lstart-Lend` body-text evidence
+     locators) and `range_blob` — the blob-style SHA-1 of just those lines'
+     bytes. Compute all three with one command so every write turn hashes
+     identically to what `check_staleness.{py,js}` recomputes later:
+     `hash_evidence.{py,js} --repo <repo> --path <path> [--range <start>-<end>]
+     --json`. Never hand-derive `git_blob_normalized` or `range_blob` — unlike
+     `git_blob` (which matches ubiquitous `git hash-object`), these two have no
+     standard-tool equivalent, so an ad hoc reimplementation risks silently
+     diverging from what `check_staleness` recomputes later.
    - Empty `sections: []` is valid only while the document is `planned` or a
      fresh scaffold; lint rejects empty sections for written documents.
    - Filled example and field rules:

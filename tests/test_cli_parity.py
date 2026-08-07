@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import initialize, load_manifest, run, write_flow_index
+from _support import blob_hash, initialize, load_manifest, markdown_with_provenance, normalized, normalized_blob_hash, provenance, run, write_flow_index
 
 
 class RuntimeParityTests(unittest.TestCase):
@@ -149,6 +149,45 @@ class RuntimeParityTests(unittest.TestCase):
                 self.assertIn("build/\n", ignore)
                 results.append((settings, ignore))
             self.assertEqual(results[0], results[1])
+
+    def test_check_staleness_cosmetic_status_output_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("one\ntwo\n", encoding="utf-8")
+            raw_blob = blob_hash(source.read_bytes())
+            norm_blob = normalized_blob_hash(source.read_bytes())
+            doc = repo / "README.md"
+            value = provenance(
+                doc_id="root_readme", path="README.md", tier="spine",
+                target_depth="overview", section_id="readme",
+                source_path="source.txt", source_blob=raw_blob,
+                normalized_blob=norm_blob,
+            )
+            doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
+            manifest = {
+                "version": "3.1", "project": {"root": str(repo)},
+                "documents": [{
+                    "id": "root_readme", "type": "root-readme", "path": "README.md",
+                    "status": "complete", "provenance_mode": "sections", "provenance": value,
+                }],
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            source.write_text("one\r\ntwo  \r\n", encoding="utf-8")
+            outputs = {}
+            for runtime in ("py", "js"):
+                plain = run(runtime, "check_staleness", "--manifest", str(manifest_path))
+                self.assertEqual(plain.returncode, 0, plain.stderr)
+                as_json = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--json")
+                self.assertEqual(as_json.returncode, 0, as_json.stderr)
+                outputs[runtime] = (
+                    normalized(plain.stdout, [repo]),
+                    normalized(as_json.stdout, [repo]),
+                )
+            self.assertEqual(outputs["py"], outputs["js"])
+            self.assertIn("COSMETIC", outputs["py"][0])
 
     def test_docforge_finish_parity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

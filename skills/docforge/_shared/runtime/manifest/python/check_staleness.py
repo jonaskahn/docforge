@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -13,21 +12,19 @@ from runtime.common.python._util import fail, load_manifest
 from .migrate_metadata import ensure_migrated
 from runtime.common.python.provenance_frontmatter import (
     BLOB,
+    SUPPORTED_SCHEMA_VERSIONS,
     migrate_v1_to_v2,
     parse_frontmatter,
     rewrite_frontmatter,
     split_frontmatter,
 )
+from runtime.common.python.evidence_hash import classify_source, git_blob_for_path
 
 WRITTEN = {"generated", "needs_review", "complete"}
 
 
 def git_blob(path: Path) -> str | None:
-    if not path.is_file():
-        return None
-    content = path.read_bytes()
-    header = f"blob {len(content)}\0".encode("ascii")
-    return hashlib.sha1(header + content).hexdigest()
+    return git_blob_for_path(path)
 
 
 def matches_document(doc: dict, document_filter: str | None) -> bool:
@@ -101,7 +98,7 @@ def check(
             results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "missing provenance"})
             clean = False
             continue
-        if provenance.get("schema") != "2.0" or "tool_version" in provenance:
+        if provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS or "tool_version" in provenance:
             results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "obsolete schema"})
             clean = False
             continue
@@ -120,31 +117,35 @@ def check(
             continue
         if section_filter is not None and not matching:
             continue
-        stale = []
+        findings = []
+        has_blocking = False
         for section in matching:
             for source in section.get("sources", []):
                 source_path = source.get("path", "")
                 recorded = source.get("git_blob")
                 if not isinstance(recorded, str) or not BLOB.fullmatch(recorded):
-                    stale.append({
+                    findings.append({
                         "doc": doc["path"], "status": "PARTIAL",
                         "section": section.get("id"), "file_status": "NO_BLOB", "file": source_path,
                     })
+                    has_blocking = True
                     continue
-                current = git_blob(repo / source_path)
-                if current is None:
-                    stale.append({
-                        "doc": doc["path"], "status": "PARTIAL",
-                        "section": section.get("id"), "file_status": "MISSING", "file": source_path,
-                    })
-                elif current != recorded:
-                    stale.append({
-                        "doc": doc["path"], "status": "PARTIAL",
-                        "section": section.get("id"), "file_status": "STALE", "file": source_path,
-                    })
-        if stale:
-            results.extend(stale)
-            clean = False
+                target = repo / source_path
+                current_bytes = target.read_bytes() if target.is_file() else None
+                outcome = classify_source(source, current_bytes)
+                if outcome == "fresh":
+                    continue
+                file_status = {"missing": "MISSING", "cosmetic": "COSMETIC", "stale": "STALE"}[outcome]
+                findings.append({
+                    "doc": doc["path"], "status": "PARTIAL",
+                    "section": section.get("id"), "file_status": file_status, "file": source_path,
+                })
+                if outcome != "cosmetic":
+                    has_blocking = True
+        if findings:
+            results.extend(findings)
+            if has_blocking:
+                clean = False
         else:
             results.append({"doc": doc["path"], "status": "FRESH"})
     return results, clean

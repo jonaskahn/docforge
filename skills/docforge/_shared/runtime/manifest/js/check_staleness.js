@@ -2,20 +2,17 @@
 "use strict";
 /** Check Docforge section provenance using only JSON and Node built-ins. */
 
-const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { fail, loadManifest } = require("../../common/js/_util.js");
 const { ensureMigrated } = require("./migrate_metadata.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
+const { classifySource, gitBlobForPath } = require("../../common/js/evidence_hash.js");
 
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 
 function gitBlob(target) {
-  if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return null;
-  const content = fs.readFileSync(target);
-  const header = Buffer.from(`blob ${content.length}\0`, "ascii");
-  return crypto.createHash("sha1").update(header).update(content).digest("hex");
+  return gitBlobForPath(fs, target);
 }
 
 function matchesDocument(doc, documentFilter) {
@@ -84,7 +81,7 @@ function check(manifest, repo, sectionFilter, skipped = new Set(), documentFilte
       clean = false;
       continue;
     }
-    if (provenance.schema !== "2.0" || "tool_version" in provenance) {
+    if (!pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema) || "tool_version" in provenance) {
       results.push({ doc: doc.path, status: "UNTRACKED", detail: "obsolete schema" });
       clean = false;
       continue;
@@ -102,25 +99,28 @@ function check(manifest, repo, sectionFilter, skipped = new Set(), documentFilte
       continue;
     }
     if (sectionFilter !== undefined && !matching.length) continue;
-    const stale = [];
+    const findings = [];
+    let hasBlocking = false;
+    const statusMap = { missing: "MISSING", cosmetic: "COSMETIC", stale: "STALE" };
     for (const section of matching) {
       for (const source of section.sources || []) {
         const sourcePath = source.path || "";
         if (typeof source.git_blob !== "string" || !pf.BLOB.test(source.git_blob)) {
-          stale.push({ doc: doc.path, status: "PARTIAL", section: section.id, file_status: "NO_BLOB", file: sourcePath });
+          findings.push({ doc: doc.path, status: "PARTIAL", section: section.id, file_status: "NO_BLOB", file: sourcePath });
+          hasBlocking = true;
           continue;
         }
-        const current = gitBlob(path.join(repo, ...sourcePath.split("/")));
-        if (current === null) {
-          stale.push({ doc: doc.path, status: "PARTIAL", section: section.id, file_status: "MISSING", file: sourcePath });
-        } else if (current !== source.git_blob) {
-          stale.push({ doc: doc.path, status: "PARTIAL", section: section.id, file_status: "STALE", file: sourcePath });
-        }
+        const target = path.join(repo, ...sourcePath.split("/"));
+        const currentBytes = (fs.existsSync(target) && fs.statSync(target).isFile()) ? fs.readFileSync(target) : null;
+        const outcome = classifySource(source, currentBytes);
+        if (outcome === "fresh") continue;
+        findings.push({ doc: doc.path, status: "PARTIAL", section: section.id, file_status: statusMap[outcome], file: sourcePath });
+        if (outcome !== "cosmetic") hasBlocking = true;
       }
     }
-    if (stale.length) {
-      results.push(...stale);
-      clean = false;
+    if (findings.length) {
+      results.push(...findings);
+      if (hasBlocking) clean = false;
     } else {
       results.push({ doc: doc.path, status: "FRESH" });
     }

@@ -1,7 +1,7 @@
 # Manifest runtime
 
 The persistent Docforge plan/status lifecycle, provenance staleness checking,
-and metadata migration. All three scripts are paired Python/JS public
+and metadata migration. All four scripts are paired Python/JS public
 commands with launchers in [`runtime/cli/`](../cli/README.md).
 
 ## Load this when
@@ -10,6 +10,8 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
   presentation; recording audits → `manage_manifest`.
 - Checking whether written documents drifted from their source blobs →
   `check_staleness`.
+- Stamping `git_blob_normalized` / `range_blob` while grounding a section →
+  `hash_evidence`.
 - Loading legacy state (manifest 3.1 / 3.0 / provenance 1.0 or pre-3.0 shapes) →
   `migrate_metadata`.
 
@@ -18,8 +20,9 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
 | Script | js/py | Kind | Purpose |
 |---|---|---|---|
 | `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `reconcile` / `finish` |
-| `check_staleness` | both | CLI | Provenance blob drift report; optional provenance sync |
-| `migrate_metadata` | both | CLI | Idempotent manifest 3.2 / provenance 2.0 upgrade |
+| `check_staleness` | both | CLI | Provenance blob drift report (raw / normalized / range-scoped); optional provenance sync |
+| `hash_evidence` | both | CLI | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one cited source |
+| `migrate_metadata` | both | CLI | Idempotent manifest 3.2 / provenance 2.1 upgrade |
 
 ## Details
 
@@ -49,10 +52,28 @@ python3 runtime/cli/python/check_staleness.py --manifest <path> \
 ```
 
 Default is read-only: reports `FRESH`, `PARTIAL` (`NO_BLOB` / `MISSING` /
-`STALE`), `UNTRACKED`, or `UNPARSEABLE`. `--sync-provenance` **mutates**: may
-migrate metadata first, rewrite obsolete document frontmatter, copy provenance
-into the manifest, and rewrite the manifest. Exit `0` clean, `1` stale/untracked,
-`2` error.
+`STALE` / `COSMETIC`), `UNTRACKED`, or `UNPARSEABLE`. A `COSMETIC` finding
+means the raw blob differs but a source's recorded `git_blob_normalized` or
+`range_blob` still matches the current file — whitespace/EOL-only, or the
+cited range is untouched — so it does not force re-grounding.
+`--sync-provenance` **mutates**: may migrate metadata first, rewrite obsolete
+document frontmatter, copy provenance into the manifest, and rewrite the
+manifest. Exit `0` when every finding is `FRESH`/`COSMETIC`, `1` when any
+`STALE`/`MISSING`/`NO_BLOB`/`UNTRACKED`/`UNPARSEABLE` finding exists, `2` error.
+
+### `hash_evidence`
+
+```sh
+python3 runtime/cli/python/hash_evidence.py --repo <repo> --path <repo-relative-path> \
+  [--range <start>-<end>] [--json]
+```
+
+Prints `git_blob` (matches `git hash-object`) and `git_blob_normalized`
+(whitespace/EOL-normalized) for the file; with `--range <start>-<end>`
+(1-indexed, inclusive), also prints `evidence_range` and `range_blob` scoped
+to just that line span. Read-only. Exit `0` success, `2` error (path escapes
+the repo, file missing, or `--range` given against an out-of-bounds or
+non-UTF-8 span).
 
 ### `migrate_metadata`
 
@@ -60,7 +81,7 @@ into the manifest, and rewrite the manifest. Exit `0` clean, `1` stale/untracked
 python3 runtime/cli/python/migrate_metadata.py --repo <repo> [--manifest <path>] [--dry-run] [--report]
 ```
 
-Upgrades manifest 3.1 (or 3.0 / provenance 1.0) to 3.2 / 2.0 — seeding each
+Upgrades manifest 3.1 (or 3.0 / provenance 1.0) to 3.2 / 2.1 — seeding each
 document's catalog-owned `description` from the catalog `summary` — and
 re-registers older
 shapes; adopts legacy written documents, scaffolds incomplete provenance,
@@ -74,10 +95,11 @@ the run read-only. Exit `1` on missing documents or failed conversion.
 |---|---|
 | `manage_manifest` | [`workflows/intake.md`](../../workflows/intake.md), [`workflows/planning.md`](../../workflows/planning.md), [`workflows/writing.md`](../../workflows/writing.md), [`workflows/validation.md`](../../workflows/validation.md), [`workflows/revision.md`](../../workflows/revision.md), [`workflows/tools.md`](../../workflows/tools.md), [`references/document-audit.md`](../../references/document-audit.md), [`references/portfolio.md`](../../references/portfolio.md), plus the `docforge` / `docforge-revise` / `docforge-dashboard` SKILL.md files |
 | `check_staleness` | [`workflows/validation.md`](../../workflows/validation.md), [`workflows/revision.md`](../../workflows/revision.md), [`workflows/writing.md`](../../workflows/writing.md), [`workflows/tools.md`](../../workflows/tools.md), [`references/provenance-tracking.md`](../../references/provenance-tracking.md) |
+| `hash_evidence` | [`workflows/writing.md`](../../workflows/writing.md), [`references/provenance-tracking.md`](../../references/provenance-tracking.md) |
 | `migrate_metadata` | [`workflows/dashboard.md`](../../workflows/dashboard.md), [`workflows/revision.md`](../../workflows/revision.md), [`workflows/validation.md`](../../workflows/validation.md), [`workflows/writing.md`](../../workflows/writing.md), [`workflows/tools.md`](../../workflows/tools.md), [`references/provenance-tracking.md`](../../references/provenance-tracking.md); also invoked programmatically by `check_staleness --sync-provenance`, `scaffold_docs`, `lint_document`, `_util` |
 
 ## Boundaries
 
-Consumes `common/` libraries (`_util`, `plan`, `provenance_frontmatter`) and
-`catalog/query_catalog`. The manifest schema (3.2) and flow-index schema (1.1)
-are enforced by `validation/validate_metadata`.
+Consumes `common/` libraries (`_util`, `plan`, `provenance_frontmatter`,
+`evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.2) and
+flow-index schema (1.1) are enforced by `validation/validate_metadata`.

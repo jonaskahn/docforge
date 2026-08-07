@@ -32,6 +32,7 @@ from runtime.common.python.provenance_frontmatter import (
     LEGACY_SCHEMA,
     SCAFFOLD_TOKEN,
     SCHEMA_VERSION,
+    SUPPORTED_SCHEMA_VERSIONS,
     emit_yaml,
     migrate_v1_to_v2,
     normalize_sections,
@@ -72,7 +73,7 @@ def needs_provenance_migration(provenance: dict | None) -> bool:
         return False
     if "schema" not in provenance:
         return False
-    if provenance.get("schema") == SCHEMA_VERSION and "generator" in provenance and "tool_version" not in provenance:
+    if provenance.get("schema") in SUPPORTED_SCHEMA_VERSIONS and "generator" in provenance and "tool_version" not in provenance:
         return False
     return True
 
@@ -349,7 +350,7 @@ def migrate_document_file(
                     text=text,
                 )
         doc["provenance"] = provenance
-        result["detail"] = "already schema 2.0"
+        result["detail"] = f"already schema {provenance.get('schema')}"
         return result
     if state not in {"ok", "obsolete"} or not isinstance(provenance, dict):
         if must_complete:
@@ -359,7 +360,7 @@ def migrate_document_file(
         return regenerate_planned(
             repo, doc, manifest, dry_run, f"unsupported state {state}", text,
         )
-    if provenance.get("schema") not in {SCHEMA_VERSION, LEGACY_SCHEMA} and "tool_version" not in provenance:
+    if provenance.get("schema") not in (SUPPORTED_SCHEMA_VERSIONS | {LEGACY_SCHEMA}) and "tool_version" not in provenance:
         reason = f"unsupported schema {provenance.get('schema')}"
         if must_complete:
             return fail_document(repo, doc, manifest, dry_run, reason, text=text)
@@ -604,7 +605,7 @@ def legacy_embedded_provenance(doc: dict) -> dict | None:
     provenance = doc.get("provenance")
     if (
         isinstance(provenance, dict)
-        and provenance.get("schema") == SCHEMA_VERSION
+        and provenance.get("schema") in SUPPORTED_SCHEMA_VERSIONS
         and isinstance(provenance.get("doc_id"), str)
     ):
         return provenance
@@ -739,11 +740,11 @@ def provenance_for_legacy_file(
         "target_depth": target_depth,
     }
     if state == "ok" and isinstance(embedded_file, dict):
-        return embedded_file, "already schema 2.0", False
+        return embedded_file, f"already schema {embedded_file.get('schema')}", False
     if state in {"legacy", "obsolete"} and isinstance(embedded_file, dict):
         try:
             migrated = migrate_v1_to_v2(embedded_file, body_for_rewrite(text), defaults=defaults)
-            return migrated, "frontmatter migrated to schema 2.0", True
+            return migrated, f"frontmatter migrated to schema {SCHEMA_VERSION}", True
         except Exception as exc:  # noqa: BLE001 - best-effort conversion
             fallback = provenance_from_legacy_sections(
                 sections, doc_id, path, generated_at, tier, graph, target_depth, version

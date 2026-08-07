@@ -54,7 +54,7 @@ function needsProvenanceMigration(provenance) {
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) return false;
   if (!("schema" in provenance)) return false;
   if (
-    provenance.schema === pf.SCHEMA_VERSION
+    pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)
     && provenance.generator
     && !("tool_version" in provenance)
   ) {
@@ -301,7 +301,7 @@ function migrateDocumentFile(repo, doc, manifest, dryRun, requireComplete = null
       }
     }
     doc.provenance = parsed.provenance;
-    result.detail = "already schema 2.0";
+    result.detail = `already schema ${parsed.provenance.schema}`;
     return result;
   }
   if ((parsed.state !== "ok" && parsed.state !== "obsolete") || !parsed.provenance) {
@@ -311,7 +311,7 @@ function migrateDocumentFile(repo, doc, manifest, dryRun, requireComplete = null
     return regeneratePlanned(repo, doc, manifest, dryRun, `unsupported state ${parsed.state}`, text);
   }
   if (
-    parsed.provenance.schema !== pf.SCHEMA_VERSION
+    !pf.SUPPORTED_SCHEMA_VERSIONS.has(parsed.provenance.schema)
     && parsed.provenance.schema !== pf.LEGACY_SCHEMA
     && !("tool_version" in parsed.provenance)
   ) {
@@ -533,7 +533,7 @@ function legacyEmbeddedProvenance(doc) {
   const provenance = doc.provenance;
   if (
     provenance && typeof provenance === "object" && !Array.isArray(provenance)
-    && provenance.schema === pf.SCHEMA_VERSION && typeof provenance.doc_id === "string"
+    && pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema) && typeof provenance.doc_id === "string"
   ) {
     return provenance;
   }
@@ -622,12 +622,12 @@ function provenanceForLegacyFile(repo, docId, docPath, sections, graph, generate
   const parsed = pf.parseFrontmatter(text);
   const defaults = { doc_id: docId, path: docPath, generated_at: generatedAt, tier, target_depth: targetDepth };
   if (parsed.state === "ok" && parsed.provenance && typeof parsed.provenance === "object") {
-    return { provenance: parsed.provenance, detail: "already schema 2.0", needsRewrite: false };
+    return { provenance: parsed.provenance, detail: `already schema ${parsed.provenance.schema}`, needsRewrite: false };
   }
   if ((parsed.state === "legacy" || parsed.state === "obsolete") && parsed.provenance) {
     try {
       const migrated = pf.migrateV1ToV2(parsed.provenance, bodyForRewrite(text), defaults);
-      return { provenance: migrated, detail: "frontmatter migrated to schema 2.0", needsRewrite: true };
+      return { provenance: migrated, detail: `frontmatter migrated to schema ${pf.SCHEMA_VERSION}`, needsRewrite: true };
     } catch (error) {
       return {
         provenance: embedded ? normalizeEmbedded(embedded) : provenanceFromLegacySections(
@@ -895,4 +895,5 @@ module.exports = {
   provenanceFromManifest,
   provenanceGaps,
   markForAgentRegen,
+  MANIFEST_CURRENT,
 };

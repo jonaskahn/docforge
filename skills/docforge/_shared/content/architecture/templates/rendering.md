@@ -1,6 +1,6 @@
 ---
 docforge_provenance:
-  schema: "2.0"
+  schema: "2.1"
   doc_id: "<DOC_ID>"
   path: "<DOCUMENT_PATH>"
   generated_at: "<GENERATED_AT>"

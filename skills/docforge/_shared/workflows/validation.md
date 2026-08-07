@@ -76,9 +76,10 @@ and the staleness report to that entry (used by single-document update in
 [`revision.md`](revision.md)).
 
 `FRESH` means recorded sources still match; `PARTIAL` identifies `STALE`,
-`MISSING`, or `NO_BLOB` sources for one section; `UNPARSEABLE` identifies
-malformed document frontmatter; and `UNTRACKED` means provenance is absent,
-empty, or legacy.
+`MISSING`, `NO_BLOB`, or the non-blocking `COSMETIC` sources for one section
+(a `COSMETIC` source's normalized or range-scoped hash still matches; it does
+not require re-grounding); `UNPARSEABLE` identifies malformed document
+frontmatter; and `UNTRACKED` means provenance is absent, empty, or legacy.
 Synchronization reads every matching manifest path, including root documents,
 and changes only each document's provenance section.
 

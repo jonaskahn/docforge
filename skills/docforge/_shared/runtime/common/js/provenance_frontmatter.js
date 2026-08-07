@@ -7,7 +7,8 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = "2.0";
+const SCHEMA_VERSION = "2.1";
+const SUPPORTED_SCHEMA_VERSIONS = new Set(["2.0", "2.1"]);
 const LEGACY_SCHEMA = "1.0";
 const GENERATOR_NAME = "docforge";
 const GENERATOR_VERSION = "2.8.0";
@@ -30,7 +31,10 @@ const PROVENANCE_KEY_ORDER = [
 const GENERATOR_KEY_ORDER = ["name", "version"];
 const GRAPH_KEY_ORDER = ["provider", "flow"];
 const SECTION_KEY_ORDER = ["id", "sources", "unresolved"];
-const SOURCE_KEY_ORDER = ["path", "git_blob", "role"];
+const SOURCE_KEY_ORDER = [
+  "path", "git_blob", "git_blob_normalized", "evidence_range", "range_blob", "role",
+];
+const EVIDENCE_RANGE_KEY_ORDER = ["start", "end"];
 const REVIEW_KEY_ORDER = ["mode", "verdict", "report"];
 
 class YamlCodecError extends Error {
@@ -116,8 +120,26 @@ function normalizeSections(sections) {
         const pathValue = source.path;
         const blob = source.git_blob;
         if (typeof pathValue !== "string" || !pathValue || typeof blob !== "string" || !blob) continue;
+        const entry = { path: pathValue, git_blob: blob };
+        const normalizedBlob = source.git_blob_normalized;
+        if (typeof normalizedBlob === "string" && BLOB.test(normalizedBlob)) {
+          entry.git_blob_normalized = normalizedBlob;
+        }
+        const evidenceRange = source.evidence_range;
+        const rangeBlob = source.range_blob;
+        if (
+          evidenceRange && typeof evidenceRange === "object" && !Array.isArray(evidenceRange)
+          && typeof evidenceRange.start === "string" && /^[1-9][0-9]*$/.test(evidenceRange.start)
+          && typeof evidenceRange.end === "string" && /^[1-9][0-9]*$/.test(evidenceRange.end)
+          && Number(evidenceRange.end) >= Number(evidenceRange.start)
+          && typeof rangeBlob === "string" && BLOB.test(rangeBlob)
+        ) {
+          entry.evidence_range = { start: evidenceRange.start, end: evidenceRange.end };
+          entry.range_blob = rangeBlob;
+        }
         const role = SOURCE_ROLES.has(source.role) ? source.role : inferSourceRole(pathValue);
-        sources.push({ path: pathValue, git_blob: blob, role });
+        entry.role = role;
+        sources.push(entry);
       }
     }
     normalized.push({
@@ -134,7 +156,7 @@ function migrateV1ToV2(provenance, body = "", defaults = {}) {
     throw new YamlCodecError("provenance must be an object");
   }
   const opts = defaults && typeof defaults === "object" && !Array.isArray(defaults) ? defaults : {};
-  if (provenance.schema === SCHEMA_VERSION && provenance.generator) {
+  if (SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema) && provenance.generator) {
     const migrated = { ...provenance };
     if (Array.isArray(migrated.sections)) migrated.sections = normalizeSections(migrated.sections);
     return migrated;
@@ -229,9 +251,21 @@ function emitMapping(lines, mapping, keyOrder, indent) {
                       if (!(nestedKey in nested)) continue;
                       const nestedBullet = nestedFirst ? "- " : "  ";
                       nestedFirst = false;
-                      lines.push(
-                        `${prefix}      ${nestedBullet}${nestedKey}: ${quoteScalar(nested[nestedKey])}`,
-                      );
+                      const nestedValue = nested[nestedKey];
+                      if (nestedValue && typeof nestedValue === "object" && !Array.isArray(nestedValue)) {
+                        lines.push(`${prefix}      ${nestedBullet}${nestedKey}:`);
+                        const subOrder = nestedKey === "evidence_range"
+                          ? EVIDENCE_RANGE_KEY_ORDER
+                          : Object.keys(nestedValue);
+                        for (const subKey of subOrder) {
+                          if (!(subKey in nestedValue)) continue;
+                          lines.push(`${prefix}          ${subKey}: ${quoteScalar(nestedValue[subKey])}`);
+                        }
+                      } else {
+                        lines.push(
+                          `${prefix}      ${nestedBullet}${nestedKey}: ${quoteScalar(nestedValue)}`,
+                        );
+                      }
                     }
                   } else {
                     lines.push(`${prefix}      - ${quoteScalar(nested)}`);
@@ -442,7 +476,7 @@ function parseFrontmatter(text) {
     return { state: "missing", provenance: null, end };
   }
   if (!("schema" in provenance)) return { state: "legacy", provenance, end };
-  if (provenance.schema !== SCHEMA_VERSION || "tool_version" in provenance) {
+  if (!SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema) || "tool_version" in provenance) {
     return { state: "obsolete", provenance, end };
   }
   return { state: "ok", provenance, end };
@@ -456,6 +490,7 @@ function rewriteFrontmatter(text, provenance) {
 
 module.exports = {
   SCHEMA_VERSION,
+  SUPPORTED_SCHEMA_VERSIONS,
   LEGACY_SCHEMA,
   GENERATOR_NAME,
   GENERATOR_VERSION,

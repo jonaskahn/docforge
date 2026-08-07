@@ -11,8 +11,10 @@ touch-up. A revise run (all, area, or flow) does all of the following that
 apply in scope:
 
 1. **Update obsolete documents** — sync provenance and compare `git_blob`
-   values; re-ground `PARTIAL` / `UNTRACKED` sections (see Update one
-   document for the per-doc mechanics).
+   values; re-ground blocking `PARTIAL` (`STALE` / `MISSING` / `NO_BLOB`) /
+   `UNTRACKED` sections (see Update one document for the per-doc mechanics). A
+   raw-blob mismatch that's still `COSMETIC` — a source's recorded
+   `git_blob_normalized` or `range_blob` still matches — needs no re-grounding.
 1a. **Upgrade contract-drifted documents** — a document whose catalog
     `contract_revision` changed is set `in_progress` with its audit cleared by
     reconcile, even when its source provenance is `FRESH`. Re-ground the
@@ -257,11 +259,11 @@ node runtime/cli/js/check_staleness.js \
   --sync-provenance --json
 ```
 
-Unless `--plan-only`: re-ground `PARTIAL` sections; fully re-ground
-`UNTRACKED`. Re-detect and add missing / newly selected documents. Refresh
-big-picture and connection surfaces. Preserve verbatim only sections that are
-both `FRESH` **and** unaffected by new flows, new docs, or new connections in
-this revise.
+Unless `--plan-only`: re-ground blocking `PARTIAL` (`STALE` / `MISSING` /
+`NO_BLOB`) sections; fully re-ground `UNTRACKED`. Re-detect and add missing /
+newly selected documents. Refresh big-picture and connection surfaces.
+Preserve verbatim only sections that are `FRESH` or `COSMETIC` **and**
+unaffected by new flows, new docs, or new connections in this revise.
 
 ## Update one document
 
@@ -278,14 +280,16 @@ path — not full revise rediscovery.
    ```
 
 3. Branch on the result:
-   - all `FRESH` → report that recorded sources are unchanged; do not rewrite
-     unless the user also asked for wording edits unrelated to source drift,
-     or the document's structure / format / content deviates from the current
-     template (step 1b) — then rewrite to the template.
-   - `PARTIAL` → open only the listed section ids and their source files;
-     re-ground those sections; keep every `FRESH` section verbatim; restamp
-     provenance for changed sections (see [`writing.md`](writing.md) stamp
-     recipe and
+   - all `FRESH` or `COSMETIC` → report that recorded sources are unchanged (a
+     `COSMETIC` source differs only in whitespace/line-endings or outside the
+     cited range); do not rewrite unless the user also asked for wording edits
+     unrelated to source drift, or the document's structure / format / content
+     deviates from the current template (step 1b) — then rewrite to the
+     template.
+   - blocking `PARTIAL` (`STALE` / `MISSING` / `NO_BLOB`) → open only the
+     listed section ids and their source files; re-ground those sections;
+     keep every `FRESH` and `COSMETIC` section verbatim; restamp provenance
+     for changed sections (see [`writing.md`](writing.md) stamp recipe and
      [`../references/provenance-tracking.md`](../references/provenance-tracking.md)).
    - `UNTRACKED` / empty sections / `UNPARSEABLE` → full re-ground and stamp
      via [`writing.md`](writing.md).
@@ -342,9 +346,10 @@ still `FRESH`.
      connection changes; use `check_staleness.{py,js} --document` (see
      [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) to
      limit *source*
-     rework to `PARTIAL` / `UNTRACKED` sections, but still update connection,
-     composition, and cross-link sections when the flow index or neighbors
-     changed, even if blobs are `FRESH`. Enforce current template conformance
+     rework to blocking `PARTIAL` (`STALE` / `MISSING` / `NO_BLOB`) /
+     `UNTRACKED` sections, but still update connection, composition, and
+     cross-link sections when the flow index or neighbors changed, even if
+     blobs are `FRESH`. Enforce current template conformance
      (step 1b): an old flow-document shape is rewritten to the current `flow`
      template, never preserved.
 7. Refresh the big picture: render `docs/flows/README.md`, and update any

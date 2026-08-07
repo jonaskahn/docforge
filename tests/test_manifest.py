@@ -18,10 +18,13 @@ from _support import (
     load_manifest,
     markdown_with_provenance,
     normalized,
+    normalized_blob_hash,
     provenance,
+    range_blob_hash,
     run,
     write_flow_index,
 )
+from test_dashboard import fake_npm_env, run_dashboard, stop_dashboard
 from runtime.common.python.provenance_frontmatter import (
     SCHEMA_VERSION,
     emit_yaml,
@@ -309,6 +312,138 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("UNTRACKED", result.stdout)
 
+    def test_whitespace_and_eol_only_change_reports_cosmetic_not_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("one\ntwo\n", encoding="utf-8")
+            raw_blob = blob_hash(source.read_bytes())
+            norm_blob = normalized_blob_hash(source.read_bytes())
+            doc = repo / "README.md"
+            value = provenance(
+                doc_id="root_readme", path="README.md", tier="spine",
+                target_depth="overview", section_id="readme",
+                source_path="source.txt", source_blob=raw_blob,
+                normalized_blob=norm_blob,
+            )
+            doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
+            manifest = {
+                "version": "3.1", "project": {"root": str(repo)},
+                "documents": [{
+                    "id": "root_readme", "type": "root-readme", "path": "README.md",
+                    "status": "complete", "provenance_mode": "sections", "provenance": value,
+                }],
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            # Whitespace/EOL-only edit: same semantic lines, CRLF + trailing spaces.
+            source.write_text("one\r\ntwo  \r\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("COSMETIC", result.stdout)
+                self.assertNotIn("STALE", result.stdout)
+
+    def test_semantic_change_with_incidental_whitespace_still_reports_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("one\ntwo\n", encoding="utf-8")
+            raw_blob = blob_hash(source.read_bytes())
+            norm_blob = normalized_blob_hash(source.read_bytes())
+            doc = repo / "README.md"
+            value = provenance(
+                doc_id="root_readme", path="README.md", tier="spine",
+                target_depth="overview", section_id="readme",
+                source_path="source.txt", source_blob=raw_blob,
+                normalized_blob=norm_blob,
+            )
+            doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
+            manifest = {
+                "version": "3.1", "project": {"root": str(repo)},
+                "documents": [{
+                    "id": "root_readme", "type": "root-readme", "path": "README.md",
+                    "status": "complete", "provenance_mode": "sections", "provenance": value,
+                }],
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            # Real content change on line 2, plus incidental CRLF/trailing-space noise.
+            source.write_text("one\r\nTHREE  \r\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("STALE", result.stdout)
+                self.assertNotIn("COSMETIC", result.stdout)
+
+    def test_range_scoped_source_outside_edit_reports_cosmetic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("l1\nl2\nl3\nl4\nl5\n", encoding="utf-8")
+            raw_blob = blob_hash(source.read_bytes())
+            scoped_blob = range_blob_hash(source.read_bytes(), 2, 3)
+            doc = repo / "README.md"
+            value = provenance(
+                doc_id="root_readme", path="README.md", tier="spine",
+                target_depth="overview", section_id="readme",
+                source_path="source.txt", source_blob=raw_blob,
+                evidence_range=(2, 3), range_blob=scoped_blob,
+            )
+            doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
+            manifest = {
+                "version": "3.1", "project": {"root": str(repo)},
+                "documents": [{
+                    "id": "root_readme", "type": "root-readme", "path": "README.md",
+                    "status": "complete", "provenance_mode": "sections", "provenance": value,
+                }],
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            # Edit line 5, outside the recorded range 2-3.
+            source.write_text("l1\nl2\nl3\nl4\nCHANGED\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("COSMETIC", result.stdout)
+                self.assertNotIn("STALE", result.stdout)
+
+    def test_range_scoped_source_inside_edit_reports_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            source = repo / "source.txt"
+            source.write_text("l1\nl2\nl3\nl4\nl5\n", encoding="utf-8")
+            raw_blob = blob_hash(source.read_bytes())
+            scoped_blob = range_blob_hash(source.read_bytes(), 2, 3)
+            doc = repo / "README.md"
+            value = provenance(
+                doc_id="root_readme", path="README.md", tier="spine",
+                target_depth="overview", section_id="readme",
+                source_path="source.txt", source_blob=raw_blob,
+                evidence_range=(2, 3), range_blob=scoped_blob,
+            )
+            doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
+            manifest = {
+                "version": "3.1", "project": {"root": str(repo)},
+                "documents": [{
+                    "id": "root_readme", "type": "root-readme", "path": "README.md",
+                    "status": "complete", "provenance_mode": "sections", "provenance": value,
+                }],
+            }
+            manifest_path = repo / ".docforge" / "manifest.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            # Edit line 2, inside the recorded range 2-3.
+            source.write_text("l1\nCHANGED\nl3\nl4\nl5\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = run(runtime, "check_staleness", "--manifest", str(manifest_path))
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("STALE", result.stdout)
+                self.assertNotIn("COSMETIC", result.stdout)
+
     def test_document_filter_limits_staleness_check(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -567,7 +702,7 @@ Body.
                 self.assertEqual(created.returncode, 0, created.stderr)
                 text = (repo / "docs" / "architecture" / "high-level.md").read_text(encoding="utf-8")
                 self.assertTrue(text.startswith("---\nid: "))
-                self.assertIn('schema: "2.0"', text)
+                self.assertIn(f'schema: "{SCHEMA_VERSION}"', text)
                 result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
                 for category in (
                     "EMPTY PROVENANCE", "MISSING PROVENANCE", "LEGACY PROVENANCE",
@@ -679,7 +814,7 @@ Body.
 """, encoding="utf-8")
                 result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
                 self.assertTrue(target.read_text(encoding="utf-8").startswith("---\ndocforge_provenance:\n"))
-                self.assertIn('schema: "2.0"', target.read_text(encoding="utf-8"))
+                self.assertIn(f'schema: "{SCHEMA_VERSION}"', target.read_text(encoding="utf-8"))
                 saved = load_manifest(repo)
                 self.assertEqual(saved["documents"][0]["status"], "in_progress")
                 self.assertIsNone(saved["documents"][0].get("audit"))
@@ -711,7 +846,7 @@ Body.
                 self.assertIn("NO_BLOB", result.stdout)
                 migrated = target.read_text(encoding="utf-8")
                 self.assertTrue(migrated.startswith("---\ndocforge_provenance:\n"), migrated[:80])
-                self.assertIn('schema: "2.0"', migrated)
+                self.assertIn(f'schema: "{SCHEMA_VERSION}"', migrated)
 
     def test_lint_placeholder_token_link_and_forge_cases(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -867,7 +1002,7 @@ class ProvenanceCodecAndMigrationTests(unittest.TestCase):
         self.assertIsNotNone(parsed)
         assert parsed is not None
         self.assertEqual(parsed["sections"], value["sections"])
-        self.assertEqual(parsed["schema"], SCHEMA_VERSION)
+        self.assertEqual(parsed["schema"], value["schema"])
 
         node_script = """
 const pf = require(process.argv[1]);
@@ -1047,7 +1182,7 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertNotIn("REGENERATED", result.stdout)
                 text = readme.read_text(encoding="utf-8")
                 self.assertTrue(text.startswith("---\ndocforge_provenance:\n"), text[:80])
-                self.assertIn('schema: "2.0"', text)
+                self.assertIn(f'schema: "{SCHEMA_VERSION}"', text)
                 self.assertIn('doc_id: "concepts_index"', text)
                 self.assertIn('generated_at: "2026-07-27T00:00:00Z"', text)
                 self.assertIn('tier: "diligence"', text)
@@ -1136,21 +1271,21 @@ process.stdout.write(pf.emitYaml(value));
 
                 readme_text = readme.read_text(encoding="utf-8")
                 self.assertTrue(readme_text.startswith("---\ndocforge_provenance:\n"), readme_text[:80])
-                self.assertIn('schema: "2.0"', readme_text)
+                self.assertIn(f'schema: "{SCHEMA_VERSION}"', readme_text)
                 self.assertIn("generator:", readme_text)
                 self.assertIn("# Readme", readme_text)
 
                 broken_text = unparseable.read_text(encoding="utf-8")
                 self.assertTrue(broken_text.startswith("---\ndocforge_provenance:\n"), broken_text[:80])
-                self.assertIn('schema: "2.0"', broken_text)
+                self.assertIn(f'schema: "{SCHEMA_VERSION}"', broken_text)
                 self.assertIn('doc_id: "broken"', broken_text)
                 self.assertIn("# Broken", broken_text)
 
                 saved = load_manifest(repo)
                 self.assertEqual(saved["version"], "3.2")
-                self.assertEqual(saved["documents"][0]["provenance"]["schema"], "2.0")
+                self.assertEqual(saved["documents"][0]["provenance"]["schema"], SCHEMA_VERSION)
                 self.assertIn("generator", saved["documents"][0]["provenance"])
-                self.assertEqual(saved["documents"][1]["provenance"]["schema"], "2.0")
+                self.assertEqual(saved["documents"][1]["provenance"]["schema"], SCHEMA_VERSION)
                 self.assertEqual(saved["documents"][1]["provenance"]["doc_id"], "broken")
                 self.assertEqual(saved["documents"][1]["status"], "in_progress")
                 self.assertIsNone(saved["documents"][1].get("audit"))
@@ -1440,23 +1575,23 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     high = docs["arch_high_level"]
                     self.assertEqual(high["status"], "generated")
                     self.assertEqual(high["type"], "architecture-high-level")
-                    self.assertEqual(high["provenance"]["schema"], "2.0")
+                    self.assertEqual(high["provenance"]["schema"], SCHEMA_VERSION)
                     self.assertEqual(high["provenance"]["doc_id"], "arch_high_level")
                     self.assertEqual(high["provenance"]["graph"], {"provider": "understand-anything", "flow": "native"})
                     source = high["provenance"]["sections"][0]["sources"][0]
                     self.assertEqual(source["path"], "src/main.ts")
                     self.assertEqual(source["role"], "code")
                     high_text = (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8")
-                    self.assertTrue(high_text.startswith('---\ndocforge_provenance:\n  schema: "2.0"\n'))
+                    self.assertTrue(high_text.startswith(f'---\ndocforge_provenance:\n  schema: "{SCHEMA_VERSION}"\n'))
                     self.assertIn("# High-level\n\nContent.\n", high_text)
 
                     overview = docs["product_overview"]
                     self.assertEqual(overview["status"], "generated")
-                    self.assertEqual(overview["provenance"]["schema"], "2.0")
+                    self.assertEqual(overview["provenance"]["schema"], SCHEMA_VERSION)
                     self.assertEqual(overview["provenance"]["sections"][0]["sources"][0]["path"], "package.json")
                     self.assertEqual(overview["provenance"]["sections"][0]["sources"][0]["role"], "manifest")
                     overview_text = (repo / "docs/product/overview.md").read_text(encoding="utf-8")
-                    self.assertTrue(overview_text.startswith('---\ndocforge_provenance:\n  schema: "2.0"\n'))
+                    self.assertTrue(overview_text.startswith(f'---\ndocforge_provenance:\n  schema: "{SCHEMA_VERSION}"\n'))
                     self.assertIn("# Overview\n\nBody.\n", overview_text)
 
                     self.assertEqual(docs["arch_low_level"]["status"], "planned")
@@ -1555,6 +1690,72 @@ class ManifestV11MigrationTests(unittest.TestCase):
             self.assertIn("-> /docs", plan.stdout)
             self.assertIn("-> /docs/architecture/high-level", plan.stdout)
             self.assertIn("-> /docs/flows/checkout", plan.stdout)
+
+    def test_v1_1_dashboard_scan_and_status_stay_read_only_on_legacy_manifest(self) -> None:
+        # `scan`/`status` never auto-migrate (strictly read-only); they keep
+        # failing with the same clear version-mismatch error as before.
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    seed_v1_1_repo(repo)
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    before_manifest = manifest_path.read_text(encoding="utf-8")
+                    for command in ("scan", "status"):
+                        result = run_dashboard(runtime, command, "--repo", str(repo))
+                        self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+                        self.assertIn("manifest must use version", result.stderr)
+                        self.assertEqual(manifest_path.read_text(encoding="utf-8"), before_manifest)
+
+    def test_v1_1_dashboard_plan_only_previews_migration_without_writing(self) -> None:
+        # `dashboard start --plan-only` against an UNMIGRATED legacy manifest
+        # must preview the migration (no separate `migrate_metadata` call
+        # needed first) and write nothing.
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    seed_v1_1_repo(repo)
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    before_manifest = manifest_path.read_text(encoding="utf-8")
+                    before_file = (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8")
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
+                    self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+                    self.assertIn("manifest is legacy", result.stdout)
+                    self.assertIn("--plan-only preview (no writes)", result.stdout)
+                    self.assertEqual(manifest_path.read_text(encoding="utf-8"), before_manifest)
+                    self.assertEqual(
+                        (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8"),
+                        before_file,
+                    )
+
+    def test_v1_1_dashboard_start_auto_migrates_without_prompt(self) -> None:
+        # A real (non-plan-only) `dashboard start` against an unmigrated
+        # legacy manifest must auto-migrate it (no stop-and-ask gate),
+        # print what changed, and then proceed to build/serve normally.
+        env, _bin = fake_npm_env()
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    seed_v1_1_repo(repo)
+                    try:
+                        result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
+                        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                        self.assertIn("manifest: legacy manifest auto-migrated to 3.2", result.stdout)
+                        manifest = load_manifest(repo)
+                        self.assertEqual(manifest["version"], "3.2")
+                        # scan/status must not perform the same auto-migration
+                        # on a manifest that's already migrated -- this just
+                        # confirms the migrated manifest is now readable by
+                        # the strictly read-only commands too.
+                        status = run_dashboard(runtime, "status", "--repo", str(repo))
+                        self.assertEqual(status.returncode, 0, status.stderr + status.stdout)
+                    finally:
+                        stop_dashboard(runtime, repo)
 
 
 def seed_v2_0_repo(repo: Path) -> None:
@@ -1660,11 +1861,11 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     self.assertEqual(high["requires"], ["code_graph"])
                     self.assertEqual(high["selection"]["origins"], [{"kind": "tier", "id": "spine"}])
                     self.assertIsNone(high["audit"])
-                    self.assertEqual(high["provenance"]["schema"], "2.0")
+                    self.assertEqual(high["provenance"]["schema"], SCHEMA_VERSION)
                     self.assertEqual(high["provenance"]["generator"]["version"], "2.0")
                     self.assertEqual(high["provenance"]["sections"][0]["sources"][0]["role"], "code")
                     high_text = (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8")
-                    self.assertTrue(high_text.startswith('---\ndocforge_provenance:\n  schema: "2.0"\n'))
+                    self.assertTrue(high_text.startswith(f'---\ndocforge_provenance:\n  schema: "{SCHEMA_VERSION}"\n'))
                     self.assertIn("# High-level\n\nContent.\n", high_text)
 
                     notes = docs["po_release_notes"]

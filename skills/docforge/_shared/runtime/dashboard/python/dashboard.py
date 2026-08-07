@@ -16,8 +16,11 @@ when the render or shell signature changed (or `--force`), installs
 dependencies only when missing, starts (or reuses) the localhost dev server,
 and opens the browser. The dev server runs detached; `stop` shuts it down.
 `scan` is the read-only diagnostic pass: missing metadata, incomplete or
-missing documents, stale provenance sources, broken internal links, and
-untracked `docs/` files.
+missing documents, stale provenance sources, broken internal links,
+route-plan problems, and untracked `docs/` files -- each tagged blocking
+(would break a build) or advisory. `start`/`export` auto-migrate a legacy
+(pre-3.0) manifest instead of stopping to ask, since the metadata migration
+is safe and non-destructive; `scan`/`status` stay strictly read-only.
 """
 
 from __future__ import annotations
@@ -46,9 +49,15 @@ from runtime.common.python._util import (
 )
 from runtime.common.python.provenance_frontmatter import (
     SCHEMA_VERSION,
+    SUPPORTED_SCHEMA_VERSIONS,
     emit_document_frontmatter,
     parse_yaml_mapping,
     split_frontmatter,
+)
+from runtime.common.python.evidence_hash import classify_source, raw_blob_hash
+from runtime.manifest.python.migrate_metadata import (
+    MANIFEST_CURRENT,
+    migrate as migrate_manifest_metadata,
 )
 
 TOOL_VERSION = "2.14.0"
@@ -98,7 +107,7 @@ def git_remote_url(repo: Path) -> str | None:
 
 def _root_doc_has_provenance(repo: Path, path: str) -> bool:
     meta = file_metadata(repo, path)
-    return meta is not None and meta["provenance_schema"] == SCHEMA_VERSION
+    return meta is not None and meta["provenance_schema"] in SUPPORTED_SCHEMA_VERSIONS
 
 
 def read_frontmatter_head(target: Path) -> tuple[str, int] | None:
@@ -151,7 +160,7 @@ def _manifest_provenance(doc: dict) -> bool:
     if doc.get("provenance_mode") != "manifest":
         return False
     provenance = doc.get("provenance")
-    return isinstance(provenance, dict) and provenance.get("schema") == SCHEMA_VERSION
+    return isinstance(provenance, dict) and provenance.get("schema") in SUPPORTED_SCHEMA_VERSIONS
 
 
 def included_documents(repo: Path, manifest: dict) -> list[dict]:
@@ -347,8 +356,8 @@ def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dic
             report["errors"].append({"doc": doc["id"], "detail": f"unparseable frontmatter: {exc}"})
             continue
         provenance = data.get("docforge_provenance")
-        if not isinstance(provenance, dict) or provenance.get("schema") != SCHEMA_VERSION:
-            report["skipped"].append({"doc": doc["id"], "detail": "provenance is not schema 2.0"})
+        if not isinstance(provenance, dict) or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS:
+            report["skipped"].append({"doc": doc["id"], "detail": "provenance schema unsupported"})
             continue
         want_id = doc["id"]
         want_title = title_for(doc)
@@ -552,7 +561,7 @@ def collect_asset_map(repo: Path) -> set[str]:
 
 
 def blob_sha1(content: bytes) -> str:
-    return hashlib.sha1(b"blob %d\0" % len(content) + content).hexdigest()
+    return raw_blob_hash(content)
 
 
 def scan(repo: Path, manifest: dict) -> dict:
@@ -560,47 +569,50 @@ def scan(repo: Path, manifest: dict) -> dict:
 
     Reports metadata problems (missing / unparseable / non-schema-2.0
     frontmatter), incomplete or missing documents, provenance source drift,
-    broken internal Markdown links, and untracked `docs/` files. Any finding
-    means the documentation should be revised before the dashboard is
-    trusted; `counts` groups findings by kind."""
+    broken internal Markdown links, route-plan problems (missing index,
+    duplicate URLs), and untracked `docs/` files. Every finding is tagged
+    `blocking` (would actually break a build: `route_plan`, `broken_link`, and
+    `metadata` on a document that would be included) or advisory (safe to
+    ignore for now: `incomplete`, `missing_file`, `drift`, `untracked`); any
+    finding still means the documentation should be revised, but only a
+    blocking one stops `start`/`export` before attempting to render."""
+    docs = included_documents(repo, manifest)
+    included_ids = {doc["id"] for doc in docs}
     problems: list[dict] = []
     report = reconcile_metadata(repo, manifest, dry_run=True)
-    for entry in report["errors"]:
-        problems.append({"kind": "metadata", "doc": entry["doc"], "detail": entry["detail"]})
-    for entry in report["skipped"]:
-        problems.append({"kind": "metadata", "doc": entry["doc"], "detail": entry["detail"]})
+    for entry in report["errors"] + report["skipped"]:
+        problems.append({"kind": "metadata", "doc": entry["doc"], "detail": entry["detail"], "blocking": entry["doc"] in included_ids})
     for doc in manifest.get("documents", []):
         path = doc.get("path", "")
         if not (path.endswith(".md") or path.endswith(".mdx")):
             continue
         if doc.get("status") not in WRITTEN:
-            problems.append({"kind": "incomplete", "doc": doc.get("id", ""), "detail": f"status {doc.get('status')}"})
+            problems.append({"kind": "incomplete", "doc": doc.get("id", ""), "detail": f"status {doc.get('status')}", "blocking": False})
             continue
         if not (repo / path).is_file():
-            problems.append({"kind": "missing_file", "doc": doc.get("id", ""), "detail": path})
+            problems.append({"kind": "missing_file", "doc": doc.get("id", ""), "detail": path, "blocking": False})
     for doc in manifest.get("documents", []):
         provenance = doc.get("provenance")
-        if not isinstance(provenance, dict) or provenance.get("schema") != SCHEMA_VERSION:
+        if not isinstance(provenance, dict) or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS:
             continue
         for section in provenance.get("sections", []):
             for source in section.get("sources", []):
                 source_path = source.get("path")
-                want = source.get("git_blob")
-                if not source_path:
+                if not source_path or not source.get("git_blob"):
                     continue
                 target = repo / source_path
-                if not target.is_file():
-                    problems.append({"kind": "drift", "doc": doc.get("id", ""), "detail": f"{source_path} missing"})
-                    continue
-                if want and blob_sha1(target.read_bytes()) != want:
-                    problems.append({"kind": "drift", "doc": doc.get("id", ""), "detail": f"{source_path} changed since provenance"})
-    docs = included_documents(repo, manifest)
+                current_bytes = target.read_bytes() if target.is_file() else None
+                outcome = classify_source(source, current_bytes)
+                if outcome == "missing":
+                    problems.append({"kind": "drift", "doc": doc.get("id", ""), "detail": f"{source_path} missing", "blocking": False})
+                elif outcome == "stale":
+                    problems.append({"kind": "drift", "doc": doc.get("id", ""), "detail": f"{source_path} changed since provenance", "blocking": False})
     ledger = build_ledger(docs)
     ledger["assets"] = collect_asset_map(repo)
     tracked = {doc.get("path") for doc in manifest.get("documents", []) if doc.get("path")}
     for rel in tree_files(repo):
         if rel.endswith((".md", ".mdx")) and rel not in tracked:
-            problems.append({"kind": "untracked", "doc": "", "detail": rel})
+            problems.append({"kind": "untracked", "doc": "", "detail": rel, "blocking": False})
     for doc in docs:
         text = (repo / doc["path"]).read_text(encoding="utf-8", errors="replace")
         raw, body, _end = split_frontmatter(text)
@@ -620,10 +632,17 @@ def scan(repo: Path, manifest: dict) -> dict:
             if re.search(r"\.mdx?(?:#|$)", repo_rel) and (
                 repo_rel.startswith(DOC_PREFIX) or "/" not in repo_rel
             ):
-                problems.append({"kind": "broken_link", "doc": doc["id"], "detail": f"{doc['path']}: {inner}"})
-    kinds = ("metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link")
+                problems.append({"kind": "broken_link", "doc": doc["id"], "detail": f"{doc['path']}: {inner}", "blocking": True})
+    route_plan = plan(repo, manifest)
+    for detail in route_plan["problems"]:
+        problems.append({"kind": "route_plan", "doc": "", "detail": detail, "blocking": True})
+    kinds = ("metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan")
     counts = {kind: sum(1 for p in problems if p["kind"] == kind) for kind in kinds}
-    return {"problems": problems, "counts": counts}
+    return {
+        "problems": problems,
+        "counts": counts,
+        "blocking": any(p["blocking"] for p in problems),
+    }
 
 
 def plan(repo: Path, manifest: dict) -> dict:
@@ -741,7 +760,7 @@ def convert_documents(repo: Path, manifest: dict, ledger: dict, stage_docs: Path
             if (
                 manifest_doc.get("provenance_mode") != "manifest"
                 or not isinstance(provenance, dict)
-                or provenance.get("schema") != SCHEMA_VERSION
+                or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS
             ):
                 raise ValueError(f"document has no frontmatter: {doc['source_path']}")
         else:
@@ -750,8 +769,8 @@ def convert_documents(repo: Path, manifest: dict, ledger: dict, stage_docs: Path
             except Exception as exc:  # noqa: BLE001
                 raise ValueError(f"unparseable frontmatter: {doc['source_path']}: {exc}") from exc
             provenance = data.get("docforge_provenance")
-            if not isinstance(provenance, dict) or provenance.get("schema") != SCHEMA_VERSION:
-                raise ValueError(f"provenance is not schema 2.0: {doc['source_path']}")
+            if not isinstance(provenance, dict) or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS:
+                raise ValueError(f"provenance schema unsupported: {doc['source_path']}")
         mdx_body, unresolved = convert_body(body, doc["source_path"], ledger, assets_needed)
         h1_title = first_h1_title(body)
         if h1_title:
@@ -1160,15 +1179,24 @@ def _stage_build(dashboard: Path, repo: Path, manifest: dict, template_dir: Path
 def _plan_only(args: argparse.Namespace, manifest: dict, render_sig: str, shell_sig: str) -> int:
     metadata_report = reconcile_metadata(args.repo, manifest, dry_run=True)
     route_plan = plan(args.repo, manifest)
+    scan_result = scan(args.repo, manifest)
     print(f"metadata (dry-run): {metadata_report['counts']['reconciled']} to reconcile, {metadata_report['counts']['unchanged']} unchanged, {metadata_report['counts']['errors']} errors")
     for page in route_plan["pages"]:
         print(f"  {page['doc_id']:<32} {page['source_path']:<48} -> {page['url']}")
     print(f"{len(route_plan['pages'])} pages in {route_plan['folder_count']} folders; {len(route_plan['problems'])} problems")
     for problem in route_plan["problems"]:
         print(f"  problem: {problem}")
+    if scan_result["problems"]:
+        print(f"scan: {len(scan_result['problems'])} problems found:")
+        for problem in scan_result["problems"]:
+            who = f"{problem['doc']}: " if problem["doc"] else ""
+            tag = " (blocking)" if problem["blocking"] else ""
+            print(f"  [{problem['kind']}]{tag} {who}{problem['detail']}")
+    else:
+        print("scan: 0 problems")
     print(f"render_sig: {render_sig}")
     print(f"shell_sig: {shell_sig}")
-    ok = not route_plan["problems"] and metadata_report["counts"]["errors"] == 0
+    ok = not route_plan["problems"] and metadata_report["counts"]["errors"] == 0 and not scan_result["blocking"]
     return 0 if ok else 1
 
 
@@ -1182,10 +1210,14 @@ def _prepare(args: argparse.Namespace, dashboard: Path, manifest: dict, template
         print(f"scan: {len(scan_result['problems'])} problems found:")
         for problem in scan_result["problems"]:
             who = f"{problem['doc']}: " if problem["doc"] else ""
-            print(f"  [{problem['kind']}] {who}{problem['detail']}")
+            tag = " (blocking)" if problem["blocking"] else ""
+            print(f"  [{problem['kind']}]{tag} {who}{problem['detail']}")
         print("you should revise again: run /docforge-revise to fix the documentation before relying on this dashboard")
     else:
         print("scan: 0 problems")
+    if scan_result["blocking"]:
+        print("dashboard was NOT opened: scan found blocking problems; run /docforge-revise to fix them, then `dashboard start` again")
+        raise ValueError("scan found blocking problems; see findings above")
     # Reconcile rewrites frontmatter, so the render signature must be computed
     # after it: the stored signature must describe the exact bytes a rebuild
     # would consume.
@@ -1265,7 +1297,8 @@ def cmd_scan(args: argparse.Namespace, manifest: dict) -> int:
     print(f"scan: {len(result['problems'])} problems found:")
     for problem in result["problems"]:
         who = f"{problem['doc']}: " if problem["doc"] else ""
-        print(f"  [{problem['kind']}] {who}{problem['detail']}")
+        tag = " (blocking)" if problem["blocking"] else ""
+        print(f"  [{problem['kind']}]{tag} {who}{problem['detail']}")
     print("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again")
     return 1
 
@@ -1329,6 +1362,27 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _auto_migrate_manifest(repo: Path, manifest_path: Path) -> dict:
+    """Legacy manifest metadata migration is safe and non-destructive (bodies
+    untouched, manifest.json + frontmatter only), so `start`/`export` run it
+    automatically instead of stopping to ask — mirroring the existing bare
+    `/docforge-revise` precedent. Never silent: prints what changed."""
+    reports, _changed = migrate_manifest_metadata(repo, manifest_path, dry_run=False)
+    counts: dict[str, int] = {}
+    for item in reports:
+        counts[item["action"]] = counts.get(item["action"], 0) + 1
+    summary = ", ".join(f"{n} {action}" for action, n in sorted(counts.items()))
+    print(f"manifest: legacy manifest auto-migrated to {MANIFEST_CURRENT} ({summary})")
+    return load_manifest(manifest_path)
+
+
+def _preview_legacy_migration(repo: Path, manifest_path: Path) -> int:
+    reports, changed = migrate_manifest_metadata(repo, manifest_path, dry_run=True)
+    print("manifest is legacy; --plan-only preview (no writes):")
+    print(dump_json({"changed": changed, "results": reports}))
+    return 1 if changed else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1340,10 +1394,21 @@ def main(argv: list[str] | None = None) -> int:
     args.dashboard = dashboard
     template_dir = Path(__file__).resolve().parent.parent / "template"
     if args.command in {"start", "export", "status", "scan"}:
+        hint = (
+            "run `dashboard start` or `dashboard export` to migrate it automatically, "
+            "or run migrate_metadata.py to re-register legacy manifests manually"
+        )
         try:
-            manifest = load_manifest(manifest_path)
+            manifest = load_manifest(manifest_path, unsupported_hint=hint)
         except ValueError as exc:
-            return fail(str(exc))
+            if args.command not in {"start", "export"} or not manifest_path.is_file():
+                return fail(str(exc))
+            try:
+                if args.command == "start" and getattr(args, "plan_only", False):
+                    return _preview_legacy_migration(repo, manifest_path)
+                manifest = _auto_migrate_manifest(repo, manifest_path)
+            except ValueError as migrate_exc:
+                return fail(str(migrate_exc))
     else:
         manifest = {}
     try:

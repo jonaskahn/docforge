@@ -18,6 +18,7 @@ from runtime.common.python.provenance_frontmatter import (
     PROVENANCE_FIELDS,
     SCAFFOLD_TOKEN,
     SOURCE_ROLES,
+    SUPPORTED_SCHEMA_VERSIONS,
     emit_document_frontmatter,
     parse_frontmatter as codec_parse_frontmatter,
     scaffold_provenance as build_provenance,
@@ -269,7 +270,7 @@ def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None
     generator = provenance.get("generator")
     if not isinstance(generator, dict) or not {"name", "version"} <= set(generator):
         missing.append("generator.name/version")
-    if missing or provenance.get("schema") != "2.0" or "graph_snapshot" in provenance:
+    if missing or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS or "graph_snapshot" in provenance:
         detail = ", ".join(missing) if missing else "invalid schema or obsolete graph_snapshot"
         result["missing provenance"].append(f"{doc['path']}: {detail}")
     sections = provenance.get("sections")

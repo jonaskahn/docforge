@@ -10,7 +10,15 @@
  * dashboard directory is self-contained: its own package.json, lockfile, and
  * node_modules; it never touches the repository's package files.
  *
- * Subcommands: start, status, stop. Python and JS peers are equivalent.
+ * Subcommands: scan, start, export, status, stop. Python and JS peers are
+ * equivalent.
+ *
+ * `scan` reports missing metadata, incomplete or missing documents, stale
+ * provenance sources, broken internal links, route-plan problems, and
+ * untracked `docs/` files -- each tagged blocking (would break a build) or
+ * advisory. `start`/`export` auto-migrate a legacy (pre-3.0) manifest
+ * instead of stopping to ask, since the metadata migration is safe and
+ * non-destructive; `scan`/`status` stay strictly read-only.
  */
 
 const { execFileSync, spawn, spawnSync } = require("child_process");
@@ -21,6 +29,8 @@ const path = require("path");
 
 const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
+const { classifySource, rawBlobHash } = require("../../common/js/evidence_hash.js");
+const { MANIFEST_CURRENT, migrate: migrateManifestMetadata } = require("../../manifest/js/migrate_metadata.js");
 
 const TOOL_VERSION = "2.14.0";
 const TEMPLATE_VERSION = "1";
@@ -67,7 +77,7 @@ function gitRemoteUrl(repo) {
 
 function rootDocHasProvenance(repo, rel) {
   const meta = fileMetadata(repo, rel);
-  return !!(meta && meta.provenance_schema === pf.SCHEMA_VERSION);
+  return !!(meta && pf.SUPPORTED_SCHEMA_VERSIONS.has(meta.provenance_schema));
 }
 
 function readFrontmatterHead(target) {
@@ -122,7 +132,7 @@ function fileMetadata(repo, rel) {
 
 function manifestProvenance(doc) {
   if (doc.provenance_mode !== "manifest") return false;
-  return !!(doc.provenance && typeof doc.provenance === "object" && doc.provenance.schema === pf.SCHEMA_VERSION);
+  return !!(doc.provenance && typeof doc.provenance === "object" && pf.SUPPORTED_SCHEMA_VERSIONS.has(doc.provenance.schema));
 }
 
 function includedDocuments(repo, manifest) {
@@ -314,8 +324,8 @@ function reconcileMetadata(repo, manifest, dryRun = false) {
       continue;
     }
     const provenance = data.docforge_provenance;
-    if (!provenance || typeof provenance !== "object" || provenance.schema !== pf.SCHEMA_VERSION) {
-      report.skipped.push({ doc: doc.id, detail: "provenance is not schema 2.0" });
+    if (!provenance || typeof provenance !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)) {
+      report.skipped.push({ doc: doc.id, detail: "provenance schema unsupported" });
       continue;
     }
     const wantId = doc.id;
@@ -505,54 +515,52 @@ function collectAssetMap(repo) {
 }
 
 function blobSha1(content) {
-  return crypto.createHash("sha1")
-    .update(Buffer.from(`blob ${content.length}\0`))
-    .update(content)
-    .digest("hex");
+  return rawBlobHash(content);
 }
 
 function scan(repo, manifest) {
+  const docs = includedDocuments(repo, manifest);
+  const includedIds = new Set(docs.map((d) => d.id));
   const problems = [];
   const report = reconcileMetadata(repo, manifest, true);
-  for (const entry of report.errors) problems.push({ kind: "metadata", doc: entry.doc, detail: entry.detail });
-  for (const entry of report.skipped) problems.push({ kind: "metadata", doc: entry.doc, detail: entry.detail });
+  for (const entry of [...report.errors, ...report.skipped]) {
+    problems.push({ kind: "metadata", doc: entry.doc, detail: entry.detail, blocking: includedIds.has(entry.doc) });
+  }
   for (const doc of manifest.documents || []) {
     const p = doc.path || "";
     if (!(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
     if (!WRITTEN.has(doc.status)) {
-      problems.push({ kind: "incomplete", doc: doc.id || "", detail: `status ${doc.status}` });
+      problems.push({ kind: "incomplete", doc: doc.id || "", detail: `status ${doc.status}`, blocking: false });
       continue;
     }
     if (!fs.existsSync(path.join(repo, p))) {
-      problems.push({ kind: "missing_file", doc: doc.id || "", detail: p });
+      problems.push({ kind: "missing_file", doc: doc.id || "", detail: p, blocking: false });
     }
   }
   for (const doc of manifest.documents || []) {
     const prov = doc.provenance;
-    if (!prov || typeof prov !== "object" || prov.schema !== pf.SCHEMA_VERSION) continue;
+    if (!prov || typeof prov !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(prov.schema)) continue;
     for (const section of prov.sections || []) {
       for (const source of section.sources || []) {
         const sourcePath = source.path;
-        const want = source.git_blob;
-        if (!sourcePath) continue;
+        if (!sourcePath || !source.git_blob) continue;
         const target = path.join(repo, sourcePath);
-        if (!fs.existsSync(target)) {
-          problems.push({ kind: "drift", doc: doc.id || "", detail: `${sourcePath} missing` });
-          continue;
-        }
-        if (want && blobSha1(fs.readFileSync(target)) !== want) {
-          problems.push({ kind: "drift", doc: doc.id || "", detail: `${sourcePath} changed since provenance` });
+        const currentBytes = fs.existsSync(target) ? fs.readFileSync(target) : null;
+        const outcome = classifySource(source, currentBytes);
+        if (outcome === "missing") {
+          problems.push({ kind: "drift", doc: doc.id || "", detail: `${sourcePath} missing`, blocking: false });
+        } else if (outcome === "stale") {
+          problems.push({ kind: "drift", doc: doc.id || "", detail: `${sourcePath} changed since provenance`, blocking: false });
         }
       }
     }
   }
-  const docs = includedDocuments(repo, manifest);
   const ledger = buildLedger(docs);
   ledger.assets = collectAssetMap(repo);
   const tracked = new Set((manifest.documents || []).map((d) => d.path).filter(Boolean));
   for (const rel of treeFiles(repo)) {
     if ((rel.endsWith(".md") || rel.endsWith(".mdx")) && !tracked.has(rel)) {
-      problems.push({ kind: "untracked", doc: "", detail: rel });
+      problems.push({ kind: "untracked", doc: "", detail: rel, blocking: false });
     }
   }
   for (const doc of docs) {
@@ -569,14 +577,18 @@ function scan(repo, manifest) {
         : path.posix.normalize(path.posix.join(path.posix.dirname(doc.path), clean));
       const normalized = repoRel.replace(/\/+$/, "");
       if (/\.mdx?(?:#|$)/.test(normalized) && (normalized.startsWith(DOC_PREFIX) || !normalized.includes("/"))) {
-        problems.push({ kind: "broken_link", doc: doc.id, detail: `${doc.path}: ${inner}` });
+        problems.push({ kind: "broken_link", doc: doc.id, detail: `${doc.path}: ${inner}`, blocking: true });
       }
     }
   }
-  const kinds = ["metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link"];
+  const routePlan = plan(repo, manifest);
+  for (const detail of routePlan.problems) {
+    problems.push({ kind: "route_plan", doc: "", detail, blocking: true });
+  }
+  const kinds = ["metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan"];
   const counts = {};
   for (const kind of kinds) counts[kind] = problems.filter((p) => p.kind === kind).length;
-  return { problems, counts };
+  return { problems, counts, blocking: problems.some((p) => p.blocking) };
 }
 
 function plan(repo, manifest) {
@@ -710,7 +722,7 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
       provenance = manifestDoc.provenance;
       if (
         manifestDoc.provenance_mode !== "manifest" ||
-        !provenance || typeof provenance !== "object" || provenance.schema !== pf.SCHEMA_VERSION
+        !provenance || typeof provenance !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)
       ) {
         throw new Error(`document has no frontmatter: ${doc.source_path}`);
       }
@@ -722,8 +734,8 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
         throw new Error(`unparseable frontmatter: ${doc.source_path}: ${error.message}`);
       }
       provenance = data.docforge_provenance;
-      if (!provenance || typeof provenance !== "object" || provenance.schema !== pf.SCHEMA_VERSION) {
-        throw new Error(`provenance is not schema 2.0: ${doc.source_path}`);
+      if (!provenance || typeof provenance !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)) {
+        throw new Error(`provenance schema unsupported: ${doc.source_path}`);
       }
     }
     const [mdxBody] = convertBody(body, doc.source_path, ledger, assetsNeeded);
@@ -1173,15 +1185,26 @@ function stageBuild(dashboard, repo, manifest, templateDir, force) {
 function planOnly(args, manifest, renderSig, shellSig) {
   const metadataReport = reconcileMetadata(args.repo, manifest, true);
   const routePlan = plan(args.repo, manifest);
+  const scanResult = scan(args.repo, manifest);
   console.log(`metadata (dry-run): ${metadataReport.counts.reconciled} to reconcile, ${metadataReport.counts.unchanged} unchanged, ${metadataReport.counts.errors} errors`);
   for (const page of routePlan.pages) {
     console.log(`  ${page.doc_id.padEnd(32)} ${page.source_path.padEnd(48)} -> ${page.url}`);
   }
   console.log(`${routePlan.pages.length} pages in ${routePlan.folder_count} folders; ${routePlan.problems.length} problems`);
   for (const problem of routePlan.problems) console.log(`  problem: ${problem}`);
+  if (scanResult.problems.length) {
+    console.log(`scan: ${scanResult.problems.length} problems found:`);
+    for (const problem of scanResult.problems) {
+      const who = problem.doc ? `${problem.doc}: ` : "";
+      const tag = problem.blocking ? " (blocking)" : "";
+      console.log(`  [${problem.kind}]${tag} ${who}${problem.detail}`);
+    }
+  } else {
+    console.log("scan: 0 problems");
+  }
   console.log(`render_sig: ${renderSig}`);
   console.log(`shell_sig: ${shellSig}`);
-  const ok = routePlan.problems.length === 0 && metadataReport.counts.errors === 0;
+  const ok = routePlan.problems.length === 0 && metadataReport.counts.errors === 0 && !scanResult.blocking;
   return ok ? 0 : 1;
 }
 
@@ -1193,11 +1216,16 @@ function prepareDashboard(args, dashboard, manifest, templateDir, renderSig, she
     console.log(`scan: ${scanResult.problems.length} problems found:`);
     for (const problem of scanResult.problems) {
       const who = problem.doc ? `${problem.doc}: ` : "";
-      console.log(`  [${problem.kind}] ${who}${problem.detail}`);
+      const tag = problem.blocking ? " (blocking)" : "";
+      console.log(`  [${problem.kind}]${tag} ${who}${problem.detail}`);
     }
     console.log("you should revise again: run /docforge-revise to fix the documentation before relying on this dashboard");
   } else {
     console.log("scan: 0 problems");
+  }
+  if (scanResult.blocking) {
+    console.log("dashboard was NOT opened: scan found blocking problems; run /docforge-revise to fix them, then `dashboard start` again");
+    throw new Error("scan found blocking problems; see findings above");
   }
   // Reconcile rewrites frontmatter, so the render signature must be computed
   // after it: the stored signature must describe the exact bytes a rebuild
@@ -1283,7 +1311,8 @@ async function cmdScan(args, manifest) {
   console.log(`scan: ${result.problems.length} problems found:`);
   for (const problem of result.problems) {
     const who = problem.doc ? `${problem.doc}: ` : "";
-    console.log(`  [${problem.kind}] ${who}${problem.detail}`);
+    const tag = problem.blocking ? " (blocking)" : "";
+    console.log(`  [${problem.kind}]${tag} ${who}${problem.detail}`);
   }
   console.log("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again");
   return 1;
@@ -1362,6 +1391,26 @@ function parseArgs(argv) {
   return args;
 }
 
+function autoMigrateManifest(repo, manifestPath) {
+  // Legacy manifest metadata migration is safe and non-destructive (bodies
+  // untouched, manifest.json + frontmatter only), so `start`/`export` run it
+  // automatically instead of stopping to ask -- mirroring the existing bare
+  // `/docforge-revise` precedent. Never silent: prints what changed.
+  const { reports } = migrateManifestMetadata(repo, manifestPath, false);
+  const counts = {};
+  for (const item of reports) counts[item.action] = (counts[item.action] || 0) + 1;
+  const summary = Object.keys(counts).sort().map((action) => `${counts[action]} ${action}`).join(", ");
+  console.log(`manifest: legacy manifest auto-migrated to ${MANIFEST_CURRENT} (${summary})`);
+  return loadManifest(manifestPath);
+}
+
+function previewLegacyMigration(repo, manifestPath) {
+  const { reports, changed } = migrateManifestMetadata(repo, manifestPath, true);
+  console.log("manifest is legacy; --plan-only preview (no writes):");
+  console.log(dumpJson({ changed, results: reports }));
+  return changed ? 1 : 0;
+}
+
 async function main() {
   let args;
   try {
@@ -1379,10 +1428,22 @@ async function main() {
   const templateDir = path.join(fs.realpathSync(__dirname), "..", "template");
   let manifest = {};
   if (args.command === "start" || args.command === "export" || args.command === "status" || args.command === "scan") {
+    const hint = "run `dashboard start` or `dashboard export` to migrate it automatically, " +
+      "or run migrate_metadata.js to re-register legacy manifests manually";
     try {
-      manifest = loadManifest(manifestPath);
+      manifest = loadManifest(manifestPath, { unsupportedHint: hint });
     } catch (error) {
-      return fail(error.message);
+      const canMigrate = (args.command === "start" || args.command === "export") &&
+        fs.existsSync(manifestPath) && fs.statSync(manifestPath).isFile();
+      if (!canMigrate) return fail(error.message);
+      try {
+        if (args.command === "start" && args.plan_only) {
+          return previewLegacyMigration(repo, manifestPath);
+        }
+        manifest = autoMigrateManifest(repo, manifestPath);
+      } catch (migrateError) {
+        return fail(migrateError.message);
+      }
     }
   }
   try {

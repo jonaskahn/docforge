@@ -31,45 +31,49 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan` and `start` require a manifest 3.2 (or 3.1, which
-`migrate_metadata.{py,js}` — see
-[`../runtime/manifest/README.md`](../runtime/manifest/README.md) —
-upgrades in place). When the preflight fails because
-`.docforge/manifest.json` carries an **older legacy manifest version** (1.1
+`scan`, `start`, `export`, and `status` all require a manifest 3.2 (or 3.1,
+which `migrate_metadata.{py,js}` — see
+[`../runtime/manifest/README.md`](../runtime/manifest/README.md) — upgrades
+in place). What happens on an **older legacy manifest version** (1.1
 `project_context` / `document_groups`, 2.0 flat `documents` with overlays, or
-any other pre-3.0 shape), stop and present exactly these options before any
-write:
+any other pre-3.0 shape) depends on whether the command writes:
 
-1. **Revise all (recommended)** — run `/docforge-revise all`. Its
-   `migrate_metadata.{py,js}` step re-registers the legacy manifest as 3.2
-   (adopting
-   written documents as `generated` with provenance 2.0, bodies preserved),
-   then the revision re-grounds, lints, and audits the tree per
-   [`workflows/revision.md`](revision.md). Run `dashboard.{py,js} start` again
-   after
-   the whole-tree gate passes.
-2. **Update metadata only** — run
-   `migrate_metadata.{py,js} --repo <repo> --report` to re-register the
-   manifest
-   without revising content, then re-run `dashboard.{py,js} scan` (or
-   `start`). This
-   path exists for **any** legacy version — nothing is hard-coded to one
-   shape. The dashboard opens only if the migrated tree passes the route
-   plan and validation; otherwise present every remaining finding and offer
-   the revision path again.
-3. **Stop** — make no changes; the dashboard is not opened and no previous
-   build is presented as current.
+- **`start` / `export`** auto-migrate it instead of stopping to ask.
+  `migrate_metadata.{py,js}` is idempotent and only ever touches
+  `.docforge/manifest.json` and per-document frontmatter — document bodies
+  are never rewritten — so this is the same safe, metadata-only operation a
+  bare `/docforge-revise` already performs without a confirmation gate (see
+  [Bare `/docforge-revise`](revision.md#bare-docforge-revise--metadata-only-migration)).
+  The migration is never silent — it always prints what changed — before
+  continuing into the normal preflight/scan/build pipeline with the freshly
+  migrated manifest:
 
-`--plan-only` runs `migrate_metadata.{py,js} --dry-run` and shows the
-migration
-preview instead of writing. `--auto-accept` never bypasses this gate: the
-manifest rewrite and frontmatter adoption are side effects with their own
-approval, like every other safety gate in [`flags.md`](../flags.md).
+  ```
+  manifest: legacy manifest auto-migrated to 3.2 (4 migrate, 1 skip)
+  ```
+
+  `--plan-only` runs the same `migrate_metadata.{py,js} --dry-run` preview
+  and stops there instead — no writes, no route plan, no server, since there
+  is nothing valid to plan against until the manifest is actually upgraded:
+
+  ```
+  manifest is legacy; --plan-only preview (no writes):
+  { "changed": true, "results": [...] }
+  ```
+
+- **`scan` / `status`** stay strictly read-only: they never migrate, and
+  fail with a clear version-mismatch error pointing at `start`/`export` (or a
+  manual `migrate_metadata.{py,js}` run) instead.
 
 A migrated tree is a **baseline**, not a certification: adopted documents
 carry provenance 2.0 but were never independently audited, so `scan`'s
 staleness checks and the `you should revise again` recommendation still
-apply.
+apply after migration. Auto-migration only ever handles the safe,
+metadata-only case — if the migrated tree still has real content problems,
+the severity-aware `scan` (below) and the
+[build-failure contract](#when-the-build-fails-revise-before-the-dashboard)
+are what tell the user a full `/docforge-revise` is actually needed; no
+separate "is this a big change?" detection exists or is required.
 
 ## Command
 
@@ -111,6 +115,10 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 - **Scan:** a read-only diagnostic pass over the manifest and tree (see
   [Scan: you should revise again](#scan-you-should-revise-again) below). `start`
   prints the findings and the recommendation up front; it does not hide them.
+  A **blocking** finding stops here — before Build is even attempted — with
+  the same "never open, never present a stale build as current" contract as
+  [When the build fails](#when-the-build-fails-revise-before-the-dashboard);
+  advisory-only findings (or none) let the pipeline continue.
 - **Metadata reconcile:** ensures each written document's public `id`,
   `title`, and `description` frontmatter match the manifest (missing
   descriptions are added; descriptions are catalog-owned, seeded from the
@@ -217,35 +225,53 @@ revise request is still asked (like other mandatory safety gates in
 
 ## Scan: you should revise again
 
-`scan` (and the `start` lifecycle) runs a read-only diagnostic pass over the
-manifest and tree before anything is built or served. It reports:
+`scan` (and the `start`/`export` lifecycle) runs a read-only diagnostic pass
+over the manifest and tree before anything is built or served. Every finding
+carries a `blocking: true/false` field (printed as `(blocking)` in text
+output) so `start`/`export` know whether to stop before attempting a build or
+to proceed anyway. It reports:
 
 - **metadata** — documents under `docs/` whose frontmatter is missing,
-  unparseable, or not schema 2.0 (reconcile would skip or error);
+  unparseable, or not schema 2.0 (reconcile would skip or error); **blocking**
+  when the document would otherwise be included in the build (it would crash
+  conversion), advisory when the document is already excluded for another
+  reason (its frontmatter can't break a build it's never part of);
 - **incomplete** — manifest documents that are not `generated` /
   `needs_review` / `complete` (planned, `in_progress`, ...), which the
-  dashboard cannot render;
-- **missing_file** — written documents whose file no longer exists;
+  dashboard cannot render; always advisory — the document is simply absent
+  from the site;
+- **missing_file** — written documents whose file no longer exists; always
+  advisory, same reasoning;
 - **drift** — provenance sources whose current bytes no longer match the
-  recorded `git_blob` (the document is stale);
+  recorded `git_blob` (the document is stale); always advisory — staleness
+  never breaks a build, it only means the rendered content may be outdated;
 - **broken_link** — internal Markdown links that resolve neither to a ledger
-  page nor to an asset;
-- **untracked** — `.md` / `.mdx` files under `docs/` with no manifest entry.
+  page nor to an asset; always **blocking**;
+- **untracked** — `.md` / `.mdx` files under `docs/` with no manifest entry;
+  always advisory;
+- **route_plan** — problems in the route table itself (no written
+  `docs/README.md` index, two documents mapping to the same URL); always
+  **blocking**.
 
-`scan` exits `1` when anything is found, so it is the read-only answer to
-"should I revise again?" before opening the dashboard.
+`scan` exits `1` when anything is found — blocking or advisory — so it stays
+the read-only answer to "should I revise again?" regardless of severity;
+severity only changes what `start`/`export` do next.
 
-When `start` (or `scan`) reports problems, the agent must:
+When `start`/`export` (or `scan`) report problems, the agent must:
 
-1. Present the full list — kind, document, and detail — never a summary that
-   hides a finding.
+1. Present the full list — kind, blocking/advisory, document, and detail —
+   never a summary that hides a finding.
 2. Tell the user **you should revise again** and recommend
    [`workflows/revision.md`](revision.md) (`/docforge-revise`, scoped to the
    failing documents or `all`); ask whether to run the revision now.
 3. Under `--auto-accept`, still print the findings and the recommendation
    before proceeding — the suggestion is never silent.
-4. Only when the scan is clean is the documentation ready to render; then
-   proceed to serve/open as usual.
+4. When every finding is advisory (or there are none), the pipeline proceeds
+   to build-if-changed and serve/open as usual. When any finding is
+   **blocking**, `start`/`export` stop right there — before Build is ever
+   attempted — under the same
+   [When the build fails](#when-the-build-fails-revise-before-the-dashboard)
+   contract: never open, never present a stale build as current.
 
 ## What the dashboard is not
 
