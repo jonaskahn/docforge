@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.14.0",
+  "version": "2.15.0",
   "category": "portfolio",
   "purpose": "Cross-repository portfolio layer for multi-repo diligence.",
   "source": "../../index.json",

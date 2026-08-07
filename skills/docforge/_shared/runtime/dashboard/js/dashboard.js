@@ -32,7 +32,7 @@ const pf = require("../../common/js/provenance_frontmatter.js");
 const { classifySource, rawBlobHash } = require("../../common/js/evidence_hash.js");
 const { MANIFEST_CURRENT, migrate: migrateManifestMetadata } = require("../../manifest/js/migrate_metadata.js");
 
-const TOOL_VERSION = "2.14.0";
+const TOOL_VERSION = "2.15.0";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";

@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.14.0 - Deeper source grounding, graph provider session lock
+## 2.15.0 - Deeper source grounding, graph provider session lock
 
 - The graph provider is now locked into the manifest once, automatically, by
   `manage_manifest.{py,js} init` (registry-priority pick; pass
