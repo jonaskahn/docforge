@@ -67,7 +67,9 @@ node runtime/cli/js/dashboard.js export --repo <repo>
 | *(none)* | `dashboard.{py,js} start` (scripts and README: [`../docforge/_shared/runtime/dashboard/README.md`](../docforge/_shared/runtime/dashboard/README.md)): reconcile metadata → rebuild generated output when the working-tree signature changed → serve → open |
 | `--force` | Ignore signatures: always regenerate generated output (`content/docs`, assets, navigation, app shell), keeping `node_modules` |
 | `--plan-only` | Preflight, metadata dry-run, signatures, and route plan; no conversion, no writes, no server. On a legacy manifest, the metadata dry-run is the `migrate_metadata.{py,js} --dry-run` preview (see [`../docforge/_shared/runtime/manifest/README.md`](../docforge/_shared/runtime/manifest/README.md)) |
-| `--auto-accept` | Skip the revise-vs-render prompt and routine pauses; never authorizes npm install of new packages without its own confirmation gate (see [`../docforge/_shared/flags.md`](../docforge/_shared/flags.md)) |
+| `--auto-accept` | No interactive prompt of `/docforge-dashboard`'s own to skip — `start` always renders current documentation; never authorizes installing Node.js, changing package files, or deleting the dashboard directory (see [`../docforge/_shared/workflows/dashboard.md`](../docforge/_shared/workflows/dashboard.md) "Flags") |
+| `--no-open` | `start` only: skip opening the default browser after the server is healthy |
+| `--port N` | `start` only: bind the dev server to port `N` instead of an auto-picked free port |
 | `--help` | Print this command's purpose and full parameter reference — [`../docforge/_shared/help.md`](../docforge/_shared/help.md) — then stop; run no workflow |
 
 Subcommands: `scan` (read-only diagnostics: missing metadata, incomplete or
@@ -90,7 +92,7 @@ which this entrypoint's load order already pulls in.
 
 - **Legacy manifest** — a pre-3.0 `.docforge/manifest.json` (1.1
   `project_context` / `document_groups`, 2.0 flat `documents`, or any other
-  legacy shape) is auto-migrated to 3.4 automatically, never a stop-and-ask
+  legacy shape) is auto-migrated to 3.6 automatically, never a stop-and-ask
   gate: `migrate_metadata` (**any** legacy version, re-registered) is
   idempotent and only ever touches the manifest, the `.docforge/provenance/`
   sidecars, and document frontmatter, never bodies. The migration is always printed, never silent. `--plan-only`

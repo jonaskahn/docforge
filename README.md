@@ -5,7 +5,7 @@
 
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-2.17.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
+  [![Version](https://img.shields.io/badge/version-2.18.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 
@@ -22,6 +22,15 @@ provenance, every document passes an independent audit before it counts.
 ```text
 PRECHECK → ANALYZE → PLAN → WRITE → AUDIT → TRACK
 ```
+
+Docforge reads the repository's own size and shape before deciding how big
+the docs should be: a small repo gets **compact layout** — the same subjects,
+folded into fewer, denser files — while a large one gets the full standard
+tree; either way you can override the suggestion. Documents that fall out of
+scope on a later run (tier downgrade, dropped profile, layout switch) are
+**retired**, not deleted out from under you — moved to a git-ignored
+`.docforge/obsolete/<year>/` (or removed, if you say so explicitly) with the
+history kept in the manifest.
 
 ## ██▓▒░ INSERT COIN ░▒▓██
 

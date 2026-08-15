@@ -1,0 +1,36 @@
+{
+  "id": "portfolio_compact",
+  "type": "compact-doc",
+  "title": "Portfolio",
+  "summary": "Compact portfolio section: inventory, system context, security, operations, diligence index, and glossary in one file",
+  "contract_file": "content/compact/contracts/portfolio.md",
+  "path": "docs-portfolio.md",
+  "group": "portfolio",
+  "selection": {
+    "mode": "compact",
+    "min_tier": "portfolio",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/compact/instructions/portfolio.md",
+  "requires": [
+    "git_history",
+    "manifests"
+  ],
+  "target_depth": "orientation",
+  "write_order": 100,
+  "provenance_mode": "sections",
+  "audit_profile": "portfolio",
+  "template_file": "content/compact/templates/portfolio.template.md",
+  "contract_revision": "2.18.0",
+  "compact_target": "docs-portfolio.md",
+  "compact_members": [
+    "portfolio_readme",
+    "portfolio_repo_inventory",
+    "portfolio_system_context",
+    "portfolio_security",
+    "portfolio_operations",
+    "portfolio_diligence_index",
+    "portfolio_glossary"
+  ]
+}

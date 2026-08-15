@@ -509,28 +509,14 @@ function resolveDocPath(row) {
   }
   return null;
 }
-function storageFor(repo) {
-  const manifestPath = path.join(repo, ".docforge", "manifest.json");
-  if (fs.existsSync(manifestPath)) {
-    try {
-      return store.storageFor(readJson(manifestPath));
-    } catch {
-      // fall through to default
-    }
-  }
-  return store.STORAGE_MARKDOWN;
-}
-
+// Stamp the folder sidecar and return the frontmatter-free document text.
 function renderDoc(repo, docPath, provenance, title, body) {
-  if (storageFor(repo) === store.STORAGE_JSON) {
-    const entry = { id: provenance.doc_id, title, provenance };
-    store.writeEntry(repo, docPath, entry);
-    return body;
-  }
-  return pf.emitYaml(provenance) + body;
+  const entry = { id: provenance.doc_id, title, provenance };
+  store.writeEntry(repo, docPath, entry);
+  return body;
 }
 
-function stubBody(row, repo = null) {
+function stubBody(row, repo) {
   const name = row.display_name || row.name;
   const docPath = resolveDocPath(row) || defaultDocPath(row.slug, row.family);
   const entry = row.entry_ref;
@@ -553,8 +539,7 @@ function stubBody(row, repo = null) {
     `- Entry: \`${signature}\``, "",
     "{{Write this document from the evidence required by its catalog entry.}}", "",
   ].join("\n");
-  if (repo) return renderDoc(repo, docPath, provenance, String(name), body);
-  return pf.emitYaml(provenance) + body;
+  return renderDoc(repo, docPath, provenance, String(name), body);
 }
 function isScaffoldOrPlaceholder(text) {
   return text.includes("{{") || text.includes("TODO(") || text.includes("Status: `placeholder`") || text.includes("<DOC_ID>");
@@ -577,7 +562,7 @@ function ensureStubs(repo, rows) {
       const existing = fs.readFileSync(target, "utf8");
       if (!isScaffoldOrPlaceholder(existing)) continue;
     }
-    fs.writeFileSync(target, stubBody(row));
+    fs.writeFileSync(target, stubBody(row, repo));
     created.push({
       id: row.id,
       slug: row.slug,
@@ -740,8 +725,7 @@ function markdown(index, tier = "spine", repo = null) {
   }
   lines.push(`_Generated ${generated}; source of truth: \`.docforge/flow-index.json\`._`, "");
   const body = lines.join("\n");
-  if (repo) return renderDoc(repo, "docs/flows/README.md", provenance, "Flows", body);
-  return pf.emitYaml(provenance) + body;
+  return renderDoc(repo, "docs/flows/README.md", provenance, "Flows", body);
 }
 function collectCandidates(args) {
   const rows = [];

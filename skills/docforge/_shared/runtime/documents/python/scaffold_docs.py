@@ -19,7 +19,6 @@ from runtime.common.python.provenance_frontmatter import (
     SCAFFOLD_TOKEN,
     SOURCE_ROLES,
     SUPPORTED_SCHEMA_VERSIONS,
-    emit_document_frontmatter,
     parse_frontmatter as codec_parse_frontmatter,
     scaffold_provenance as build_provenance,
 )
@@ -54,7 +53,7 @@ def resolve_manifest(value: Path, repo: Path) -> Path:
 
 
 def active_documents(manifest: dict) -> list[dict]:
-    return [doc for doc in manifest["documents"] if doc.get("status") != "skipped"]
+    return [doc for doc in manifest["documents"] if doc.get("status") not in {"skipped", "retired"}]
 
 
 def preview(manifest: dict, repo: Path, revise: bool = False) -> int:
@@ -100,16 +99,6 @@ def preview(manifest: dict, repo: Path, revise: bool = False) -> int:
 
 def title_for(doc: dict) -> str:
     return doc.get("title") or doc["id"].replace("-", " ").replace("_", " ").title()
-
-
-def scaffold_provenance(doc: dict, manifest: dict) -> str:
-    provenance = build_provenance(
-        doc["id"],
-        doc["path"],
-        tier=manifest.get("project", {}).get("tier", "<TIER>"),
-        target_depth=doc["target_depth"],
-    )
-    return emit_document_frontmatter(doc["id"], title_for(doc), provenance)
 
 
 def scaffold_entry(doc: dict, manifest: dict) -> dict:
@@ -161,7 +150,7 @@ def expand_children_block(body: str, doc: dict, manifest: dict) -> str:
     return body[:start] + block + body[end + len(CHILDREN_END):]
 
 
-def scaffold_body(doc: dict, manifest: dict, storage: str) -> str:
+def scaffold_body(doc: dict, manifest: dict) -> str:
     if doc["type"] in INDEX_TYPES:
         template = SKILL_ROOT / doc["scaffold_template"]
         if not template.is_file():
@@ -170,8 +159,6 @@ def scaffold_body(doc: dict, manifest: dict, storage: str) -> str:
         state, _, body_start = codec_parse_frontmatter(body)
         if state != "missing":
             body = body[body_start:]
-        if storage == store.STORAGE_MARKDOWN and doc["path"] not in MARKDOWN_EXCEPTIONS:
-            body = scaffold_provenance(doc, manifest) + body
         body = expand_children_block(body, doc, manifest)
         return body.replace("{{TITLE}}", title_for(doc), 1)
     template = SKILL_ROOT / doc["scaffold_template"]
@@ -181,8 +168,6 @@ def scaffold_body(doc: dict, manifest: dict, storage: str) -> str:
     state, _, body_start = codec_parse_frontmatter(body)
     if state != "missing":
         body = body[body_start:]
-    if storage == store.STORAGE_MARKDOWN and doc["path"] not in MARKDOWN_EXCEPTIONS:
-        body = scaffold_provenance(doc, manifest) + body
     return body
 
 
@@ -207,9 +192,8 @@ def ensure_local_ignore(repo: Path) -> None:
 
 
 def write_document(repo: Path, doc: dict, manifest: dict) -> str:
-    storage = store.storage_for(manifest)
     target = repo / doc["path"]
-    body = scaffold_body(doc, manifest, storage)
+    body = scaffold_body(doc, manifest)
     target.parent.mkdir(parents=True, exist_ok=True)
     if doc["type"] == "machine-config" and target.exists():
         existing = json.loads(target.read_text(encoding="utf-8"))
@@ -223,7 +207,6 @@ def write_document(repo: Path, doc: dict, manifest: dict) -> str:
         action = "create"
     if (
         action == "create"
-        and storage == store.STORAGE_JSON
         and doc.get("provenance_mode") == "sections"
         and doc["type"] != "machine-config"
         and doc["path"] not in MARKDOWN_EXCEPTIONS
@@ -452,15 +435,11 @@ def audit(repo: Path, manifest: dict) -> int:
         if forge_hits:
             findings["forge leakage"].append(f"{doc['path']}: {', '.join(forge_hits)}")
         if doc["provenance_mode"] == "sections" and doc["path"] not in MARKDOWN_EXCEPTIONS:
-            storage = store.storage_for(manifest)
-            if storage == store.STORAGE_JSON:
-                meta = store.read_doc_metadata(repo, doc, storage)
-                state = "legacy" if meta["state"] == "inline" else meta["state"]
-                provenance = meta["provenance"]
-                body = text
-            else:
-                state, provenance, body_start = codec_parse_frontmatter(text)
-                body = text[body_start:]
+            meta = store.read_doc_metadata(repo, doc)
+            # An un-migrated inline document is a legacy finding, not a pass.
+            state = "legacy" if meta["state"] == "inline" else meta["state"]
+            provenance = meta["provenance"]
+            body = text
             for kind, items in provenance_defects(
                 repo, doc, state, provenance, body, manifest.get("project", {}).get("tier")
             ).items():

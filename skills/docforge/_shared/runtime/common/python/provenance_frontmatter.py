@@ -18,7 +18,7 @@ SCHEMA_VERSION = "2.1"
 SUPPORTED_SCHEMA_VERSIONS = frozenset({"2.0", "2.1"})
 LEGACY_SCHEMA = "1.0"
 GENERATOR_NAME = "docforge"
-GENERATOR_VERSION = "2.17.0"
+GENERATOR_VERSION = "2.18.0"
 PROVENANCE_FIELDS = {
     "schema", "doc_id", "path", "generated_at", "generator", "tier",
     "target_depth", "graph", "sections",
@@ -354,33 +354,6 @@ def emit_yaml(provenance: dict) -> str:
     return "\n".join(lines)
 
 
-def emit_document_frontmatter(
-    doc_id: str,
-    title: str,
-    provenance: dict,
-    description: str | None = None,
-) -> str:
-    """Emit MDX-compatible public identity (id, title, optional description)
-    plus private Docforge provenance."""
-    if not doc_id or not title:
-        raise YamlCodecError("document id and title must be non-empty")
-    lines = ["---", f"id: {quote_scalar(doc_id)}", f"title: {quote_scalar(title)}"]
-    if description is not None:
-        lines.append(f"description: {quote_scalar(description)}")
-    lines.append("docforge_provenance:")
-    _emit_mapping(lines, provenance, PROVENANCE_KEY_ORDER, 2)
-    lines.extend(["---", ""])
-    return "\n".join(lines)
-
-
-def wrap_document(provenance: dict, body: str) -> str:
-    if body.startswith("\n"):
-        return emit_yaml(provenance) + body.lstrip("\n")
-    if body and not body.endswith("\n"):
-        body = body + "\n"
-    return emit_yaml(provenance) + body
-
-
 def _reject_unsupported(raw: str) -> None:
     for line in raw.splitlines():
         stripped = line.strip()
@@ -529,10 +502,3 @@ def parse_frontmatter(text: str) -> tuple[str, dict | None, int]:
     if provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS or "tool_version" in provenance:
         return "obsolete", provenance, end
     return "ok", provenance, end
-
-
-def rewrite_frontmatter(text: str, provenance: dict) -> str:
-    raw, body, _end = split_frontmatter(text)
-    if raw is None:
-        return wrap_document(provenance, text)
-    return emit_yaml(provenance) + body

@@ -29,37 +29,28 @@ def flow_is_main_priority(row: dict) -> bool:
     return False
 
 
-def document_action(repo: Path, doc: dict, revise: bool = False, storage: str | None = None) -> tuple[str, str]:
+def document_action(repo: Path, doc: dict, revise: bool = False) -> tuple[str, str]:
     status = doc.get("status", "planned")
     if status == "skipped":
         return "skip", "explicitly skipped"
+    if status == "retired":
+        return "retired", "out of scope; content moved by retire; entry preserved"
     target = repo / doc["path"]
     if not target.is_file():
         if status in WRITTEN:
             return "add", f"file missing despite {status}"
         return "add", "planned; will be scaffolded"
-    if storage is None:
-        storage = store.STORAGE_MARKDOWN
-    if storage == store.STORAGE_JSON:
-        meta = store.read_doc_metadata(repo, doc, storage)
-        if meta["state"] == "ok":
-            state, provenance = "ok", meta["provenance"]
-        elif meta["state"] == "inline":
-            return "update", "inline provenance pending sidecar migration"
-        elif meta["state"] == "legacy":
-            return "rewrite", "legacy provenance pending migration"
-        elif meta["state"] == "obsolete":
-            return "rewrite", "obsolete provenance schema; run migrate_metadata"
-        else:
-            return "rewrite", "provenance missing or unparseable"
+    meta = store.read_doc_metadata(repo, doc)
+    if meta["state"] == "ok":
+        state, provenance = "ok", meta["provenance"]
+    elif meta["state"] == "inline":
+        return "update", "inline provenance pending sidecar migration"
+    elif meta["state"] == "legacy":
+        return "rewrite", "legacy provenance pending migration"
+    elif meta["state"] == "obsolete":
+        return "rewrite", "obsolete provenance schema; run migrate_metadata"
     else:
-        state, provenance, _ = parse_frontmatter(target.read_text(encoding="utf-8", errors="replace"))
-        if state == "legacy":
-            return "rewrite", "legacy provenance pending migration"
-        if state == "obsolete":
-            return "rewrite", "obsolete provenance schema; run migrate_metadata"
-        if state != "ok" or not isinstance(provenance, dict):
-            return "rewrite", "provenance missing or unparseable"
+        return "rewrite", "provenance missing or unparseable"
     if status in {"in_progress", "needs_review"}:
         return "rewrite", "status requires re-grounding"
     if status == "planned":
@@ -78,9 +69,8 @@ def plan_entries(
     revise: bool = False,
 ) -> list[dict]:
     entries: list[dict] = []
-    storage = store.storage_for(manifest)
     for doc in manifest.get("documents", []):
-        action, reason = document_action(repo, doc, revise, storage)
+        action, reason = document_action(repo, doc, revise)
         entries.append({
             "id": doc.get("id"),
             "path": doc.get("path"),
@@ -111,7 +101,7 @@ def plan_entries(
             if doc is None:
                 action, reason = "add", f"flow {flow_id}: not yet planned"
             else:
-                action, reason = document_action(repo, doc, revise, storage)
+                action, reason = document_action(repo, doc, revise)
             entries.append({
                 "id": flow_id,
                 "path": path,
@@ -130,7 +120,7 @@ def plan_lines(
     flow_index_path: Path | None = None,
     revise: bool = False,
 ) -> list[str]:
-    docs = [doc for doc in manifest.get("documents", []) if doc.get("status") != "skipped"]
+    docs = [doc for doc in manifest.get("documents", []) if doc.get("status") not in {"skipped", "retired"}]
     project = manifest.get("project", {})
     lines = [f"Generation plan — tier: {project.get('tier', 'unknown')}"]
     profiles = project.get("profiles", {})

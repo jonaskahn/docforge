@@ -10,17 +10,11 @@ In a repo where the runtime is linked at the root (`ln -s <cartridge>/runtime
 
 ## Session runtime (agent-owned)
 
-There is no runtime-precheck CLI. At the start of a Docforge session the
-agent probes the host once (`command -v` / equivalent) and **locks one
-engine for every Docforge tool call in that session**:
-
-1. Prefer Python: `python3`, else `python` (3.10+).
-2. Else JS: `node` (22+), else `bun`, else `deno`.
-3. If none are available, stop and tell the user to install one family.
-
-Do not switch engines mid-session. Python and JS peers are behaviorally
-equivalent; a few JS implementations are execution shims (they exit on
-`require`) rather than importable re-exports, which does not affect CLI use.
+Detection order and the one-engine-per-session lock are owned by
+[`../../workflows/tools.md`](../../workflows/tools.md) "Session runtime
+(agent-owned)". Python and JS peers are behaviorally equivalent; a few JS
+implementations are execution shims (they exit on `require`) rather than
+importable re-exports, which does not affect CLI use.
 
 ### Invocation forms
 
@@ -53,7 +47,7 @@ Always put the command/subcommand before flags (e.g.
 | `generate_indexes` | Regenerate catalog routers (`--write` / `--check`) |
 | `validate_metadata` | Catalog, schema, peer, and release-metadata validation |
 | `detect_profiles` | Shape/platform/framework/concern recommendations (writes `.docforge/scratch/manifest-deps.json`) |
-| `manage_manifest` | `init` / `add` / `set` / `presentation` / `status` / `audit` / `reconcile` / `finish` |
+| `manage_manifest` | `init` / `add` / `set` / `presentation` / `status` / `audit` / `set-graph` / `reconcile` / `unmanaged` / `retire` / `finish` |
 | `scaffold_docs` | Dry-run tree, one-document materialize, manifest audit |
 | `check_staleness` | Provenance blob drift + optional sync |
 | `hash_evidence` | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one source |

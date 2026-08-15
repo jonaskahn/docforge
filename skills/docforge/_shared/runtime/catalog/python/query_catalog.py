@@ -13,6 +13,9 @@ from runtime.common.python._util import dump_json, fail
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 CATALOG_DIR = SKILL_ROOT / ".metadata" / "catalog"
+# Depth brake for a compact merge: beyond this, prefer authoring the group as
+# fewer, denser sections elsewhere rather than one file with too many.
+COMPACT_MEMBER_CAP = 8
 INDEX_PATH = CATALOG_DIR / "index.json"
 TYPES_DIR = CATALOG_DIR / "types"
 PROFILES_DIR = CATALOG_DIR / "profiles"
@@ -53,7 +56,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.17.0"
+CATALOG_VERSION = "2.18.0"
 PRESENTATION_VALUES = {
     "code": {"contract-only", "task-focused"},
     "related_docs": {"none", "compact", "traceability"},
@@ -170,7 +173,7 @@ def tier_rows(tier: str) -> list[dict]:
 # writing procedure, regardless of group.
 ROUTE_WORKFLOW = "workflows/writing.md"
 GROUP_SUMMARIES = {
-    "root": "Root-level entrypoints: README, SKILL.md, and package descriptors.",
+    "root": "Root-level entrypoints: repository README, changelog, and the docs index.",
     "product": "Product surface: overview, quickstart, and audience-specific product views.",
     "architecture": "System architecture: structure, boundaries, and integration surfaces.",
     "flows": "End-to-end flow documentation derived from the flow index.",
@@ -261,7 +264,65 @@ def resolve_presentation(detail: dict, audiences: list[str] | None = None) -> tu
     return primary, presentation, origins
 
 
-def route(value: str, audiences: list[str] | None = None) -> dict:
+def manifest_compact_members(repo: Path | None, doc_id: str) -> list[str] | None:
+    """The manifest's own folded `compact_members` for `doc_id`, or None when
+    no manifest is available or the entry has none.
+
+    A compact group spanning tiers (e.g. `architecture_compact` at Spine and
+    Diligence) declares its *full* member roster in the catalog, but only a
+    tier-appropriate subset is ever actually selected and folded for one
+    project. The manifest entry — built by `fold_compact_groups` from the
+    tier-filtered selection — already carries the correct subset; prefer it
+    over the catalog's full list whenever a manifest is available."""
+    if repo is None:
+        return None
+    manifest_path = repo / ".docforge" / "manifest.json"
+    if not manifest_path.is_file():
+        return None
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    for doc in manifest.get("documents", []):
+        if doc.get("id") == doc_id:
+            members = doc.get("compact_members")
+            return members if isinstance(members, list) and members else None
+    return None
+
+
+def composed_compact_contract(detail: dict, repo: Path | None = None) -> tuple[str, list[dict]]:
+    """Compose the merged file's content contract at route time: the group's
+    short header contract plus each member's existing contract as a named
+    section, in `compact_members` order. Member contracts are reused, never
+    rewritten. `repo`, when given, narrows a tier-spanning group's full
+    catalog roster to what this project's manifest actually folded — see
+    `manifest_compact_members`."""
+    parts: list[str] = []
+    members: list[dict] = []
+    header = detail.get("contract_file")
+    if header and (SKILL_ROOT / header).is_file():
+        parts.append((SKILL_ROOT / header).read_text(encoding="utf-8").rstrip())
+    member_ids = manifest_compact_members(repo, detail.get("id")) or detail.get("compact_members", [])
+    for order, member_id in enumerate(member_ids, start=1):
+        member = load_type(member_id)
+        member_contract = member.get("contract_file")
+        members.append({
+            "id": member_id,
+            "order": order,
+            "contract": member_contract,
+            "instruction": member.get("instruction_file"),
+            "template": member.get("template_file"),
+            "target_depth": member.get("target_depth"),
+            "model_depth": member.get("model_depth", {}),
+            "dominant_form": member.get("dominant_form"),
+        })
+        if member_contract and (SKILL_ROOT / member_contract).is_file():
+            text = (SKILL_ROOT / member_contract).read_text(encoding="utf-8").rstrip()
+            parts.append(f"## {member_id}\n\n{text}")
+    return "\n\n".join(parts), members
+
+
+def route(value: str, audiences: list[str] | None = None, repo: Path | None = None) -> dict:
     doc_id = resolve_catalog_id(value)
     row = index_row(doc_id)
     detail = load_type(doc_id)
@@ -272,7 +333,8 @@ def route(value: str, audiences: list[str] | None = None) -> dict:
         if model in detail.get("model_depth", {})
     }
     primary_audience, presentation, presentation_origin = resolve_presentation(detail, audiences)
-    return {
+    compact_members = detail.get("compact_members")
+    result = {
         "id": doc_id,
         "group": detail.get("group"),
         "summary": detail.get("summary"),
@@ -290,6 +352,14 @@ def route(value: str, audiences: list[str] | None = None) -> dict:
         "presentation": presentation,
         "presentation_origin": presentation_origin,
     }
+    if compact_members:
+        composed, members = composed_compact_contract(detail, repo)
+        result["contract"] = composed
+        result["compact"] = {
+            "header_contract": detail.get("contract_file"),
+            "members": members,
+        }
+    return result
 
 
 # Field order and shape of a pre-2.5 type-detail record. --id/--ids/--tier/
@@ -388,7 +458,7 @@ def applicable(
     for row in index["document_types"]:
         detail = load_type(row["id"])
         rule = detail["selection"]
-        if rule["mode"] == "dynamic" and not include_dynamic:
+        if rule["mode"] in {"dynamic", "compact"} and not include_dynamic:
             continue
         if ranks[rule["min_tier"]] > tier_rank:
             continue
@@ -606,8 +676,40 @@ def validate() -> list[str]:
             dynamic_types.add(doc["type"])
             if doc["type"] in index_ids and doc["type"] != doc_id:
                 errors.append(f"{doc_id}: dynamic type collides with catalog id {doc['type']}")
+        elif selection.get("mode") == "compact":
+            if not doc.get("compact_members"):
+                errors.append(f"{doc_id}: compact documents must declare compact_members")
+            if doc.get("compact_target") and doc.get("compact_target") != doc.get("path"):
+                errors.append(f"{doc_id}: compact_target must match path")
+            if doc["id"] in static_ids:
+                errors.append(f"duplicate static id: {doc['id']}")
+            if doc["path"] in static_paths:
+                errors.append(f"duplicate static path: {doc['path']}")
+            static_ids.add(doc["id"])
+            static_paths.add(doc["path"])
         else:
             errors.append(f"{doc_id}: selection.mode must be static or dynamic")
+    compact_ids = {
+        doc_id for doc_id in index_ids
+        if load_type(doc_id).get("selection", {}).get("mode") == "compact"
+    }
+    for doc_id in index_ids:
+        doc = load_type(doc_id)
+        group = doc.get("compact_group")
+        if group is not None and group not in compact_ids:
+            errors.append(f"{doc_id}: compact_group references missing compact document {group}")
+        for member_id in doc.get("compact_members", []):
+            if member_id not in index_ids:
+                errors.append(f"{doc_id}: compact_members references unknown document {member_id}")
+            elif load_type(member_id).get("compact_group") != doc_id:
+                errors.append(f"{doc_id}: member {member_id} does not declare compact_group {doc_id}")
+            if doc.get("selection", {}).get("mode") != "compact":
+                errors.append(f"{doc_id}: compact_members belongs on a compact document")
+        if len(doc.get("compact_members", [])) > COMPACT_MEMBER_CAP:
+            errors.append(
+                f"{doc_id}: {len(doc['compact_members'])} compact_members exceeds the "
+                f"{COMPACT_MEMBER_CAP}-member depth brake (document-composition.md)"
+            )
 
     # §0.10: infrastructure-platform must carry widened signals + aliases
     infra = next(
@@ -680,6 +782,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--validate", action="store_true")
     parser.add_argument("--category", dest="category", help="Group id, e.g. architecture")
     parser.add_argument("--route", dest="route_id", help="Document id to resolve")
+    parser.add_argument(
+        "--repo", type=Path, default=None,
+        help="Target repo, for --route on a tier-spanning compact document: "
+             "narrows its composed contract to what the manifest actually "
+             "folded, when a manifest is present",
+    )
     args = parser.parse_args(argv)
 
     modes = sum(
@@ -745,7 +853,7 @@ def main(argv: list[str] | None = None) -> int:
             print(dump_json(category(args.category)), end="")
             return 0
         if args.route_id:
-            print(dump_json(route(args.route_id, args.audience)), end="")
+            print(dump_json(route(args.route_id, args.audience, args.repo)), end="")
             return 0
     except ValueError as exc:
         return fail(str(exc), 2)

@@ -28,6 +28,7 @@ class RuntimeParityTests(unittest.TestCase):
             for manifest in (py_manifest, js_manifest):
                 manifest["generated_at"] = "<TIME>"
                 manifest["metadata"]["last_updated"] = "<TIME>"
+                manifest["project"]["scale"]["decided_at"] = "<TIME>"
                 manifest["project"]["root"] = "<REPO>"
                 manifest["project"]["name"] = "<NAME>"
             self.assertEqual(py_manifest, js_manifest)
@@ -96,6 +97,7 @@ class RuntimeParityTests(unittest.TestCase):
                 manifest["generated_at"] = "<TIME>"
                 manifest["metadata"]["last_updated"] = "<TIME>"
                 manifest["graph"]["locked_at"] = "<TIME>"
+                manifest["project"]["scale"]["decided_at"] = "<TIME>"
                 manifest["project"]["root"] = "<REPO>"
                 manifest["project"]["name"] = "<NAME>"
                 manifests[runtime] = manifest

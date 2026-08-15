@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-/* Migrate Docforge manifest metadata to 3.4 / provenance 2.0.
+/* Migrate Docforge manifest metadata to 3.5 / provenance 2.0.
  *
  * Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
  * manifest 3.2 / provenance 2.0 (seeding each document's
@@ -11,7 +11,7 @@
  * frontmatter, including pre-schema `doc` / `graph_snapshot` shapes, while
  * preserving section evidence), and re-registers any older legacy manifest —
  * 1.1 (`project_context` / `document_groups`), 2.0 (flat `documents` with
- * overlay profiles), or any other pre-3.0 shape — as 3.4: written documents
+ * overlay profiles), or any other pre-3.0 shape — as 3.5: written documents
  * are adopted as `generated` with provenance 2.0, bodies preserved, and plan
  * entries kept. When a document cannot be converted to complete provenance
  * 2.0 (missing or unparseable frontmatter, conversion failure, or incomplete
@@ -25,10 +25,11 @@ const { dumpJson, fail, loadManifest } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
+const { computeScale } = require("../../common/js/scale.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 
-const MANIFEST_CURRENT = "3.4";
-const MANIFEST_IN_PLACE = ["3.4", "3.3", "3.2", "3.1", "3.0"];
+const MANIFEST_CURRENT = "3.6";
+const MANIFEST_IN_PLACE = ["3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
 const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
@@ -48,10 +49,17 @@ const LEGACY_OVERLAY_MAP = {
   "data-pipeline": ["shapes", "data-pipeline"],
 };
 const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
-const STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"];
+const STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped", "retired"];
 const ORIGIN_KINDS = new Set([
   "tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor",
+  "compact",
 ]);
+
+// Guards that seed a missing field must test the shape, not truthiness: a
+// present-but-wrong-typed value has to be repaired, not preserved.
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
 function needsProvenanceMigration(provenance) {
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) return false;
@@ -194,19 +202,17 @@ function publicFor(text, doc) {
   return publicMeta;
 }
 
-function writeOutput(repo, doc, text, provenance, dryRun, storage) {
+// Persist provenance to the folder sidecar and leave the markdown clean.
+// Stripping is unconditional: this is the one pass that guarantees no
+// generated document keeps a frontmatter block.
+function writeOutput(repo, doc, text, provenance, dryRun) {
+  if (dryRun) return;
   const body = bodyForRewrite(text);
   const filePath = path.join(repo, ...doc.path.split("/"));
-  if (storage === store.STORAGE_JSON) {
-    if (!dryRun) {
-      const entry = publicFor(text, doc);
-      entry.provenance = provenance;
-      store.writeEntry(repo, doc.path, entry);
-      fs.writeFileSync(filePath, body.replace(/^\n+/, ""), "utf8");
-    }
-  } else if (!dryRun) {
-    fs.writeFileSync(filePath, pf.emitYaml(provenance) + body.replace(/^\n+/, ""), "utf8");
-  }
+  const entry = publicFor(text, doc);
+  entry.provenance = provenance;
+  store.writeEntry(repo, doc.path, entry);
+  fs.writeFileSync(filePath, body.replace(/^\n+/, ""), "utf8");
 }
 
 function failDocument(repo, doc, manifest, dryRun, reason, options = {}) {
@@ -219,7 +225,7 @@ function failDocument(repo, doc, manifest, dryRun, reason, options = {}) {
   let detail = `${reason}; agent must regenerate provenance`;
   if (demoted) detail += "; status -> in_progress";
   const result = { doc: doc.path, action: "failed", detail };
-  writeOutput(repo, doc, text, generated, dryRun, store.storageFor(manifest));
+  writeOutput(repo, doc, text, generated, dryRun);
   doc.provenance = generated;
   return result;
 }
@@ -231,7 +237,7 @@ function regeneratePlanned(repo, doc, manifest, dryRun, reason, text) {
     action: "regenerate",
     detail: `${reason}; wrote provenance ${pf.SCHEMA_VERSION} scaffold from manifest`,
   };
-  writeOutput(repo, doc, text, generated, dryRun, store.storageFor(manifest));
+  writeOutput(repo, doc, text, generated, dryRun);
   doc.provenance = generated;
   return result;
 }
@@ -249,14 +255,13 @@ function writeMigrated(repo, doc, manifest, text, migrated, dryRun, detail, requ
     );
   }
   const result = { doc: doc.path, action: "migrate", detail };
-  writeOutput(repo, doc, text, migrated, dryRun, store.storageFor(manifest));
+  writeOutput(repo, doc, text, migrated, dryRun);
   doc.provenance = migrated;
   return result;
 }
 
 function migrateDocumentFile(repo, doc, manifest, dryRun, requireComplete = null) {
   const result = { doc: doc.path, action: "skip", detail: "" };
-  const storage = store.storageFor(manifest);
   if (doc.provenance_mode === "manifest" || MARKDOWN_EXCEPTIONS.has(path.basename(doc.path))) {
     result.detail = "manifest-only provenance";
     return result;
@@ -268,38 +273,36 @@ function migrateDocumentFile(repo, doc, manifest, dryRun, requireComplete = null
     return result;
   }
   const mustComplete = requireComplete == null ? WRITTEN.has(doc.status) : Boolean(requireComplete);
-  if (storage === store.STORAGE_JSON) {
-    const entry = store.entryFor(repo, doc.path);
-    if (entry && entry.provenance && typeof entry.provenance === "object") {
-      const defaults = migrationDefaults(doc, manifest);
-      let provenance = entry.provenance;
-      if (needsProvenanceMigration(provenance)) {
-        try {
-          provenance = pf.migrateV1ToV2(provenance, "", defaults);
-        } catch {
-          provenance = provenanceFromManifest(doc, manifest);
-        }
-        if (!dryRun) {
-          const updated = { ...entry, provenance };
-          store.writeEntry(repo, doc.path, updated);
-        }
-        doc.provenance = provenance;
-        return { doc: doc.path, action: "migrate", detail: `sidecar schema -> ${pf.SCHEMA_VERSION}` };
+  const entry = store.entryFor(repo, doc.path);
+  if (entry && entry.provenance && typeof entry.provenance === "object") {
+    const defaults = migrationDefaults(doc, manifest);
+    let provenance = entry.provenance;
+    if (needsProvenanceMigration(provenance)) {
+      try {
+        provenance = pf.migrateV1ToV2(provenance, "", defaults);
+      } catch {
+        provenance = provenanceFromManifest(doc, manifest);
       }
-      if (mustComplete) {
-        const gaps = provenanceGaps(provenance);
-        if (gaps.length) {
-          const demoted = markForAgentRegen(doc);
-          let detail = `incomplete provenance 2.0 (${gaps.join(", ")}); agent must regenerate provenance`;
-          if (demoted) detail += "; status -> in_progress";
-          doc.provenance = provenance;
-          return { doc: doc.path, action: "failed", detail };
-        }
+      if (!dryRun) {
+        const updated = { ...entry, provenance };
+        store.writeEntry(repo, doc.path, updated);
       }
       doc.provenance = provenance;
-      result.detail = `already sidecar schema ${provenance.schema}`;
-      return result;
+      return { doc: doc.path, action: "migrate", detail: `sidecar schema -> ${pf.SCHEMA_VERSION}` };
     }
+    if (mustComplete) {
+      const gaps = provenanceGaps(provenance);
+      if (gaps.length) {
+        const demoted = markForAgentRegen(doc);
+        let detail = `incomplete provenance 2.0 (${gaps.join(", ")}); agent must regenerate provenance`;
+        if (demoted) detail += "; status -> in_progress";
+        doc.provenance = provenance;
+        return { doc: doc.path, action: "failed", detail };
+      }
+    }
+    doc.provenance = provenance;
+    result.detail = `already sidecar schema ${provenance.schema}`;
+    return result;
   }
   const text = fs.readFileSync(filePath, "utf8");
   const parsed = pf.parseFrontmatter(text);
@@ -361,19 +364,15 @@ function migrateDocumentFile(repo, doc, manifest, dryRun, requireComplete = null
       }
     }
     doc.provenance = parsed.provenance;
-    if (storage === store.STORAGE_JSON) {
-      if (dryRun) {
-        return { doc: doc.path, action: "migrate", detail: "inline -> sidecar" };
-      }
-      const action = store.moveInlineToSidecar(repo, doc, storage);
-      return {
-        doc: doc.path,
-        action: action === "moved" ? "migrate" : "skip",
-        detail: action === "moved" ? "inline -> sidecar" : action,
-      };
+    if (dryRun) {
+      return { doc: doc.path, action: "migrate", detail: "inline -> sidecar" };
     }
-    result.detail = `already schema ${parsed.provenance.schema}`;
-    return result;
+    const action = store.moveInlineToSidecar(repo, doc);
+    return {
+      doc: doc.path,
+      action: action === "moved" ? "migrate" : "skip",
+      detail: action === "moved" ? "inline -> sidecar" : action,
+    };
   }
   if ((parsed.state !== "ok" && parsed.state !== "obsolete") || !parsed.provenance) {
     if (mustComplete) {
@@ -435,9 +434,24 @@ function seedDescriptions(docs, maps) {
   return seeded;
 }
 
-function migrateManifestObject(manifest, demoteIncomplete = false) {
+// Detected-only scale record for backfill. A present `project.scale` is
+// never overwritten — this function is only called when the field is absent.
+function backfillProjectScale(repo) {
+  const detected = computeScale(repo);
+  return {
+    class: detected.class,
+    layout: detected.suggested_layout,
+    decided_by: "detected",
+    decided_at: new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00"),
+    signals: detected.signals,
+  };
+}
+
+function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
   let changed = false;
   if (
+    manifest.version === "3.5" ||
+    manifest.version === "3.4" ||
     manifest.version === "3.3" ||
     manifest.version === "3.2" ||
     manifest.version === "3.1" ||
@@ -446,7 +460,13 @@ function migrateManifestObject(manifest, demoteIncomplete = false) {
     manifest.version = MANIFEST_CURRENT;
     changed = true;
   }
-  if (manifest.project && typeof manifest.project === "object" && !manifest.project.provenance_storage) {
+  // `markdown` storage is gone: normalize the field, and the per-document
+  // pass below strips whatever frontmatter that mode left behind.
+  if (
+    manifest.project
+    && typeof manifest.project === "object"
+    && manifest.project.provenance_storage !== store.STORAGE_JSON
+  ) {
     manifest.project.provenance_storage = store.STORAGE_JSON;
     changed = true;
   }
@@ -456,6 +476,14 @@ function migrateManifestObject(manifest, demoteIncomplete = false) {
     !Array.isArray(manifest.project.unmanaged_docs)
   ) {
     manifest.project.unmanaged_docs = [];
+    changed = true;
+  }
+  if (
+    manifest.project &&
+    typeof manifest.project === "object" &&
+    !isPlainObject(manifest.project.scale)
+  ) {
+    manifest.project.scale = backfillProjectScale(repo);
     changed = true;
   }
   const docs = manifest.documents || [];
@@ -504,7 +532,7 @@ function migrate(repo, manifestPath, dryRun) {
   for (const doc of manifest.documents || []) {
     if (typeof doc.id === "string") requireComplete[doc.id] = WRITTEN.has(doc.status);
   }
-  const objectChanged = migrateManifestObject(manifest, false);
+  const objectChanged = migrateManifestObject(manifest, repo, false);
   reports.push({
     doc: manifestPath,
     action: objectChanged ? "migrate" : "skip",
@@ -519,7 +547,7 @@ function migrate(repo, manifestPath, dryRun) {
     reports.push(migrateDocumentFile(repo, doc, manifest, dryRun, mustComplete));
   }
   if (!dryRun) {
-    migrateManifestObject(manifest, true);
+    migrateManifestObject(manifest, repo, true);
     fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   }
   return {
@@ -827,6 +855,7 @@ function migrateLegacy(repo, manifestPath, manifest, dryRun) {
       name: project.name,
       root: project.root,
       tier: project.tier,
+      scale: backfillProjectScale(repo),
       profiles: project.profiles,
       provenance_storage: store.STORAGE_JSON,
       unmanaged_docs: [],
@@ -896,7 +925,7 @@ function migrateLegacy(repo, manifestPath, manifest, dryRun) {
     if (needsRewrite && WRITTEN.has(status) && docPath.endsWith(".md") && !MARKDOWN_EXCEPTIONS.has(path.basename(docPath)) && !dryRun) {
       const target = path.join(repo, docPath);
       const text = fs.readFileSync(target, "utf8");
-      writeOutput(repo, legacyDoc, text, provenance, dryRun, store.STORAGE_JSON);
+      writeOutput(repo, legacyDoc, text, provenance, dryRun);
     }
   }
   if (!dryRun) {

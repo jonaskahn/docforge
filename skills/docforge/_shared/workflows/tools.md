@@ -79,7 +79,10 @@ from the absolute cartridge root with `query_catalog --validate`,
   `--check`). `--check` exits `1` without writing when generated output is
   stale.
 - `manage_manifest.{py,js}`: `init`, `add`, `set`, `presentation`, `audit`,
-  `status`, `set-graph`, and `reconcile`. `presentation` persists a
+  `status`, `set-graph`, `reconcile`, `unmanaged`, `retire`, and `finish` —
+  full per-subcommand table:
+  [`../runtime/manifest/README.md`](../runtime/manifest/README.md)
+  "`manage_manifest`". `presentation` persists a
   per-document reader policy override and invalidates audited output only
   when its effective presentation changes. `init`'s optional `--graph-provider`
   threads through an explicit provider choice from intake; `set-graph`
@@ -96,13 +99,14 @@ from the absolute cartridge root with `query_catalog --validate`,
 - `check_staleness.{py,js}`: `--document <id|path>`, `--section`, JSON output,
   and provenance sync.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade;
-  upgrades manifest 3.3 / 3.2 (or 3.1 / 3.0 / provenance 1.0) to 3.4 / 2.1, moving
-  inline frontmatter into `.docforge/provenance/` sidecars under the default
-  `json` storage,
+  upgrades manifest 3.5 / 3.4 / 3.3 (or 3.2 / 3.1 / 3.0 / provenance 1.0) to 3.6 / 2.1, moving
+  a pre-migration document's inline frontmatter into its `.docforge/provenance/`
+  sidecar,
   seeding each document's catalog-owned `description` from the catalog
-  `summary` and the project's `unmanaged_docs` list, and re-registers
-  any legacy pre-3.0 manifest (1.1, 2.0, or another shape) as 3.4 (written
-  documents adopted as `generated` with provenance 2.0, bodies preserved,
+  `summary`, the project's `unmanaged_docs` list, and the project's `scale`
+  record (detected when absent), and re-registers
+  any legacy pre-3.0 manifest (1.1, 2.0, or another shape) as 3.6 (written
+  documents adopted as `generated` with provenance 2.1, bodies preserved,
   plan entries kept);
   incomplete or unconvertible written documents are reported as `FAILED` and
   demoted to `in_progress` for agent regeneration.

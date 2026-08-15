@@ -20,5 +20,7 @@
   "write_order": 71,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
-  "template_file": "content/operations/templates/deployment.md"
+  "template_file": "content/operations/templates/deployment.md",
+  "compact_group": "operations_compact",
+  "compact_order": 2
 }

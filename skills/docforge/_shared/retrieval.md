@@ -1,7 +1,10 @@
 # Agent retrieval protocol
 
-1. Read the active skill entrypoint (`docforge` or `docforge-revise`), then
-   this cartridge’s [`rules.md`](rules.md) and [`flags.md`](flags.md).
+1. Read the active skill entrypoint (`docforge`, `docforge-revise`, or
+   `docforge-dashboard`), then this cartridge’s [`rules.md`](rules.md) and
+   [`flags.md`](flags.md). A `docforge-dashboard` invocation needs this
+   protocol only when it triggers a revise-driven write; plain scan/start/
+   export/status/stop never route or materialize a document.
 2. Select the applicable workflow from
    [`workflows/README.md`](workflows/README.md).
 3. For a document task, resolve it in one call (from this cartridge root):

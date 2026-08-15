@@ -31,7 +31,7 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan`, `start`, `export`, and `status` all require a manifest 3.4 (or 3.3 /
+`scan`, `start`, `export`, and `status` all require a manifest 3.5 (or 3.4 / 3.3 /
 3.2 / 3.1, which `migrate_metadata.{py,js}` — see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md) — upgrades
 in place). What happens on an **older legacy manifest version** (1.1
@@ -50,7 +50,7 @@ any other pre-3.0 shape) depends on whether the command writes:
   migrated manifest:
 
   ```
-  manifest: legacy manifest auto-migrated to 3.4 (4 migrate, 1 skip)
+  manifest: legacy manifest auto-migrated to 3.5 (4 migrate, 1 skip)
   ```
 
   `--plan-only` runs the same `migrate_metadata.{py,js} --dry-run` preview
@@ -67,7 +67,7 @@ any other pre-3.0 shape) depends on whether the command writes:
   manual `migrate_metadata.{py,js}` run) instead.
 
 A migrated tree is a **baseline**, not a certification: adopted documents
-carry provenance 2.0 but were never independently audited, so `scan`'s
+carry current provenance but were never independently audited, so `scan`'s
 staleness checks and the `you should revise again` recommendation still
 apply after migration. Auto-migration only ever handles the safe,
 metadata-only case — if the migrated tree still has real content problems,
@@ -104,7 +104,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 -> INSTALL (if missing) -> EXPORT               (export)
 ```
 
-- **Preflight:** repository, manifest 3.4 (or 3.3 / 3.2 / 3.1), and a readable `docs/` tree.
+- **Preflight:** repository, manifest 3.5 (or 3.4 / 3.3 / 3.2 / 3.1), and a readable `docs/` tree.
   When the manifest is a legacy pre-3.0 version (or any other unsupported
   version), apply the [Legacy manifest gate](#legacy-manifest-gate)
   before continuing. The
@@ -123,14 +123,13 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 - **Metadata reconcile:** ensures each written document's public `id`,
   `title`, and `description` match the manifest (missing
   descriptions are added; descriptions are catalog-owned, seeded from the
-  catalog `summary` at init / migrate / reconcile) and that
-  `docforge_provenance.doc_id` / `path` agree; bodies are preserved
-  byte-for-byte. Idempotent and always run (it is the dashboard's required
-  input). In `json` storage mode the fields are reconciled in the folder
-  sidecar (`.docforge/provenance/<folder>.json`); in `markdown` mode in the
-  inline frontmatter. File bodies are never read for reconcile, route
-  planning, or navigation ordering; they are read only for MDX conversion,
-  asset copying, and link validation.
+  catalog `summary` at init / migrate / reconcile) and that the provenance
+  object's `doc_id` / `path` agree; bodies are preserved byte-for-byte.
+  Idempotent and always run (it is the dashboard's required input). The
+  fields are reconciled in the document's folder sidecar
+  (`.docforge/provenance/<folder>.json`). File bodies are never read for
+  reconcile, route planning, or navigation ordering; they are read only for
+  MDX conversion, asset copying, and link validation.
 - **Signature:** two working-tree signatures decide what to rebuild:
   - `render_sig` — `docs/**/*.md[x]` paths and bytes (including images),
     included root-document bytes, and a manifest projection (`id`, `title`,
@@ -233,9 +232,9 @@ carries a `blocking: true/false` field (printed as `(blocking)` in text
 output) so `start`/`export` know whether to stop before attempting a build or
 to proceed anyway. It reports:
 
-- **metadata** — documents under `docs/` whose provenance (sidecar entry in
-  `json` mode, frontmatter in `markdown` mode) is missing, unparseable, or
-  not schema 2.0 (reconcile would skip or error); **blocking** when the
+- **metadata** — documents under `docs/` whose provenance sidecar entry is
+  missing, unparseable, or an old schema (reconcile would skip or error);
+  **blocking** when the
   document would otherwise be included in the build (it would crash
   conversion), advisory when the document is already excluded for another
   reason (its metadata can't break a build it's never part of);
@@ -282,9 +281,8 @@ When `start`/`export` (or `scan`) report problems, the agent must:
 ## What the dashboard is not
 
 - Never write outside `<repo>/.docforge/dashboard/` except the metadata
-  reconciliation of `docs/` provenance (folder sidecars or frontmatter,
-  per `project.provenance_storage` — the dashboard's required input) and
-  the `.docforge/.gitignore` rule.
+  reconciliation of `docs/` provenance (the folder sidecars — the
+  dashboard's required input) and the `.docforge/.gitignore` rule.
 - Never touch the repository's `package.json`, lockfiles, or workspace
   configuration.
 - Never delete `node_modules` or the app shell for an ordinary content
@@ -294,12 +292,10 @@ When `start`/`export` (or `scan`) report problems, the agent must:
 
 ## Conversion rules (deterministic, code-fence aware)
 
-- Converted pages carry **`id`, `title`, and `description`** frontmatter —
-  resolved from the folder sidecar in `json` storage mode, from the manifest
-  / inline frontmatter in `markdown` mode; `docforge_provenance` is never
-  emitted into the rendered site (the sidecar / manifest stay the
-  authoritative metadata store). The body is otherwise untouched except for
-  the rules below.
+- Converted pages carry **`id`, `title`, and `description`** frontmatter,
+  resolved from the folder sidecar; the provenance object is never emitted
+  into the rendered site (the sidecar stays the authoritative metadata
+  store). The body is otherwise untouched except for the rules below.
 - The frontmatter `title` is the document's **first H1 heading** (markers
   like `[!toc]` / `[#custom-id]` and link/formatting syntax stripped) so
   titles are fully meaningful ("Documentation", not "Docs Index"); it falls
@@ -414,9 +410,11 @@ Same flags as `/docforge` (see [`flags.md`](../flags.md)):
   metadata dry-run is the `migrate_metadata.{py,js} --dry-run` preview (see
   the
   [Legacy manifest gate](#legacy-manifest-gate)).
-- `--auto-accept`: skips the revise-vs-render prompt (renders current
-  documentation) and routine pauses; never authorizes installing Node.js,
-  changing package files, or deleting the dashboard directory.
+- `--auto-accept`: `/docforge-dashboard` has no interactive prompt of its own
+  to skip — `start` always renders current documentation (build-if-changed),
+  and its three preflight gates (legacy manifest, scan, build failure) apply
+  the same way in both modes. `--auto-accept` never authorizes installing
+  Node.js, changing package files, or deleting the dashboard directory.
 
 ## Not this workflow
 

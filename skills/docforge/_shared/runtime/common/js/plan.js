@@ -21,9 +21,10 @@ function flowIsMainPriority(row) {
   return false;
 }
 
-function documentAction(repo, doc, revise, storage = null) {
+function documentAction(repo, doc, revise) {
   const status = doc.status || "planned";
   if (status === "skipped") return ["skip", "explicitly skipped"];
+  if (status === "retired") return ["retired", "out of scope; content moved by retire; entry preserved"];
   const target = path.join(repo, ...doc.path.split("/"));
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
     if (WRITTEN.has(status)) return ["add", `file missing despite ${status}`];
@@ -31,27 +32,18 @@ function documentAction(repo, doc, revise, storage = null) {
   }
   let state;
   let provenance;
-  const effectiveStorage = storage == null ? store.STORAGE_MARKDOWN : storage;
-  if (effectiveStorage === store.STORAGE_JSON) {
-    const meta = store.readDocMetadata(repo, doc, effectiveStorage);
-    if (meta.state === "ok") {
-      state = "ok";
-      provenance = meta.provenance;
-    } else if (meta.state === "inline") {
-      return ["update", "inline provenance pending sidecar migration"];
-    } else if (meta.state === "legacy") {
-      return ["rewrite", "legacy provenance pending migration"];
-    } else if (meta.state === "obsolete") {
-      return ["rewrite", "obsolete provenance schema; run migrate_metadata"];
-    } else {
-      return ["rewrite", "provenance missing or unparseable"];
-    }
+  const meta = store.readDocMetadata(repo, doc);
+  if (meta.state === "ok") {
+    state = "ok";
+    provenance = meta.provenance;
+  } else if (meta.state === "inline") {
+    return ["update", "inline provenance pending sidecar migration"];
+  } else if (meta.state === "legacy") {
+    return ["rewrite", "legacy provenance pending migration"];
+  } else if (meta.state === "obsolete") {
+    return ["rewrite", "obsolete provenance schema; run migrate_metadata"];
   } else {
-    const parsed = pf.parseFrontmatter(fs.readFileSync(target, "utf8"));
-    if (parsed.state === "legacy") return ["rewrite", "legacy provenance pending migration"];
-    if (parsed.state === "obsolete") return ["rewrite", "obsolete provenance schema; run migrate_metadata"];
-    state = parsed.state;
-    provenance = parsed.provenance;
+    return ["rewrite", "provenance missing or unparseable"];
   }
   if (state !== "ok" || !provenance || typeof provenance !== "object") {
     return ["rewrite", "provenance missing or unparseable"];
@@ -67,9 +59,8 @@ function documentAction(repo, doc, revise, storage = null) {
 
 function planEntries(repo, manifest, flowIndexPath, revise) {
   const entries = [];
-  const storage = store.storageFor(manifest);
   for (const doc of manifest.documents || []) {
-    const [action, reason] = documentAction(repo, doc, revise, storage);
+    const [action, reason] = documentAction(repo, doc, revise);
     entries.push({
       id: doc.id,
       path: doc.path,
@@ -101,7 +92,7 @@ function planEntries(repo, manifest, flowIndexPath, revise) {
         action = "add";
         reason = `flow ${flowId}: not yet planned`;
       } else {
-        [action, reason] = documentAction(repo, doc, revise, storage);
+        [action, reason] = documentAction(repo, doc, revise);
       }
       entries.push({
         id: flowId,
@@ -118,7 +109,7 @@ function planEntries(repo, manifest, flowIndexPath, revise) {
 }
 
 function planLines(repo, manifest, flowIndexPath, revise) {
-  const docs = (manifest.documents || []).filter((doc) => doc.status !== "skipped");
+  const docs = (manifest.documents || []).filter((doc) => !["skipped", "retired"].includes(doc.status));
   const project = manifest.project || {};
   const lines = [`Generation plan — tier: ${project.tier || "unknown"}`];
   const profiles = project.profiles || {};

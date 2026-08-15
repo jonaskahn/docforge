@@ -14,7 +14,6 @@ from runtime.common.python.provenance_frontmatter import (
     BLOB,
     SUPPORTED_SCHEMA_VERSIONS,
     migrate_v1_to_v2,
-    rewrite_frontmatter,
 )
 from runtime.common.python import provenance_store as store
 from runtime.common.python.evidence_hash import classify_source, git_blob_for_path
@@ -32,16 +31,11 @@ def matches_document(doc: dict, document_filter: str | None) -> bool:
     return doc.get("id") == document_filter or doc.get("path") == document_filter
 
 
-def _write_back(repo: Path, doc: dict, storage: str, provenance: dict) -> None:
-    if storage == store.STORAGE_JSON:
-        entry = store.entry_for(repo, doc["path"])
-        entry = dict(entry) if isinstance(entry, dict) else {}
-        entry["provenance"] = provenance
-        store.write_entry(repo, doc["path"], entry)
-    else:
-        doc_path = repo / doc["path"]
-        text = doc_path.read_text(encoding="utf-8", errors="replace")
-        doc_path.write_text(rewrite_frontmatter(text, provenance), encoding="utf-8")
+def _write_back(repo: Path, doc: dict, provenance: dict) -> None:
+    entry = store.entry_for(repo, doc["path"])
+    entry = dict(entry) if isinstance(entry, dict) else {}
+    entry["provenance"] = provenance
+    store.write_entry(repo, doc["path"], entry)
 
 
 def sync_provenance(
@@ -52,16 +46,15 @@ def sync_provenance(
     updated = 0
     results: list[dict] = []
     failed: set[str] = set()
-    storage = store.storage_for(manifest)
     for doc in manifest["documents"]:
         if not matches_document(doc, document_filter):
             continue
         if doc.get("provenance_mode") == "manifest":
             continue
-        meta = store.read_doc_metadata(repo, doc, storage)
+        meta = store.read_doc_metadata(repo, doc)
         state = meta["state"]
         if state == "inline":
-            if store.move_inline_to_sidecar(repo, doc, storage) != "moved":
+            if store.move_inline_to_sidecar(repo, doc) != "moved":
                 failed.add(doc["path"])
                 results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "inline migration failed"})
                 continue
@@ -74,7 +67,7 @@ def sync_provenance(
             continue
         if state == "obsolete":
             migrated = migrate_v1_to_v2(meta["provenance"])
-            _write_back(repo, doc, storage, migrated)
+            _write_back(repo, doc, migrated)
             doc["provenance"] = migrated
             updated += 1
             continue

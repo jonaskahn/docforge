@@ -29,15 +29,10 @@ root before following any cartridge link.
 
 ## Session tool runtime
 
-There is no runtime-precheck CLI. Once per Docforge session, the agent
-detects `PATH` and locks **one** engine for every Docforge tool call:
-
-1. `python3` (3.10+), else `python` (3.10+).
-2. Else `node` (22+), else `bun`, else `deno`.
-3. If none are available, stop and ask the user to install one family.
-
-Do not switch engines mid-session. Prefer Python when both families work.
-Detail: [`workflows/tools.md`](workflows/tools.md),
+Once per Docforge session, the agent locks **one** engine (Python preferred)
+for every Docforge tool call and never switches mid-session. Detail —
+detection order, fallback chain, invocation forms:
+[`workflows/tools.md`](workflows/tools.md) "Session runtime (agent-owned)",
 [`runtime/cli/README.md`](runtime/cli/README.md).
 
 ## Code-graph precondition
@@ -94,8 +89,10 @@ unless both were READY and the user chose a primary. Detail:
    contract ([`references/parallel-execution.md`](references/parallel-execution.md)):
    workers edit only their own artifact files, and every manifest mutation
    stays a serial orchestrator operation.
-4. Stamp provenance while writing (YAML provenance 2.0, byte one). Replace
-   every scaffold token with concrete write metadata and source blobs.
+4. Stamp provenance while writing, into the document's folder sidecar
+   (`.docforge/provenance/<folder>.json`) — generated markdown carries no
+   frontmatter. Replace every scaffold token with concrete write metadata
+   and source blobs.
 5. A writer never marks its own artifact complete; mechanical lint is
    necessary but never sufficient.
 6. State a fact once in its owning document; link to it elsewhere.
@@ -109,6 +106,8 @@ and the whole tree passes `scaffold_docs --audit` plus the cross-document
 quality gate ([`workflows/validation.md`](workflows/validation.md),
 [`references/quality-bar.md`](references/quality-bar.md)). A **run** is
 complete only when the whole-tree gate passes and — unless the invocation
-included `--plan-only` or `--no-dashboard` — the dashboard has been started
+included `--plan-only` or `--no-dashboard`, or the manifest's
+`project.scale.layout` is `compact` and the offered dashboard was declined —
+the dashboard has been started
 and its URL reported in the final response
-([`workflows/validation.md`](workflows/validation.md) §7).
+([`workflows/validation.md`](workflows/validation.md) §8).

@@ -22,5 +22,7 @@
   "provenance_mode": "sections",
   "audit_profile": "risk",
   "dominant_form": "table",
-  "template_file": "content/architecture/templates/dependencies.md"
+  "template_file": "content/architecture/templates/dependencies.md",
+  "compact_group": "architecture_compact",
+  "compact_order": 5
 }

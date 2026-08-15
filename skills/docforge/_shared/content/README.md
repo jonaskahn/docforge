@@ -19,7 +19,7 @@ Contracts, instructions, and templates for every catalog document, organized by 
 - [product/](product/README.md) — Product surface: overview, quickstart, and audience-specific product views.
 - [records/](records/README.md) — Architecture decision records.
 - [reference/](reference/README.md) — Reference lookups: APIs, configuration, and glossary.
-- [root/](root/README.md) — Root-level entrypoints: README, SKILL.md, and package descriptors.
+- [root/](root/README.md) — Root-level entrypoints: repository README, changelog, and the docs index.
 - [security/](security/README.md) — Security posture, permissions, and threat model.
 - [shared/](shared/README.md) — artifacts referenced by more than one group
 
@@ -39,6 +39,11 @@ Every substantive document must:
 Router/index documents orient and link. Procedure documents are executable in
 order. Reference documents optimize lookup. Explanation documents establish
 mechanism, constraints, and tradeoffs.
+
+Compact-layout documents are composed, not rewritten: a merged file presents
+each member as a `##` section following its member contract, per
+[`../references/document-composition.md`](../references/document-composition.md)
+"Compact demotion".
 
 Code, output, configuration, and diagrams follow
 [`../references/code-presentation.md`](../references/code-presentation.md).

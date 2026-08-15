@@ -14,6 +14,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
+- `product_compact` — Compact product section: what the product is, who it serves, and the problem it solves — in one file → [index.json](index.json)
 - `product_index` — Product documentation overview: what the product is, scope, and the reader question each product document answers → [index.json](index.json)
 - `product_overview` — Users, problems, capabilities, explicit non-goals → [index.json](index.json)
 - `content_model` — Content types, lifecycle, validation, ownership, publishing boundary → [index.json](index.json)

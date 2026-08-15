@@ -10,8 +10,11 @@ skill — this skill has no runtime of its own. It requires the `docforge`
 skill to be installed and loads its shared cartridge:
 [`../docforge/_shared/README.md`](../docforge/_shared/README.md).
 
-Never run any migration or write any file without explicit user confirmation
-first.
+Migration is unconditional and needs no confirmation — every invocation
+upgrades the manifest and moves provenance automatically
+([`../docforge/_shared/workflows/validation.md`](../docforge/_shared/workflows/validation.md)
+"Manifest and provenance"). Writing or rewriting any document always stops
+and asks first — never on silent defaults.
 
 Cartridge root: `../docforge/_shared` relative to this SKILL.md — the
 `docforge` skill's `_shared`, whether installed as a plugin, via Agent Skills,
@@ -55,7 +58,7 @@ first; see [`../docforge/_shared/workflows/tools.md`](../docforge/_shared/workfl
 
 | Invocation | Behavior |
 |---|---|
-| `/docforge-revise` | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (`--dry-run` preview first, apply only when needed). No scope question, no detection, no writing, no dashboard |
+| `/docforge-revise` | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (`--dry-run` preview, then apply — unconditional and idempotent, a clean no-op when already current). No scope question, no detection, no writing, no dashboard |
 | `/docforge-revise flow` | Full flow pipeline |
 | `/docforge-revise <area>` | Scoped revise (architecture, flows, operations, …) |
 | `/docforge-revise all` | Full-tree revise |
@@ -100,8 +103,12 @@ A revise run is complete only after the whole-tree gate
 ([`../docforge/_shared/workflows/validation.md`](../docforge/_shared/workflows/validation.md))
 passes and — unless the invocation included `--plan-only` or `--no-dashboard`
 — the dashboard has been started and its URL reported in the final response
-(`validation.md` §7 Dashboard auto-serve). Never finish a run with the docs
-revised but the dashboard never started or its URL never shown.
+(`validation.md` §8 Dashboard auto-serve). In compact layout
+(`project.scale.layout == "compact"`) the **offer**, not the started
+dashboard, is the non-waivable part: the run must end with either a started,
+reported dashboard or the compact-layout offer line and the user's answer.
+Never finish a run with the docs revised but the dashboard never started (or
+offered and answered) and its URL never shown.
 
 ## Not this command
 

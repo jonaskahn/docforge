@@ -10,13 +10,13 @@ node or GitNexus Process into a document.
 Run:
 
 ```sh
-python runtime/cli/python/flow_index.py harvest --repo <repo> \
+python3 runtime/cli/python/flow_index.py harvest --repo <repo> \
 node runtime/cli/js/flow_index.js harvest --repo <repo> \
 # bun  runtime/cli/js/flow_index.js harvest --repo <repo> \
 # deno run -A runtime/cli/js/flow_index.js harvest --repo <repo> \
   [--gitnexus-export <mcp-export.json>] [--main-limit 15]
 
-python runtime/cli/python/flow_index.py revise --repo <repo> \
+python3 runtime/cli/python/flow_index.py revise --repo <repo> \
 node runtime/cli/js/flow_index.js revise --repo <repo> \
 # bun  runtime/cli/js/flow_index.js revise --repo <repo> \
 # deno run -A runtime/cli/js/flow_index.js revise --repo <repo> \
@@ -94,12 +94,12 @@ After `harvest` or `revise`, and **before** deep-dive analysis, run the
 organize step so naming and grouping are settled:
 
 ```sh
-python runtime/cli/python/flow_index.py organize emit --repo <repo>
+python3 runtime/cli/python/flow_index.py organize emit --repo <repo>
 node runtime/cli/js/flow_index.js organize emit --repo <repo>
 # bun  runtime/cli/js/flow_index.js organize emit --repo <repo>
 # deno run -A runtime/cli/js/flow_index.js organize emit --repo <repo>
 # Agent writes .docforge/tmp/flow-organization.json from the pack
-python runtime/cli/python/flow_index.py organize apply --repo <repo> \
+python3 runtime/cli/python/flow_index.py organize apply --repo <repo> \
 node runtime/cli/js/flow_index.js organize apply --repo <repo> \
 # bun  runtime/cli/js/flow_index.js organize apply --repo <repo> \
 # deno run -A runtime/cli/js/flow_index.js organize apply --repo <repo> \

@@ -11,7 +11,7 @@ const SCHEMA_VERSION = "2.1";
 const SUPPORTED_SCHEMA_VERSIONS = new Set(["2.0", "2.1"]);
 const LEGACY_SCHEMA = "1.0";
 const GENERATOR_NAME = "docforge";
-const GENERATOR_VERSION = "2.17.0";
+const GENERATOR_VERSION = "2.18.0";
 const PROVENANCE_FIELDS = new Set([
   "schema", "doc_id", "path", "generated_at", "generator", "tier",
   "target_depth", "graph", "sections",
@@ -296,25 +296,6 @@ function emitYaml(provenance) {
   return lines.join("\n");
 }
 
-function emitDocumentFrontmatter(docId, title, provenance, description = null) {
-  if (!docId || !title) throw new YamlCodecError("document id and title must be non-empty");
-  const lines = ["---", `id: ${quoteScalar(docId)}`, `title: ${quoteScalar(title)}`];
-  if (description !== null && description !== undefined) {
-    lines.push(`description: ${quoteScalar(description)}`);
-  }
-  lines.push("docforge_provenance:");
-  emitMapping(lines, provenance, PROVENANCE_KEY_ORDER, 2);
-  lines.push("---", "");
-  return lines.join("\n");
-}
-
-function wrapDocument(provenance, body) {
-  let next = body;
-  if (next.startsWith("\n")) next = next.replace(/^\n+/, "");
-  if (next && !next.endsWith("\n")) next += "\n";
-  return emitYaml(provenance) + next;
-}
-
 function rejectUnsupported(raw) {
   for (const line of raw.split(/\r?\n/)) {
     const stripped = line.trim();
@@ -482,12 +463,6 @@ function parseFrontmatter(text) {
   return { state: "ok", provenance, end };
 }
 
-function rewriteFrontmatter(text, provenance) {
-  const { raw, body } = splitFrontmatter(text);
-  if (raw == null) return wrapDocument(provenance, text);
-  return emitYaml(provenance) + body;
-}
-
 module.exports = {
   SCHEMA_VERSION,
   SUPPORTED_SCHEMA_VERSIONS,
@@ -510,10 +485,7 @@ module.exports = {
   normalizeSections,
   migrateV1ToV2,
   emitYaml,
-  emitDocumentFrontmatter,
-  wrapDocument,
   parseYamlMapping,
   splitFrontmatter,
   parseFrontmatter,
-  rewriteFrontmatter,
 };

@@ -80,7 +80,7 @@ function gitRemoteUrl(repo) {
 }
 
 function rootDocHasProvenance(repo, rel, manifest) {
-  const meta = store.readDocMetadata(repo, { path: rel }, store.storageFor(manifest));
+  const meta = store.readDocMetadata(repo, { path: rel });
   if ((meta.state === "ok" || meta.state === "inline") && meta.provenance && typeof meta.provenance === "object") {
     return pf.SUPPORTED_SCHEMA_VERSIONS.has(meta.provenance.schema);
   }
@@ -298,10 +298,6 @@ function saveState(dashboard, state) {
   fs.writeFileSync(statePath(dashboard), dumpJson(state), "utf8");
 }
 
-function publicFrontmatter(docId, title, provenance, description = null) {
-  return pf.emitDocumentFrontmatter(docId, title, provenance, description || null);
-}
-
 function pageFrontmatter(docId, title, description = null) {
   // Public frontmatter for converted dashboard pages: id, title, and
   // description (when present). docforge_provenance stays out of the
@@ -323,9 +319,8 @@ function splitFrontmatterRaw(text) {
 
 function reconcileMetadata(repo, manifest, dryRun = false) {
   const report = { reconciled: [], unchanged: [], skipped: [], errors: [] };
-  const storage = store.storageFor(manifest);
   for (const doc of manifest.documents || []) {
-    if (doc.status === "skipped" || doc.provenance_mode === "manifest") continue;
+    if (doc.status === "skipped" || doc.status === "retired" || doc.provenance_mode === "manifest") continue;
     const p = doc.path || "";
     if (!p.startsWith(DOC_PREFIX) || !p.endsWith(".md")) continue;
     const target = path.join(repo, p);
@@ -333,62 +328,20 @@ function reconcileMetadata(repo, manifest, dryRun = false) {
     const wantId = doc.id;
     const wantTitle = titleFor(doc);
     const wantDescription = doc.description || "";
-    if (storage === store.STORAGE_JSON) {
-      const entry = store.entryFor(repo, p);
-      if (!entry) {
-        report.skipped.push({ doc: doc.id, detail: "no provenance entry" });
-        continue;
-      }
-      const provenance = entry.provenance;
-      if (!provenance || typeof provenance !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)) {
-        report.skipped.push({ doc: doc.id, detail: "provenance schema unsupported" });
-        continue;
-      }
-      const problems = [];
-      if (entry.id !== wantId) problems.push("id");
-      if (entry.title !== wantTitle) problems.push("title");
-      if ((entry.description || "") !== wantDescription) problems.push("description");
-      if (provenance.doc_id !== wantId) problems.push("provenance.doc_id");
-      if (provenance.path !== p) problems.push("provenance.path");
-      if (problems.length === 0) {
-        report.unchanged.push({ doc: doc.id });
-        continue;
-      }
-      report.reconciled.push({ doc: doc.id, path: p, fixed: problems });
-      if (!dryRun) {
-        const updated = { ...entry };
-        updated.id = wantId;
-        updated.title = wantTitle;
-        if (wantDescription) updated.description = wantDescription;
-        else delete updated.description;
-        provenance.doc_id = wantId;
-        provenance.path = p;
-        updated.provenance = provenance;
-        store.writeEntry(repo, p, updated);
-      }
+    const entry = store.entryFor(repo, p);
+    if (!entry) {
+      report.skipped.push({ doc: doc.id, detail: "no provenance entry" });
       continue;
     }
-    const head = readFrontmatterHead(target);
-    if (!head) {
-      report.skipped.push({ doc: doc.id, detail: "no frontmatter" });
-      continue;
-    }
-    let data;
-    try {
-      data = pf.parseYamlMapping(head.raw);
-    } catch (error) {
-      report.errors.push({ doc: doc.id, detail: `unparseable frontmatter: ${error.message}` });
-      continue;
-    }
-    const provenance = data.docforge_provenance;
+    const provenance = entry.provenance;
     if (!provenance || typeof provenance !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)) {
       report.skipped.push({ doc: doc.id, detail: "provenance schema unsupported" });
       continue;
     }
     const problems = [];
-    if (data.id !== wantId) problems.push("id");
-    if (data.title !== wantTitle) problems.push("title");
-    if ((data.description || "") !== wantDescription) problems.push("description");
+    if (entry.id !== wantId) problems.push("id");
+    if (entry.title !== wantTitle) problems.push("title");
+    if ((entry.description || "") !== wantDescription) problems.push("description");
     if (provenance.doc_id !== wantId) problems.push("provenance.doc_id");
     if (provenance.path !== p) problems.push("provenance.path");
     if (problems.length === 0) {
@@ -397,15 +350,17 @@ function reconcileMetadata(repo, manifest, dryRun = false) {
     }
     report.reconciled.push({ doc: doc.id, path: p, fixed: problems });
     if (!dryRun) {
-      if (problems.includes("provenance.doc_id")) provenance.doc_id = wantId;
-      if (problems.includes("provenance.path")) provenance.path = p;
-      const split = pf.splitFrontmatter(fs.readFileSync(target, "utf8"));
-      fs.writeFileSync(
-        target,
-        publicFrontmatter(wantId, wantTitle, provenance, wantDescription) + split.body,
-        "utf8",
-      );
+      const updated = { ...entry };
+      updated.id = wantId;
+      updated.title = wantTitle;
+      if (wantDescription) updated.description = wantDescription;
+      else delete updated.description;
+      provenance.doc_id = wantId;
+      provenance.path = p;
+      updated.provenance = provenance;
+      store.writeEntry(repo, p, updated);
     }
+    continue;
   }
   report.counts = {
     reconciled: report.reconciled.length,
@@ -767,7 +722,6 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
   const assetsNeeded = new Set();
   const anchors = {};
   const converted = [];
-  const storage = store.storageFor(manifest);
   for (const doc of ledger.pages) {
     const source = path.join(repo, doc.source_path);
     const text = fs.readFileSync(source, "utf8");
@@ -775,8 +729,8 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
     const manifestDoc = doc.doc || {};
     let provenance;
     let publicMeta = {};
-    if (raw == null && storage === store.STORAGE_JSON) {
-      const meta = store.readDocMetadata(repo, { path: doc.source_path }, storage);
+    if (raw == null) {
+      const meta = store.readDocMetadata(repo, { path: doc.source_path });
       if (meta.state !== "ok" || !meta.provenance || typeof meta.provenance !== "object") {
         provenance = manifestDoc.provenance;
         if (

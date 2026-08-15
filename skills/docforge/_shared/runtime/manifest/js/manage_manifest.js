@@ -6,7 +6,8 @@ const fs = require("fs");
 const path = require("path");
 const { dumpJson, ensureDocforgeGitignore, ensureGitignoredDir, fail, finishDocforge, loadManifest } = require("../../common/js/_util.js");
 const { planLines } = require("../../common/js/plan.js");
-const { detect: detectProfiles } = require("../../catalog/js/detect_profiles.js");
+const { computeScale, LAYOUT_BY_CLASS } = require("../../common/js/scale.js");
+const { detect: detectProfiles, inventory: inventoryFiles } = require("../../catalog/js/detect_profiles.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
@@ -15,7 +16,8 @@ const { reportFlowGraph } = require("../../graph/js/precheck_graph.js");
 
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const FLOW_INDEX_REL = path.join(".docforge", "flow-index.json");
-const STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"];
+const STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped", "retired"];
+const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const TRANSITIONS = {
   planned: new Set(["in_progress", "skipped"]),
   in_progress: new Set(["generated", "needs_review", "skipped"]),
@@ -23,9 +25,10 @@ const TRANSITIONS = {
   needs_review: new Set(["in_progress", "skipped"]),
   complete: new Set(["in_progress"]),
   skipped: new Set(["planned"]),
+  retired: new Set(["planned"]),
 };
 const TOOL_VERSION = pf.GENERATOR_VERSION;
-const MANIFEST_VERSION = "3.4";
+const MANIFEST_VERSION = "3.6";
 const USER_CONFIRMED_TRIGGERS = new Set([
   "new-trust-boundary", "per-interaction-review", "regulated-workload",
   "high-criticality", "new-external-integration", "new-data-classification",
@@ -77,6 +80,7 @@ function saveManifest(repo, manifest) {
     needs_review: docs.filter((d) => d.status === "needs_review").length,
     complete: docs.filter((d) => d.status === "complete").length,
     skipped: docs.filter((d) => d.status === "skipped").length,
+    retired: docs.filter((d) => d.status === "retired").length,
     last_updated: nowIso(),
   };
   const target = manifestPath(repo);
@@ -208,7 +212,7 @@ function matchingOrigins(rule, profiles) {
   }
   return origins;
 }
-function addAncestorIndexes(catalog, selected, audiences) {
+function addAncestorIndexes(catalog, selected, audiences, skipIds = new Set()) {
   const indexTypes = new Set(["folder-index", "docs-index", "portfolio-index", "decision-index", "portfolio-decisions-index", "flow-index"]);
   const definitions = new Map(catalog.documents
     .filter((item) => item.selection.mode === "static" && indexTypes.has(item.type))
@@ -222,7 +226,7 @@ function addAncestorIndexes(catalog, selected, audiences) {
       while (parent !== ".") {
         const candidate = path.posix.join(parent, "README.md");
         const definition = definitions.get(candidate);
-        if (definition && !selectedPaths.has(candidate)) {
+        if (definition && !skipIds.has(definition.id) && !selectedPaths.has(candidate)) {
           selected.push(makeDocument(definition, [{ kind: "ancestor", id: child.id }], [], null, audiences));
           selectedPaths.add(candidate);
           changed = true;
@@ -232,9 +236,61 @@ function addAncestorIndexes(catalog, selected, audiences) {
     }
   }
 }
-function selectedStaticDocuments(catalog, repo, tier, profiles) {
+// Compact-layout fold: replace every selected document whose catalog record
+// declares a `compact_group` with the group's single merged entry at its
+// `compact_target`, members recorded on the entry so provenance and revise
+// can trace them back. Strictly gated on `layout === "compact"` by the
+// caller — a standard run never folds. Folded member ids are returned so
+// ancestor-index computation skips resurrecting them.
+// Order members by `compact_order`, then id. The id tiebreak is required:
+// `compact_order` defaults to 0, so two members without an explicit order
+// would otherwise have an unspecified relative order.
+function compactMemberOrder(a, b) {
+  return a[0] - b[0] || a[1].id.localeCompare(b[1].id);
+}
+function foldCompactGroups(catalog, selected, audiences) {
+  const byId = new Map(catalog.documents.map((item) => [item.id, item]));
+  const groups = new Map();
+  const kept = [];
+  for (const doc of selected) {
+    const detail = queryCatalog.loadType(doc.id);
+    const groupId = detail.compact_group;
+    if (groupId) {
+      if (!groups.has(groupId)) groups.set(groupId, []);
+      groups.get(groupId).push([detail.compact_order || 0, doc]);
+    } else {
+      kept.push(doc);
+    }
+  }
+  const foldedIds = new Set();
+  for (const groupId of [...groups.keys()].sort()) {
+    const members = groups.get(groupId);
+    const definition = byId.get(groupId);
+    if (!definition || (definition.selection || {}).mode !== "compact") {
+      kept.push(...[...members].sort(compactMemberOrder).map(([, doc]) => doc));
+      continue;
+    }
+    members.sort(compactMemberOrder);
+    const merged = makeDocument(
+      definition,
+      [
+        { kind: "tier", id: definition.selection.min_tier },
+        { kind: "compact", id: groupId },
+      ],
+      [],
+      null,
+      audiences,
+    );
+    merged.compact_members = members.map(([, doc]) => doc.id);
+    merged.requires = [...new Set(members.flatMap(([, doc]) => doc.requires || []))].sort();
+    for (const [, doc] of members) foldedIds.add(doc.id);
+    kept.push(merged);
+  }
+  return [kept, foldedIds];
+}
+function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standard") {
   const ranks = Object.fromEntries(catalog.tiers.map((item) => [item.id, item.order]));
-  const selected = [];
+  let selected = [];
   for (const definition of catalog.documents) {
     const rule = definition.selection;
     if (rule.mode !== "static") continue;
@@ -249,30 +305,34 @@ function selectedStaticDocuments(catalog, repo, tier, profiles) {
     if (rule.condition) origins.push({ kind: "condition", id: rule.condition });
     selected.push(makeDocument(definition, origins, evidence, null, profiles.audiences));
   }
-  addAncestorIndexes(catalog, selected, profiles.audiences);
+  let foldedIds = new Set();
+  if (layout === "compact") {
+    [selected, foldedIds] = foldCompactGroups(catalog, selected, profiles.audiences);
+  }
+  addAncestorIndexes(catalog, selected, profiles.audiences, foldedIds);
   return selected.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
 }
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "set-storage", "unmanaged"]);
+  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "unmanaged", "retire"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
-  const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence"]);
+  const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence", "doc"]);
   const boolean = new Set(["force", "keep-tmp", "reset", "dry-run"]);
   const allowed = {
-    init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force", "graph-provider", "storage"]),
+    init: new Set(["repo", "tier", "scale-class", "layout", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force", "graph-provider"]),
     add: new Set(["repo", "type", "id", "path", "title", "evidence"]),
     set: new Set(["repo", "id", "status"]),
     presentation: new Set(["repo", "id", "primary-audience", "code", "related-docs", "repository-paths", "reset"]),
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
     "set-graph": new Set(["repo", "provider", "force"]),
-    reconcile: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience"]),
+    reconcile: new Set(["repo", "tier", "layout", "shape", "platform", "framework", "concern", "audience"]),
     finish: new Set(["repo", "keep-tmp"]),
-    "set-storage": new Set(["repo", "storage", "dry-run"]),
     unmanaged: new Set(["repo", "action", "path", "dry-run"]),
+    retire: new Set(["repo", "doc", "mode", "dry-run"]),
   }[command];
-  const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [], evidence: [] };
+  const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [], evidence: [], doc: [] };
   for (let i = 1; i < argv.length; i++) {
     const token = argv[i];
     if (!token.startsWith("--")) throw new Error(`unexpected argument: ${token}`);
@@ -309,12 +369,38 @@ function resolveGraphLock(repo, provider) {
   if (!source) return null;
   return { provider: source.name, flow: reportFlowGraph(repo), locked_at: nowIso() };
 }
+// Build the `project.scale` record. Omitted flags adopt detection; any
+// explicit flag records `decided_by: "user"` with `detected_class` preserved
+// so a later run never silently re-classifies an override. `files` and
+// `detections` let a caller that already walked the repo avoid a second walk.
+function resolveScale(repo, scaleClass, layout, files = null, detections = null) {
+  const detected = computeScale(repo, files, detections);
+  if (!scaleClass && !layout) {
+    return {
+      class: detected.class,
+      layout: detected.suggested_layout,
+      decided_by: "detected",
+      decided_at: nowIso(),
+      signals: detected.signals,
+    };
+  }
+  const chosenClass = scaleClass || detected.class;
+  const chosenLayout = layout || LAYOUT_BY_CLASS[chosenClass];
+  return {
+    class: chosenClass,
+    layout: chosenLayout,
+    detected_class: detected.class,
+    decided_by: "user",
+    decided_at: nowIso(),
+    signals: detected.signals,
+  };
+}
 function cmdInit(args) {
   required(args, ["repo", "tier"]);
   if (args.overlay.length) return fail("--overlay is unsupported in Docforge 2.0; use --shape, --platform, --framework, --concern, or --audience", 2);
   if (!["spine", "diligence", "portfolio"].includes(args.tier)) return fail(`invalid tier: ${args.tier}`, 2);
-  if (!args.storage) args.storage = store.STORAGE_JSON;
-  if (![store.STORAGE_JSON, store.STORAGE_MARKDOWN].includes(args.storage)) return fail(`invalid storage: ${args.storage}`, 2);
+  if (args.scale_class && !["small", "medium", "large"].includes(args.scale_class)) return fail(`invalid scale class: ${args.scale_class}`, 2);
+  if (args.layout && !["compact", "standard"].includes(args.layout)) return fail(`invalid layout: ${args.layout}`, 2);
   const target = manifestPath(args.repo);
   if (fs.existsSync(target) && !args.force) return fail(`manifest already exists: ${target}; pass --force to replace it`);
   const catalog = loadCatalog();
@@ -328,7 +414,11 @@ function cmdInit(args) {
   } catch (error) {
     return fail(error.message, 2);
   }
-  const docs = selectedStaticDocuments(catalog, args.repo, args.tier, profiles);
+  // One walk feeds both the discovery record and the scale record.
+  const walked = inventoryFiles(fs.realpathSync(args.repo));
+  const discovery = detectProfiles(fs.realpathSync(args.repo), true, walked);
+  const projectScale = resolveScale(args.repo, args.scale_class, args.layout, walked, discovery);
+  const docs = selectedStaticDocuments(catalog, args.repo, args.tier, profiles, projectScale.layout);
   const manifest = {
     version: MANIFEST_VERSION,
     generated_at: nowIso(),
@@ -336,11 +426,12 @@ function cmdInit(args) {
       name: args.name || path.basename(path.resolve(args.repo)),
       root: path.resolve(args.repo),
       tier: args.tier,
+      scale: projectScale,
       profiles,
-      provenance_storage: args.storage,
+      provenance_storage: store.STORAGE_JSON,
       unmanaged_docs: [],
     },
-    discovery: detectProfiles(fs.realpathSync(args.repo)),
+    discovery,
     discovery_gate: null,
     documents: docs,
     metadata: {},
@@ -543,6 +634,8 @@ function cmdReconcile(args) {
   }
   const catalog = loadCatalog();
   const newTier = args.tier || manifest.project.tier;
+  const currentScale = manifest.project.scale || {};
+  const newLayout = args.layout || currentScale.layout || "standard";
   const raw = {};
   for (const dimension of PROFILE_DIMENSIONS) {
     const singular = dimension === "audiences" ? "audience" : dimension.slice(0, -1);
@@ -557,18 +650,26 @@ function cmdReconcile(args) {
   } catch (error) {
     return fail(error.message, 2);
   }
-  const selected = selectedStaticDocuments(catalog, args.repo, newTier, profiles);
+  const selected = selectedStaticDocuments(catalog, args.repo, newTier, profiles, newLayout);
   const selectedIds = new Set(selected.map((doc) => doc.id));
   const kept = [];
   const removed = [];
+  const retire = [];
   const keptIds = new Set();
   for (const doc of manifest.documents) {
     const origins = ((doc.selection || {}).origins) || [];
     const isDynamic = origins.some((origin) => origin.kind === "dynamic");
     if (selectedIds.has(doc.id)) {
+      if (doc.status === "retired") {
+        doc.status = "planned";
+        doc.audit = null;
+        delete doc.retired_at;
+        delete doc.retired_destination;
+      }
       kept.push(doc);
       keptIds.add(doc.id);
     } else if (isDynamic || doc.status !== "planned") {
+      if (!isDynamic && WRITTEN.has(doc.status)) retire.push(doc.id);
       kept.push(doc);
       keptIds.add(doc.id);
     } else {
@@ -583,14 +684,39 @@ function cmdReconcile(args) {
   manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
   manifest.project.tier = newTier;
   manifest.project.profiles = profiles;
+  if (args.layout && args.layout !== currentScale.layout) {
+    let scaleRecord;
+    if (currentScale.class) {
+      scaleRecord = { ...currentScale };
+      if (!scaleRecord.signals) scaleRecord.signals = computeScale(args.repo).signals;
+    } else {
+      // A pre-3.5 manifest reconciled before migrate has no usable prior
+      // record. Detect a complete one rather than emit a record missing the
+      // schema-required `class`.
+      scaleRecord = resolveScale(args.repo, null, args.layout);
+    }
+    scaleRecord.layout = args.layout;
+    scaleRecord.decided_by = "user";
+    scaleRecord.decided_at = nowIso();
+    manifest.project.scale = scaleRecord;
+    console.log(`  layout: ${currentScale.layout || "standard"} -> ${args.layout}`);
+  }
   saveManifest(args.repo, manifest);
   console.log(`Reconcile ${args.repo}:`);
   console.log(`  tier: ${oldTier} -> ${newTier}`);
   for (const dimension of PROFILE_DIMENSIONS) {
     console.log(`  ${dimension}: ${profiles[dimension].join(", ") || "(none)"}`);
   }
+  const countParts = [];
+  if (added.length) countParts.push(`${added.length} add`);
+  if (removed.length) countParts.push(`${removed.length} removed-planned`);
+  if (retire.length) countParts.push(`${retire.length} retire`);
+  if (contractUpdated.length) countParts.push(`${contractUpdated.length} contract-updated`);
+  if (presentationUpdated.length) countParts.push(`${presentationUpdated.length} presentation-updated`);
+  console.log(`  counts: ${countParts.join(", ") || "no change"}`);
   if (added.length) console.log(`  added: ${added.map((doc) => doc.id).sort().join(", ")}`);
   if (removed.length) console.log(`  removed-planned: ${removed.sort().join(", ")}`);
+  if (retire.length) console.log(`  retire: ${retire.sort().join(", ")} (written, out of scope — approve the retire step to move or delete)`);
   if (contractUpdated.length) console.log(`  contract-updated: ${contractUpdated.sort().join(", ")}`);
   if (presentationUpdated.length) console.log(`  presentation-updated: ${presentationUpdated.sort().join(", ")}`);
   console.log(`  kept: ${kept.length} documents`);
@@ -618,7 +744,7 @@ function cmdSet(args) {
       console.log(`${args.id}: ${old} -> ${args.status}`);
       return 0;
     }
-    if (!TRANSITIONS[old].has(args.status)) return fail(`invalid status transition for ${args.id}: ${old} -> ${args.status}`, 2);
+    if (!(TRANSITIONS[old] || new Set()).has(args.status)) return fail(`invalid status transition for ${args.id}: ${old} -> ${args.status}`, 2);
     if (args.status === "complete" && (!doc.audit || doc.audit.verdict !== "PASS")) {
       return fail(`${args.id} cannot be complete without a passing independent audit`, 2);
     }
@@ -716,63 +842,12 @@ function cmdStatus(args) {
     }
     const c = manifest.metadata;
     console.log();
-    console.log(`${c.total_documents} documents: planned=${c.planned} in_progress=${c.in_progress} generated=${c.generated} needs_review=${c.needs_review} complete=${c.complete} skipped=${c.skipped}`);
+    console.log(`${c.total_documents} documents: planned=${c.planned} in_progress=${c.in_progress} generated=${c.generated} needs_review=${c.needs_review} complete=${c.complete} skipped=${c.skipped} retired=${c.retired || 0}`);
     return 0;
   } catch (error) {
     return fail(error.message, 2);
   }
 }
-function cmdSetStorage(args) {
-  required(args, ["repo", "storage"]);
-  if (![store.STORAGE_JSON, store.STORAGE_MARKDOWN].includes(args.storage)) {
-    return fail(`invalid storage: ${args.storage}`, 2);
-  }
-  try {
-    const manifest = loadManifest(manifestPath(args.repo), {
-      unsupportedHint: MANIFEST_HINT,
-    });
-    const current = store.storageFor(manifest);
-    if (current === args.storage) {
-      console.log(`storage already ${current}; no changes.`);
-      return 0;
-    }
-    const planned = [];
-    for (const doc of manifest.documents) {
-      if (doc.provenance_mode !== "sections") continue;
-      if (args.storage === store.STORAGE_JSON) {
-        if (store.readDocMetadata(args.repo, doc, store.STORAGE_JSON).state === "inline") planned.push(doc.path);
-      } else if (store.entryFor(args.repo, doc.path) !== null) {
-        planned.push(doc.path);
-      }
-    }
-    if (args.dry_run) {
-      console.log(`DRY RUN  ${current} -> ${args.storage} (${planned.length} documents)`);
-      for (const item of planned) {
-        console.log(args.storage === store.STORAGE_JSON ? `  ${item}: inline -> sidecar` : `  ${item}: sidecar -> inline`);
-      }
-      return 0;
-    }
-    const moves = [];
-    for (const doc of manifest.documents) {
-      if (doc.provenance_mode !== "sections") continue;
-      if (args.storage === store.STORAGE_JSON) {
-        const action = store.moveInlineToSidecar(args.repo, doc, store.STORAGE_JSON);
-        if (action === "moved") moves.push(`${doc.path}: inline -> sidecar`);
-      } else {
-        const action = store.moveSidecarToInline(args.repo, doc);
-        if (action === "moved") moves.push(`${doc.path}: sidecar -> inline`);
-      }
-    }
-    manifest.project.provenance_storage = args.storage;
-    saveManifest(args.repo, manifest);
-    console.log(`storage  ${current} -> ${args.storage} (${moves.length} documents moved)`);
-    for (const item of moves) console.log(`  ${item}`);
-    return 0;
-  } catch (error) {
-    return fail(error.message, 2);
-  }
-}
-
 function cmdFinish(args) {
   required(args, ["repo"]);
   const docforgeDir = path.join(args.repo, ".docforge");
@@ -784,6 +859,75 @@ function cmdFinish(args) {
   const cleaned = result.cleaned_dirs.length > 0 ? result.cleaned_dirs.join(", ") : "none";
   console.log(`finish  ensured ${path.join(docforgeDir, ".gitignore")}`);
   console.log(`finish  cleaned ephemeral scratch dirs: ${cleaned}`);
+  return 0;
+}
+// Move out-of-scope written documents to a git-ignored obsolete location
+// (default) or delete them, marking the manifest entry `retired` — the entry
+// itself is always preserved. A file operation: never under `--auto-accept`,
+// always an explicitly approved step after `reconcile` reports the delta.
+function cmdRetire(args) {
+  required(args, ["repo", "doc", "mode"]);
+  if (!["obsolete", "delete"].includes(args.mode)) return fail(`invalid retire mode: ${args.mode}`, 2);
+  let manifest;
+  try {
+    manifest = loadManifest(manifestPath(args.repo), { unsupportedHint: MANIFEST_HINT });
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  const year = String(new Date().getUTCFullYear());
+  if (!args.dry_run) ensureDocforgeGitignore(path.join(args.repo, ".docforge"));
+  let movedAny = false;
+  for (const docId of args.doc) {
+    let doc;
+    try {
+      doc = findDocument(manifest, docId);
+    } catch (error) {
+      return fail(error.message, 2);
+    }
+    if (doc.status === "retired") {
+      console.log(`retire  ${docId}: already retired; no changes.`);
+      continue;
+    }
+    if (!WRITTEN.has(doc.status)) {
+      return fail(`${docId} has status ${doc.status}; only written documents can be retired`, 2);
+    }
+    const value = doc.path.replace(/\\/g, "/");
+    const valueParts = value.split("/");
+    let label;
+    if (args.mode === "obsolete") {
+      const targetParts = [".docforge", "obsolete", year, ...valueParts];
+      const target = targetParts.join("/");
+      label = `move ${value} -> ${target}`;
+      if (args.dry_run) {
+        console.log(`DRY RUN  retire ${docId}: ${label}`);
+        continue;
+      }
+      const source = path.join(args.repo, ...valueParts);
+      if (!fs.existsSync(source) || !fs.statSync(source).isFile()) {
+        return fail(`file not found: ${value}`, 2);
+      }
+      const destination = path.join(args.repo, ...targetParts);
+      if (fs.existsSync(destination)) return fail(`retire target already exists: ${target}`, 2);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      ensureGitignoredDir(path.join(args.repo, ".docforge", "obsolete", year));
+      fs.renameSync(source, destination);
+      doc.retired_destination = target;
+    } else {
+      label = `delete ${value}`;
+      if (args.dry_run) {
+        console.log(`DRY RUN  retire ${docId}: ${label}`);
+        continue;
+      }
+      const source = path.join(args.repo, ...valueParts);
+      if (fs.existsSync(source) && fs.statSync(source).isFile()) fs.unlinkSync(source);
+    }
+    doc.retired_at = nowIso();
+    doc.status = "retired";
+    doc.audit = null;
+    movedAny = true;
+    console.log(`retire  ${docId}: ${label} (status -> retired; entry preserved)`);
+  }
+  if (!args.dry_run && movedAny) saveManifest(args.repo, manifest);
   return 0;
 }
 
@@ -877,7 +1021,7 @@ function cmdUnmanaged(args) {
   }
 }
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--storage <json|markdown>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | set-storage --repo <path> --storage <json|markdown> [--dry-run] | unmanaged --repo <path> --action <list|add|remove|archive> [--path <rel>] [--dry-run] | finish --repo <path> [--keep-tmp]");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--scale-class <small|medium|large>] [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | unmanaged --repo <path> --action <list|add|remove|archive> [--path <rel>] [--dry-run] | retire --repo <path> --doc <id> [--doc <id> ...] --mode <obsolete|delete> [--dry-run] | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;
@@ -890,7 +1034,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, "set-storage": cmdSetStorage, unmanaged: cmdUnmanaged }[args.command](args);
+    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, unmanaged: cmdUnmanaged, retire: cmdRetire }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

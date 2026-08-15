@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Folder-mirrored JSON sidecar store for Docforge document metadata.
 
-When `project.provenance_storage` is `json` (the default), the public
-frontmatter identity (id, title, description) and the private
-`docforge_provenance` object live in one git-tracked JSON file per docs
-folder under `.docforge/provenance/`, and the markdown files carry no
-frontmatter at all. With `markdown` storage the legacy inline frontmatter
-layout is kept. Both runtimes share this module so file moves, reads, and
-writes stay byte-identical.
+The public frontmatter identity (id, title, description) and the private
+`docforge_provenance` object live in one git-tracked JSON file per docs folder
+under `.docforge/provenance/`; generated markdown carries no frontmatter at
+all. Both runtimes share this module so file moves, reads, and writes stay
+byte-identical.
+
+Documents written before the sidecar store still carry inline frontmatter.
+This module reads that layout so `migrate_metadata` can move it, but nothing
+writes it.
 """
 
 from __future__ import annotations
@@ -19,26 +21,18 @@ from typing import Any
 from runtime.common.python.provenance_frontmatter import (
     LEGACY_SCHEMA,
     SUPPORTED_SCHEMA_VERSIONS,
-    emit_document_frontmatter,
     parse_yaml_mapping,
     split_frontmatter,
 )
 
 SIDECAR_SCHEMA = "1.0"
 STORAGE_JSON = "json"
-STORAGE_MARKDOWN = "markdown"
 SIDECAR_DIRNAME = "provenance"
 PUBLIC_FIELDS = ("id", "title", "description")
 
 
 class SidecarError(ValueError):
     """Raised when a sidecar file cannot be read or written."""
-
-
-def storage_for(manifest: dict) -> str:
-    """The project's provenance storage mode; json when unset (default)."""
-    value = (manifest.get("project") or {}).get("provenance_storage")
-    return value if value in {STORAGE_JSON, STORAGE_MARKDOWN} else STORAGE_JSON
 
 
 def sidecar_root(repo: Path) -> Path:
@@ -125,14 +119,27 @@ def remove_entry(repo: Path, doc_path: str) -> None:
 
 def read_inline(text: str) -> tuple[str, dict | None]:
     """Parse a markdown file's full frontmatter mapping (id/title/description
-    plus docforge_provenance) without interpreting schema state."""
+    plus docforge_provenance) without interpreting schema state.
+
+    A schema-1.0-era document may carry JSON frontmatter rather than
+    restricted YAML — `parse_frontmatter` in `provenance_frontmatter.py`
+    already special-cases this; mirror it here so a document without a
+    sidecar entry is classified the same way regardless of which reader
+    resolves it."""
     raw, _body, _end = split_frontmatter(text)
     if raw is None:
         return "missing", None
-    try:
-        data = parse_yaml_mapping(raw)
-    except ValueError:
-        return "unparseable", None
+    stripped = raw.lstrip()
+    if stripped.startswith("{"):
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return "unparseable", None
+    else:
+        try:
+            data = parse_yaml_mapping(raw)
+        except ValueError:
+            return "unparseable", None
     if not isinstance(data, dict):
         return "missing", None
     return "ok", data
@@ -157,57 +164,42 @@ def schema_state(provenance: Any) -> str:
     return "ok"
 
 
-def read_doc_metadata(repo: Path, doc: dict, storage: str) -> dict:
-    """Mode-aware read of one document's metadata.
+def read_doc_metadata(repo: Path, doc: dict) -> dict:
+    """Read one document's metadata, sidecar first.
 
     Returns {"state", "public", "provenance", "source"}. State is explicit:
-    `ok` (current schema), `inline` (json mode: current-schema frontmatter
-    not yet moved to the sidecar), `legacy` (schema-less provenance),
-    `obsolete` (schema 1.0 / tool_version / unsupported schema), `missing`,
-    or `unparseable`. Old-schema metadata is never folded into `ok` and is
-    never silently moved.
+    `ok` (current schema, in the sidecar), `inline` (current-schema
+    frontmatter on a document not yet migrated), `legacy` (schema-less
+    provenance), `obsolete` (schema 1.0 / tool_version / unsupported schema),
+    `missing`, or `unparseable`. Old-schema metadata is never folded into `ok`
+    and is never silently moved.
     """
     doc_path = doc.get("path", "")
     target = repo / doc_path
-    if storage == STORAGE_JSON:
-        entry = entry_for(repo, doc_path)
-        if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
-            state = schema_state(entry["provenance"])
-            return {
-                "state": state,
-                "public": {key: entry.get(key) for key in PUBLIC_FIELDS},
-                "provenance": entry["provenance"],
-                "source": "sidecar",
-            }
-        if target.is_file():
-            text = target.read_text(encoding="utf-8", errors="replace")
-            state, data = read_inline(text)
-            if state == "ok" and isinstance(data.get("docforge_provenance"), dict):
-                schema = schema_state(data["docforge_provenance"])
-                state = "inline" if schema == "ok" else schema
-                return {
-                    "state": state,
-                    "public": {key: data.get(key) for key in PUBLIC_FIELDS},
-                    "provenance": data["docforge_provenance"],
-                    "source": "markdown",
-                }
-            if state == "unparseable":
-                return {"state": "unparseable", "public": None, "provenance": None, "source": "markdown"}
-        return {"state": "missing", "public": None, "provenance": None, "source": "sidecar"}
-    if not target.is_file():
-        return {"state": "missing", "public": None, "provenance": None, "source": "markdown"}
-    text = target.read_text(encoding="utf-8", errors="replace")
-    state, data = read_inline(text)
-    if state == "unparseable":
-        return {"state": "unparseable", "public": None, "provenance": None, "source": "markdown"}
-    if state == "ok" and isinstance(data.get("docforge_provenance"), dict):
+    entry = entry_for(repo, doc_path)
+    if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
         return {
-            "state": schema_state(data["docforge_provenance"]),
-            "public": {key: data.get(key) for key in PUBLIC_FIELDS},
-            "provenance": data["docforge_provenance"],
-            "source": "markdown",
+            "state": schema_state(entry["provenance"]),
+            "public": {key: entry.get(key) for key in PUBLIC_FIELDS},
+            "provenance": entry["provenance"],
+            "source": "sidecar",
         }
-    return {"state": "missing", "public": None, "provenance": None, "source": "markdown"}
+    # No sidecar entry: the document may predate the store and still carry
+    # frontmatter. Report that explicitly so migration can move it.
+    if target.is_file():
+        text = target.read_text(encoding="utf-8", errors="replace")
+        state, data = read_inline(text)
+        if state == "ok" and isinstance(data.get("docforge_provenance"), dict):
+            schema = schema_state(data["docforge_provenance"])
+            return {
+                "state": "inline" if schema == "ok" else schema,
+                "public": {key: data.get(key) for key in PUBLIC_FIELDS},
+                "provenance": data["docforge_provenance"],
+                "source": "markdown",
+            }
+        if state == "unparseable":
+            return {"state": "unparseable", "public": None, "provenance": None, "source": "markdown"}
+    return {"state": "missing", "public": None, "provenance": None, "source": "sidecar"}
 
 
 def public_from_manifest(doc: dict) -> dict:
@@ -219,13 +211,11 @@ def public_from_manifest(doc: dict) -> dict:
     return public
 
 
-def move_inline_to_sidecar(repo: Path, doc: dict, storage: str) -> str:
+def move_inline_to_sidecar(repo: Path, doc: dict) -> str:
     """Move a document's inline frontmatter into the folder sidecar and strip
     it from the markdown. Only current-schema provenance moves — old-schema
     metadata is reported explicitly (`legacy-schema` / `obsolete-schema`) and
-    left untouched for migrate_metadata to convert; there is no opt-out."""
-    if storage != STORAGE_JSON:
-        return "skip"
+    left untouched for migrate_metadata to convert first."""
     doc_path = doc.get("path", "")
     target = repo / doc_path
     if not target.is_file():
@@ -253,30 +243,4 @@ def move_inline_to_sidecar(repo: Path, doc: dict, storage: str) -> str:
     write_entry(repo, doc_path, entry)
     _raw, body, _end = split_frontmatter(text)
     target.write_text(body.lstrip("\n"), encoding="utf-8")
-    return "moved"
-
-
-def move_sidecar_to_inline(repo: Path, doc: dict) -> str:
-    """Re-emit a sidecar entry as inline frontmatter and drop the entry."""
-    doc_path = doc.get("path", "")
-    entry = entry_for(repo, doc_path)
-    if not isinstance(entry, dict):
-        return "no-sidecar"
-    public = {key: entry.get(key) for key in PUBLIC_FIELDS if entry.get(key)}
-    title = public.get("title") or doc.get("title") or doc.get("id", "document")
-    doc_id = public.get("id") or doc.get("id", "")
-    description = public.get("description")
-    frontmatter = emit_document_frontmatter(
-        doc_id, title, entry["provenance"], description
-    )
-    target = repo / doc_path
-    if target.is_file():
-        text = target.read_text(encoding="utf-8", errors="replace")
-        _raw, body, _end = split_frontmatter(text)
-        content = frontmatter + body.lstrip("\n")
-    else:
-        content = frontmatter
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
-    remove_entry(repo, doc_path)
     return "moved"

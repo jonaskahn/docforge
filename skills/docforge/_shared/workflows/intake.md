@@ -72,6 +72,11 @@ asking any scope questions, present a short discovery brief:
   graph setup for the root.
 - **Recommended** vs **also possible** profile rows for shapes, platforms,
   frameworks, and concerns, each with a one-line evidence or gate reason.
+- Project scale: `<source_files>` source files, `<confirmed_profiles>` confirmed
+  profiles → `small` | `medium` | `large`; `<compact|standard>` layout suggested
+  (see [`../references/docs-tree.md`](../references/docs-tree.md) "Compact
+  layout"). A small repo with many tracked config/docs files but little source
+  is still small; this is a file-count signal, not a coverage judgment.
 - Existing documentation note when `docs/` (or equivalent) is already present,
   with a brief evidence note such as an API schema, web framework manifest,
   library package manifest, pipeline configuration, or infrastructure files.
@@ -237,12 +242,20 @@ detection, or writing — but scale the pack to what is actually unresolved or
 changed, never a reflexive full re-ask of every dimension on every run:
 
 - **Execution mode** (and **Scope**, when the invocation is ambiguous) is
-  always asked — these govern this run and are never read off the manifest.
+  always asked, unless the invocation already supplies `--plan-only` or
+  `--auto-accept` — these govern this run and are never read off the
+  manifest.
 - **Tier** is asked only when the invocation requests a tier change, the
   manifest has no tier, or detection surfaces evidence the current tier no
   longer fits (for example, newly evidenced profiles that unlock a higher
   tier). No such reason means state the current tier as unchanged instead of
-  presenting a control.
+  presenting a control. **Exception:** `/docforge-revise all` and any
+  invocation that names a tier (`spine` / `diligence` / `portfolio`) always
+  present the tier control and always show the selection-change preview
+  ([`revision.md`](revision.md) "Annotated plan tree") — even with no delta —
+  so a tier-naming run can never change which documents belong silently.
+  `<area>` and `flow` keep the delta-aware behavior above; a bare
+  `/docforge-revise` still asks nothing.
 - **Profiles** (shape / platform / framework / concern) are asked only for
   dimensions with an actual delta: a fresh detection not already selected, or
   a change the user requested. A dimension with no new candidates and no
@@ -269,7 +282,12 @@ ask one concise follow-up containing only those unresolved choices.
 After resolving the answers, display one confirmation summary containing the
 action, tier, every selected profile dimension, every selected audience,
 selected graph provider and its code/flow capabilities, and execution mode
-(include “permissionless” in the label when Auto-accept was selected). Ask
+(include “permissionless” in the label when Auto-accept was selected). The
+summary also states the project scale and layout once, as a proposed default
+with the detected evidence: `Scale: small (7 source files, 2 confirmed
+profiles) — layout: compact (suggested)`; the user may override either value
+(`Change to medium`, `Use standard layout`) in the same reply, which records
+`decided_by: "user"` on the manifest — never a silent re-derivation. Ask
 whether to continue, edit a choice, or cancel. Always wait for explicit confirmation
 of this intake summary, including when Auto-accept was selected. Only after
 confirmation may Docforge initialize or replace a manifest or begin deeper

@@ -19,5 +19,7 @@
   "write_order": 86,
   "provenance_mode": "sections",
   "audit_profile": "standard",
-  "template_file": "content/contributing/ownership.template.md"
+  "template_file": "content/contributing/ownership.template.md",
+  "compact_group": "contributing_compact",
+  "compact_order": 2
 }

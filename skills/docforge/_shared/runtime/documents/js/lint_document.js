@@ -116,63 +116,35 @@ function illustrationDefects(text) {
 }
 function metadataContext(filePath, text) {
   // Resolve { state, provenance, bodyStart, public } for one document.
-  // In json storage mode the folder sidecar wins; inline frontmatter that
-  // has not been migrated yet reports state `inline` so lint flags it.
+  // The folder sidecar wins; inline frontmatter that has not been migrated
+  // yet reports state `inline` so lint flags it.
   const root = repositoryRoot(filePath);
-  let storage = store.STORAGE_MARKDOWN;
-  const manifestPath = path.join(root, ".docforge", "manifest.json");
-  if (fs.existsSync(manifestPath)) {
-    try {
-      storage = store.storageFor(JSON.parse(fs.readFileSync(manifestPath, "utf8")));
-    } catch {
-      // fall through to default
-    }
-  }
   const rel = path.relative(root, filePath).split(path.sep).join("/");
-  if (storage === store.STORAGE_JSON) {
-    const entry = store.entryFor(root, rel);
-    if (entry && entry.provenance && typeof entry.provenance === "object") {
-      const publicMeta = {};
-      for (const key of store.PUBLIC_FIELDS) {
-        if (entry[key]) publicMeta[key] = entry[key];
-      }
-      return { state: "ok", provenance: entry.provenance, bodyStart: 0, public: publicMeta };
+  const entry = store.entryFor(root, rel);
+  if (entry && entry.provenance && typeof entry.provenance === "object") {
+    const publicMeta = {};
+    for (const key of store.PUBLIC_FIELDS) {
+      if (entry[key]) publicMeta[key] = entry[key];
     }
-    const parsedInline = pf.parseFrontmatter(text);
-    let inlineState = parsedInline.state;
-    if (inlineState === "ok") inlineState = "inline";
-    const publicInline = {};
-    if (inlineState === "ok" || inlineState === "inline") {
-      const split = pf.splitFrontmatter(text);
-      if (split.raw != null) {
-        try {
-          const data = pf.parseYamlMapping(split.raw);
-          for (const key of store.PUBLIC_FIELDS) {
-            if (data[key]) publicInline[key] = data[key];
-          }
-        } catch {
-          // provenance defects report parsing
-        }
-      }
-    }
-    return { state: inlineState, provenance: parsedInline.provenance, bodyStart: parsedInline.end, public: publicInline };
+    return { state: "ok", provenance: entry.provenance, bodyStart: 0, public: publicMeta };
   }
-  const parsed = pf.parseFrontmatter(text);
-  const publicMeta = {};
-  if (parsed.state === "ok") {
+  const parsedInline = pf.parseFrontmatter(text);
+  const inlineState = parsedInline.state === "ok" ? "inline" : parsedInline.state;
+  const publicInline = {};
+  if (inlineState === "inline") {
     const split = pf.splitFrontmatter(text);
     if (split.raw != null) {
       try {
         const data = pf.parseYamlMapping(split.raw);
         for (const key of store.PUBLIC_FIELDS) {
-          if (data[key]) publicMeta[key] = data[key];
+          if (data[key]) publicInline[key] = data[key];
         }
       } catch {
         // provenance defects report parsing
       }
     }
   }
-  return { state: parsed.state, provenance: parsed.provenance, bodyStart: parsed.end, public: publicMeta };
+  return { state: inlineState, provenance: parsedInline.provenance, bodyStart: parsedInline.end, public: publicInline };
 }
 
 function provenanceDefects(filePath, text) {
@@ -185,7 +157,7 @@ function provenanceDefects(filePath, text) {
   if (parsed.state === "obsolete") return [{ kind: "obsolete schema", line: 1, detail: "run migrate_metadata.js" }];
   if (parsed.state === "legacy") return [{ kind: "legacy provenance", line: 1, detail: "schema absent" }];
   if (parsed.state === "inline") {
-    return [{ kind: "legacy provenance", line: 1, detail: "inline provenance in json mode; run migrate_metadata" }];
+    return [{ kind: "legacy provenance", line: 1, detail: "inline provenance; run migrate_metadata to move it into the sidecar" }];
   }
   const provenance = parsed.provenance;
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
@@ -294,7 +266,9 @@ function checkDocument(filePath, requireHeadings) {
     ? context.provenance.target_depth || "deep-dive"
     : "deep-dive";
   defects.push(...budgetDefects(text, targetDepth));
-  defects.push(...validateLocators(filePath, text));
+  // Hand over the resolved provenance: under sidecar storage the markdown has
+  // no frontmatter, and a locator check that re-parsed it would find nothing.
+  defects.push(...validateLocators(filePath, text, context.provenance, context.bodyStart));
   defects.push(...visiblePresentationDefects(text));
 
   // scaffold markers + tokens, with line numbers

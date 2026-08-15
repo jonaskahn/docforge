@@ -35,6 +35,7 @@ const DOCFORGE_GITIGNORE_RULES = [
   "scratch/",
   "backups/",
   "cache/",
+  "obsolete/",
   "*.tmp",
   "*.log",
 ];
@@ -89,7 +90,7 @@ function finishDocforge(docforgeDir, options = {}) {
 function ensureGitignoredDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
   if (
-    ["tmp", "audits", "scratch"].includes(path.basename(dirPath)) &&
+    ["tmp", "audits", "scratch", "obsolete"].includes(path.basename(dirPath)) &&
     path.basename(path.dirname(dirPath)) === ".docforge"
   ) {
     ensureDocforgeGitignore(path.dirname(dirPath));
@@ -100,7 +101,7 @@ function ensureGitignoredDir(dirPath) {
 }
 
 function loadManifest(target, options = {}) {
-  const allowedVersions = options.allowedVersions || ["3.4", "3.3", "3.2", "3.1"];
+  const allowedVersions = options.allowedVersions || ["3.6", "3.5", "3.4", "3.3", "3.2", "3.1"];
   const requireDocuments = Boolean(options.requireDocuments);
   const unsupportedHint =
     options.unsupportedHint || "run migrate_metadata.js to re-register legacy manifests";

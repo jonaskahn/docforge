@@ -23,6 +23,29 @@
   vocabulary, forge-confinement.
 - [`references/portfolio.md`](references/portfolio.md): cross-repository
   diligence.
+- [`references/illustration.md`](references/illustration.md): visual form
+  selection and illustration constraints.
+- [`references/depth-and-audience.md`](references/depth-and-audience.md):
+  reader-facing depth (decision-relevant detail, not file/word count) and
+  audience-driven content scope.
+- [`references/model-depth-ladders.md`](references/model-depth-ladders.md):
+  `model_depth` rigor floors, distinct from reader-facing `target_depth`.
+- [`references/parallel-execution.md`](references/parallel-execution.md):
+  read-only evidence fan-out and the serial-orchestrator/parallel-worker
+  contract.
+- [`references/source-analysis.md`](references/source-analysis.md): the
+  bounded evidence ladder for querying a selected graph provider.
+- [`references/discovery-gate.md`](references/discovery-gate.md):
+  open-vocabulary profile-cue judgment after deterministic detection.
+- [`references/decision-records.md`](references/decision-records.md): when a
+  decision earns a durable record and where it lives.
+- [`references/profiles/README.md`](references/profiles/README.md):
+  audience and repository-shape reader-facing guidance.
+- [`references/docs-tree.md`](references/docs-tree.md): project scale
+  classification and compact/standard layout (in addition to paths, naming,
+  tiers, and placement above).
+- [`workflows/revision.md`](workflows/revision.md): document retirement and
+  current-template conformance enforcement.
 - `content/<group>/instructions/`: document-specific writing craft only.
 - `content/<group>/templates/`: output scaffolds only.
 

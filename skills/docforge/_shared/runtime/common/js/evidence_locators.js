@@ -27,18 +27,31 @@ function outsideFences(text) {
   }
   return lines;
 }
-function validateLocators(document, text = null) {
+/* `provenance` and `bodyStart` come from the caller's already-resolved
+ * metadata. Passing them is what makes this work under sidecar storage, where
+ * the markdown carries no frontmatter to parse — without them the check would
+ * find no provenance and silently pass every document. When they are omitted
+ * the frontmatter is parsed directly, for callers holding a legacy document. */
+function validateLocators(document, text = null, provenance = null, bodyStart = null) {
   document = path.resolve(document);
   const contents = text == null ? fs.readFileSync(document, "utf8") : text;
-  const parsed = pf.parseFrontmatter(contents);
-  if (parsed.state !== "ok" || !parsed.provenance || typeof parsed.provenance !== "object") return [];
+  if (provenance === null) {
+    const parsed = pf.parseFrontmatter(contents);
+    if (parsed.state !== "ok" || !parsed.provenance || typeof parsed.provenance !== "object") return [];
+    provenance = parsed.provenance;
+    if (bodyStart === null) bodyStart = parsed.end;
+  }
+  if (!provenance || typeof provenance !== "object") return [];
+  if (bodyStart === null) bodyStart = 0;
   const headings = [];
-  const bodyLine0 = contents.slice(0, parsed.end).split(/\r?\n/).length;
-  for (const [index, line] of contents.slice(parsed.end).split(/\r?\n/).entries()) {
+  // Newlines before the body, so the first body line is 1-based like the
+  // locator scan below. `split().length` would count lines, not newlines.
+  const bodyLine0 = contents.slice(0, bodyStart).split(/\r?\n/).length - 1;
+  for (const [index, line] of contents.slice(bodyStart).split(/\r?\n/).entries()) {
     const match = line.match(HEADING); if (match) headings.push([bodyLine0 + index + 1, anchor(match[2])]);
   }
   const sourcePairs = new Map();
-  for (const section of parsed.provenance.sections || []) {
+  for (const section of provenance.sections || []) {
     sourcePairs.set(section.id, new Set((section.sources || []).map((source) => `${source.path}\0${source.git_blob}`)));
   }
   const repo = root(document); const defects = [];

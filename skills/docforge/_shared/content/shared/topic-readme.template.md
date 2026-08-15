@@ -1,19 +1,3 @@
----
-docforge_provenance:
-  schema: "2.1"
-  doc_id: "<DOC_ID>"
-  path: "<DOCUMENT_PATH>"
-  generated_at: "<GENERATED_AT>"
-  generator:
-    name: "docforge"
-    version: "2.17.0"
-  tier: "<TIER>"
-  target_depth: "<TARGET_DEPTH>"
-  graph:
-    provider: "<GRAPH_PROVIDER>"
-    flow: "<FLOW_CAPABILITY>"
-  sections: []
----
 # {{Topic name — a flow or a subsystem, in business or plain-technical words}}
 
 <!-- This template is used both as a flat file (docs/flows/<flow>.md) and, once a

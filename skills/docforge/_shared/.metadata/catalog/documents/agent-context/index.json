@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "category": "agent-context",
   "purpose": "Agent-facing context: AGENTS.md and coding-agent views.",
   "source": "../../index.json",

@@ -14,6 +14,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
+- `architecture_compact` — Compact architecture section: mental model, high-level design, plus (Diligence) components, constraints, dependencies, tech debt → [index.json](index.json)
 - `architecture_index` — What the system is and how it is built: section overview and one-line purpose of every selected architecture document → [index.json](index.json)
 - `arch_high_level` — Context, deployable or provisioned blocks labeled with implementing technology (e.g. 'React SPA', 'PostgreSQL 15', or for `infrastructure-platform`... → [index.json](index.json)
 - `arch_low_level` — Module/component responsibilities and their interfaces (or, for `infrastructure-platform`, resource-group / stack responsibilities and apply order); one... → [index.json](index.json)

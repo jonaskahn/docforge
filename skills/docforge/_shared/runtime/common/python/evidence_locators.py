@@ -40,13 +40,32 @@ def _outside_fences(text: str) -> list[tuple[int, str]]:
     return lines
 
 
-def validate_locators(document: Path, text: str | None = None) -> list[dict]:
-    """Return structured locator defects without broadening provenance 2.0."""
+def validate_locators(
+    document: Path,
+    text: str | None = None,
+    provenance: dict | None = None,
+    body_start: int | None = None,
+) -> list[dict]:
+    """Return structured locator defects without broadening provenance 2.1.
+
+    `provenance` and `body_start` come from the caller's already-resolved
+    metadata. Passing them is what makes this work under sidecar storage, where
+    the markdown carries no frontmatter to parse — without them the check would
+    find no provenance and silently pass every document. When they are omitted
+    the frontmatter is parsed directly, for callers holding a legacy document.
+    """
     text = document.read_text(encoding="utf-8", errors="replace") if text is None else text
     document = document.resolve()
-    state, provenance, body_start = parse_frontmatter(text)
-    if state != "ok" or not isinstance(provenance, dict):
+    if provenance is None:
+        state, provenance, parsed_start = parse_frontmatter(text)
+        if state != "ok" or not isinstance(provenance, dict):
+            return []
+        if body_start is None:
+            body_start = parsed_start
+    if not isinstance(provenance, dict):
         return []
+    if body_start is None:
+        body_start = 0
     body = text[body_start:]
     body_line0 = text[:body_start].count("\n")
     headings: list[tuple[int, str]] = [

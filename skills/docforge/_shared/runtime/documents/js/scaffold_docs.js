@@ -33,7 +33,7 @@ function resolveManifest(value, repo) {
   return fs.existsSync(direct) ? direct : repoRelative;
 }
 function activeDocuments(manifest) {
-  return manifest.documents.filter((doc) => doc.status !== "skipped");
+  return manifest.documents.filter((doc) => doc.status !== "skipped" && doc.status !== "retired");
 }
 function preview(manifest, repo, revise) {
   const docs = activeDocuments(manifest);
@@ -78,13 +78,6 @@ function posixDirname(value) {
 function titleFor(doc) {
   return doc.title || doc.id.replace(/[-_]/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
-function scaffoldProvenance(doc, manifest) {
-  const provenance = pf.scaffoldProvenance(doc.id, doc.path, {
-    tier: (manifest.project || {}).tier || "<TIER>",
-    target_depth: doc.target_depth,
-  });
-  return pf.emitDocumentFrontmatter(doc.id, titleFor(doc), provenance);
-}
 function scaffoldEntry(doc, manifest) {
   const publicMeta = store.publicFromManifest(doc);
   const entry = { ...publicMeta };
@@ -120,16 +113,13 @@ function expandChildrenBlock(body, doc, manifest) {
   const block = [CHILDREN_START, ...childRows(doc, manifest), CHILDREN_END].join("\n");
   return body.slice(0, start) + block + body.slice(end + CHILDREN_END.length);
 }
-function scaffoldBody(doc, manifest, storage) {
+function scaffoldBody(doc, manifest) {
   if (INDEX_TYPES.has(doc.type)) {
     const template = path.join(SKILL_ROOT, doc.scaffold_template);
     if (!fs.existsSync(template)) throw new Error(`template not found for ${doc.id}: ${doc.scaffold_template}`);
     let body = fs.readFileSync(template, "utf8");
     const parsed = pf.parseFrontmatter(body);
     if (parsed.state !== "missing") body = body.slice(parsed.end);
-    if (storage === store.STORAGE_MARKDOWN && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
-      body = scaffoldProvenance(doc, manifest) + body;
-    }
     body = expandChildrenBlock(body, doc, manifest);
     return body.replace("{{TITLE}}", titleFor(doc));
   }
@@ -138,9 +128,6 @@ function scaffoldBody(doc, manifest, storage) {
   let body = fs.readFileSync(template, "utf8");
   const parsed = pf.parseFrontmatter(body);
   if (parsed.state !== "missing") body = body.slice(parsed.end);
-  if (storage === store.STORAGE_MARKDOWN && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
-    body = scaffoldProvenance(doc, manifest) + body;
-  }
   return body;
 }
 function deepMerge(existing, defaults) {
@@ -161,9 +148,8 @@ function ensureLocalIgnore(repo) {
   }
 }
 function writeDocument(repo, doc, manifest) {
-  const storage = store.storageFor(manifest);
   const target = path.join(repo, ...doc.path.split("/"));
-  const body = scaffoldBody(doc, manifest, storage);
+  const body = scaffoldBody(doc, manifest);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   let action;
   if (doc.type === "machine-config" && fs.existsSync(target)) {
@@ -179,7 +165,6 @@ function writeDocument(repo, doc, manifest) {
   }
   if (
     action === "create"
-    && storage === store.STORAGE_JSON
     && doc.provenance_mode === "sections"
     && doc.type !== "machine-config"
     && !MARKDOWN_EXCEPTIONS.has(doc.path)
@@ -386,20 +371,11 @@ function audit(repo, manifest) {
     const forgeHits = [...new Set((text.match(FORGE) || []).map((item) => item.toLowerCase()))].sort();
     if (forgeHits.length) findings["forge leakage"].push(`${doc.path}: ${forgeHits.join(", ")}`);
     if (doc.provenance_mode === "sections" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
-      const storage = store.storageFor(manifest);
-      let state;
-      let provenance;
-      let body = text;
-      if (storage === store.STORAGE_JSON) {
-        const meta = store.readDocMetadata(repo, doc, storage);
-        state = meta.state === "inline" ? "legacy" : meta.state;
-        provenance = meta.provenance;
-      } else {
-        const parsed = pf.parseFrontmatter(text);
-        state = parsed.state;
-        provenance = parsed.provenance;
-        body = text.slice(parsed.end);
-      }
+      const meta = store.readDocMetadata(repo, doc);
+      // An un-migrated inline document is a legacy finding, not a pass.
+      const state = meta.state === "inline" ? "legacy" : meta.state;
+      const provenance = meta.provenance;
+      const body = text;
       const defects = provenanceDefects(repo, doc, state, provenance, body, (manifest.project || {}).tier);
       for (const [kind, items] of Object.entries(defects)) findings[kind].push(...items);
     }
