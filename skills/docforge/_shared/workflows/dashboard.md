@@ -31,8 +31,8 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan`, `start`, `export`, and `status` all require a manifest 3.5 (or 3.4 / 3.3 /
-3.2 / 3.1, which `migrate_metadata.{py,js}` — see
+`scan`, `start`, `export`, and `status` all require a manifest 3.7 (or 3.6 / 3.5 /
+3.4 / 3.3 / 3.2 / 3.1, which `migrate_metadata.{py,js}` — see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md) — upgrades
 in place). What happens on an **older legacy manifest version** (1.1
 `project_context` / `document_groups`, 2.0 flat `documents` with overlays, or
@@ -104,7 +104,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 -> INSTALL (if missing) -> EXPORT               (export)
 ```
 
-- **Preflight:** repository, manifest 3.5 (or 3.4 / 3.3 / 3.2 / 3.1), and a readable `docs/` tree.
+- **Preflight:** repository, manifest 3.7 (or 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1), and a readable `docs/` tree.
   When the manifest is a legacy pre-3.0 version (or any other unsupported
   version), apply the [Legacy manifest gate](#legacy-manifest-gate)
   before continuing. The
