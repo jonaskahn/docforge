@@ -215,10 +215,8 @@ def validate() -> list[str]:
             errors.append(f"{template.name}: provenance frontmatter must use schema {SCHEMA_VERSION}")
     cli_py = SKILL_ROOT / "runtime" / "cli" / "python"
     cli_js = SKILL_ROOT / "runtime" / "cli" / "js"
-    # One-shot migration helpers; not part of the dual-runtime public surface.
-    peerless = {"split_catalog", "split_document_catalog"}
-    py_names = {path.stem for path in cli_py.glob("*.py")} - peerless
-    js_names = {path.stem for path in cli_js.glob("*.js")} - peerless
+    py_names = {path.stem for path in cli_py.glob("*.py")}
+    js_names = {path.stem for path in cli_js.glob("*.js")}
     for name in sorted(py_names - js_names):
         errors.append(f"missing Node peer for {name}.py")
     for name in sorted(js_names - py_names):

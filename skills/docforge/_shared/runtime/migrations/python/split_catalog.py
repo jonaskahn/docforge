@@ -201,7 +201,21 @@ def emit(catalog: dict, *, dry_run: bool) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--root",
+        type=Path,
+        help="skill root override (default: derived from this file's location)",
+    )
     args = parser.parse_args()
+    global METADATA, MONOLITH, INDEX_PATH, TYPES_DIR, PROFILES_DIR, SKILL_ROOT
+    if args.root:
+        root = Path(args.root).resolve()
+        SKILL_ROOT = root
+        METADATA = root / ".metadata"
+        MONOLITH = METADATA / "catalog.json"
+        INDEX_PATH = METADATA / "catalog" / "index.json"
+        TYPES_DIR = METADATA / "catalog" / "types"
+        PROFILES_DIR = METADATA / "catalog" / "profiles"
     try:
         catalog = load_monolith()
     except SystemExit:

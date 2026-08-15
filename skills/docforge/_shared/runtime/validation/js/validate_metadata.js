@@ -220,18 +220,15 @@ function validate() {
   }
   const cliPy = path.join(SKILL_ROOT, "runtime", "cli", "python");
   const cliJs = path.join(SKILL_ROOT, "runtime", "cli", "js");
-  const peerless = new Set(["split_catalog", "split_document_catalog"]);
   const py = new Set(
     fs.readdirSync(cliPy)
       .filter((name) => name.endsWith(".py"))
-      .map((name) => path.basename(name, ".py"))
-      .filter((name) => !peerless.has(name)),
+      .map((name) => path.basename(name, ".py")),
   );
   const js = new Set(
     fs.readdirSync(cliJs)
       .filter((name) => name.endsWith(".js"))
-      .map((name) => path.basename(name, ".js"))
-      .filter((name) => !peerless.has(name)),
+      .map((name) => path.basename(name, ".js")),
   );
   for (const name of [...py].filter((name) => !js.has(name)).sort()) errors.push(`missing Node peer for ${name}.py`);
   for (const name of [...js].filter((name) => !py.has(name)).sort()) errors.push(`missing Python peer for ${name}.js`);

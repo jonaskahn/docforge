@@ -160,7 +160,18 @@ def emit(*, dry_run: bool) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--root",
+        type=Path,
+        help="skill root override (default: derived from this file's location)",
+    )
     args = parser.parse_args()
+    global SOURCE, OUT_DIR, SKILL_ROOT
+    if args.root:
+        root = Path(args.root).resolve()
+        SKILL_ROOT = root
+        SOURCE = root / "references" / "document-catalog.md"
+        OUT_DIR = root / "references" / "catalog-contracts"
     return emit(dry_run=args.dry_run)
 
 
