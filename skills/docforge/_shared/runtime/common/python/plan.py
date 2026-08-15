@@ -41,21 +41,25 @@ def document_action(repo: Path, doc: dict, revise: bool = False, storage: str | 
     if storage is None:
         storage = store.STORAGE_MARKDOWN
     if storage == store.STORAGE_JSON:
-        entry = store.entry_for(repo, doc["path"])
-        if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
-            state, provenance = "ok", entry["provenance"]
+        meta = store.read_doc_metadata(repo, doc, storage)
+        if meta["state"] == "ok":
+            state, provenance = "ok", meta["provenance"]
+        elif meta["state"] == "inline":
+            return "update", "inline provenance pending sidecar migration"
+        elif meta["state"] == "legacy":
+            return "rewrite", "legacy provenance pending migration"
+        elif meta["state"] == "obsolete":
+            return "rewrite", "obsolete provenance schema; run migrate_metadata"
         else:
-            state, provenance, _ = parse_frontmatter(target.read_text(encoding="utf-8", errors="replace"))
-            if state == "ok" and isinstance(provenance, dict):
-                state = "inline"
+            return "rewrite", "provenance missing or unparseable"
     else:
         state, provenance, _ = parse_frontmatter(target.read_text(encoding="utf-8", errors="replace"))
-        if state == "ok" and not isinstance(provenance, dict):
-            state = "missing"
-    if state == "inline":
-        return "update", "inline provenance pending sidecar migration"
-    if state != "ok" or not isinstance(provenance, dict):
-        return "rewrite", "provenance missing or unparseable"
+        if state == "legacy":
+            return "rewrite", "legacy provenance pending migration"
+        if state == "obsolete":
+            return "rewrite", "obsolete provenance schema; run migrate_metadata"
+        if state != "ok" or not isinstance(provenance, dict):
+            return "rewrite", "provenance missing or unparseable"
     if status in {"in_progress", "needs_review"}:
         return "rewrite", "status requires re-grounding"
     if status == "planned":

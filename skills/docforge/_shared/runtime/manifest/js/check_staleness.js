@@ -21,10 +21,6 @@ function matchesDocument(doc, documentFilter) {
   return doc.id === documentFilter || doc.path === documentFilter;
 }
 
-function obsolete(provenance) {
-  return "tool_version" in provenance || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema);
-}
-
 function writeBack(repo, doc, storage, provenance) {
   if (storage === store.STORAGE_JSON) {
     const entry = store.entryFor(repo, doc.path) || {};
@@ -46,46 +42,39 @@ function syncProvenance(manifest, repo, documentFilter) {
     if (!matchesDocument(doc, documentFilter)) continue;
     if (doc.provenance_mode === "manifest") continue;
     const meta = store.readDocMetadata(repo, doc, storage);
-    if (meta.state === "inline") {
+    const state = meta.state;
+    if (state === "inline") {
       if (store.moveInlineToSidecar(repo, doc, storage) !== "moved") {
         failed.add(doc.path);
         results.push({ doc: doc.path, status: "UNTRACKED", detail: "inline migration failed" });
         continue;
       }
-      let provenance = null;
-      const entry = store.entryFor(repo, doc.path);
-      if (entry) provenance = entry.provenance;
-      if (provenance && obsolete(provenance)) {
-        provenance = pf.migrateV1ToV2(provenance);
-        writeBack(repo, doc, storage, provenance);
-      }
-      doc.provenance = provenance;
+      doc.provenance = meta.provenance;
       updated += 1;
       continue;
     }
-    if (meta.state !== "ok") {
+    if (state === "legacy") {
       failed.add(doc.path);
-      if (meta.state === "unparseable") {
+      results.push({ doc: doc.path, status: "UNTRACKED", detail: "legacy provenance" });
+      continue;
+    }
+    if (state === "obsolete") {
+      const migrated = pf.migrateV1ToV2(meta.provenance);
+      writeBack(repo, doc, storage, migrated);
+      doc.provenance = migrated;
+      updated += 1;
+      continue;
+    }
+    if (state !== "ok") {
+      failed.add(doc.path);
+      if (state === "unparseable") {
         results.push({ doc: doc.path, status: "UNPARSEABLE", detail: "invalid frontmatter" });
       } else {
         results.push({ doc: doc.path, status: "UNTRACKED", detail: "missing provenance" });
       }
       continue;
     }
-    const provenance = meta.provenance;
-    if (!("schema" in provenance)) {
-      failed.add(doc.path);
-      results.push({ doc: doc.path, status: "UNTRACKED", detail: "legacy provenance" });
-      continue;
-    }
-    if (obsolete(provenance)) {
-      const migrated = pf.migrateV1ToV2(provenance);
-      writeBack(repo, doc, storage, migrated);
-      doc.provenance = migrated;
-      updated += 1;
-      continue;
-    }
-    doc.provenance = provenance;
+    doc.provenance = meta.provenance;
     updated += 1;
   }
   return { updated, results, failed };

@@ -17,6 +17,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from runtime.common.python.provenance_frontmatter import (
+    LEGACY_SCHEMA,
+    SUPPORTED_SCHEMA_VERSIONS,
     emit_document_frontmatter,
     parse_yaml_mapping,
     split_frontmatter,
@@ -136,21 +138,43 @@ def read_inline(text: str) -> tuple[str, dict | None]:
     return "ok", data
 
 
+def schema_state(provenance: Any) -> str:
+    """Explicit classification of a provenance object's schema.
+
+    `ok` — current schema (2.0/2.1, no `tool_version`);
+    `legacy` — no `schema` key at all (pre-schema shape);
+    `obsolete` — schema 1.0, `tool_version`, or an unsupported schema;
+    `missing` — not a provenance object. Detection is always on — there is
+    no opt-in/opt-out: callers see the old-schema state explicitly and must
+    migrate before any move.
+    """
+    if not isinstance(provenance, dict) or not provenance:
+        return "missing"
+    if "schema" not in provenance:
+        return "legacy"
+    if provenance["schema"] not in SUPPORTED_SCHEMA_VERSIONS or "tool_version" in provenance:
+        return "obsolete"
+    return "ok"
+
+
 def read_doc_metadata(repo: Path, doc: dict, storage: str) -> dict:
     """Mode-aware read of one document's metadata.
 
-    Returns {"state", "public", "provenance", "source"} where state is one
-    of ok | missing | unparseable | inline and source is sidecar|markdown.
-    In json mode a file whose inline frontmatter has not been migrated yet
-    reports state `inline` so callers can trigger the move.
+    Returns {"state", "public", "provenance", "source"}. State is explicit:
+    `ok` (current schema), `inline` (json mode: current-schema frontmatter
+    not yet moved to the sidecar), `legacy` (schema-less provenance),
+    `obsolete` (schema 1.0 / tool_version / unsupported schema), `missing`,
+    or `unparseable`. Old-schema metadata is never folded into `ok` and is
+    never silently moved.
     """
     doc_path = doc.get("path", "")
     target = repo / doc_path
     if storage == STORAGE_JSON:
         entry = entry_for(repo, doc_path)
         if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
+            state = schema_state(entry["provenance"])
             return {
-                "state": "ok",
+                "state": state,
                 "public": {key: entry.get(key) for key in PUBLIC_FIELDS},
                 "provenance": entry["provenance"],
                 "source": "sidecar",
@@ -159,8 +183,10 @@ def read_doc_metadata(repo: Path, doc: dict, storage: str) -> dict:
             text = target.read_text(encoding="utf-8", errors="replace")
             state, data = read_inline(text)
             if state == "ok" and isinstance(data.get("docforge_provenance"), dict):
+                schema = schema_state(data["docforge_provenance"])
+                state = "inline" if schema == "ok" else schema
                 return {
-                    "state": "inline",
+                    "state": state,
                     "public": {key: data.get(key) for key in PUBLIC_FIELDS},
                     "provenance": data["docforge_provenance"],
                     "source": "markdown",
@@ -176,7 +202,7 @@ def read_doc_metadata(repo: Path, doc: dict, storage: str) -> dict:
         return {"state": "unparseable", "public": None, "provenance": None, "source": "markdown"}
     if state == "ok" and isinstance(data.get("docforge_provenance"), dict):
         return {
-            "state": "ok",
+            "state": schema_state(data["docforge_provenance"]),
             "public": {key: data.get(key) for key in PUBLIC_FIELDS},
             "provenance": data["docforge_provenance"],
             "source": "markdown",
@@ -195,7 +221,9 @@ def public_from_manifest(doc: dict) -> dict:
 
 def move_inline_to_sidecar(repo: Path, doc: dict, storage: str) -> str:
     """Move a document's inline frontmatter into the folder sidecar and strip
-    it from the markdown. No-op unless json storage and inline exists."""
+    it from the markdown. Only current-schema provenance moves — old-schema
+    metadata is reported explicitly (`legacy-schema` / `obsolete-schema`) and
+    left untouched for migrate_metadata to convert; there is no opt-out."""
     if storage != STORAGE_JSON:
         return "skip"
     doc_path = doc.get("path", "")
@@ -208,6 +236,11 @@ def move_inline_to_sidecar(repo: Path, doc: dict, storage: str) -> str:
         return "unparseable"
     if state == "missing" or not isinstance(data.get("docforge_provenance"), dict):
         return "no-frontmatter"
+    schema = schema_state(data["docforge_provenance"])
+    if schema == "legacy":
+        return "legacy-schema"
+    if schema == "obsolete":
+        return "obsolete-schema"
     public = {key: data.get(key) for key in PUBLIC_FIELDS if data.get(key)}
     if not public.get("id"):
         public["id"] = doc.get("id", "")

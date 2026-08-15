@@ -10,6 +10,9 @@ skill — this skill has no runtime of its own. It requires the `docforge`
 skill to be installed and loads its shared cartridge:
 [`../docforge/_shared/README.md`](../docforge/_shared/README.md).
 
+Never run any migration or write any file without explicit user confirmation
+first.
+
 Cartridge root: `../docforge/_shared` relative to this SKILL.md — the
 `docforge` skill's `_shared`, whether installed as a plugin, via Agent Skills,
 or in a global skill dir. Locate the copy of this skill that the host loaded —

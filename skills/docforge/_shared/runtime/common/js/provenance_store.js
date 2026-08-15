@@ -119,14 +119,34 @@ function readInline(text) {
   return { state: "ok", data };
 }
 
+function schemaState(provenance) {
+  // Explicit classification of a provenance object's schema:
+  // ok — current schema (2.0/2.1, no tool_version);
+  // legacy — no schema key at all (pre-schema shape);
+  // obsolete — schema 1.0, tool_version, or an unsupported schema;
+  // missing — not a provenance object. Always on; no opt-in/opt-out.
+  if (!provenance || typeof provenance !== "object" || Array.isArray(provenance) || !Object.keys(provenance).length) {
+    return "missing";
+  }
+  if (!("schema" in provenance)) return "legacy";
+  if (!pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema) || "tool_version" in provenance) {
+    return "obsolete";
+  }
+  return "ok";
+}
+
 function readDocMetadata(repo, doc, storage) {
+  // Mode-aware read of one document's metadata. State is explicit: ok,
+  // inline (json mode: current-schema frontmatter not yet moved), legacy,
+  // obsolete, missing, unparseable. Old-schema metadata is never folded
+  // into ok and is never silently moved.
   const docPath = (doc && doc.path) || "";
   const target = path.join(repo, docPath);
   if (storage === STORAGE_JSON) {
     const entry = entryFor(repo, docPath);
     if (entry && entry.provenance && typeof entry.provenance === "object") {
       return {
-        state: "ok",
+        state: schemaState(entry.provenance),
         public: publicOf(entry),
         provenance: entry.provenance,
         source: "sidecar",
@@ -136,8 +156,9 @@ function readDocMetadata(repo, doc, storage) {
       const text = fs.readFileSync(target, "utf8");
       const { state, data } = readInline(text);
       if (state === "ok" && data.docforge_provenance && typeof data.docforge_provenance === "object") {
+        const schema = schemaState(data.docforge_provenance);
         return {
-          state: "inline",
+          state: schema === "ok" ? "inline" : schema,
           public: publicOf(data),
           provenance: data.docforge_provenance,
           source: "markdown",
@@ -159,7 +180,7 @@ function readDocMetadata(repo, doc, storage) {
   }
   if (state === "ok" && data.docforge_provenance && typeof data.docforge_provenance === "object") {
     return {
-      state: "ok",
+      state: schemaState(data.docforge_provenance),
       public: publicOf(data),
       provenance: data.docforge_provenance,
       source: "markdown",
@@ -184,6 +205,10 @@ function publicFromManifest(doc) {
 }
 
 function moveInlineToSidecar(repo, doc, storage) {
+  // Move a document's inline frontmatter into the folder sidecar and strip
+  // it from the markdown. Only current-schema provenance moves — old-schema
+  // metadata is reported explicitly (legacy-schema / obsolete-schema) and
+  // left untouched for migrate_metadata to convert; no opt-out.
   if (storage !== STORAGE_JSON) return "skip";
   const docPath = (doc && doc.path) || "";
   const target = path.join(repo, docPath);
@@ -194,6 +219,9 @@ function moveInlineToSidecar(repo, doc, storage) {
   if (state === "missing" || !data.docforge_provenance || typeof data.docforge_provenance !== "object") {
     return "no-frontmatter";
   }
+  const schema = schemaState(data.docforge_provenance);
+  if (schema === "legacy") return "legacy-schema";
+  if (schema === "obsolete") return "obsolete-schema";
   const publicMeta = publicOf(data);
   if (!publicMeta.id) publicMeta.id = doc.id || "";
   if (!publicMeta.title) {
@@ -246,6 +274,7 @@ module.exports = {
   writeEntry,
   removeEntry,
   readInline,
+  schemaState,
   readDocMetadata,
   publicOf,
   publicFromManifest,

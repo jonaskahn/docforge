@@ -48,12 +48,16 @@ All are paired libraries (Python snake_case / JS camelCase exports).
   `rewrite_frontmatter`, plus `PROVENANCE_FIELDS` / `SCHEMA_VERSION`. Rejects
   anchors, aliases, block scalars, and multi-document markers.
 - `provenance_store` — `storage_for(manifest)`, `sidecar_path(repo, folder)`,
-  `entry_for`, `write_entry`, `remove_entry`, `read_doc_metadata` (state:
-  `ok` / `inline` / `missing` / `unparseable`), `move_inline_to_sidecar`,
-  `move_sidecar_to_inline`, `public_from_manifest`. `json` storage (default)
+  `entry_for`, `write_entry`, `remove_entry`, `read_doc_metadata` (explicit
+  state: `ok` / `inline` / `legacy` / `obsolete` / `missing` /
+  `unparseable`), `move_inline_to_sidecar`, `move_sidecar_to_inline`,
+  `public_from_manifest`. `json` storage (default)
   keeps id/title/description + `docforge_provenance` in one git-tracked JSON
   per folder under `.docforge/provenance/` and leaves markdown frontmatter-free;
-  `markdown` storage keeps the legacy inline layout.
+  `markdown` storage keeps the legacy inline layout. Old-schema metadata
+  (schema-less legacy or schema 1.0 / `tool_version`) is always reported
+  explicitly — never folded into `ok`, never silently moved; there is no
+  opt-in/opt-out.
 - `plan` — `flow_is_main_priority`, `document_action`, `plan_entries`,
   `plan_lines`.
 - `manifest_deps` — `normalize`, `extract_dependencies(files)`,

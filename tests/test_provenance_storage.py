@@ -136,8 +136,117 @@ class StoreParityTests(unittest.TestCase):
             store.STORAGE_MARKDOWN,
         )
 
+    def test_old_schema_detection_is_explicit(self) -> None:
+        """Legacy/obsolete metadata is never folded into ok/inline and is
+        never silently moved — the store reports it explicitly, always on,
+        with no opt-in/opt-out."""
+        from runtime.common.python import provenance_store as store
+
+        legacy_text = (
+            "---\n"
+            "docforge_provenance:\n"
+            '  doc_id: "only"\n'
+            '  path: "docs/only.md"\n'
+            '  generated_at: "2026-07-27T09:12:44Z"\n'
+            "  sections:\n"
+            '    - id: "only"\n'
+            "      sources: []\n"
+            "      unresolved: []\n"
+            "---\n"
+            "# Only\n\nBody.\n"
+        )
+        obsolete_text = (
+            "---\n"
+            "docforge_provenance:\n"
+            '  schema: "1.0"\n'
+            '  tool_version: "2.0.0"\n'
+            '  doc_id: "only"\n'
+            '  path: "docs/only.md"\n'
+            '  generated_at: "2026-07-27T09:12:44Z"\n'
+            "  sections: []\n"
+            "---\n"
+            "# Only\n\nBody.\n"
+        )
+        for storage in (store.STORAGE_JSON, store.STORAGE_MARKDOWN):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                target = repo / "docs" / "only.md"
+                target.parent.mkdir(parents=True)
+                doc = {"path": "docs/only.md", "id": "only", "title": "Only"}
+
+                target.write_text(legacy_text, encoding="utf-8")
+                meta = store.read_doc_metadata(repo, doc, storage)
+                self.assertEqual(meta["state"], "legacy", storage)
+                if storage == store.STORAGE_JSON:
+                    action = store.move_inline_to_sidecar(repo, doc, storage)
+                    self.assertEqual(action, "legacy-schema", storage)
+                    self.assertEqual(target.read_text(encoding="utf-8"), legacy_text, storage)
+                    self.assertFalse((repo / SIDECAR_ROOT / "docs.json").exists(), storage)
+
+                target.write_text(obsolete_text, encoding="utf-8")
+                meta = store.read_doc_metadata(repo, doc, storage)
+                self.assertEqual(meta["state"], "obsolete", storage)
+                if storage == store.STORAGE_JSON:
+                    action = store.move_inline_to_sidecar(repo, doc, storage)
+                    self.assertEqual(action, "obsolete-schema", storage)
+                    self.assertEqual(target.read_text(encoding="utf-8"), obsolete_text, storage)
+                    self.assertFalse((repo / SIDECAR_ROOT / "docs.json").exists(), storage)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            doc = {"path": "docs/only.md", "id": "only", "title": "Only"}
+            legacy_provenance = {"doc_id": "only", "path": "docs/only.md", "sections": []}
+            store.write_entry(repo, "docs/only.md", {"id": "only", "title": "Only", "provenance": legacy_provenance})
+            meta = store.read_doc_metadata(repo, doc, store.STORAGE_JSON)
+            self.assertEqual(meta["state"], "legacy")
+            self.assertEqual(meta["source"], "sidecar")
+            store.write_entry(repo, "docs/only.md", {"id": "only", "title": "Only", "provenance": {"schema": "1.0", "tool_version": "2.0.0"}})
+            meta = store.read_doc_metadata(repo, doc, store.STORAGE_JSON)
+            self.assertEqual(meta["state"], "obsolete")
+            self.assertEqual(meta["source"], "sidecar")
 
 class JsonModePipelineTests(unittest.TestCase):
+
+    def test_sync_never_silently_moves_old_schema_inline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                self._seed_inline_repo(repo, runtime)
+                manifest_path = repo / ".docforge" / "manifest.json"
+                run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
+                target = repo / "docs" / "only.md"
+                # Replace the migrated sidecar entry with a schema-less legacy
+                # provenance and drop the clean markdown back to inline-free
+                # content: sync must report it explicitly, never move it.
+                legacy_sidecar = {
+                    "schema": "1.0",
+                    "folder": "docs",
+                    "files": {
+                        "only.md": {
+                            "id": "only",
+                            "title": "Only",
+                            "provenance": {
+                                "doc_id": "only",
+                                "path": "docs/only.md",
+                                "generated_at": "2026-07-27T09:12:44Z",
+                                "sections": [],
+                            },
+                        }
+                    },
+                }
+                (repo / SIDECAR_ROOT / "docs.json").write_text(json.dumps(legacy_sidecar, indent=2) + "\n", encoding="utf-8")
+                target.write_text("# Only\n\nBody.\n", encoding="utf-8")
+                sync = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
+                self.assertEqual(sync.returncode, 1)
+                self.assertIn("UNTRACKED", sync.stdout)
+                self.assertIn("legacy provenance", sync.stdout)
+                self.assertEqual(target.read_text(encoding="utf-8"), "# Only\n\nBody.\n")
+                self.assertEqual(
+                    json.loads((repo / SIDECAR_ROOT / "docs.json").read_text(encoding="utf-8")),
+                    legacy_sidecar,
+                )
+
     def _seed_inline_repo(self, repo: Path, runtime: str) -> None:
         source = repo / "source.txt"
         source.write_text("evidence\n", encoding="utf-8")

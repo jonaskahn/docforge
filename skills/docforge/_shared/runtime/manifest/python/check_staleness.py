@@ -32,10 +32,6 @@ def matches_document(doc: dict, document_filter: str | None) -> bool:
     return doc.get("id") == document_filter or doc.get("path") == document_filter
 
 
-def _obsolete(provenance: dict) -> bool:
-    return "tool_version" in provenance or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS
-
-
 def _write_back(repo: Path, doc: dict, storage: str, provenance: dict) -> None:
     if storage == store.STORAGE_JSON:
         entry = store.entry_for(repo, doc["path"])
@@ -63,39 +59,33 @@ def sync_provenance(
         if doc.get("provenance_mode") == "manifest":
             continue
         meta = store.read_doc_metadata(repo, doc, storage)
-        if meta["state"] == "inline":
+        state = meta["state"]
+        if state == "inline":
             if store.move_inline_to_sidecar(repo, doc, storage) != "moved":
                 failed.add(doc["path"])
                 results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "inline migration failed"})
                 continue
-            entry = store.entry_for(repo, doc["path"])
-            provenance = entry.get("provenance") if isinstance(entry, dict) else None
-            if isinstance(provenance, dict) and _obsolete(provenance):
-                migrated = migrate_v1_to_v2(provenance)
-                _write_back(repo, doc, storage, migrated)
-                provenance = migrated
-            doc["provenance"] = provenance
+            doc["provenance"] = meta["provenance"]
             updated += 1
             continue
-        if meta["state"] != "ok":
-            failed.add(doc["path"])
-            if meta["state"] == "unparseable":
-                results.append({"doc": doc["path"], "status": "UNPARSEABLE", "detail": "invalid frontmatter"})
-            else:
-                results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "missing provenance"})
-            continue
-        provenance = meta["provenance"]
-        if "schema" not in provenance:
+        if state == "legacy":
             failed.add(doc["path"])
             results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "legacy provenance"})
             continue
-        if _obsolete(provenance):
-            migrated = migrate_v1_to_v2(provenance)
+        if state == "obsolete":
+            migrated = migrate_v1_to_v2(meta["provenance"])
             _write_back(repo, doc, storage, migrated)
             doc["provenance"] = migrated
             updated += 1
             continue
-        doc["provenance"] = provenance
+        if state != "ok":
+            failed.add(doc["path"])
+            if state == "unparseable":
+                results.append({"doc": doc["path"], "status": "UNPARSEABLE", "detail": "invalid frontmatter"})
+            else:
+                results.append({"doc": doc["path"], "status": "UNTRACKED", "detail": "missing provenance"})
+            continue
+        doc["provenance"] = meta["provenance"]
         updated += 1
     return updated, results, failed
 

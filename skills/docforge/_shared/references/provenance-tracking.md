@@ -33,7 +33,12 @@ document's metadata lives:
   sidecars (dry-run preview first); `check_staleness.{py,js}
   --sync-provenance` moves any straggler inline document it meets; and
   `manage_manifest.{py,js} set-storage json|markdown` flips the whole tree in
-  either direction.
+  either direction. **Old-schema metadata is always detected explicitly** —
+  a schema-less (legacy) or schema-1.0 / `tool_version` (obsolete) block in a
+  markdown file or sidecar entry is reported as `legacy` / `obsolete`, never
+  treated as current, and is never silently moved; there is no opt-in or
+  opt-out. Such documents must pass through `migrate_metadata.{py,js}`
+  (schema conversion) before any storage move.
 
 - **`markdown`** — the legacy inline layout: public frontmatter plus
   `docforge_provenance` at byte one of each generated file.

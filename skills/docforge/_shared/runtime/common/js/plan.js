@@ -33,22 +33,26 @@ function documentAction(repo, doc, revise, storage = null) {
   let provenance;
   const effectiveStorage = storage == null ? store.STORAGE_MARKDOWN : storage;
   if (effectiveStorage === store.STORAGE_JSON) {
-    const entry = store.entryFor(repo, doc.path);
-    if (entry && entry.provenance && typeof entry.provenance === "object") {
+    const meta = store.readDocMetadata(repo, doc, effectiveStorage);
+    if (meta.state === "ok") {
       state = "ok";
-      provenance = entry.provenance;
+      provenance = meta.provenance;
+    } else if (meta.state === "inline") {
+      return ["update", "inline provenance pending sidecar migration"];
+    } else if (meta.state === "legacy") {
+      return ["rewrite", "legacy provenance pending migration"];
+    } else if (meta.state === "obsolete") {
+      return ["rewrite", "obsolete provenance schema; run migrate_metadata"];
     } else {
-      const parsed = pf.parseFrontmatter(fs.readFileSync(target, "utf8"));
-      state = parsed.state;
-      provenance = parsed.provenance;
-      if (state === "ok") state = "inline";
+      return ["rewrite", "provenance missing or unparseable"];
     }
   } else {
     const parsed = pf.parseFrontmatter(fs.readFileSync(target, "utf8"));
+    if (parsed.state === "legacy") return ["rewrite", "legacy provenance pending migration"];
+    if (parsed.state === "obsolete") return ["rewrite", "obsolete provenance schema; run migrate_metadata"];
     state = parsed.state;
     provenance = parsed.provenance;
   }
-  if (state === "inline") return ["update", "inline provenance pending sidecar migration"];
   if (state !== "ok" || !provenance || typeof provenance !== "object") {
     return ["rewrite", "provenance missing or unparseable"];
   }
