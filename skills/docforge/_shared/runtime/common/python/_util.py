@@ -108,7 +108,7 @@ def ensure_gitignored_dir(path: Path) -> Path:
 def load_manifest(
     path: Path,
     *,
-    allowed_versions: Sequence[str] = ("3.3", "3.2", "3.1"),
+    allowed_versions: Sequence[str] = ("3.4", "3.3", "3.2", "3.1"),
     require_documents: bool = False,
     unsupported_hint: str = "run migrate_metadata.py to re-register legacy manifests",
 ) -> dict:
@@ -124,6 +124,24 @@ def load_manifest(
             f"manifest must use version {versions_text}: {path}; {unsupported_hint}"
         )
     return data
+
+
+def unmanaged_paths(manifest: dict) -> set[str]:
+    """Paths the user decided to keep self-managed: never tracked by Docforge,
+    never re-asked, updatable in place without ownership.
+
+    Reads `project.unmanaged_docs` (`[{path, decided_at}]`)."""
+    project = manifest.get("project")
+    if not isinstance(project, dict):
+        return set()
+    entries = project.get("unmanaged_docs")
+    if not isinstance(entries, list):
+        return set()
+    return {
+        str(entry["path"])
+        for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str) and entry["path"]
+    }
 
 
 if __name__ == "__main__":

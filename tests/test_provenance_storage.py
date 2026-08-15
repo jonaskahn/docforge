@@ -159,7 +159,7 @@ class StoreParityTests(unittest.TestCase):
             "---\n"
             "docforge_provenance:\n"
             '  schema: "1.0"\n'
-            '  tool_version: "2.0.0"\n'
+            '  tool_version: "2.17.0"\n'
             '  doc_id: "only"\n'
             '  path: "docs/only.md"\n'
             '  generated_at: "2026-07-27T09:12:44Z"\n'
@@ -200,7 +200,7 @@ class StoreParityTests(unittest.TestCase):
             meta = store.read_doc_metadata(repo, doc, store.STORAGE_JSON)
             self.assertEqual(meta["state"], "legacy")
             self.assertEqual(meta["source"], "sidecar")
-            store.write_entry(repo, "docs/only.md", {"id": "only", "title": "Only", "provenance": {"schema": "1.0", "tool_version": "2.0.0"}})
+            store.write_entry(repo, "docs/only.md", {"id": "only", "title": "Only", "provenance": {"schema": "1.0", "tool_version": "2.17.0"}})
             meta = store.read_doc_metadata(repo, doc, store.STORAGE_JSON)
             self.assertEqual(meta["state"], "obsolete")
             self.assertEqual(meta["source"], "sidecar")
@@ -312,7 +312,7 @@ class JsonModePipelineTests(unittest.TestCase):
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 saved = load_manifest(repo)
-                self.assertEqual(saved["version"], "3.3")
+                self.assertEqual(saved["version"], "3.4")
                 self.assertEqual(saved["project"]["provenance_storage"], "json")
                 self.assertEqual(saved["documents"][0]["provenance"]["schema"], "2.0")
                 target = repo / "docs" / "only.md"
@@ -333,7 +333,7 @@ class JsonModePipelineTests(unittest.TestCase):
                 repo.mkdir()
                 self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.3")
+                self.assertEqual(manifest["version"], "3.4")
                 self.assertEqual(manifest["project"]["provenance_storage"], "json")
                 manifest_path = repo / ".docforge" / "manifest.json"
                 result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--document", "arch_high_level")

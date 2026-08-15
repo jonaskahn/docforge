@@ -31,8 +31,8 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan`, `start`, `export`, and `status` all require a manifest 3.3 (or 3.2 /
-3.1, which `migrate_metadata.{py,js}` — see
+`scan`, `start`, `export`, and `status` all require a manifest 3.4 (or 3.3 /
+3.2 / 3.1, which `migrate_metadata.{py,js}` — see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md) — upgrades
 in place). What happens on an **older legacy manifest version** (1.1
 `project_context` / `document_groups`, 2.0 flat `documents` with overlays, or
@@ -50,7 +50,7 @@ any other pre-3.0 shape) depends on whether the command writes:
   migrated manifest:
 
   ```
-  manifest: legacy manifest auto-migrated to 3.3 (4 migrate, 1 skip)
+  manifest: legacy manifest auto-migrated to 3.4 (4 migrate, 1 skip)
   ```
 
   `--plan-only` runs the same `migrate_metadata.{py,js} --dry-run` preview
@@ -104,7 +104,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 -> INSTALL (if missing) -> EXPORT               (export)
 ```
 
-- **Preflight:** repository, manifest 3.3 (or 3.2 / 3.1), and a readable `docs/` tree.
+- **Preflight:** repository, manifest 3.4 (or 3.3 / 3.2 / 3.1), and a readable `docs/` tree.
   When the manifest is a legacy pre-3.0 version (or any other unsupported
   version), apply the [Legacy manifest gate](#legacy-manifest-gate)
   before continuing. The
@@ -251,7 +251,10 @@ to proceed anyway. It reports:
 - **broken_link** — internal Markdown links that resolve neither to a ledger
   page nor to an asset; always **blocking**;
 - **untracked** — `.md` / `.mdx` files under `docs/` with no manifest entry;
-  always advisory;
+  always advisory. **Unmanaged docs** (recorded in `project.unmanaged_docs`)
+  and everything under `docs/_archive/` (or `docs-portfolio/_archive/`) are
+  known and never reported as `untracked`; `scan` instead lists them under
+  its `unmanaged` info line.
 - **route_plan** — problems in the route table itself (no written
   `docs/README.md` index, two documents mapping to the same URL); always
   **blocking**.

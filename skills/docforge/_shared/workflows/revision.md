@@ -62,6 +62,16 @@ apply in scope:
    recorded source blobs still match. Blob freshness only proves cited
    source files are unchanged; it does not prove the document's place in the
    documentation graph is still correct.
+7. **Triage unmanaged documents** — detect foreign `.md` / `.mdx` files under
+   `docs/` or `docs-portfolio/` that have no manifest entry and are not
+   already recorded in `project.unmanaged_docs` (see
+   [`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
+   documents"). Ask per file — **Keep self-managed** (recommended) or
+   **Archive** to `docs/_archive/<year>/` — and apply mechanically with
+   `manage_manifest.{py,js} unmanaged add` / `unmanaged archive` (archive is
+   a file move: separately approved, never under `--auto-accept`).
+   Already-recorded paths are baseline facts, never re-asked, and never
+   added to the plan, scaffold, or manifest.
 
 **Update / refresh of one named document** is the cheap exception: blob-first,
 no rediscovery, unless that document is untracked or deviates from the current
@@ -136,6 +146,13 @@ answers only what is actually in question instead of every dimension on every
 run. Display one confirmation summary ([`intake.md`](intake.md)), covering
 every dimension whether changed or unchanged, and wait for explicit
 confirmation before continuing.
+
+The **unmanaged-document triage** (step 7) joins that same confirmation
+summary when this revise finds foreign docs: one line per file with the
+proposed action (keep self-managed is the recommended default; archive is
+listed as a change requiring approval), resolved with the same stop-and-ask
+mechanics — never applied silently, and `--auto-accept` never authorizes the
+archive move.
 
 ### Applying the answers to the manifest
 
@@ -214,11 +231,12 @@ dashboard.
 
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
-2. When the manifest needs migration, apply it: upgrade manifest 3.2 (or
-   3.1 / 3.0 / provenance 1.0) to 3.3 / 2.1 — seeding each document's
-   catalog-owned `description` from the catalog `summary` and the project's
-   `provenance_storage` (default `json`) — and re-register
-   any pre-3.0 shape as 3.3
+2. When the manifest needs migration, apply it: upgrade manifest 3.3 / 3.2 (or
+   3.1 / 3.0 / provenance 1.0) to 3.4 / 2.1 — seeding each document's
+   catalog-owned `description` from the catalog `summary`, the project's
+   `provenance_storage` (default `json`), and the project's `unmanaged_docs`
+   list (default empty) — and re-register
+   any pre-3.0 shape as 3.4
    (adopting legacy written documents as `generated` with provenance 2.0,
    demoting incomplete or unconvertible documents to `in_progress`), and
    print the migration report. When storage is `json`, the same run moves
@@ -249,7 +267,7 @@ Flags combine with a scope argument, e.g.
 `migrate_metadata.{py,js}` also re-registers legacy manifests (any pre-3.0
 version —
 1.1 `project_context` / `document_groups`, 2.0 flat `documents` with
-overlays, or any other shape) as 3.3: written documents are adopted as
+overlays, or any other shape) as 3.4: written documents are adopted as
 `generated` with provenance 2.0 (bodies preserved) and plan entries are
 kept, so a revise run over an old manifest re-grounds and audits the adopted
 documents like any other written tree (steps 1 / 1a / 1b above). Adopted
@@ -280,6 +298,18 @@ unaffected by new flows, new docs, or new connections in this revise.
 
 Natural-language **update** or **refresh** of a **named** document uses this
 path — not full revise rediscovery.
+
+**Unmanaged documents.** When the named document has no manifest entry (or is
+recorded in `project.unmanaged_docs`), it is an unmanaged doc: update its
+content in place with the normal grounding and writing quality
+([`writing.md`](writing.md) craft, without a manifest entry) but **never** add
+it to the manifest, never stamp Docforge provenance, and keep (or record) it
+in `project.unmanaged_docs` — the file keeps belonging to the user. When the
+file is foreign and not yet recorded, ask the keep-self-managed / archive
+triage first (see
+[`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
+documents") and apply it with `manage_manifest.{py,js} unmanaged`, then update
+the doc wherever it now lives.
 
 1. Run `migrate_metadata.{py,js}` when needed.
 2. Scan only that document:

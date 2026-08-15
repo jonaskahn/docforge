@@ -44,7 +44,7 @@ def build_fixture(repo: Path, source_content: bytes, citation_blob: str, start: 
         '  generated_at: "2026-07-27T09:12:44Z"\n'
         "  generator:\n"
         '    name: "docforge"\n'
-        '    version: "2.8.0"\n'
+        '    version: "2.17.0"\n'
         '  tier: "spine"\n'
         '  target_depth: "orientation"\n'
         "  graph:\n"

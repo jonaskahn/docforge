@@ -13,7 +13,7 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.16.0";
+const CATALOG_VERSION = "2.17.0";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
@@ -71,12 +71,15 @@ function validate() {
   if (fs.existsSync(path.join(metadata, "catalog.json"))) {
     errors.push("obsolete monolith catalog.json remains; use .metadata/catalog/");
   }
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.3") {
-    errors.push("manifest schema must require version 3.3");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.4") {
+    errors.push("manifest schema must require version 3.4");
   }
   const projectRequired = new Set(((((manifestSchema.properties || {}).project || {}).required) || []));
   if (!projectRequired.has("provenance_storage")) {
     errors.push("manifest schema project must require provenance_storage");
+  }
+  if (!projectRequired.has("unmanaged_docs")) {
+    errors.push("manifest schema project must require unmanaged_docs");
   }
   const documentSchema = ((((manifestSchema.definitions || {}).document || {}).properties) || {});
   if (!("description" in documentSchema)) {

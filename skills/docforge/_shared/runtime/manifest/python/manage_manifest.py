@@ -39,7 +39,7 @@ TRANSITIONS = {
     "skipped": {"planned"},
 }
 TOOL_VERSION = GENERATOR_VERSION
-MANIFEST_VERSION = "3.3"
+MANIFEST_VERSION = "3.4"
 USER_CONFIRMED_TRIGGERS = {
     "new-trust-boundary", "per-interaction-review", "regulated-workload",
     "high-criticality", "new-external-integration", "new-data-classification",
@@ -393,6 +393,7 @@ def cmd_init(args: argparse.Namespace) -> int:
             "tier": args.tier,
             "profiles": profiles,
             "provenance_storage": args.storage,
+            "unmanaged_docs": [],
         },
         "discovery": detect_profiles(args.repo),
         "discovery_gate": None,
@@ -892,6 +893,103 @@ def cmd_finish(args: argparse.Namespace) -> int:
     return 0
 
 
+UNMANAGED_ROOTS = ("docs/", "docs-portfolio/")
+
+
+def unmanaged_source(path: PurePosixPath) -> PurePosixPath:
+    """The docs root (`docs` / `docs-portfolio`) an unmanaged path lives
+    under, or None when it is outside the docs tree."""
+    for root in UNMANAGED_ROOTS:
+        prefix = PurePosixPath(root.rstrip("/"))
+        try:
+            relative = path.relative_to(prefix)
+        except ValueError:
+            continue
+        if relative.parts and relative.name.endswith((".md", ".mdx")):
+            return prefix
+    return None
+
+
+def validate_unmanaged_path(repo: Path, value: str) -> PurePosixPath:
+    """A safe, existing, markdown path under the docs tree, not owned by any
+    manifest document. Returns the normalized relative path."""
+    validate_relative_path(value)
+    relative = PurePosixPath(value)
+    root = unmanaged_source(relative)
+    if root is None:
+        raise ValueError(
+            f"unmanaged path must be a .md/.mdx file under {' or '.join(UNMANAGED_ROOTS)}: {value}"
+        )
+    if not (repo / relative).is_file():
+        raise ValueError(f"file not found: {value}")
+    return relative
+
+
+def unmanaged_entries(manifest: dict) -> list[dict]:
+    return manifest["project"]["unmanaged_docs"]
+
+
+def cmd_unmanaged(args: argparse.Namespace) -> int:
+    try:
+        manifest = load_manifest(manifest_path(args.repo), unsupported_hint=MANIFEST_HINT)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    entries = unmanaged_entries(manifest)
+    by_path = {entry["path"]: entry for entry in entries}
+    action = args.action
+    if action == "list":
+        if not entries:
+            print("unmanaged  none")
+            return 0
+        for entry in entries:
+            print(f"unmanaged  {entry['path']}  (since {entry['decided_at']})")
+        return 0
+    if not args.path:
+        return fail(f"unmanaged {action} requires --path", 2)
+    tracked = {doc["path"] for doc in manifest.get("documents", []) if doc.get("path")}
+    if action in {"add", "archive"}:
+        try:
+            relative = validate_unmanaged_path(args.repo, args.path)
+        except ValueError as exc:
+            return fail(str(exc), 2)
+        value = relative.as_posix()
+        if value in tracked:
+            return fail(f"{value} is a tracked manifest document; unmanaged is for docs Docforge does not own", 2)
+        if action == "add":
+            if value in by_path:
+                print(f"unmanaged  {value} already self-managed; no changes.")
+                return 0
+            entries.append({"path": value, "decided_at": now_iso()})
+            save_manifest(args.repo, manifest)
+            print(f"unmanaged  {value} -> self-managed (never tracked, never re-asked)")
+            return 0
+        archived = PurePosixPath("docs") / "_archive" / str(datetime.now(timezone.utc).year)
+        if relative.parts and relative.parts[0] == "docs-portfolio":
+            archived = PurePosixPath("docs-portfolio") / "_archive" / str(datetime.now(timezone.utc).year)
+        target = archived / PurePosixPath(*relative.parts[1:])
+        if args.dry_run:
+            print(f"DRY RUN  move {value} -> {target.as_posix()}")
+            return 0
+        if (args.repo / target).exists():
+            return fail(f"archive target already exists: {target.as_posix()}", 2)
+        (args.repo / target).parent.mkdir(parents=True, exist_ok=True)
+        (args.repo / value).rename(args.repo / target)
+        entries.append({"path": target.as_posix(), "decided_at": now_iso()})
+        save_manifest(args.repo, manifest)
+        print(f"unmanaged  {value} -> {target.as_posix()} (archived)")
+        return 0
+    if action == "remove":
+        value = args.path
+        if value not in by_path:
+            print(f"unmanaged  {value} not in list; no changes.")
+            return 0
+        entries[:] = [entry for entry in entries if entry["path"] != value]
+        save_manifest(args.repo, manifest)
+        print(f"unmanaged  {value} -> removed from list (file untouched)")
+        return 0
+    return fail(f"unknown unmanaged action: {action}", 2)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -981,6 +1079,16 @@ def build_parser() -> argparse.ArgumentParser:
     reconcile.add_argument("--concern", action="append", default=[])
     reconcile.add_argument("--audience", action="append", default=[])
     reconcile.set_defaults(func=cmd_reconcile)
+
+    unmanaged = sub.add_parser("unmanaged")
+    add_repo(unmanaged)
+    unmanaged.add_argument(
+        "--action", required=True, choices=["list", "add", "remove", "archive"],
+        help="list self-managed docs, or add/remove/archive one (archive moves it into docs/_archive/<year>/)",
+    )
+    unmanaged.add_argument("--path", help="repository-relative path of the unmanaged doc")
+    unmanaged.add_argument("--dry-run", action="store_true")
+    unmanaged.set_defaults(func=cmd_unmanaged)
 
     finish = sub.add_parser("finish")
     add_repo(finish)

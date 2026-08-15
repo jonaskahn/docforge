@@ -75,6 +75,12 @@ shows either its persisted value as an unchanged baseline fact, or, only when
 it actually has a delta or a requested change, a `Change to <tier>` /
 `Add` / `Remove` control. Never proceed on silent defaults.
 
+When the revise finds foreign docs (`.md` / `.mdx` under `docs/` with no
+manifest entry), the same confirmation adds the **unmanaged-document
+triage**: per file, Keep self-managed (recommended) or Archive to
+`docs/_archive/<year>/` — applied with `manage_manifest.{py,js} unmanaged`
+(see [`../docforge/_shared/references/docs-tree.md`](../docforge/_shared/references/docs-tree.md)).
+
 Before writing, revise displays an annotated plan tree (`add` / `update` /
 `rewrite` / `unchanged` / `skip`), including the `Flows:` mapping.
 

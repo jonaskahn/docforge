@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { ensureDocforgeGitignore, fail, loadManifest } = require("../../common/js/_util.js");
+const { ensureDocforgeGitignore, fail, loadManifest, unmanagedPaths } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { planEntries } = require("../../common/js/plan.js");
@@ -350,6 +350,7 @@ function audit(repo, manifest) {
   const tokens = [];
   const docs = activeDocuments(manifest);
   const expected = new Set(docs.map((doc) => doc.path));
+  const selfManaged = unmanagedPaths(manifest);
   for (const rootName of ["docs", "docs-portfolio"]) {
     const root = path.join(repo, rootName);
     if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) continue;
@@ -362,7 +363,7 @@ function audit(repo, manifest) {
           if (entry.name !== "_archive") stack.push(target);
         } else if (entry.isFile() && entry.name.endsWith(".md")) {
           const rel = path.relative(repo, target).split(path.sep).join("/");
-          if (!expected.has(rel)) findings.unexpected.push(rel);
+          if (!expected.has(rel) && !selfManaged.has(rel)) findings.unexpected.push(rel);
         }
       }
     }

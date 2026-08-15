@@ -9,7 +9,7 @@ import re
 import sys
 from pathlib import Path, PurePosixPath
 
-from runtime.common.python._util import ensure_docforge_gitignore, fail, load_manifest
+from runtime.common.python._util import ensure_docforge_gitignore, fail, load_manifest, unmanaged_paths
 from runtime.common.python.plan import plan_entries
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.provenance_frontmatter import (
@@ -422,12 +422,13 @@ def audit(repo: Path, manifest: dict) -> int:
     tokens: list[str] = []
     docs = active_documents(manifest)
     expected = {doc["path"] for doc in docs}
+    self_managed = unmanaged_paths(manifest)
     for root_name in ("docs", "docs-portfolio"):
         root = repo / root_name
         if root.is_dir():
             for existing in root.rglob("*.md"):
                 rel = existing.relative_to(repo).as_posix()
-                if "_archive" not in existing.parts and rel not in expected:
+                if "_archive" not in existing.parts and rel not in expected and rel not in self_managed:
                     findings["unexpected"].append(rel)
     for doc in docs:
         target = repo / doc["path"]

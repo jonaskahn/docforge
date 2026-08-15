@@ -11,7 +11,7 @@ const SCHEMA_VERSION = "2.1";
 const SUPPORTED_SCHEMA_VERSIONS = new Set(["2.0", "2.1"]);
 const LEGACY_SCHEMA = "1.0";
 const GENERATOR_NAME = "docforge";
-const GENERATOR_VERSION = "2.16.0";
+const GENERATOR_VERSION = "2.17.0";
 const PROVENANCE_FIELDS = new Set([
   "schema", "doc_id", "path", "generated_at", "generator", "tier",
   "target_depth", "graph", "sections",

@@ -25,7 +25,7 @@ const TRANSITIONS = {
   skipped: new Set(["planned"]),
 };
 const TOOL_VERSION = pf.GENERATOR_VERSION;
-const MANIFEST_VERSION = "3.3";
+const MANIFEST_VERSION = "3.4";
 const USER_CONFIRMED_TRIGGERS = new Set([
   "new-trust-boundary", "per-interaction-review", "regulated-workload",
   "high-criticality", "new-external-integration", "new-data-classification",
@@ -255,7 +255,7 @@ function selectedStaticDocuments(catalog, repo, tier, profiles) {
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "set-storage"]);
+  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "set-storage", "unmanaged"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence"]);
   const boolean = new Set(["force", "keep-tmp", "reset", "dry-run"]);
@@ -270,6 +270,7 @@ function parseArgs(argv) {
     reconcile: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience"]),
     finish: new Set(["repo", "keep-tmp"]),
     "set-storage": new Set(["repo", "storage", "dry-run"]),
+    unmanaged: new Set(["repo", "action", "path", "dry-run"]),
   }[command];
   const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [], evidence: [] };
   for (let i = 1; i < argv.length; i++) {
@@ -337,6 +338,7 @@ function cmdInit(args) {
       tier: args.tier,
       profiles,
       provenance_storage: args.storage,
+      unmanaged_docs: [],
     },
     discovery: detectProfiles(fs.realpathSync(args.repo)),
     discovery_gate: null,
@@ -784,8 +786,98 @@ function cmdFinish(args) {
   console.log(`finish  cleaned ephemeral scratch dirs: ${cleaned}`);
   return 0;
 }
+
+const UNMANAGED_ROOTS = ["docs/", "docs-portfolio/"];
+function unmanagedSource(rel) {
+  for (const root of UNMANAGED_ROOTS) {
+    if (!rel.startsWith(root)) continue;
+    const rest = rel.slice(root.length);
+    if (!rest) continue;
+    if (rest.endsWith(".md") || rest.endsWith(".mdx")) return root;
+  }
+  return null;
+}
+function validateUnmanagedPath(repo, value) {
+  validateRelativePath(value);
+  const root = unmanagedSource(value);
+  if (!root) {
+    throw new Error(`unmanaged path must be a .md/.mdx file under ${UNMANAGED_ROOTS.join(" or ")}: ${value}`);
+  }
+  if (!fs.existsSync(path.join(repo, ...value.split("/"))) || !fs.statSync(path.join(repo, ...value.split("/"))).isFile()) {
+    throw new Error(`file not found: ${value}`);
+  }
+  return value.replace(/\\/g, "/");
+}
+function cmdUnmanaged(args) {
+  required(args, ["repo", "action"]);
+  if (!["list", "add", "remove", "archive"].includes(args.action)) {
+    return fail(`unknown unmanaged action: ${args.action}`, 2);
+  }
+  try {
+    const manifest = loadManifest(manifestPath(args.repo), {
+      unsupportedHint: MANIFEST_HINT,
+    });
+    const entries = manifest.project.unmanaged_docs || [];
+    const byPath = new Map(entries.map((entry) => [entry.path, entry]));
+    if (args.action === "list") {
+      if (!entries.length) {
+        console.log("unmanaged  none");
+        return 0;
+      }
+      for (const entry of entries) console.log(`unmanaged  ${entry.path}  (since ${entry.decided_at})`);
+      return 0;
+    }
+    if (!args.path) return fail(`unmanaged ${args.action} requires --path`, 2);
+    if (args.action === "add" || args.action === "archive") {
+      const value = validateUnmanagedPath(args.repo, args.path);
+      const tracked = new Set(manifest.documents.map((doc) => doc.path).filter(Boolean));
+      if (tracked.has(value)) {
+        return fail(`${value} is a tracked manifest document; unmanaged is for docs Docforge does not own`, 2);
+      }
+      if (args.action === "add") {
+        if (byPath.has(value)) {
+          console.log(`unmanaged  ${value} already self-managed; no changes.`);
+          return 0;
+        }
+        entries.push({ path: value, decided_at: nowIso() });
+        saveManifest(args.repo, manifest);
+        console.log(`unmanaged  ${value} -> self-managed (never tracked, never re-asked)`);
+        return 0;
+      }
+      const parts = value.split("/");
+      const archiveRoot = parts[0] === "docs-portfolio" ? "docs-portfolio" : "docs";
+      const target = [archiveRoot, "_archive", String(new Date().getUTCFullYear()), ...parts.slice(1)].join("/");
+      if (args.dry_run) {
+        console.log(`DRY RUN  move ${value} -> ${target}`);
+        return 0;
+      }
+      if (fs.existsSync(path.join(args.repo, ...target.split("/")))) {
+        return fail(`archive target already exists: ${target}`, 2);
+      }
+      fs.mkdirSync(path.dirname(path.join(args.repo, ...target.split("/"))), { recursive: true });
+      fs.renameSync(path.join(args.repo, ...value.split("/")), path.join(args.repo, ...target.split("/")));
+      entries.push({ path: target, decided_at: nowIso() });
+      saveManifest(args.repo, manifest);
+      console.log(`unmanaged  ${value} -> ${target} (archived)`);
+      return 0;
+    }
+    if (args.action === "remove") {
+      if (!byPath.has(args.path)) {
+        console.log(`unmanaged  ${args.path} not in list; no changes.`);
+        return 0;
+      }
+      manifest.project.unmanaged_docs = entries.filter((entry) => entry.path !== args.path);
+      saveManifest(args.repo, manifest);
+      console.log(`unmanaged  ${args.path} -> removed from list (file untouched)`);
+      return 0;
+    }
+    return fail(`unknown unmanaged action: ${args.action}`, 2);
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+}
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--storage <json|markdown>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | set-storage --repo <path> --storage <json|markdown> [--dry-run] | finish --repo <path> [--keep-tmp]");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--storage <json|markdown>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | set-storage --repo <path> --storage <json|markdown> [--dry-run] | unmanaged --repo <path> --action <list|add|remove|archive> [--path <rel>] [--dry-run] | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;
@@ -798,7 +890,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, "set-storage": cmdSetStorage }[args.command](args);
+    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, "set-storage": cmdSetStorage, unmanaged: cmdUnmanaged }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

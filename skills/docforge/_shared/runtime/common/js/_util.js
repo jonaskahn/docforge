@@ -100,7 +100,7 @@ function ensureGitignoredDir(dirPath) {
 }
 
 function loadManifest(target, options = {}) {
-  const allowedVersions = options.allowedVersions || ["3.3", "3.2", "3.1"];
+  const allowedVersions = options.allowedVersions || ["3.4", "3.3", "3.2", "3.1"];
   const requireDocuments = Boolean(options.requireDocuments);
   const unsupportedHint =
     options.unsupportedHint || "run migrate_metadata.js to re-register legacy manifests";
@@ -120,11 +120,27 @@ function loadManifest(target, options = {}) {
   return data;
 }
 
+// Paths the user decided to keep self-managed: never tracked by Docforge,
+// never re-asked, updatable in place without ownership. Reads
+// `project.unmanaged_docs` (`[{path, decided_at}]`).
+function unmanagedPaths(manifest) {
+  const project = manifest && manifest.project;
+  if (!project || typeof project !== "object" || !Array.isArray(project.unmanaged_docs)) {
+    return new Set();
+  }
+  return new Set(
+    project.unmanaged_docs
+      .filter((entry) => entry && typeof entry.path === "string" && entry.path)
+      .map((entry) => entry.path),
+  );
+}
+
 module.exports = {
   fail,
   readJson,
   dumpJson,
   loadManifest,
+  unmanagedPaths,
   ensureGitignoredDir,
   ensureDocforgeGitignore,
   finishDocforge,

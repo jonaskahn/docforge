@@ -21,5 +21,5 @@
   "audit_profile": "router",
   "template_file": "content/root/docs-index.template.md",
   "title": "Documentation",
-  "contract_revision": "2.11.0"
+  "contract_revision": "2.17.0"
 }

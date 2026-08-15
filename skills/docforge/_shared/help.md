@@ -62,7 +62,8 @@ a documentation source; the source of truth stays `docs/` Markdown and
 
 Subcommands: `scan` (read-only diagnostics: missing metadata, incomplete or
 missing documents, stale provenance sources, broken links, route-plan
-problems, untracked `docs/` files — each tagged blocking or advisory; exits 1
+problems, untracked `docs/` files — self-managed and archived docs are known
+and never flagged — each tagged blocking or advisory; exits 1
 when anything is found — "you should revise again"), `start` (build-if-changed
 → serve → open, stopping before build on any blocking finding), `export`
 (build-if-changed → static HTML export: `next build` emits `index.html` per
@@ -72,7 +73,7 @@ state), `stop` (shut down the detached dev server).
 
 A legacy manifest (any pre-3.0 version — 1.1 `project_context` /
 `document_groups`, 2.0 flat `documents` with overlays, or another shape) is
-auto-migrated to 3.3 by `start`/`export` (never a stop-and-ask gate:
+auto-migrated to 3.4 by `start`/`export` (never a stop-and-ask gate:
 `migrate_metadata` is safe, idempotent, re-registers any legacy version, and
 never touches document bodies — the migration is always printed).
 `--plan-only` runs the `migrate_metadata --dry-run` preview instead of

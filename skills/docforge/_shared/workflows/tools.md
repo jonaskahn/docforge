@@ -96,12 +96,12 @@ from the absolute cartridge root with `query_catalog --validate`,
 - `check_staleness.{py,js}`: `--document <id|path>`, `--section`, JSON output,
   and provenance sync.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade;
-  upgrades manifest 3.2 (or 3.1 / 3.0 / provenance 1.0) to 3.3 / 2.1, moving
+  upgrades manifest 3.3 / 3.2 (or 3.1 / 3.0 / provenance 1.0) to 3.4 / 2.1, moving
   inline frontmatter into `.docforge/provenance/` sidecars under the default
   `json` storage,
   seeding each document's catalog-owned `description` from the catalog
-  `summary`, and re-registers
-  any legacy pre-3.0 manifest (1.1, 2.0, or another shape) as 3.3 (written
+  `summary` and the project's `unmanaged_docs` list, and re-registers
+  any legacy pre-3.0 manifest (1.1, 2.0, or another shape) as 3.4 (written
   documents adopted as `generated` with provenance 2.0, bodies preserved,
   plan entries kept);
   incomplete or unconvertible written documents are reported as `FAILED` and
@@ -113,7 +113,8 @@ from the absolute cartridge root with `query_catalog --validate`,
   including generated-router drift (`generate_indexes --check`).
 - `dashboard.{py,js}`: `scan` (read-only diagnostics: missing metadata,
   incomplete/missing docs, source drift, broken links, untracked `docs/`
-  files), `start` (scan → reconcile metadata → rebuild generated
+  files — self-managed and archived docs are known, never flagged),
+  `start` (scan → reconcile metadata → rebuild generated
   output when the working-tree signature changed → serve → open), `export`
   (same pipeline, then `next build` the static HTML export into `out/`),
   `status`, `stop`. The dev server runs detached. See

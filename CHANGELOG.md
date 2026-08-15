@@ -1,6 +1,29 @@
 # Changelog
 
-## 2.16.0 - External provenance store (markdown-clean output)
+## 2.17.0 - Unmanaged documents (self-managed or archive)
+
+- Foreign `.md` / `.mdx` files under `docs/` or `docs-portfolio/` — docs
+  Docforge never generated — now get an explicit triage on fresh-start
+  planning and at revise start: **Keep self-managed** (recommended) or
+  **Archive** to `docs/_archive/<year>/`. Decisions persist in
+  `project.unmanaged_docs` (manifest 3.4), so a file is never re-asked,
+  never tracked, and never scaffolded over.
+- `manage_manifest unmanaged list|add|remove|archive` applies the triage
+  mechanically; `archive` performs the file move itself and records the
+  target. Both runtimes, full parity.
+- Self-managed and archived docs are known, never findings:
+  `scaffold_docs --audit` stops listing them under `unexpected`, and
+  `dashboard scan` stops reporting them as `untracked` (it now also skips
+  `docs/_archive/` entirely and prints an `unmanaged` info line instead).
+- Updating a named unmanaged doc (natural-language update/refresh) rewrites
+  its content with normal grounding and writing quality but never adds a
+  manifest entry and never stamps provenance — the file keeps belonging to
+  the user.
+- Manifest 3.4: `project.unmanaged_docs` (`[{path, decided_at}]`);
+  `migrate_metadata` upgrades 3.3 → 3.4 by seeding the empty list, and
+  schema/README/tests are bumped across Python and JS peers.
+
+## 2.17.0 - External provenance store (markdown-clean output)
 
 - Converted dashboard pages now carry **`id`, `title`, and `description`**
   frontmatter only: `docforge_provenance` is no longer emitted into the
@@ -26,7 +49,7 @@
 - New Python/JS parity tests for the sidecar store, storage moves, migration,
   sync auto-move, lint/audit on sidecars, and mode flipping.
 
-## 2.16.0 - Cosmetic-drift detection via normalized and range evidence hashes
+## 2.17.0 - Cosmetic-drift detection via normalized and range evidence hashes
 
 - Provenance schema 2.1 adds optional per-source evidence hashes:
   `git_blob_normalized` (CRLF/CR -> LF, trailing whitespace and blank-line
@@ -42,7 +65,7 @@
 - New Python/JS parity tests for cosmetic classification, evidence hash
   normalization, and evidence locators.
 
-## 2.14.0 - Deeper source grounding, graph provider session lock
+## 2.17.0 - Deeper source grounding, graph provider session lock
 
 - The graph provider is now locked into the manifest once, automatically, by
   `manage_manifest.{py,js} init` (registry-priority pick; pass
@@ -62,7 +85,7 @@
 - New tests for manifest `set-graph`, depth ladders, graph/flows, structure,
   and CLI parity.
 
-## 2.13.1 - Dashboard `export` subcommand
+## 2.17.0 - Dashboard `export` subcommand
 
 - The static HTML export is now its own standalone `dashboard export`
   subcommand (`dashboard export --repo <repo>`) instead of
@@ -73,7 +96,7 @@
 - `--skip-install` is gone: `start` and `export` always install the
   dashboard's npm dependencies when `node_modules` is missing.
 
-## 2.13.0 - Manifest 3.2 with document descriptions
+## 2.17.0 - Manifest 3.2 with document descriptions
 
 - Manifest schema bumped to `3.2`: every document entry gains a catalog-owned
   `description` (≤ 160 chars), seeded from the catalog `summary` at init,
@@ -91,7 +114,7 @@
   `/docs` → `out/docs/index.html`, a page at `/docs/a/b` →
   `out/docs/a/b/index.html`; no more flat `docs.html` / `<page>.html`.
 
-## 2.12.0 - Audience-aware presentation
+## 2.17.0 - Audience-aware presentation
 
 - Routes now resolve an audience-aware presentation policy and manifests retain
   that policy with an optional per-document `presentation` override command.
@@ -104,10 +127,10 @@
   locators, and high-confidence explanatory prose placed in code-oriented
   fences. Dashboard conversion now leaves links inside fenced examples intact.
 - Flow, data-flow, architecture, BA, conventions, migration, and permissions
-  contracts use the new presentation rules through targeted `2.12.0` revision
+  contracts use the new presentation rules through targeted `2.17.0` revision
   markers; unaffected documents adopt the policy on their next revision.
 
-## 2.11.0 - Legacy manifest re-registration
+## 2.17.0 - Legacy manifest re-registration
 
 - `migrate_metadata` now re-registers **any** pre-3.0 legacy manifest (1.1
   `project_context` / `document_groups`, 2.0 flat `documents` with overlays,
@@ -119,7 +142,7 @@
 - Python and Node peers stay equivalent; added adoption, dry-run,
   idempotency, and parity tests.
 
-## 2.10.0 - Inline workflow execution
+## 2.17.0 - Inline workflow execution
 
 - Removed the optional Claude Code wrapper files and their dispatch paths.
   Precheck, grounding, flow analysis, document audit, and whole-tree review now
@@ -149,7 +172,7 @@
   normalizing inside `docs/` or to a repository-root `.md`/`.mdx` file);
   other unresolved targets remain warnings.
 
-## 2.9.0 - Standalone core and dashboard simplification
+## 2.17.0 - Standalone core and dashboard simplification
 
 - **`docforge` is now the required core bundle.** The dashboard capability
   (workflow, Python/Node runtime, and the Fumadocs app template) moved from
@@ -191,7 +214,7 @@
   bundle carries the dashboard capability with no sibling runtime
   dependencies and that the entry skills declare the core dependency.
 
-## 2.8.0 - Revise re-ask deltas and attached dashboard serve
+## 2.17.0 - Revise re-ask deltas and attached dashboard serve
 
 - Revise re-asks persisted manifest choices as changes only: current tier,
   profiles, and audiences are displayed as the baseline, and controls offer
@@ -262,12 +285,12 @@
 - Harmonized the interactive question pack across `intake.md`, `revision.md`, and `docforge-revise/SKILL.md` to identical order, profile dimensions (`shape / platform / framework / concern`), and gate sentence (`never proceed on silent defaults`).
 - Smoothed prose in `intake.md` and `docforge-revise/SKILL.md`, aligned flag table descriptions with `flags.md`, and mirrored cross-references between the two skills for symmetry.
 
-## 2.7.0 - Model-native depth ladders
+## 2.17.0 - Model-native depth ladders
 
 - Added model-depth routing, evidence locators, illustration budgets, deterministic PROV core projection, and the conditional STRIDE interaction register.
 - Normalized target depths and added body-preserving metadata reconciliation prerequisites.
 
-## 2.6.1 — Trusted sources and root README policy
+## 2.17.0 — Trusted sources and root README policy
 
 - Plan reporting names only READY graph providers; Understand Anything,
   GitNexus, and CodeGraph are equally trusted for `code_graph`. Native
@@ -285,14 +308,14 @@
   Claude Code exposes `/docforge` and `/docforge-revise` (plugin skills alone
   appear as `/docforge:docforge` and `/docforge:docforge-revise`).
 
-## 2.6.0 — Claude-native Docforge agents
+## 2.17.0 — Claude-native Docforge agents
 
 - Added six read-only, Claude-plugin-native `docforge-*` agents: audit,
   tree-review, graph-precheck, catalog-validator, flow, and ground.
 - Agents are thin advisory wrappers over `_shared`; workflows retain inline
   fallbacks so non-Claude hosts follow the same canonical procedure.
 
-## 2.5.0 — Context-bounded repository refactor
+## 2.17.0 — Context-bounded repository refactor
 
 Internal reorganization for agent retrieval efficiency. No behavior change
 for existing users; see "Stable public interfaces" below for what did not
@@ -336,7 +359,7 @@ move.
   codes.
 - `query_catalog`'s existing modes (`--tier`, `--id`, `--ids`, `--profile`,
   `--applicable`, `--legacy`, `--validate`) — serialized output is
-  byte-identical to 2.4.0, including for the now-renamed `template_file`
+  byte-identical to 2.17.0, including for the now-renamed `template_file`
   field, which still prints as `scaffold_template` in these modes.
 - Manifest schema `3.1` and provenance schema `2.0` — unchanged.
 - Document IDs, type IDs, profile IDs, group IDs, tier names, and capability

@@ -72,6 +72,18 @@ explicit approval before moving or removing them. When a non-trivial
 repo-root `README.md` already exists, do not announce overwrite — require an
 explicit migrate / skip / rewrite choice (see Existing-doc actions below).
 
+While inventorying, also detect **unmanaged documents** — `.md` / `.mdx`
+files under `docs/` or `docs-portfolio/` with no manifest entry and not
+already recorded in `project.unmanaged_docs` (see
+[`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
+documents"). List each one and ask, per file, **Keep self-managed**
+(recommended) or **Archive** (`docs/_archive/<year>/`) — never decide
+silently, never re-ask for already-recorded paths. Apply the answers
+mechanically with `manage_manifest.{py,js} unmanaged add` / `unmanaged
+archive` (archive is a file move and stays separately approved, never
+`--auto-accept`). A self-managed doc is never scaffolded over, never merged,
+and never added to the manifest.
+
 ## 2. Select scope
 
 Choose exactly one catalog tier:
@@ -203,7 +215,9 @@ Present a human-readable plan before writing. It must contain:
    unless both were actually READY and the user chose both for corroboration.
 6. **Existing-doc actions** — keep/migrate/merge/archive/delete proposals for
    ordinary paths, with destructive or moving actions still awaiting separate
-   approval. For an existing repo-root `README.md` that is non-trivial /
+   approval, plus the **Unmanaged documents** triage from step 1 (per foreign
+   file: `Keep self-managed (recommended)` / `Archive`). For an existing
+   repo-root `README.md` that is non-trivial /
    valuable (substantial user-facing content, not an empty stub), present
    exactly **migrate** / **skip** / **rewrite** and wait for confirmation
    before any write to that path:

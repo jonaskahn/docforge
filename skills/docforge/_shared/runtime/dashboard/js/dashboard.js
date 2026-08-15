@@ -16,7 +16,10 @@
  * `scan` reports missing metadata, incomplete or missing documents, stale
  * provenance sources, broken internal links, route-plan problems, and
  * untracked `docs/` files -- each tagged blocking (would break a build) or
- * advisory. `start`/`export` auto-migrate a legacy (pre-3.0) manifest
+ * advisory. Self-managed docs (`project.unmanaged_docs`) and everything
+ * under `docs/_archive/` are known and never reported as untracked; `scan`
+ * lists the self-managed ones under its `unmanaged` info line instead.
+ * `start`/`export` auto-migrate a legacy (pre-3.0) manifest
  * instead of stopping to ask, since the metadata migration is safe and
  * non-destructive; `scan`/`status` stay strictly read-only.
  */
@@ -27,13 +30,13 @@ const fs = require("fs");
 const net = require("net");
 const path = require("path");
 
-const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../../common/js/_util.js");
+const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson, unmanagedPaths } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { classifySource, rawBlobHash } = require("../../common/js/evidence_hash.js");
 const { MANIFEST_CURRENT, migrate: migrateManifestMetadata } = require("../../manifest/js/migrate_metadata.js");
 
-const TOOL_VERSION = "2.16.0";
+const TOOL_VERSION = "2.17.0";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";
@@ -609,10 +612,11 @@ function scan(repo, manifest) {
   const ledger = buildLedger(docs);
   ledger.assets = collectAssetMap(repo);
   const tracked = new Set((manifest.documents || []).map((d) => d.path).filter(Boolean));
+  const selfManaged = unmanagedPaths(manifest);
   for (const rel of treeFiles(repo)) {
-    if ((rel.endsWith(".md") || rel.endsWith(".mdx")) && !tracked.has(rel)) {
-      problems.push({ kind: "untracked", doc: "", detail: rel, blocking: false });
-    }
+    if (!(rel.endsWith(".md") || rel.endsWith(".mdx")) || tracked.has(rel)) continue;
+    if (`/${rel}`.includes("/_archive/") || rel.startsWith("_archive/") || selfManaged.has(rel)) continue;
+    problems.push({ kind: "untracked", doc: "", detail: rel, blocking: false });
   }
   for (const doc of docs) {
     const text = fs.readFileSync(path.join(repo, doc.path), "utf8");
@@ -639,7 +643,7 @@ function scan(repo, manifest) {
   const kinds = ["metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan"];
   const counts = {};
   for (const kind of kinds) counts[kind] = problems.filter((p) => p.kind === kind).length;
-  return { problems, counts, blocking: problems.some((p) => p.blocking) };
+  return { problems, counts, unmanaged: [...selfManaged].sort(), blocking: problems.some((p) => p.blocking) };
 }
 
 function plan(repo, manifest) {
@@ -1382,16 +1386,20 @@ async function cmdScan(args, manifest) {
   }
   if (result.problems.length === 0) {
     console.log("scan: 0 problems; the documentation is ready to render");
-    return 0;
+  } else {
+    console.log(`scan: ${result.problems.length} problems found:`);
+    for (const problem of result.problems) {
+      const who = problem.doc ? `${problem.doc}: ` : "";
+      const tag = problem.blocking ? " (blocking)" : "";
+      console.log(`  [${problem.kind}]${tag} ${who}${problem.detail}`);
+    }
+    console.log("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again");
   }
-  console.log(`scan: ${result.problems.length} problems found:`);
-  for (const problem of result.problems) {
-    const who = problem.doc ? `${problem.doc}: ` : "";
-    const tag = problem.blocking ? " (blocking)" : "";
-    console.log(`  [${problem.kind}]${tag} ${who}${problem.detail}`);
+  if (result.unmanaged.length) {
+    console.log(`unmanaged: ${result.unmanaged.length} self-managed docs (never tracked, never re-asked)`);
+    for (const rel of result.unmanaged) console.log(`  ${rel}`);
   }
-  console.log("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again");
-  return 1;
+  return result.problems.length ? 1 : 0;
 }
 
 async function cmdStatus(args, dashboard, manifest, templateDir) {

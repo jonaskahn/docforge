@@ -14,7 +14,7 @@ GOLDEN = """\
 
 A demo service with one framework and one test runner.
 
-<!-- docforge-provenance v2.6.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->
+<!-- docforge-provenance v2.17.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->
 
 ## 1. Commands
 

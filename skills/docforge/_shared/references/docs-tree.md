@@ -154,7 +154,32 @@ generated paths are listed in its own composition notes:
 Before moving existing documents, inventory and propose one action per file:
 keep, migrate, merge, archive, or delete. Moving, merging, archiving, and
 deleting require explicit user approval. Archive approved obsolete material
-under `docs/_archive/<year>/`; audits exclude that directory.
+under `docs/_archive/<year>/` (or `docs-portfolio/_archive/<year>/`); audits
+exclude that directory.
+
+## Unmanaged documents
+
+An **unmanaged document** is a `.md` / `.mdx` file under `docs/` or
+`docs-portfolio/` that has no manifest entry — Docforge did not generate it
+and does not own it (user-written notes, other tools' output, hand-maintained
+guides). When a run first sees one, it asks once per file:
+
+- **Keep self-managed** (recommended) — leave the file in place and record it
+  in `project.unmanaged_docs` (`[{path, decided_at}]`) with
+  `manage_manifest.{py,js} unmanaged add`. Self-managed docs are **never
+  tracked, never re-asked**: scans and audits skip them, no scaffold or
+  template touches them, and no future run offers to track or overwrite them.
+- **Archive** — move the file into `docs/_archive/<year>/` (or
+  `docs-portfolio/_archive/<year>/`) with
+  `manage_manifest.{py,js} unmanaged archive`. This is a file move and always
+  requires explicit user approval (never under `--auto-accept`).
+
+If the user later asks to **update** an unmanaged doc, update its content
+with the normal grounding and writing quality — but never add a manifest
+entry, never stamp Docforge provenance, and keep it in `unmanaged_docs`: the
+file keeps belonging to the user. `unmanaged remove` forgets the record
+without touching the file (the doc is then foreign again and will be asked
+about on the next run).
 
 **Root `README.md` special case.** Catalog `root_readme` targets the
 repo-root `README.md`. When that file already exists and is non-trivial /

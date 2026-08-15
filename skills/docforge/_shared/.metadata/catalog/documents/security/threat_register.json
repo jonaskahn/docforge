@@ -20,6 +20,6 @@
   "dominant_form": "table",
   "template_file": "content/security/templates/threat-register.md",
   "model_depth": {"stride": "interaction-risk"},
-  "contract_revision": "2.8.0",
+  "contract_revision": "2.17.0",
   "selection_evidence_required": true
 }

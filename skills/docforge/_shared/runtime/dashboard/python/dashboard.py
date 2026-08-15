@@ -46,6 +46,7 @@ from runtime.common.python._util import (
     fail,
     load_manifest,
     read_json,
+    unmanaged_paths,
 )
 from runtime.common.python.provenance_frontmatter import (
     SCHEMA_VERSION,
@@ -61,7 +62,7 @@ from runtime.manifest.python.migrate_metadata import (
     migrate as migrate_manifest_metadata,
 )
 
-TOOL_VERSION = "2.16.0"
+TOOL_VERSION = "2.17.0"
 TEMPLATE_VERSION = "1"
 STATE_SCHEMA = 1
 STATE_FILE = ".docforge-dashboard.json"
@@ -612,7 +613,9 @@ def scan(repo: Path, manifest: dict) -> dict:
     Reports metadata problems (missing / unparseable / non-schema-2.0
     frontmatter), incomplete or missing documents, provenance source drift,
     broken internal Markdown links, route-plan problems (missing index,
-    duplicate URLs), and untracked `docs/` files. Every finding is tagged
+    duplicate URLs), and untracked `docs/` files. Self-managed docs (the
+    manifest's `project.unmanaged_docs`) and everything under `docs/_archive/`
+    are known and never reported as `untracked`. Every finding is tagged
     `blocking` (would actually break a build: `route_plan`, `broken_link`, and
     `metadata` on a document that would be included) or advisory (safe to
     ignore for now: `incomplete`, `missing_file`, `drift`, `untracked`); any
@@ -652,9 +655,13 @@ def scan(repo: Path, manifest: dict) -> dict:
     ledger = build_ledger(docs)
     ledger["assets"] = collect_asset_map(repo)
     tracked = {doc.get("path") for doc in manifest.get("documents", []) if doc.get("path")}
+    self_managed = unmanaged_paths(manifest)
     for rel in tree_files(repo):
-        if rel.endswith((".md", ".mdx")) and rel not in tracked:
-            problems.append({"kind": "untracked", "doc": "", "detail": rel, "blocking": False})
+        if not rel.endswith((".md", ".mdx")) or rel in tracked:
+            continue
+        if "/_archive/" in f"/{rel}" or rel.startswith("_archive/") or rel in self_managed:
+            continue
+        problems.append({"kind": "untracked", "doc": "", "detail": rel, "blocking": False})
     for doc in docs:
         text = (repo / doc["path"]).read_text(encoding="utf-8", errors="replace")
         raw, body, _end = split_frontmatter(text)
@@ -683,6 +690,7 @@ def scan(repo: Path, manifest: dict) -> dict:
     return {
         "problems": problems,
         "counts": counts,
+        "unmanaged": sorted(self_managed),
         "blocking": any(p["blocking"] for p in problems),
     }
 
@@ -1349,14 +1357,18 @@ def cmd_scan(args: argparse.Namespace, manifest: dict) -> int:
         return 0 if not result["problems"] else 1
     if not result["problems"]:
         print("scan: 0 problems; the documentation is ready to render")
-        return 0
-    print(f"scan: {len(result['problems'])} problems found:")
-    for problem in result["problems"]:
-        who = f"{problem['doc']}: " if problem["doc"] else ""
-        tag = " (blocking)" if problem["blocking"] else ""
-        print(f"  [{problem['kind']}]{tag} {who}{problem['detail']}")
-    print("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again")
-    return 1
+    else:
+        print(f"scan: {len(result['problems'])} problems found:")
+        for problem in result["problems"]:
+            who = f"{problem['doc']}: " if problem["doc"] else ""
+            tag = " (blocking)" if problem["blocking"] else ""
+            print(f"  [{problem['kind']}]{tag} {who}{problem['detail']}")
+        print("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again")
+    if result["unmanaged"]:
+        print(f"unmanaged: {len(result['unmanaged'])} self-managed docs (never tracked, never re-asked)")
+        for rel in result["unmanaged"]:
+            print(f"  {rel}")
+    return 1 if result["problems"] else 0
 
 
 def cmd_status(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:

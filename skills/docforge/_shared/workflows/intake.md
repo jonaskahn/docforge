@@ -75,6 +75,11 @@ asking any scope questions, present a short discovery brief:
 - Existing documentation note when `docs/` (or equivalent) is already present,
   with a brief evidence note such as an API schema, web framework manifest,
   library package manifest, pipeline configuration, or infrastructure files.
+  When the tree holds foreign `.md` / `.mdx` files (no manifest entry),
+  include their count — the unmanaged-document triage (keep self-managed /
+  archive, see [`../references/docs-tree.md`](../references/docs-tree.md))
+  is a planning-time tree decision, not a scope dimension: no extra intake
+  control here.
 - Portfolio readiness, only when nested repos were detected: name each
   detected member and its tier, and state plainly whether every member is
   already at Diligence or higher.

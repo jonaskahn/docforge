@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 "use strict";
-/* Migrate Docforge manifest metadata to 3.3 / provenance 2.0.
+/* Migrate Docforge manifest metadata to 3.4 / provenance 2.0.
  *
- * Upgrades manifest 3.2 / provenance 2.0 (seeding each document's
+ * Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
+ * manifest 3.2 / provenance 2.0 (seeding each document's
  * catalog-owned `description` and the project's `provenance_storage`, then
  * moving inline frontmatter into `.docforge/provenance/` sidecars when
  * storage is `json`) and manifest 3.1 / provenance 2.0, plus manifest
@@ -10,7 +11,7 @@
  * frontmatter, including pre-schema `doc` / `graph_snapshot` shapes, while
  * preserving section evidence), and re-registers any older legacy manifest —
  * 1.1 (`project_context` / `document_groups`), 2.0 (flat `documents` with
- * overlay profiles), or any other pre-3.0 shape — as 3.3: written documents
+ * overlay profiles), or any other pre-3.0 shape — as 3.4: written documents
  * are adopted as `generated` with provenance 2.0, bodies preserved, and plan
  * entries kept. When a document cannot be converted to complete provenance
  * 2.0 (missing or unparseable frontmatter, conversion failure, or incomplete
@@ -26,8 +27,8 @@ const store = require("../../common/js/provenance_store.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 
-const MANIFEST_CURRENT = "3.3";
-const MANIFEST_IN_PLACE = ["3.3", "3.2", "3.1", "3.0"];
+const MANIFEST_CURRENT = "3.4";
+const MANIFEST_IN_PLACE = ["3.4", "3.3", "3.2", "3.1", "3.0"];
 const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
@@ -436,12 +437,25 @@ function seedDescriptions(docs, maps) {
 
 function migrateManifestObject(manifest, demoteIncomplete = false) {
   let changed = false;
-  if (manifest.version === "3.2" || manifest.version === "3.1" || manifest.version === "3.0") {
+  if (
+    manifest.version === "3.3" ||
+    manifest.version === "3.2" ||
+    manifest.version === "3.1" ||
+    manifest.version === "3.0"
+  ) {
     manifest.version = MANIFEST_CURRENT;
     changed = true;
   }
   if (manifest.project && typeof manifest.project === "object" && !manifest.project.provenance_storage) {
     manifest.project.provenance_storage = store.STORAGE_JSON;
+    changed = true;
+  }
+  if (
+    manifest.project &&
+    typeof manifest.project === "object" &&
+    !Array.isArray(manifest.project.unmanaged_docs)
+  ) {
+    manifest.project.unmanaged_docs = [];
     changed = true;
   }
   const docs = manifest.documents || [];
@@ -815,6 +829,7 @@ function migrateLegacy(repo, manifestPath, manifest, dryRun) {
       tier: project.tier,
       profiles: project.profiles,
       provenance_storage: store.STORAGE_JSON,
+      unmanaged_docs: [],
     },
     discovery: [],
     discovery_gate: null,

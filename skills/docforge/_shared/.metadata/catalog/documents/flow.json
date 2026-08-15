@@ -20,6 +20,6 @@
   "provenance_mode": "sections",
   "audit_profile": "flow",
   "dominant_form": "sequenceDiagram",
-  "contract_revision": "2.12.0",
+  "contract_revision": "2.17.0",
   "template_file": "content/flows/flow.template.md"
 }

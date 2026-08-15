@@ -20,5 +20,5 @@
   "audit_profile": "router",
   "template_file": "content/shared/section-readme.template.md",
   "title": "Reference",
-  "contract_revision": "2.11.0"
+  "contract_revision": "2.17.0"
 }

@@ -7,6 +7,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from _support import (
@@ -72,7 +73,7 @@ class ManifestSelectionTests(unittest.TestCase):
                 result = initialize("py", repo, tier)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.3")
+                self.assertEqual(manifest["version"], "3.4")
                 self.assertEqual(manifest["project"]["tier"], tier)
                 self.assertEqual(
                     manifest["project"]["profiles"]["audiences"],
@@ -638,7 +639,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.5.0"
+    version: "2.17.0"
   tier: "spine"
   target_depth: "orientation"
   graph:
@@ -656,7 +657,7 @@ Body.
                         "doc_id": "only",
                         "path": "docs/only.md",
                         "generated_at": "2026-07-27T09:12:44Z",
-                        "tool_version": "2.0.0",
+                        "tool_version": "2.17.0",
                         "tier": "spine",
                         "target_depth": "reference",
                         "graph": {"provider": "gitnexus", "flow": "native"},
@@ -771,7 +772,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.5.0"
+    version: "2.17.0"
   tier: "spine"
   target_depth: "orientation"
   graph:
@@ -802,7 +803,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.5.0"
+    version: "2.17.0"
   tier: "spine"
   target_depth: "orientation"
   graph:
@@ -832,7 +833,7 @@ Body.
                         "doc_id": "only",
                         "path": "docs/only.md",
                         "generated_at": "2026-07-27T09:12:44Z",
-                        "tool_version": "2.0.0",
+                        "tool_version": "2.17.0",
                         "tier": "spine",
                         "target_depth": "reference",
                         "graph": {"provider": "gitnexus", "flow": "native"},
@@ -1036,7 +1037,7 @@ process.stdout.write(pf.emitYaml(value));
             "doc_id": "legacy",
             "path": "legacy.md",
             "generated_at": "2026-07-27T09:12:44Z",
-            "tool_version": "2.0.0",
+            "tool_version": "2.17.0",
             "tier": "spine",
             "target_depth": "reference",
             "graph": {"provider": "gitnexus", "flow": "native"},
@@ -1044,7 +1045,7 @@ process.stdout.write(pf.emitYaml(value));
         }
         migrated = migrate_v1_to_v2(legacy, "# Body\n")
         self.assertEqual(migrated["schema"], SCHEMA_VERSION)
-        self.assertEqual(migrated["generator"], {"name": "docforge", "version": "2.0.0"})
+        self.assertEqual(migrated["generator"], {"name": "docforge", "version": "2.17.0"})
         self.assertEqual(migrated["sections"], legacy["sections"])
         self.assertTrue(migrated["content_hash"].startswith("sha256:"))
 
@@ -1220,7 +1221,7 @@ process.stdout.write(pf.emitYaml(value));
                 "doc_id": "readme",
                 "path": "README.md",
                 "generated_at": "2026-07-27T09:12:44Z",
-                "tool_version": "2.0.0",
+                "tool_version": "2.17.0",
                 "tier": "spine",
                 "target_depth": "overview",
                 "graph": {"provider": "gitnexus", "flow": "native"},
@@ -1291,7 +1292,7 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertIn("# Broken", broken_text)
 
                 saved = load_manifest(repo)
-                self.assertEqual(saved["version"], "3.3")
+                self.assertEqual(saved["version"], "3.4")
                 self.assertEqual(saved["documents"][0]["provenance"]["schema"], SCHEMA_VERSION)
                 self.assertIn("generator", saved["documents"][0]["provenance"])
                 self.assertEqual(saved["documents"][1]["provenance"]["schema"], SCHEMA_VERSION)
@@ -1314,7 +1315,7 @@ process.stdout.write(pf.emitYaml(value));
                 "---\n" + json.dumps({"docforge_provenance": {
                     "schema": "2.0", "doc_id": "docs_index", "path": "docs/README.md",
                     "generated_at": "2026-08-01T00:00:00Z",
-                    "generator": {"name": "docforge", "version": "2.8.0"},
+                    "generator": {"name": "docforge", "version": "2.17.0"},
                     "tier": "spine", "target_depth": "orientation",
                     "graph": {"provider": "gitnexus", "flow": "native"},
                     "sections": [{
@@ -1350,7 +1351,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.3")
+                self.assertEqual(migrated["version"], "3.4")
                 self.assertIn("description", migrated["documents"][0])
                 self.assertEqual(migrated["documents"][0]["description"], "Self-introduction to the documentation: what the repo is, who it serves, and the reader question each selected section answers")
                 self.assertEqual(migrated["documents"][0]["provenance"]["schema"], "2.0")
@@ -1401,7 +1402,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.3")
+                self.assertEqual(migrated["version"], "3.4")
                 self.assertEqual(migrated["documents"][0]["description"], "Writer-refined one-liner.")
 
     def test_obsolete_schema_defect_names_migrate_command(self) -> None:
@@ -1412,7 +1413,7 @@ process.stdout.write(pf.emitYaml(value));
                 "doc_id": "subject",
                 "path": "subject.md",
                 "generated_at": "2026-07-27T09:12:44Z",
-                "tool_version": "2.0.0",
+                "tool_version": "2.17.0",
                 "tier": "spine",
                 "target_depth": "reference",
                 "graph": {"provider": "gitnexus", "flow": "native"},
@@ -1576,7 +1577,7 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.3")
+                    self.assertEqual(manifest["version"], "3.4")
                     self.assertEqual(manifest["project"]["tier"], "spine")
                     self.assertEqual(manifest["project"]["profiles"]["audiences"], ["coding-agents"])
                     docs = {doc["id"]: doc for doc in manifest["documents"]}
@@ -1757,9 +1758,9 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     try:
                         result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-                        self.assertIn("manifest: legacy manifest auto-migrated to 3.3", result.stdout)
+                        self.assertIn("manifest: legacy manifest auto-migrated to 3.4", result.stdout)
                         manifest = load_manifest(repo)
-                        self.assertEqual(manifest["version"], "3.3")
+                        self.assertEqual(manifest["version"], "3.4")
                         # scan/status must not perform the same auto-migration
                         # on a manifest that's already migrated -- this just
                         # confirms the migrated manifest is now readable by
@@ -1859,7 +1860,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.3")
+                    self.assertEqual(manifest["version"], "3.4")
                     self.assertEqual(manifest["project"]["tier"], "diligence")
                     self.assertEqual(manifest["project"]["name"], "legacy2")
                     self.assertEqual(manifest["project"]["profiles"]["shapes"], ["api-service"])
@@ -1910,7 +1911,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     report = json.loads(result.stdout)
                     self.assertIn("re-registered from 0.9", report["results"][0]["detail"])
                     out = load_manifest(repo)
-                    self.assertEqual(out["version"], "3.3")
+                    self.assertEqual(out["version"], "3.4")
                     overview = next(doc for doc in out["documents"] if doc["id"] == "product_overview")
                     self.assertEqual(
                         overview["selection"]["origins"],
@@ -2062,6 +2063,149 @@ class GraphProviderLockTests(unittest.TestCase):
                 repo = Path(tmp)
                 result = run(runtime, "manage_manifest", "set-graph", "--repo", str(repo))
                 self.assertEqual(result.returncode, 2)
+
+
+class UnmanagedDocsTests(unittest.TestCase):
+    """Unmanaged docs: foreign `.md` files under the docs tree that the user
+    decided to keep self-managed — never tracked, never re-asked, updatable
+    in place without ownership. Both runtimes share the same behavior."""
+
+    def seed(self, repo: Path) -> None:
+        (repo / "docs").mkdir()
+        (repo / "docs" / "notes.md").write_text("# Notes\n", encoding="utf-8")
+        (repo / "docs" / "guides").mkdir()
+        (repo / "docs" / "guides" / "extra.md").write_text("# Extra\n", encoding="utf-8")
+        (repo / "docs-portfolio").mkdir()
+        (repo / "docs-portfolio" / "investors.md").write_text("# Investors\n", encoding="utf-8")
+        (repo / "docs" / "readme.txt").write_text("not markdown", encoding="utf-8")
+
+    def test_add_list_remove_parity_and_guards(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                self.seed(repo)
+                listed = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "list")
+                self.assertEqual(listed.returncode, 0, listed.stderr)
+                self.assertIn("unmanaged  none", listed.stdout)
+                outside = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "add", "--path", "docs/readme.txt")
+                self.assertEqual(outside.returncode, 2)
+                missing = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "add", "--path", "docs/nope.md")
+                self.assertEqual(missing.returncode, 2)
+                added = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "add", "--path", "docs/notes.md")
+                self.assertEqual(added.returncode, 0, added.stderr)
+                self.assertIn("self-managed", added.stdout)
+                manifest = load_manifest(repo)
+                entries = manifest["project"]["unmanaged_docs"]
+                self.assertEqual([entry["path"] for entry in entries], ["docs/notes.md"])
+                self.assertEqual(len(entries[0]["decided_at"]), 25)
+                dup = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "add", "--path", "docs/notes.md")
+                self.assertEqual(dup.returncode, 0, dup.stderr)
+                self.assertIn("already self-managed", dup.stdout)
+                self.assertEqual(len(load_manifest(repo)["project"]["unmanaged_docs"]), 1)
+                listed = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "list")
+                self.assertIn("docs/notes.md", listed.stdout)
+                removed = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "remove", "--path", "docs/notes.md")
+                self.assertEqual(removed.returncode, 0, removed.stderr)
+                self.assertEqual(load_manifest(repo)["project"]["unmanaged_docs"], [])
+                self.assertTrue((repo / "docs" / "notes.md").is_file())
+
+    def test_unmanaged_rejects_tracked_document(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                (repo / "docs").mkdir()
+                (repo / "docs" / "README.md").write_text("# R\n", encoding="utf-8")
+                result = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "add", "--path", "docs/README.md")
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("tracked manifest document", result.stderr)
+
+    def test_archive_moves_file_and_records_target(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                self.seed(repo)
+                preview = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "archive", "--path", "docs/notes.md", "--dry-run")
+                self.assertEqual(preview.returncode, 0, preview.stderr)
+                self.assertIn("DRY RUN", preview.stdout)
+                self.assertTrue((repo / "docs" / "notes.md").is_file())
+                archived = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "archive", "--path", "docs/notes.md")
+                self.assertEqual(archived.returncode, 0, archived.stderr)
+                year = str(datetime.now(timezone.utc).year)
+                self.assertFalse((repo / "docs" / "notes.md").exists())
+                self.assertTrue((repo / "docs" / "_archive" / year / "notes.md").is_file())
+                self.assertIn(f"docs/_archive/{year}/notes.md", archived.stdout)
+                entries = load_manifest(repo)["project"]["unmanaged_docs"]
+                self.assertEqual([entry["path"] for entry in entries], [f"docs/_archive/{year}/notes.md"])
+                portfolio = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "archive", "--path", "docs-portfolio/investors.md")
+                self.assertEqual(portfolio.returncode, 0, portfolio.stderr)
+                self.assertTrue((repo / "docs-portfolio" / "_archive" / year / "investors.md").is_file())
+
+    def test_unmanaged_never_flag_untracked_in_scan_or_audit(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                self.seed(repo)
+                (repo / "docs" / "_archive").mkdir()
+                (repo / "docs" / "_archive" / "old.md").write_text("# Old\n", encoding="utf-8")
+                added = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "add", "--path", "docs/notes.md")
+                self.assertEqual(added.returncode, 0, added.stderr)
+                scan = run(runtime, "dashboard", "scan", "--repo", str(repo), "--json")
+                self.assertEqual(scan.returncode, 1, scan.stderr)
+                scan_result = json.loads(scan.stdout)
+                untracked = [p["detail"] for p in scan_result["problems"] if p["kind"] == "untracked"]
+                self.assertNotIn("docs/notes.md", untracked)
+                self.assertNotIn("docs/_archive/old.md", untracked)
+                self.assertNotIn("docs/guides/extra.md", scan_result["unmanaged"])
+                self.assertIn("docs/notes.md", scan_result["unmanaged"])
+                audit = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(repo / ".docforge" / "manifest.json"), "--audit")
+                self.assertEqual(audit.returncode, 1, audit.stderr)
+                self.assertNotIn("docs/notes.md", audit.stdout)
+                self.assertIn("docs/guides/extra.md", audit.stdout)
+
+    def test_migrate_3_3_seeds_unmanaged_docs(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                manifest_path = repo / ".docforge" / "manifest.json"
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest["version"] = "3.3"
+                del manifest["project"]["unmanaged_docs"]
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                migrated = run(runtime, "migrate_metadata", "--repo", str(repo))
+                # Exit 1 comes from MISSING planned-doc files in a bare repo;
+                # the migration itself must not fail.
+                self.assertIn(migrated.returncode, (0, 1), migrated.stderr)
+                self.assertNotIn("FAILED", migrated.stdout)
+                reloaded = load_manifest(repo)
+                self.assertEqual(reloaded["version"], "3.4")
+                self.assertEqual(reloaded["project"]["unmanaged_docs"], [])
+                # Second run is a clean no-op apart from the same MISSING files.
+                again = run(runtime, "migrate_metadata", "--repo", str(repo))
+                self.assertNotIn("FAILED", again.stdout)
+
+    def test_unmanaged_update_keeps_file_untracked(self) -> None:
+        """Updating an unmanaged doc in place never adds a manifest entry and
+        never stamps provenance — the file stays self-managed."""
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
+                self.seed(repo)
+                added = run(runtime, "manage_manifest", "unmanaged", "--repo", str(repo), "--action", "add", "--path", "docs/notes.md")
+                self.assertEqual(added.returncode, 0, added.stderr)
+                (repo / "docs" / "notes.md").write_text("# Notes updated\n", encoding="utf-8")
+                manifest = load_manifest(repo)
+                self.assertNotIn("docs/notes.md", {doc["path"] for doc in manifest["documents"]})
+                scan = run(runtime, "dashboard", "scan", "--repo", str(repo), "--json")
+                self.assertEqual(scan.returncode, 1, scan.stderr)
+                result = json.loads(scan.stdout)
+                self.assertIn("docs/notes.md", result["unmanaged"])
+                self.assertNotIn("docs/notes.md", [p["detail"] for p in result["problems"] if p["kind"] == "untracked"])
 
 
 if __name__ == "__main__":

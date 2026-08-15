@@ -25,16 +25,22 @@ and no section README routes readers into source files. A whole-tree discovery
 that changes one artifact sends that artifact through its independent audit
 again ([`writing.md`](writing.md)).
 
+Unmanaged docs (`project.unmanaged_docs`) and everything under
+`docs/_archive/` are known, never findings: the audit's `unexpected` check
+skips them, and the gate neither requires nor offers anything for them. The
+gate's exit code reflects real defects only.
+
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `3.3`; there is no secondary runtime state file.
-Manifest 3.2 (and 3.1 / 3.0 / provenance 1.0) are migrated by
+Its schema version is `3.4`; there is no secondary runtime state file.
+Manifest 3.3 (and 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
 `migrate_metadata.{py,js}`
 (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
-resume, revision, or provenance synchronization — the 3.2 → 3.3 step seeds
-each document's catalog-owned `description` from the catalog `summary` and
-the project's `provenance_storage` (`json` by default). A
+resume, revision, or provenance synchronization — the 3.3 → 3.4 step seeds
+each document's catalog-owned `description` from the catalog `summary`,
+the project's `provenance_storage` (`json` by default), and the project's
+`unmanaged_docs` list (empty by default). A
 legacy manifest of any
 pre-3.0 version (1.1 `project_context` / `document_groups`, 2.0 flat
 `documents` with overlays, or another shape) is re-registered by the same

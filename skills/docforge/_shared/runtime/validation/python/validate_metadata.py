@@ -22,7 +22,7 @@ from runtime.catalog.python import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
-CATALOG_VERSION = "2.16.0"
+CATALOG_VERSION = "2.17.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run"],
@@ -74,11 +74,13 @@ def validate() -> list[str]:
         errors.append("split catalog index.json is missing")
     if (metadata / "catalog.json").is_file():
         errors.append("obsolete monolith catalog.json remains; use .metadata/catalog/")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.3":
-        errors.append("manifest schema must require version 3.3")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.4":
+        errors.append("manifest schema must require version 3.4")
     project_required = set(manifest_schema.get("properties", {}).get("project", {}).get("required", []))
     if "provenance_storage" not in project_required:
         errors.append("manifest schema project must require provenance_storage")
+    if "unmanaged_docs" not in project_required:
+        errors.append("manifest schema project must require unmanaged_docs")
     document_schema = (
         manifest_schema.get("definitions", {})
         .get("document", {})

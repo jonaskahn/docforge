@@ -495,7 +495,7 @@ class DashboardBuildTests(unittest.TestCase):
             "doc_id": "agents_kernel",
             "path": "AGENTS.md",
             "generated_at": "2026-08-01T00:00:00Z",
-            "generator": {"name": "docforge", "version": "2.8.0"},
+            "generator": {"name": "docforge", "version": "2.17.0"},
             "tier": "spine",
             "target_depth": "orientation",
             "graph": {"provider": "fixture", "flow": "none"},

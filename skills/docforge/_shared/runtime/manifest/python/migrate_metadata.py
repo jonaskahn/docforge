@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Migrate Docforge manifest metadata to 3.3 / provenance 2.0.
+"""Migrate Docforge manifest metadata to 3.4 / provenance 2.0.
 
-Upgrades manifest 3.2 / provenance 2.0 (seeding each document's catalog-owned
+Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
+manifest 3.2 / provenance 2.0 (seeding each document's catalog-owned
 `description` and the project's `provenance_storage`, then moving inline
 frontmatter into `.docforge/provenance/` sidecars when storage is `json`) and
 manifest 3.1 / provenance 2.0, plus manifest 3.0 / provenance 1.0 (converting
@@ -9,7 +10,7 @@ schema 1.0 and schema-less
 legacy frontmatter, including pre-schema `doc` / `graph_snapshot` shapes,
 while preserving section evidence), and re-registers any older legacy
 manifest — 1.1 (`project_context` / `document_groups`), 2.0 (flat
-`documents` with overlay profiles), or any other pre-3.0 shape — as 3.3:
+`documents` with overlay profiles), or any other pre-3.0 shape — as 3.4:
 written documents are adopted as `generated` with provenance 2.0, bodies
 preserved, and plan entries kept. When a document cannot be converted to
 complete provenance 2.0 (missing or unparseable frontmatter, conversion
@@ -44,8 +45,8 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-MANIFEST_CURRENT = "3.3"
-MANIFEST_IN_PLACE = ("3.3", "3.2", "3.1", "3.0")
+MANIFEST_CURRENT = "3.4"
+MANIFEST_IN_PLACE = ("3.4", "3.3", "3.2", "3.1", "3.0")
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
@@ -480,12 +481,15 @@ def seed_descriptions(
 
 def migrate_manifest_object(manifest: dict, *, demote_incomplete: bool = False) -> bool:
     changed = False
-    if manifest.get("version") in {"3.2", "3.1", "3.0"}:
+    if manifest.get("version") in {"3.3", "3.2", "3.1", "3.0"}:
         manifest["version"] = MANIFEST_CURRENT
         changed = True
     project = manifest.get("project")
     if isinstance(project, dict) and not project.get("provenance_storage"):
         project["provenance_storage"] = store.STORAGE_JSON
+        changed = True
+    if isinstance(project, dict) and not isinstance(project.get("unmanaged_docs"), list):
+        project["unmanaged_docs"] = []
         changed = True
     docs = manifest.get("documents", [])
     if any(not doc.get("description") for doc in docs):
@@ -997,6 +1001,7 @@ def migrate_legacy(
             "tier": project["tier"],
             "profiles": project["profiles"],
             "provenance_storage": store.STORAGE_JSON,
+            "unmanaged_docs": [],
         },
         "discovery": [],
         "discovery_gate": None,
