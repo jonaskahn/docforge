@@ -72,8 +72,11 @@ question pack and stop-and-ask mechanics are owned by
 [`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md)
 and
 [`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md):
-one confirmation covering Scope, Layout, Tier, Profiles, Output audience, and
-Execution mode, but scaled to what is actually unresolved or changed — each
+two turns, then one confirmation. **Turn 1** asks Scope and Layout; **Turn 2**
+asks Tier, Profiles, Output audience, and Execution mode, and opens only after
+Turn 1 is answered. Layout is never presented in the same turn as tier,
+profiles, audiences, or execution mode. Each turn is scaled to what is
+actually unresolved or changed — each
 dimension shows either its persisted value as an unchanged baseline fact, or,
 only when it actually has a delta or a requested change, a
 `Change to <layout>` / `Change to <tier>` /

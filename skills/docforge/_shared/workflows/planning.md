@@ -155,8 +155,9 @@ common case). See
 "Session persistence" for the mechanics every later step, including spawned
 parallel writers, relies on.
 
-`init` also detects project scale and records `project.scale`. Intake always
-asks for the layout first, before tier, profiles, and audiences: when the
+`init` also detects project scale and records `project.scale`. Turn 1 of
+intake confirms the layout, before Turn 2 asks tier, profiles, and audiences
+([`intake.md`](intake.md) "Turn structure"): when the
 user's pick matches the detected layout, no flags are needed and `init`
 records `decided_by: "detected"`; when the pick differs, pass
 `--layout <compact|standard>` (and `--scale-class <small|medium|large>` when

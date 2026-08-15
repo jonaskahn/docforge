@@ -56,7 +56,7 @@ link.
 
 | File | Owns |
 |---|---|
-| `workflows/intake.md` | Bare `/docforge` invocation, discovery gate, scope questions, confirmation, graph-provider choice |
+| `workflows/intake.md` | Bare `/docforge` invocation, discovery gate, the two-turn scope-question contract (Turn 1 = goal/scope + layout, Turn 2 = tier, profiles, audience, graph source, execution mode), confirmation, graph-provider choice |
 | `workflows/planning.md` | Repository inspection, tier/profile selection, dynamic-document discovery, manifest init, dry-run tree, plan checkpoint |
 | `workflows/writing.md` | Per-document execution card, evidence, scaffolding, provenance, status transitions, independent audit; continue incomplete runs |
 | `workflows/revision.md` | `/docforge-revise` (incl. shared flags), single-document update/refresh, flow-index organization |

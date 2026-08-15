@@ -66,10 +66,11 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("interactive intake", intake)
         self.assertIn("## Discovery brief", intake)
         self.assertIn("before**\nasking any scope questions", intake)
-        self.assertIn("never present scope questions without this\nbrief", intake)
+        self.assertIn("Never present scope questions without this brief.", intake)
         self.assertIn("**Recommended** vs **also possible**", intake)
-        self.assertIn("Present all applicable unresolved questions together", intake)
-        self.assertIn("Collect the applicable answers as one response", intake)
+        self.assertIn("Within one", intake)
+        self.assertIn("turn, present that turn's unresolved questions together.", intake)
+        self.assertIn("Collect each turn's applicable answers as one response.", intake)
         for question in (
             "Goal or action",
             "Documentation layout",
@@ -81,10 +82,10 @@ class SkillContentTests(unittest.TestCase):
         ):
             self.assertIn(question, intake)
         self.assertIn(
-            "**Documentation layout.** Always asked for a new or plan-only scope",
+            "**Documentation layout.** Turn 1 resolves layout",
             intake,
         )
-        self.assertIn("always\n   before tier, profiles, and audiences", intake)
+        self.assertIn("never deferred to Turn 2.", intake)
         self.assertIn("one multi-select per applicable dimension", intake)
         self.assertIn("silent-confirm them on the user's behalf", intake)
         self.assertIn("Never silent-confirm detections or gate judgments", intake)
@@ -116,6 +117,69 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Engineers + beginners", intake)
         self.assertIn("Missing competitors are normal", intake)
         self.assertIn("/docforge-revise flow", intake)
+
+    def test_intake_asks_layout_in_its_own_turn(self) -> None:
+        """Layout must be settled before anything that describes the tree it
+        shapes. A single combined pack is what dropped the layout control and
+        made the user pick Tier first; the two-turn contract is the fix and
+        must stay asserted at the single-sentence level."""
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn("## Turn structure", intake)
+        self.assertIn("### Turn 1 — Direction", intake)
+        self.assertIn("### Turn 2 — Scope", intake)
+        self.assertIn(
+            "- Never present layout in the same turn as tier, profiles, audiences, or execution mode.",
+            intake,
+        )
+        self.assertIn("- Open Turn 2 only after Turn 1 is answered.", intake)
+        self.assertIn(
+            "- Turn 2 never re-presents Goal or Layout as controls; they appear there only as confirmed baseline facts.",
+            intake,
+        )
+        self.assertIn(
+            "Never merge the confirmation summary into Turn 1.",
+            intake,
+        )
+        turn_one = intake.index("### Turn 1 — Direction")
+        turn_two = intake.index("### Turn 2 — Scope")
+        self.assertLess(turn_one, turn_two)
+        self.assertLess(intake.index("**Documentation layout.**"), turn_two)
+        for later in (
+            "**Documentation tier.**",
+            "**Repository profiles.**",
+            "**Output audience.**",
+            "**Execution mode.**",
+        ):
+            self.assertLess(turn_two, intake.index(later), later)
+        # revise inherits the same split
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        self.assertIn("Revise uses the same two-turn split as a fresh start", revision)
+
+    def test_intake_profile_dimensions_have_distinct_labels(self) -> None:
+        """Shapes/Platforms/Frameworks/Concerns rendered as four near-identical
+        peer controls. The user-facing labels now name their own axis; catalog
+        ids and CLI flags are unchanged."""
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        for label, dimension, question in (
+            ("**Delivers**", "`shape`", "What does this repository deliver?"),
+            ("**Runs on**", "`platform`", "Where does it run?"),
+            ("**Built with**", "`framework`", "What is it built with?"),
+            ("**Behaviors**", "`concern`", "What cross-cutting behavior does it have?"),
+        ):
+            row = next(
+                line for line in intake.splitlines()
+                if line.startswith(f"   | {label} |")
+            )
+            self.assertIn(dimension, row)
+            self.assertIn(question, row)
+        self.assertIn("Each control's first clause states its own axis.", intake)
+        self.assertIn(
+            "Two dimensions must never",
+            intake,
+        )
+        self.assertIn("share question text or an option set.", intake)
+        self.assertIn("only candidate — confirm it or add your own", intake)
+        self.assertIn('keeps the "these are weak candidates" framing', intake)
 
     def test_revision_workflow_covers_revise_flow(self) -> None:
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
@@ -460,8 +524,10 @@ class SkillContentTests(unittest.TestCase):
     def test_root_readme_describes_bare_invocation(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("/docforge", readme)
-        self.assertIn("all applicable unresolved scope questions together", readme)
-        self.assertIn("summarizes the complete scope and asks you to", readme)
+        self.assertIn("asks its scope questions in two turns", readme)
+        self.assertIn("goal and the documentation layout", readme)
+        self.assertIn("summarizes the complete scope and", readme)
+        self.assertIn("asks you to confirm, edit, or cancel", readme)
         self.assertIn("confirm, edit, or cancel", readme)
         self.assertIn("repository evidence", readme)
 

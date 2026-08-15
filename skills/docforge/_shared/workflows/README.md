@@ -9,7 +9,8 @@ loaded; every procedural detail lives here.
 Canonical workflow responsibility is owned by [`../ownership.md`](../ownership.md).
 
 - Bare `/docforge`, no task or flags → [intake.md](intake.md) — discovery
-  gate, brief, scope questions, confirmation gate, graph provider choice.
+  gate, brief, **two-turn scope questions**, confirmation gate, graph provider
+  choice.
 - A task with tier/profile/flags already given, or continuing after intake
   confirmation → [planning.md](planning.md) — inspection, tier/profile
   selection, dynamic discovery, manifest init, dry-run tree, plan checkpoint.

@@ -138,22 +138,32 @@ invocation, before migration, detection, or writing, revise presents a
 discovery brief and a question set that is **delta-aware**, not a reflexive
 full re-ask of every dimension on every run.
 
-**Scope** — `flow`, `<area>`, or `all` (pre-checked from invocation; asked
-only for natural-language revise requests, never for a bare
+Revise uses the same two-turn split as a fresh start
+([`intake.md`](intake.md) "Turn structure"): **Turn 1** asks Scope and Layout,
+**Turn 2** asks Tier, Profiles, Output audience, and Execution mode. Layout is
+never presented in the same turn as tier, profiles, audiences, or execution
+mode, and Turn 2 opens only after Turn 1 is answered.
+
+**Scope** (Turn 1) — `flow`, `<area>`, or `all` (pre-checked from invocation;
+asked only for natural-language revise requests, never for a bare
 `/docforge-revise`).
 
 [`intake.md`](intake.md) "Scope intake" owns the exact per-dimension rule —
 which of Scope, Tier, Profiles, Output audience, and Execution mode get
-asked versus reported as an unchanged baseline fact, including the
-tier-naming exception (`/docforge-revise all` or any invocation that names a
-tier always shows the tier control and the selection-change preview below,
-even with no delta) and the execution-mode exception (skipped only when the
-invocation already supplies `--plan-only` / `--auto-accept`). Display one
-confirmation summary ([`intake.md`](intake.md)), covering every dimension
-whether changed or unchanged, and wait for explicit confirmation before
-continuing — this still requires explicit confirmation even when every
-dimension resolves unchanged; it answers only what is actually in question
-instead of every dimension on every run.
+asked versus reported as an unchanged baseline fact. Two exceptions live
+there and apply here unchanged:
+
+- **Tier-naming.** `/docforge-revise all`, or any invocation that names a
+  tier, always shows the tier control and the selection-change preview below,
+  even with no delta.
+- **Execution mode.** It is skipped only when the invocation already supplies
+  `--plan-only` or `--auto-accept`.
+
+After Turn 2, display one confirmation summary ([`intake.md`](intake.md))
+covering every dimension, changed or unchanged. Wait for explicit
+confirmation before continuing. Explicit confirmation is required even when
+every dimension resolves unchanged. The summary answers only what is actually
+in question, not every dimension on every run.
 
 The **unmanaged-document triage** (step 7) joins that same confirmation
 summary when this revise finds foreign docs: one line per file with the

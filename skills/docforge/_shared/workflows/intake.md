@@ -1,8 +1,8 @@
 # Intake
 
 Owns: bare `/docforge` invocation, safe discovery, profile detection, the
-discovery gate, the discovery brief, scope questions, the confirmation gate,
-and graph-provider choice.
+discovery gate, the discovery brief, the two-turn scope questions, the
+confirmation gate, and graph-provider choice.
 
 ## Bare `/docforge` invocation
 
@@ -11,41 +11,47 @@ document request, begin an **interactive intake**. Do not initialize a
 manifest, scaffold a file, build/refresh a graph, install a provider, change
 configuration, or archive/delete anything.
 
-First perform only safe discovery: identify the repository root, check whether
-`.docforge/manifest.json` exists, run the read-only code-graph precheck, and run
-`detect_profiles.{py,js}` inline to identify candidate shapes, platforms,
-frameworks, and concerns (see
-[`../runtime/catalog/README.md`](../runtime/catalog/README.md)).
+First perform only safe discovery:
+
+1. Identify the repository root.
+2. Check whether `.docforge/manifest.json` exists.
+3. Run the read-only code-graph precheck.
+4. Run `detect_profiles.{py,js}` inline to identify candidate shapes,
+   platforms, frameworks, and concerns (see
+   [`../runtime/catalog/README.md`](../runtime/catalog/README.md)).
+
 `detect_profiles.{py,js}` recognizes frameworks and shapes by reading
 *declared dependencies* structurally from project-definition manifests
 (`package.json`, `pyproject.toml`/`requirements.txt`, `pom.xml`,
 `build.gradle*`, `go.mod`, `Cargo.toml`, `Gemfile`, `composer.json`,
-`*.csproj`, `pubspec.yaml`), not by substring — so a declared dependency is
-**strong** evidence. Path fragments and content keywords are **weak** cues:
-they never alone confirm a profile. The same noun or team term can mean
-different aspects across projects, stacks, and domain language.
+`*.csproj`, `pubspec.yaml`), not by substring. A declared dependency is
+therefore **strong** evidence. Path fragments and content keywords are
+**weak** cues: they never alone confirm a profile. The same noun or team term
+can mean different aspects across projects, stacks, and domain language.
 
 When the pack from `detect_profiles.{py,js} --emit-gate-pack` sets
-`needs_gate`, run the
-**discovery gate** before the discovery brief: follow
+`needs_gate`, the orchestrator runs the **discovery gate** before the
+discovery brief: follow
 [`../references/discovery-gate.md`](../references/discovery-gate.md), ground
 decisions only in the bounded pack, and emit judgment JSON (`promote` / `keep`
-/ `demote` / `drop` / `propose`). Apply it with the `discovery_gate` library
-API (`runtime/catalog/{python/discovery_gate.py,js/discovery_gate.js}`, see
-[`../runtime/catalog/README.md`](../runtime/catalog/README.md)); on
-invalid judgment, fail open to deterministic ranks. Detection and the gate
-propose profiles; they never confirm them on the user's behalf. When exactly
-one readable code-graph provider is ready, use it as the proposed default and
-do not ask the user to choose among absent providers. This read-only provider
-selection is not permission to build, refresh, install, or configure
+/ `demote` / `drop` / `propose`). Apply the judgment with the
+`discovery_gate` library API
+(`runtime/catalog/{python/discovery_gate.py,js/discovery_gate.js}`, see
+[`../runtime/catalog/README.md`](../runtime/catalog/README.md)). On an invalid
+judgment, fail open to deterministic ranks. Detection and the gate propose
+profiles; they never confirm them on the user's behalf.
+
+When exactly one readable code-graph provider is ready, use it as the proposed
+default. Do not ask the user to choose among absent providers. This read-only
+provider selection is not permission to build, refresh, install, or configure
 anything.
 
 When the repository root contains any nested `.git` directory (a candidate
 multi-repo workspace), also run the read-only `discover_child_repos.{py,js}`
 (see [`../references/portfolio.md`](../references/portfolio.md)) to learn
-each detected member's own tier. This is discovery only — it does not decide
-inclusion or offer Portfolio by itself; it makes the fact available to the
-discovery brief and the tier question below.
+each detected member's own tier. This is discovery only: it does not decide
+inclusion, and it does not offer Portfolio by itself. It makes the fact
+available to the discovery brief and to the tier question below.
 
 Treat `detect_profiles` and the nested-`.git` check as one paired discovery
 step: never refresh one without the other. If repository state changes
@@ -97,20 +103,43 @@ asking any scope questions, present a short discovery brief:
   already at Diligence or higher.
 
 Do not initialize a manifest, scaffold files, or ask for side-effect approval
-in the brief. Open the scope question pack in the same turn when the host
-allows (brief + questions together), or brief first then questions if the host
-needs a separate message — but never present scope questions without this
-brief. Never silent-confirm detections or gate judgments.
+in the brief. Open Turn 1 of the scope questions in the same message as the
+brief when the host allows it; otherwise send the brief first and Turn 1 next.
+Never present scope questions without this brief.
+Never silent-confirm detections or gate judgments.
+
+## Turn structure
+
+Intake asks its scope questions in exactly two turns.
+
+| Turn | Asks | Why it is separate |
+|---|---|---|
+| 1 — Direction | Goal or action (Scope, on revise) and Documentation layout | Layout fixes the shape of the tree that every later answer describes |
+| 2 — Scope | Tier, repository profiles, output audience, graph source, execution mode | These describe the content *inside* the tree Turn 1 fixed |
+
+The orchestrator applies these rules when it builds a pack:
+
+- Never present layout in the same turn as tier, profiles, audiences, or execution mode.
+- Open Turn 2 only after Turn 1 is answered.
+- Turn 2 never re-presents Goal or Layout as controls; they appear there only as confirmed baseline facts.
+- The confirmation summary is the last step of Turn 2's pack (the host's `Confirm` control) or a separate message after it. Never merge the confirmation summary into Turn 1.
+- A turn whose questions are all already resolved is skipped, never shown empty.
 
 ## Scope intake
 
-Present all applicable unresolved questions together in one intake. Explain in
-plain language why each question matters, then give every choice a short
-consequence so the user can select one answer per question (or multiple answers
-where explicitly allowed). Use native single-select and multi-select controls
-when the host provides them; otherwise use a concise numbered question set with
+Ask only what remains unresolved, in the question order below. Within one
+turn, present that turn's unresolved questions together. Explain in plain
+language why each question matters, then give every choice a short consequence
+so the user can select one answer per question (or multiple answers where
+explicitly allowed). Use native single-select and multi-select controls when
+the host provides them; otherwise use a concise numbered question set with
 lettered options. Do not prescribe an exact screen or require a particular
 combined answer syntax.
+
+Collect each turn's applicable answers as one response. When the user supplied
+one or more choices in the original request, retain them and present only the
+unresolved questions. For Resume or Status, omit tier, audience, and profile
+questions that the existing manifest already resolves.
 
 ### Revise selection changes
 
@@ -127,8 +156,8 @@ Instead, controls represent only requested changes:
   drift as a fact and offer the change without a recommendation — a user
   decision is never silently re-derived, and no change means the manifest
   values stand unchanged (see [`revision.md`](revision.md) "Applying the
-  answers to the manifest"). Layout is the first control in the pack — it
-  shapes the plan tree every later answer describes.
+  answers to the manifest"). Layout belongs to Turn 1 and is the first control
+  in that pack — it shapes the plan tree every later answer describes.
 - **Tier:** show `Current tier: <tier>` and offer `Change to <other tier>` for
   each alternative tier.
 - **Profiles and output audiences:** show `Currently selected: <values>` and
@@ -140,7 +169,7 @@ An empty set of changes preserves the displayed manifest values, but it is not
 silent acceptance: include those unchanged values in the final confirmation and
 wait for the user's explicit confirmation before reconciling the manifest.
 
-Ask only what remains unresolved, in this order:
+### Turn 1 — Direction
 
 1. **Goal or action.** Base this only on the repository root's own manifest
    state — the discovery brief's first bullet — never on a detected member's
@@ -159,26 +188,47 @@ Ask only what remains unresolved, in this order:
    distinguish inspection, planning, writing, and read-only reporting.
    Natural-language **update** / **refresh** of a named document routes to
    [`revision.md`](revision.md) (staleness-first), not a full rewrite.
-2. **Documentation layout.** Always asked for a new or plan-only scope —
-   never silently defaulted, even when detection suggests one — and always
-   before tier, profiles, and audiences, because the layout shapes the plan
-   tree every later answer describes. Present a native single-select with
-   both layouts, each carrying the detected evidence from the discovery
-   brief's scale line:
+2. **Documentation layout.** Turn 1 resolves layout — never silently
+   defaulted, even when detection suggests one, and never deferred to Turn 2.
+   Whether it is asked follows this table, so no discretion is left:
+
+   | Repository / invocation state | Layout in Turn 1 |
+   |---|---|
+   | No manifest | **Asked.** Both layouts; the detected one marked `(suggested — …)`, never pre-selected |
+   | Manifest exists and the goal may replace the plan | **Asked**, with the qualifier line below |
+   | Manifest exists and detection drifted from `project.scale` | **Asked** as a `Change to <detected layout>` control (see Revise selection changes) |
+   | Manifest exists, no drift, goal is Resume / Status / single-document update | **Not asked.** Stated as a baseline fact in the confirmation summary |
+   | `/docforge-revise all`, or any invocation that names a tier | **Asked** (mirrors the tier-naming exception below) |
+
+   Present a native single-select with both layouts, each carrying the
+   detected evidence from the discovery brief's scale line:
    - **Compact** — fewer, denser files; the same subjects as Standard at the
      same depth (`docs/product.md` instead of `docs/product/README.md` +
      overview, and so on).
    - **Standard** — one file per subject.
+
    Mark the detected layout `(suggested — <source_files> source files,
    <declared_dependencies> declared dependencies, <flow_candidates> flow
    candidates, <confirmed_profiles> confirmed profiles)` but never pre-select
    it on the user's behalf. If the reply omits layout, ask one layout-only
-   follow-up. The confirmed pick is carried into `init`
-   ([`planning.md`](planning.md)): no flag when it matches detection
-   (`decided_by: "detected"`), `--layout <compact|standard>` (with
-   `--scale-class` when the user also changed the class) when it differs
-   (`decided_by: "user"`). Resume or Status omits layout — the manifest
-   already resolves it.
+   follow-up before opening Turn 2.
+
+   When Goal is still open in the same pack, add this qualifier: *"Layout
+   applies only if you create or replace a plan; Resume and Status use the
+   layout already recorded in the manifest."* If the chosen goal turns out not
+   to use layout, discard the layout answer and report the manifest value as a
+   baseline fact — never silently apply the discarded answer.
+
+   The confirmed pick is carried into `init` ([`planning.md`](planning.md)):
+   no flag when it matches detection (`decided_by: "detected"`);
+   `--layout <compact|standard>` (with `--scale-class` when the user also
+   changed the class) when it differs (`decided_by: "user"`).
+
+### Turn 2 — Scope
+
+Open Turn 2 only after Turn 1 is answered. Restate the confirmed goal and
+layout as baseline facts at the top of the pack, never as controls.
+
 3. **Documentation tier.** For a new or plan-only scope, offer Spine
    (essential repository documentation) and Diligence (Spine plus flows,
    risks, security, operations, dependencies, and ADRs) always, or a grounded
@@ -190,17 +240,32 @@ Ask only what remains unresolved, in this order:
    needs its own separate Diligence run first, rather than listing Portfolio
    as a normal choice (see [`../references/portfolio.md`](../references/portfolio.md)
    "Readiness gate").
-4. **Repository profiles.** Require one multi-select per applicable dimension
-   (shapes, platforms, frameworks, concerns): a native multi-select or lettered
-   multi-select with **recommended** options pre-checked and **also possible**
-   options unchecked, each with its evidence or gate reason from the discovery
+4. **Repository profiles.** Require one multi-select per applicable dimension.
+   Each dimension is a separate control with its own user-facing label and its
+   own question text; internal catalog ids and CLI flags are unchanged:
+
+   | Control label | Catalog dimension | Question text | Axis |
+   |---|---|---|---|
+   | **Delivers** | `shape` | What does this repository deliver? | The artifact it ships |
+   | **Runs on** | `platform` | Where does it run? | Execution environment |
+   | **Built with** | `framework` | What is it built with? | Declared frameworks and toolkits |
+   | **Behaviors** | `concern` | What cross-cutting behavior does it have? | Evidenced cross-cutting concerns |
+
+   Each control's first clause states its own axis. Two dimensions must never
+   share question text or an option set. A confirmed `framework` tailors
+   evidence queries; it never adds a framework-specific tree.
+
+   Each control is a native multi-select or lettered multi-select with
+   **recommended** options pre-checked and **also possible** options
+   unchecked, each carrying its evidence or gate reason from the discovery
    brief. Omit a dimension only when detection produced no candidates and no
-   weak cues for it. Permit multiple values in every dimension — one overloaded
-   cue may map to several aspects when evidence supports it. Shapes describe
-   what the repository delivers; platforms describe where it runs; frameworks
-   describe how it is built and tailor evidence queries without adding
-   framework-specific trees; concerns describe evidenced cross-cutting
-   behavior. Detection and the gate never finalize profiles; do not
+   weak cues for it. Permit multiple values in every dimension — one
+   overloaded cue may map to several aspects when evidence supports it. A
+   dimension with exactly one candidate and no alternative says so
+   (`only candidate — confirm it or add your own`) instead of presenting a
+   one-item choice that reads as a decision. A dimension whose candidates rest
+   on weak cues only keeps the "these are weak candidates" framing. Detection
+   and the gate never finalize profiles; do not
    silent-confirm them on the user's behalf.
 5. **Output audience.** Always present a native multi-select that lists
    **every** catalog audience as a visible option — never drop BA/PO/agents
@@ -267,25 +332,23 @@ Ask only what remains unresolved, in this order:
    Execution mode, and never apply execution mode on silent defaults. If the reply
    omits mode, ask one mode-only follow-up.
 
-Collect the applicable answers as one response. If the user supplied one or
-more choices in the original request, retain them and include only unresolved
-questions in the intake. For Resume or Status, omit tier, audience, and shape
-questions that the existing manifest already resolves.
+### Revise: which dimensions each turn actually asks
 
 For `/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`,
 or any revise that rediscovers docs, always stop and ask before migration,
-detection, or writing — but scale the pack to what is actually unresolved or
-changed, never a reflexive full re-ask of every dimension on every run:
+detection, or writing — but scale each turn to what is actually unresolved or
+changed, never a reflexive full re-ask of every dimension on every run. Turn 1
+carries Scope and Layout; Turn 2 carries the rest.
 
-- **Execution mode** (and **Scope**, when the invocation is ambiguous) is
-  always asked, unless the invocation already supplies `--plan-only` or
-  `--auto-accept` — these govern this run and are never read off the
-  manifest.
-- **Layout** is asked only when scale detection disagrees with the manifest
-  or the user requested a change; it is the first control in the pack when
-  asked (see Revise selection changes). No delta means state the current
-  layout as unchanged instead.
-- **Tier** is asked only when the invocation requests a tier change, the
+- **Scope** (Turn 1) is asked when the invocation is ambiguous.
+- **Layout** (Turn 1) is asked only when scale detection disagrees with the
+  manifest or the user requested a change; it is the first control in that
+  pack when asked (see Revise selection changes). No delta means state the
+  current layout as unchanged instead.
+- **Execution mode** (Turn 2) is always asked, unless the invocation already
+  supplies `--plan-only` or `--auto-accept` — these govern this run and are
+  never read off the manifest.
+- **Tier** (Turn 2) is asked only when the invocation requests a tier change, the
   manifest has no tier, or detection surfaces evidence the current tier no
   longer fits (for example, newly evidenced profiles that unlock a higher
   tier). No such reason means state the current tier as unchanged instead of
@@ -296,11 +359,11 @@ changed, never a reflexive full re-ask of every dimension on every run:
   so a tier-naming run can never change which documents belong silently.
   `<area>` and `flow` keep the delta-aware behavior above; a bare
   `/docforge-revise` still asks nothing.
-- **Profiles** (shape / platform / framework / concern) are asked only for
+- **Profiles** (Turn 2 — Delivers / Runs on / Built with / Behaviors) are asked only for
   dimensions with an actual delta: a fresh detection not already selected, or
   a change the user requested. A dimension with no new candidates and no
   requested change is reported unchanged, not re-presented.
-- **Output audience** is asked only when there are suitable missing
+- **Output audience** (Turn 2) is asked only when there are suitable missing
   audiences or the user requested a change. No delta means state the current
   audiences as unchanged instead.
 
@@ -314,11 +377,13 @@ requested change, use the change-only controls in **Revise selection changes**
 audience) for those dimensions only, and show the rest as plain baseline
 facts in the same confirmation summary — with the manifest's current values
 displayed as the baseline throughout. Never proceed on silent defaults;
-collect the requested changes in one response, show the confirmation summary,
-and wait for explicit confirmation before continuing. If the reply leaves a
-material choice missing or ambiguous — including Layout, Output audience, or
-Execution mode when required — ask one concise follow-up containing only
-those unresolved choices.
+collect each turn's requested changes in one response, show the confirmation
+summary, and wait for explicit confirmation before continuing. If the reply
+leaves a material choice missing or ambiguous — including Layout, Output
+audience, or Execution mode when required — ask one concise follow-up
+containing only those unresolved choices, in the turn that owns them.
+
+## Confirmation summary
 
 After resolving the answers, display one confirmation summary containing the
 action, the confirmed layout, tier, every selected profile dimension, and
@@ -374,9 +439,9 @@ default
 `/docforge` intake.
 
 Explicit requests such as "create diligence API documentation" skip answered
-questions; present any materially missing scope questions together. The final
-intake confirmation and all side-effect approvals remain mandatory under
-`--auto-accept` (see [`../flags.md`](../flags.md)).
+questions; present any materially missing scope questions in their own turn.
+The final intake confirmation and all side-effect approvals remain mandatory
+under `--auto-accept` (see [`../flags.md`](../flags.md)).
 
 ## Invocation flags relevant to intake
 

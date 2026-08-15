@@ -68,7 +68,11 @@ Check which generated docs have drifted from source.
 ### /docforge — fresh start
 
 Intake, plan, or write a tree from scratch. On intake it performs only
-read-only discovery, presents all applicable unresolved scope questions together, then summarizes the complete scope and asks you to confirm, edit, or cancel before writing anything.
+read-only discovery, then asks its scope questions in two turns: first your
+goal and the documentation layout, then tier, repository profiles, audience,
+graph source, and execution mode. It finally summarizes the complete scope and
+asks you to confirm, edit, or cancel before writing anything.
+
 | Command | Use |
 |---|---|
 | `/docforge` | Fresh start: intake, plan, or write |
