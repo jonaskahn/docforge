@@ -299,11 +299,18 @@ function publicFrontmatter(docId, title, provenance, description = null) {
   return pf.emitDocumentFrontmatter(docId, title, provenance, description || null);
 }
 
-function pageFrontmatter(docId, title) {
-  // Minimal public frontmatter for converted dashboard pages: only id and
-  // title. Description and docforge_provenance stay out of the rendered
-  // site — the sidecar / manifest remain the authoritative store.
-  return `---\nid: ${JSON.stringify(docId)}\ntitle: ${JSON.stringify(title)}\n---\n`;
+function pageFrontmatter(docId, title, description = null) {
+  // Public frontmatter for converted dashboard pages: id, title, and
+  // description (when present). docforge_provenance stays out of the
+  // rendered site — the sidecar / manifest remain the authoritative store.
+  const lines = [
+    "---",
+    `id: ${JSON.stringify(docId)}`,
+    `title: ${JSON.stringify(title)}`,
+  ];
+  if (description) lines.push(`description: ${JSON.stringify(description)}`);
+  lines.push("---");
+  return `${lines.join("\n")}\n`;
 }
 
 function splitFrontmatterRaw(text) {
@@ -807,7 +814,11 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
     if (h1Title) doc.title = h1Title;
     const pageId = publicMeta.id || doc.doc_id;
     const pageTitle = doc.title;
-    const content = pageFrontmatter(pageId, pageTitle) + mdxBody;
+    const content = pageFrontmatter(
+      pageId,
+      pageTitle,
+      publicMeta.description || manifestDoc.description,
+    ) + mdxBody;
     const target = path.join(stageDocs, doc.output_path);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, content, "utf8");

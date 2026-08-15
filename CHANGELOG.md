@@ -2,11 +2,10 @@
 
 ## 2.16.0 - External provenance store (markdown-clean output)
 
-- Converted dashboard pages now carry **only `id` and `title`** frontmatter:
-  `description` and `docforge_provenance` are no longer emitted into the
+- Converted dashboard pages now carry **`id`, `title`, and `description`**
+  frontmatter only: `docforge_provenance` is no longer emitted into the
   rendered site — the sidecar / manifest stay the authoritative metadata
-  store (the Fumadocs shell's `generateMetadata` drops the description
-  field accordingly).
+  store.
 - Manifest 3.3 adds `project.provenance_storage` — `json` (default) or
   `markdown`. In `json` mode generated files carry **no frontmatter at all**;
   each docs folder's public identity (`id`, `title`, `description`) and

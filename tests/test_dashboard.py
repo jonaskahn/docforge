@@ -430,7 +430,7 @@ class DashboardBuildTests(unittest.TestCase):
                     text = output.read_text(encoding="utf-8")
                     self.assertTrue(text.startswith('---\nid: "architecture_constraints"\n'))
                     self.assertIn('title: "Constraints"', text)
-                    self.assertNotIn("description:", text.split("---\n", 2)[1].split("\n---\n", 1)[0])
+                    self.assertIn('description: "Fixture description for architecture constraints."', text)
                     self.assertNotIn("docforge_provenance:", text)
                     self.assertIn("Owner is &lt;TEAM_OWNER&gt;", text)
                     self.assertIn("&#123;stay&#125;", text)

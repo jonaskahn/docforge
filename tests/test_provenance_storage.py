@@ -442,7 +442,7 @@ class JsonModePipelineTests(unittest.TestCase):
                     self.assertTrue(text.startswith('---\nid: "only"\n'))
                     self.assertIn('title: "Only"', text)
                     head = text.split("\n---\n", 1)[0]
-                    self.assertNotIn("description:", head)
+                    self.assertIn('description: "One-liner."', head)
                     self.assertNotIn("docforge_provenance:", head)
                     self.assertIn("# Only\n\nBody.", text)
                 finally:

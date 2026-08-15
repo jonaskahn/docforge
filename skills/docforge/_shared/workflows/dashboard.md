@@ -291,10 +291,10 @@ When `start`/`export` (or `scan`) report problems, the agent must:
 
 ## Conversion rules (deterministic, code-fence aware)
 
-- Converted pages carry **only `id` and `title`** frontmatter — resolved
-  from the folder sidecar in `json` storage mode, from the manifest / inline
-  frontmatter in `markdown` mode; `description` and `docforge_provenance`
-  are never emitted into the rendered site (the sidecar / manifest stay the
+- Converted pages carry **`id`, `title`, and `description`** frontmatter —
+  resolved from the folder sidecar in `json` storage mode, from the manifest
+  / inline frontmatter in `markdown` mode; `docforge_provenance` is never
+  emitted into the rendered site (the sidecar / manifest stay the
   authoritative metadata store). The body is otherwise untouched except for
   the rules below.
 - The frontmatter `title` is the document's **first H1 heading** (markers
