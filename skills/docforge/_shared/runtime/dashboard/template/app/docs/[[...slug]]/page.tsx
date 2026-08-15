@@ -61,6 +61,5 @@ export async function generateMetadata({ params }: { params: Promise<{ slug?: st
 
   return {
     title: page.data.title ? `${page.data.title} | ${appName}` : appName,
-    description: page.data.description,
   };
 }

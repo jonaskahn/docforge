@@ -322,6 +322,18 @@ def public_frontmatter(
     return emit_document_frontmatter(doc_id, title, provenance, description or None)
 
 
+def page_frontmatter(doc_id: str, title: str) -> str:
+    """Minimal public frontmatter for converted dashboard pages: only `id`
+    and `title`. Description and `docforge_provenance` stay out of the
+    rendered site — the sidecar / manifest remain the authoritative store."""
+    return (
+        "---\n"
+        f"id: {json.dumps(doc_id, ensure_ascii=False)}\n"
+        f"title: {json.dumps(title, ensure_ascii=False)}\n"
+        "---\n"
+    )
+
+
 def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dict:
     report = {"reconciled": [], "unchanged": [], "skipped": [], "errors": []}
     storage = store.storage_for(manifest)
@@ -819,12 +831,7 @@ def convert_documents(repo: Path, manifest: dict, ledger: dict, stage_docs: Path
         if h1_title:
             doc["title"] = h1_title
         page = {"id": public.get("id") or doc["doc_id"], "title": doc["title"]}
-        content = public_frontmatter(
-            page["id"],
-            page["title"],
-            provenance,
-            public.get("description") or manifest_doc.get("description"),
-        ) + mdx_body
+        content = page_frontmatter(page["id"], page["title"]) + mdx_body
         target = stage_docs / doc["output_path"]
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")

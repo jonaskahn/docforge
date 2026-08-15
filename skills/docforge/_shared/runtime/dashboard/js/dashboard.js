@@ -299,6 +299,13 @@ function publicFrontmatter(docId, title, provenance, description = null) {
   return pf.emitDocumentFrontmatter(docId, title, provenance, description || null);
 }
 
+function pageFrontmatter(docId, title) {
+  // Minimal public frontmatter for converted dashboard pages: only id and
+  // title. Description and docforge_provenance stay out of the rendered
+  // site — the sidecar / manifest remain the authoritative store.
+  return `---\nid: ${JSON.stringify(docId)}\ntitle: ${JSON.stringify(title)}\n---\n`;
+}
+
 function splitFrontmatterRaw(text) {
   const split = pf.splitFrontmatter(text);
   return { raw: split.raw, body: split.body };
@@ -800,12 +807,7 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
     if (h1Title) doc.title = h1Title;
     const pageId = publicMeta.id || doc.doc_id;
     const pageTitle = doc.title;
-    const content = publicFrontmatter(
-      pageId,
-      pageTitle,
-      provenance,
-      publicMeta.description || manifestDoc.description,
-    ) + mdxBody;
+    const content = pageFrontmatter(pageId, pageTitle) + mdxBody;
     const target = path.join(stageDocs, doc.output_path);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, content, "utf8");

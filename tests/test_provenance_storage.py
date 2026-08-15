@@ -242,18 +242,25 @@ class JsonModePipelineTests(unittest.TestCase):
                 self.assertIn("UNTRACKED", sync.stdout)
                 self.assertIn("legacy provenance", sync.stdout)
                 self.assertEqual(target.read_text(encoding="utf-8"), "# Only\n\nBody.\n")
+                saved_sidecar = json.loads((repo / SIDECAR_ROOT / "docs.json").read_text(encoding="utf-8"))
                 self.assertEqual(
-                    json.loads((repo / SIDECAR_ROOT / "docs.json").read_text(encoding="utf-8")),
-                    legacy_sidecar,
+                    saved_sidecar["files"]["only.md"]["provenance"],
+                    legacy_sidecar["files"]["only.md"]["provenance"],
                 )
 
     def _seed_inline_repo(self, repo: Path, runtime: str) -> None:
         source = repo / "source.txt"
         source.write_text("evidence\n", encoding="utf-8")
+        source_blob = blob_hash(source.read_bytes())
         value = provenance(
             doc_id="only", path="docs/only.md", tier="spine",
             target_depth="reference", section_id="only",
-            source_path="source.txt", source_blob=blob_hash(source.read_bytes()),
+            source_path="source.txt", source_blob=source_blob,
+        )
+        index_value = provenance(
+            doc_id="docs_index", path="docs/README.md", tier="spine",
+            target_depth="orientation", section_id="documentation",
+            source_path="source.txt", source_blob=source_blob,
         )
         manifest = {
             "version": "3.2",
@@ -261,6 +268,14 @@ class JsonModePipelineTests(unittest.TestCase):
                         "profiles": {"shapes": [], "platforms": [], "frameworks": [], "concerns": [], "audiences": []}},
             "discovery": [],
             "documents": [{
+                "id": "docs_index", "type": "docs-index", "path": "docs/README.md",
+                "title": "Documentation", "description": "One-liner.", "status": "complete",
+                "requires": [], "group": "root",
+                "scaffold_template": "docs-index.template.md", "instruction_file": None,
+                "target_depth": "orientation", "write_order": 30,
+                "provenance_mode": "sections", "audit_profile": "router",
+                "provenance": index_value, "audit": None,
+            }, {
                 "id": "only", "type": "generic", "path": "docs/only.md",
                 "title": "Only", "description": "One-liner.", "status": "complete", "requires": [],
                 "group": "reference",
@@ -277,6 +292,11 @@ class JsonModePipelineTests(unittest.TestCase):
         target = repo / "docs" / "only.md"
         target.parent.mkdir()
         target.write_text(markdown_with_provenance(value, "# Only\n\nBody.\n"), encoding="utf-8")
+        index = repo / "docs" / "README.md"
+        index.write_text(
+            markdown_with_provenance(index_value, "# Documentation\n\nSee [Only](only.md).\n\nBody.\n"),
+            encoding="utf-8",
+        )
 
     def test_migrate_32_to_33_moves_inline_into_sidecars(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -362,7 +382,7 @@ class JsonModePipelineTests(unittest.TestCase):
                 target = repo / "docs" / "only.md"
                 self.assertTrue(target.read_text(encoding="utf-8").startswith("# Only\n"))
                 # An inline-frontmatter copy reappears (e.g. restored from an
-                # older branch) while the sidecar entry is gone: sync moves it.
+                # older branch) while its sidecar entry is gone: sync moves it.
                 value = provenance(
                     doc_id="only", path="docs/only.md", tier="spine",
                     target_depth="reference", section_id="only",
@@ -370,7 +390,10 @@ class JsonModePipelineTests(unittest.TestCase):
                     source_blob=blob_hash((repo / "source.txt").read_bytes()),
                 )
                 target.write_text(markdown_with_provenance(value, "# Only\n\nBody.\n"), encoding="utf-8")
-                (repo / SIDECAR_ROOT / "docs.json").unlink()
+                sidecar_path = repo / SIDECAR_ROOT / "docs.json"
+                sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+                del sidecar["files"]["only.md"]
+                sidecar_path.write_text(json.dumps(sidecar, indent=2) + "\n", encoding="utf-8")
                 sync = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
                 self.assertEqual(sync.returncode, 0, sync.stderr + sync.stdout)
                 self.assertIn("FRESH", sync.stdout)
@@ -399,6 +422,31 @@ class JsonModePipelineTests(unittest.TestCase):
             preview = run("py", "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--dry-run")
             self.assertEqual(preview.returncode, 0, preview.stderr)
             self.assertIn("inline provenance pending sidecar migration", preview.stdout)
+
+    def test_dashboard_converts_sidecar_docs_to_id_title_only(self) -> None:
+        from test_dashboard import fake_npm_env, run_dashboard, stop_dashboard
+
+        env, _bin = fake_npm_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                self._seed_inline_repo(repo, runtime)
+                manifest_path = repo / ".docforge" / "manifest.json"
+                run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
+                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                    page = repo / ".docforge" / "dashboard" / "content" / "docs" / "only.mdx"
+                    text = page.read_text(encoding="utf-8")
+                    self.assertTrue(text.startswith('---\nid: "only"\n'))
+                    self.assertIn('title: "Only"', text)
+                    head = text.split("\n---\n", 1)[0]
+                    self.assertNotIn("description:", head)
+                    self.assertNotIn("docforge_provenance:", head)
+                    self.assertIn("# Only\n\nBody.", text)
+                finally:
+                    stop_dashboard(runtime, repo)
 
 
 if __name__ == "__main__":

@@ -291,18 +291,17 @@ When `start`/`export` (or `scan`) report problems, the agent must:
 
 ## Conversion rules (deterministic, code-fence aware)
 
-- The public frontmatter (`id`, `title`, `description`,
-  `docforge_provenance`) is re-emitted for the site — from the folder
-  sidecar in `json` storage mode, from the manifest / inline frontmatter in
-  `markdown` mode; the body is otherwise untouched except for the rules
-  below.
+- Converted pages carry **only `id` and `title`** frontmatter — resolved
+  from the folder sidecar in `json` storage mode, from the manifest / inline
+  frontmatter in `markdown` mode; `description` and `docforge_provenance`
+  are never emitted into the rendered site (the sidecar / manifest stay the
+  authoritative metadata store). The body is otherwise untouched except for
+  the rules below.
 - The frontmatter `title` is the document's **first H1 heading** (markers
   like `[!toc]` / `[#custom-id]` and link/formatting syntax stripped) so
   titles are fully meaningful ("Documentation", not "Docs Index"); it falls
   back to the manifest title when a document has no H1. `meta.json` folder
-  titles inherit the same value. The frontmatter `description` (manifest /
-  catalog-owned, ≤ 160 chars) drives per-page `<meta name="description">`
-  and the `generateMetadata` output of the site.
+  titles inherit the same value.
 - Inside fenced code blocks and inline code, text is preserved verbatim.
 - Outside code, `<` `>` `{` `}` are escaped to HTML entities so typed
   `<UPPER_SNAKE_CASE>` tokens and literal braces can never be parsed as JSX
