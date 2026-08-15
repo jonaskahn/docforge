@@ -1,6 +1,6 @@
 {
   "$schema": "manifest-schema.json",
-  "version": "3.6",
+  "version": "3.7",
   "generated_at": "2026-01-01T00:00:00+00:00",
   "project": {
     "name": "example",
@@ -14,7 +14,9 @@
       "signals": {
         "tracked_files": 42,
         "source_files": 18,
-        "confirmed_profiles": 1
+        "confirmed_profiles": 1,
+        "declared_dependencies": 12,
+        "flow_candidates": 0
       }
     },
     "profiles": {

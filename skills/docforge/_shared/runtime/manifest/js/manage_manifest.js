@@ -28,7 +28,7 @@ const TRANSITIONS = {
   retired: new Set(["planned"]),
 };
 const TOOL_VERSION = pf.GENERATOR_VERSION;
-const MANIFEST_VERSION = "3.6";
+const MANIFEST_VERSION = "3.7";
 const USER_CONFIRMED_TRIGGERS = new Set([
   "new-trust-boundary", "per-interaction-review", "regulated-workload",
   "high-criticality", "new-external-integration", "new-data-classification",
@@ -327,7 +327,7 @@ function parseArgs(argv) {
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
     "set-graph": new Set(["repo", "provider", "force"]),
-    reconcile: new Set(["repo", "tier", "layout", "shape", "platform", "framework", "concern", "audience"]),
+    reconcile: new Set(["repo", "tier", "scale-class", "layout", "shape", "platform", "framework", "concern", "audience"]),
     finish: new Set(["repo", "keep-tmp"]),
     unmanaged: new Set(["repo", "action", "path", "dry-run"]),
     retire: new Set(["repo", "doc", "mode", "dry-run"]),
@@ -635,7 +635,10 @@ function cmdReconcile(args) {
   const catalog = loadCatalog();
   const newTier = args.tier || manifest.project.tier;
   const currentScale = manifest.project.scale || {};
-  const newLayout = args.layout || currentScale.layout || "standard";
+  const newLayout = args.layout
+    || (args.scale_class ? LAYOUT_BY_CLASS[args.scale_class] : null)
+    || currentScale.layout
+    || "standard";
   const raw = {};
   for (const dimension of PROFILE_DIMENSIONS) {
     const singular = dimension === "audiences" ? "audience" : dimension.slice(0, -1);
@@ -684,22 +687,39 @@ function cmdReconcile(args) {
   manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
   manifest.project.tier = newTier;
   manifest.project.profiles = profiles;
-  if (args.layout && args.layout !== currentScale.layout) {
+  if (args.scale_class || args.layout) {
     let scaleRecord;
     if (currentScale.class) {
       scaleRecord = { ...currentScale };
-      if (!scaleRecord.signals) scaleRecord.signals = computeScale(args.repo).signals;
     } else {
       // A pre-3.5 manifest reconciled before migrate has no usable prior
       // record. Detect a complete one rather than emit a record missing the
       // schema-required `class`.
-      scaleRecord = resolveScale(args.repo, null, args.layout);
+      scaleRecord = resolveScale(args.repo, args.scale_class, args.layout);
     }
-    scaleRecord.layout = args.layout;
+    const oldClass = scaleRecord.class;
+    const oldLayout = scaleRecord.layout || "standard";
+    if (args.scale_class && args.scale_class !== oldClass) {
+      scaleRecord.class = args.scale_class;
+      // A class change carries its class-default layout unless the user also
+      // named a layout.
+      if (!args.layout) scaleRecord.layout = LAYOUT_BY_CLASS[args.scale_class];
+    }
+    if (args.layout && args.layout !== oldLayout) {
+      scaleRecord.layout = args.layout;
+    }
     scaleRecord.decided_by = "user";
     scaleRecord.decided_at = nowIso();
+    const detected = computeScale(args.repo);
+    scaleRecord.detected_class = detected.class;
+    scaleRecord.signals = detected.signals;
     manifest.project.scale = scaleRecord;
-    console.log(`  layout: ${currentScale.layout || "standard"} -> ${args.layout}`);
+    if (oldClass !== scaleRecord.class) {
+      console.log(`  scale class: ${oldClass} -> ${scaleRecord.class}`);
+    }
+    if (oldLayout !== scaleRecord.layout) {
+      console.log(`  layout: ${oldLayout} -> ${scaleRecord.layout}`);
+    }
   }
   saveManifest(args.repo, manifest);
   console.log(`Reconcile ${args.repo}:`);
@@ -1021,7 +1041,7 @@ function cmdUnmanaged(args) {
   }
 }
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--scale-class <small|medium|large>] [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | unmanaged --repo <path> --action <list|add|remove|archive> [--path <rel>] [--dry-run] | retire --repo <path> --doc <id> [--doc <id> ...] --mode <obsolete|delete> [--dry-run] | finish --repo <path> [--keep-tmp]");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--scale-class <small|medium|large>] [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | reconcile --repo <path> [--tier <spine|diligence|portfolio>] [--scale-class <small|medium|large>] [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | unmanaged --repo <path> --action <list|add|remove|archive> [--path <rel>] [--dry-run] | retire --repo <path> --doc <id> [--doc <id> ...] --mode <obsolete|delete> [--dry-run] | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;

@@ -226,7 +226,7 @@ def seed_repo(repo: Path) -> None:
         written_doc("product_overview", "docs/product/overview.md", bodies["product_overview"], write_order=19),
     ]
     manifest = {
-        "version": "3.6",
+        "version": "3.7",
         "generated_at": "2026-08-01T00:00:00Z",
         "project": {
             "name": "fixture", "root": str(repo), "tier": "spine",

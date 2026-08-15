@@ -399,7 +399,7 @@ class SkillContentTests(unittest.TestCase):
         # wording lives in workflows/dashboard.md (asserted above).
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**Legacy manifest**", thin)
-        self.assertIn("auto-migrated to 3.6 automatically, never a stop-and-ask", thin)
+        self.assertIn("auto-migrated to 3.7 automatically, never a stop-and-ask", thin)
         self.assertIn("never migrate", thin)
         self.assertNotIn("three-option gate", thin)
         self.assertNotIn("Legacy manifest gate (v1.1)", thin)

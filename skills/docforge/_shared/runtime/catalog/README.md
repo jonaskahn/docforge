@@ -55,7 +55,13 @@ python3 runtime/cli/python/detect_profiles.py --repo <path> [--json] [--emit-gat
 **Not fully read-only:** even plain detection writes
 `.docforge/scratch/manifest-deps.json` in the target repository.
 `--emit-gate-pack` additionally emits strong/weak detections, cues, excerpts,
-and `needs_gate` for the discovery-gate step.
+`needs_gate` for the discovery-gate step, and `scale` — the three-way project
+scale (`small` | `medium` | `large`), its `suggested_layout`
+(`compact` | `standard`), and its measurement `signals` (`tracked_files`,
+`source_files`, `confirmed_profiles`, `declared_dependencies`,
+`flow_candidates`). Classification lives in `common/scale`; the pack reuses
+its own walk, so nothing is re-traversed. See
+[`../common/README.md`](../common/README.md) for the thresholds.
 
 ### `discovery_gate`
 

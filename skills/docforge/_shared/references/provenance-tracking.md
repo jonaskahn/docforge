@@ -147,8 +147,8 @@ preserves section evidence (inferring source `role` and adding empty
 `unresolved` when absent), migrates embedded manifest provenance objects,
 seeds each document's catalog-owned public `description` (from the catalog
 `summary`), and
-bumps the manifest from `3.5` / `3.4` / `3.3` (or `3.2` / `3.1` / `3.0`) to
-`3.6`.
+bumps the manifest from `3.6` / `3.5` / `3.4` / `3.3` (or `3.2` / `3.1` / `3.0`) to
+`3.7`.
 
 When frontmatter is missing or unparseable, conversion throws, or the result
 for a previously written document is still incomplete (scaffold tokens, empty

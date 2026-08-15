@@ -72,11 +72,18 @@ asking any scope questions, present a short discovery brief:
   graph setup for the root.
 - **Recommended** vs **also possible** profile rows for shapes, platforms,
   frameworks, and concerns, each with a one-line evidence or gate reason.
-- Project scale: `<source_files>` source files, `<confirmed_profiles>` confirmed
-  profiles → `small` | `medium` | `large`; `<compact|standard>` layout suggested
-  (see [`../references/docs-tree.md`](../references/docs-tree.md) "Compact
-  layout"). A small repo with many tracked config/docs files but little source
-  is still small; this is a file-count signal, not a coverage judgment.
+- Project scale, from the gate pack's `scale` field (see
+  [`../runtime/catalog/README.md`](../runtime/catalog/README.md)):
+  `<source_files>` source files, `<declared_dependencies>` declared
+  dependencies, `<flow_candidates>` flow candidates, `<confirmed_profiles>`
+  confirmed profiles → `small` | `medium` | `large`;
+  `<compact|standard>` layout suggested (see
+  [`../references/docs-tree.md`](../references/docs-tree.md) "Compact
+  layout"). Small is under 50 source files; dependency breadth (40+) and
+  flow breadth (10+ indexed flow candidates) promote a small repo to
+  medium. A small repo with many tracked config/docs files but little
+  source is still small; this is a file-count signal, not a coverage
+  judgment.
 - Existing documentation note when `docs/` (or equivalent) is already present,
   with a brief evidence note such as an API schema, web framework manifest,
   library package manifest, pipeline configuration, or infrastructure files.
@@ -115,6 +122,14 @@ Instead, controls represent only requested changes:
 
 - **Tier:** show `Current tier: <tier>` and offer `Change to <other tier>` for
   each alternative tier.
+- **Scale / layout:** re-derive scale from the same detect run and show
+  `Current: <class> / <layout>` when detection disagrees with the manifest.
+  When `decided_by` is `detected`, offer `Change to <detected class/layout>`
+  as a recommended change; when `decided_by` is `user`, state the detected
+  drift as a fact and offer the change without a recommendation — a user
+  decision is never silently re-derived, and no change means the manifest
+  values stand unchanged (see [`revision.md`](revision.md) "Applying the
+  answers to the manifest").
 - **Profiles and output audiences:** show `Currently selected: <values>` and
   offer `Add <value>` for unselected values and `Remove <value>` for selected
   values. Freshly detected profiles and suitable missing audiences are
@@ -284,10 +299,13 @@ action, tier, every selected profile dimension, every selected audience,
 selected graph provider and its code/flow capabilities, and execution mode
 (include “permissionless” in the label when Auto-accept was selected). The
 summary also states the project scale and layout once, as a proposed default
-with the detected evidence: `Scale: small (7 source files, 2 confirmed
-profiles) — layout: compact (suggested)`; the user may override either value
-(`Change to medium`, `Use standard layout`) in the same reply, which records
-`decided_by: "user"` on the manifest — never a silent re-derivation. Ask
+with the detected evidence: `Scale: small (34 source files, 28 declared
+dependencies, 3 flow candidates, 2 confirmed profiles) — layout: compact
+(suggested)`; the user may override either value (`Change to medium`, `Use
+standard layout`) in the same reply, which records `decided_by: "user"` on the
+manifest — never a silent re-derivation. A confirmed override is passed to
+`init` as `--scale-class` / `--layout` ([`planning.md`](planning.md)); a
+confirmed detection needs no flags. Ask
 whether to continue, edit a choice, or cancel. Always wait for explicit confirmation
 of this intake summary, including when Auto-accept was selected. Only after
 confirmation may Docforge initialize or replace a manifest or begin deeper

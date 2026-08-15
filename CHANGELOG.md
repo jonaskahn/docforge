@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- **Smarter scale classification (manifest 3.7).** `small` is now under 50
+  source files (was 15), and classification weighs three signals: source-file
+  count (base class), declared-dependency breadth (40+ deps promote
+  `small` → `medium`, 200+ promote `medium` → `large`), and flow breadth
+  (10+ / 40+ harvested flow-index candidates). Promotions cap at one class
+  above the source-file base and never demote. The two new measurements —
+  `declared_dependencies` and `flow_candidates` — join `project.scale.signals`;
+  `migrate_metadata` refreshes signals on upgrade while never re-deriving a
+  `decided_by: "user"` class or layout.
+- **Scale surfaces at intake and revise.** `detect_profiles --emit-gate-pack`
+  now carries a `scale` field (class, suggested layout, signals) reusing its
+  own walk, so the intake discovery brief and the revise confirmation summary
+  can state and re-check the detected scale without another tree pass.
+  `reconcile` accepts `--scale-class` (layout follows the class default unless
+  `--layout` is also named), and revise re-detects scale drift on every
+  detection pass — recommended as a change when `decided_by: "detected"`,
+  reported as a fact when `decided_by: "user"`.
+
 ## 2.18.0 - Project scale, compact layout at every tier, retirement, and a markdown-only-JSON provenance store
 
 - **Project scale awareness.** `manage_manifest init` classifies a repository

@@ -28,8 +28,8 @@ const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const { computeScale } = require("../../common/js/scale.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 
-const MANIFEST_CURRENT = "3.6";
-const MANIFEST_IN_PLACE = ["3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
+const MANIFEST_CURRENT = "3.7";
+const MANIFEST_IN_PLACE = ["3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
 const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
@@ -449,7 +449,9 @@ function backfillProjectScale(repo) {
 
 function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
   let changed = false;
+  let upgradedVersion = false;
   if (
+    manifest.version === "3.6" ||
     manifest.version === "3.5" ||
     manifest.version === "3.4" ||
     manifest.version === "3.3" ||
@@ -459,6 +461,7 @@ function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
   ) {
     manifest.version = MANIFEST_CURRENT;
     changed = true;
+    upgradedVersion = true;
   }
   // `markdown` storage is gone: normalize the field, and the per-document
   // pass below strips whatever frontmatter that mode left behind.
@@ -485,6 +488,23 @@ function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
   ) {
     manifest.project.scale = backfillProjectScale(repo);
     changed = true;
+  }
+  // Schema 3.7 added two measurement signals. Refresh them on any upgrade —
+  // signals are measurements; class/layout/decided_by (possible user
+  // decisions) are never re-derived.
+  const scaleRecord = isPlainObject(manifest.project && manifest.project.scale)
+    ? manifest.project.scale
+    : null;
+  if (upgradedVersion && scaleRecord) {
+    const signals = scaleRecord.signals;
+    if (
+      !isPlainObject(signals) ||
+      !("declared_dependencies" in signals) ||
+      !("flow_candidates" in signals)
+    ) {
+      scaleRecord.signals = computeScale(repo).signals;
+      changed = true;
+    }
   }
   const docs = manifest.documents || [];
   if (docs.some((doc) => !doc.description)) {

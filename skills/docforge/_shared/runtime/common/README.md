@@ -82,14 +82,22 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 - `special_files` — `SPECIAL_DOC_OUTPUTS` (AGENTS.md, CLAUDE.md,
   CLAUDE.local.md) and `SPECIAL_DOC_SOURCES` (agents-kernel.md, claude-md.md,
   claude-local-md.md).
-- `scale` — `compute_scale(repo, files=None, detections=None)` /
-  `computeScale(repo, files, detections)` returning
+- `scale` — `compute_scale(repo, files=None, detections=None, dependencies=None)` /
+  `computeScale(repo, files, detections, dependencies)` returning
   `{class, suggested_layout, signals}`; thresholds are tunable constants
-  (`SMALL_MAX_SOURCE_FILES`, `MEDIUM_MAX_SOURCE_FILES`,
-  `BOUNDARY_NUDGE_RATIO`, `PROFILE_NUDGE_THRESHOLD`). Read-only: reuses
-  `detect_profiles.inventory` and non-persisting detection. Pass `files` and
-  `detections` when the caller already walked the repository — `init` does, so
-  one walk serves both the discovery record and the scale record.
+  (`SMALL_MAX_SOURCE_FILES` = 49, `MEDIUM_MAX_SOURCE_FILES` = 200,
+  `DEP_NUDGE_SMALL|MEDIUM`, `FLOW_NUDGE_SMALL|MEDIUM`,
+  `BOUNDARY_NUDGE_RATIO`, `PROFILE_NUDGE_THRESHOLD`). Classification:
+  source files < 50 → `small` (layout `compact`), 50–200 → `medium`, > 200 →
+  `large` (both `standard`). Declared-dependency breadth (`manifest_deps`)
+  and flow breadth (`.docforge/flow-index.json` rows, when present) promote
+  at most one class above the source-file class; the confirmed-profile count
+  still nudges boundary-adjacent repos. `signals` carries `tracked_files`,
+  `source_files`, `confirmed_profiles`, `declared_dependencies`, and
+  `flow_candidates`. Read-only: reuses `detect_profiles.inventory` and
+  non-persisting detection. Pass `files`, `detections`, and `dependencies`
+  when the caller already walked the repository — `init` does, so one walk
+  serves both the discovery record and the scale record.
 
 ## Where invoked
 
@@ -104,7 +112,8 @@ consumers:
 - `manifest/` — `_util`, `plan`, `provenance_frontmatter`, `provenance_store`,
   `evidence_hash`.
 - `validation/` — `_util`, `provenance_frontmatter`, `special_files`.
-- `catalog/` — `manifest_deps` (via `detect_profiles`).
+- `catalog/` — `manifest_deps` (via `detect_profiles`), `scale` (via
+  `detect_profiles --emit-gate-pack`, lazily to avoid the import cycle).
 - `portfolio/` — `manifest_deps` (via `discover_child_repos`).
 - `dashboard/` — `_util`, `provenance_frontmatter`, `provenance_store`,
   `evidence_hash`.

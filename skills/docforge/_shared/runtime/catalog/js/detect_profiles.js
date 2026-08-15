@@ -304,6 +304,10 @@ function emitGatePack(repo) {
     cues,
     excerpts: excerpts(repo, evidencePaths, files),
     dependencies: dependencySummary(dependencies),
+    // Lazy require: common/scale requires this module, so a module-level
+    // require here would be circular. The pack reuses the same walk and
+    // extraction.
+    scale: require("../../common/js/scale.js").computeScale(repo, files, detections, dependencies),
     catalog_ids: catalogIds,
     query_hints: queryHints,
     cue_hints: queryCatalog.loadIndex().cue_hints || [],

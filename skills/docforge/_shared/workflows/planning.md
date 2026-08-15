@@ -155,6 +155,14 @@ common case). See
 "Session persistence" for the mechanics every later step, including spawned
 parallel writers, relies on.
 
+`init` also detects project scale and records `project.scale` with
+`decided_by: "detected"` — no flags needed when intake confirmed the detected
+class and layout. Only when intake recorded an override does `init` carry it:
+`--scale-class <small|medium|large>` and/or `--layout <compact|standard>`,
+which records `decided_by: "user"` with the detected class preserved as
+`detected_class`. The compact fold is automatic whenever the confirmed layout
+is `compact`.
+
 The dry run is the exact active manifest tree and prints, for every selected
 document, its group/type, target depth, required evidence, selection origin,
 and write order. When the confirmed layout is `compact`, `init` /

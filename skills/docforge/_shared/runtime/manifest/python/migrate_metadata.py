@@ -45,8 +45,8 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-MANIFEST_CURRENT = "3.6"
-MANIFEST_IN_PLACE = ("3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
+MANIFEST_CURRENT = "3.7"
+MANIFEST_IN_PLACE = ("3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
@@ -495,9 +495,11 @@ def migrate_manifest_object(
     demote_incomplete: bool = False,
 ) -> bool:
     changed = False
-    if manifest.get("version") in {"3.5", "3.4", "3.3", "3.2", "3.1", "3.0"}:
+    upgraded_version = False
+    if manifest.get("version") in {"3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"}:
         manifest["version"] = MANIFEST_CURRENT
         changed = True
+        upgraded_version = True
     project = manifest.get("project")
     # `markdown` storage is gone: normalize the field, and the per-document
     # pass below strips whatever frontmatter that mode left behind.
@@ -510,6 +512,17 @@ def migrate_manifest_object(
     if isinstance(project, dict) and not isinstance(project.get("scale"), dict):
         project["scale"] = backfill_project_scale(repo)
         changed = True
+    # Schema 3.7 added two measurement signals. Refresh them on any upgrade —
+    # signals are measurements; class/layout/decided_by (possible user
+    # decisions) are never re-derived.
+    scale_record = project.get("scale") if isinstance(project, dict) else None
+    if upgraded_version and isinstance(scale_record, dict):
+        signals = scale_record.get("signals")
+        if not isinstance(signals, dict) or (
+            "declared_dependencies" not in signals or "flow_candidates" not in signals
+        ):
+            scale_record["signals"] = scale.compute_scale(repo)["signals"]
+            changed = True
     docs = manifest.get("documents", [])
     if any(not doc.get("description") for doc in docs):
         by_id, by_type, by_path = load_catalog_maps()

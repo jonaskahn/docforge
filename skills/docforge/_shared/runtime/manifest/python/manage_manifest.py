@@ -43,7 +43,7 @@ TRANSITIONS = {
     "retired": {"planned"},
 }
 TOOL_VERSION = GENERATOR_VERSION
-MANIFEST_VERSION = "3.6"
+MANIFEST_VERSION = "3.7"
 USER_CONFIRMED_TRIGGERS = {
     "new-trust-boundary", "per-interaction-review", "regulated-workload",
     "high-criticality", "new-external-integration", "new-data-classification",
@@ -736,7 +736,11 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     new_tier = args.tier or manifest["project"]["tier"]
     project = manifest["project"]
     current_scale = project.get("scale") or {}
-    new_layout = args.layout or current_scale.get("layout", "standard")
+    new_layout = (
+        args.layout
+        or (scale.LAYOUT_BY_CLASS[args.scale_class] if args.scale_class else None)
+        or current_scale.get("layout", "standard")
+    )
     raw: dict[str, list[str]] = {}
     for dimension in PROFILE_DIMENSIONS:
         singular = "audience" if dimension == "audiences" else dimension[:-1]
@@ -778,21 +782,34 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
     manifest["project"]["tier"] = new_tier
     manifest["project"]["profiles"] = profiles
-    if args.layout and args.layout != current_scale.get("layout"):
+    if args.scale_class or args.layout:
         if current_scale.get("class"):
             scale_record = dict(current_scale)
-            if "signals" not in scale_record:
-                scale_record["signals"] = scale.compute_scale(args.repo)["signals"]
         else:
             # A pre-3.5 manifest reconciled before migrate has no usable prior
             # record. Detect a complete one rather than emit a record missing
             # the schema-required `class`.
-            scale_record = resolve_scale(args.repo, None, args.layout)
-        scale_record["layout"] = args.layout
+            scale_record = resolve_scale(args.repo, args.scale_class, args.layout)
+        old_class = scale_record.get("class")
+        old_layout = scale_record.get("layout", "standard")
+        if args.scale_class and args.scale_class != old_class:
+            scale_record["class"] = args.scale_class
+            # A class change carries its class-default layout unless the user
+            # also named a layout.
+            if not args.layout:
+                scale_record["layout"] = scale.LAYOUT_BY_CLASS[args.scale_class]
+        if args.layout and args.layout != old_layout:
+            scale_record["layout"] = args.layout
         scale_record["decided_by"] = "user"
         scale_record["decided_at"] = now_iso()
+        detected = scale.compute_scale(args.repo)
+        scale_record["detected_class"] = detected["class"]
+        scale_record["signals"] = detected["signals"]
         manifest["project"]["scale"] = scale_record
-        print(f"  layout: {current_scale.get('layout', 'standard')} -> {args.layout}")
+        if old_class != scale_record.get("class"):
+            print(f"  scale class: {old_class} -> {scale_record['class']}")
+        if old_layout != scale_record.get("layout"):
+            print(f"  layout: {old_layout} -> {scale_record['layout']}")
     save_manifest(args.repo, manifest)
     print(f"Reconcile {args.repo}:")
     print(f"  tier: {old_tier} -> {new_tier}")
@@ -1233,6 +1250,7 @@ def build_parser() -> argparse.ArgumentParser:
     reconcile = sub.add_parser("reconcile")
     add_repo(reconcile)
     reconcile.add_argument("--tier", choices=["spine", "diligence", "portfolio"])
+    reconcile.add_argument("--scale-class", choices=["small", "medium", "large"])
     reconcile.add_argument("--layout", choices=["compact", "standard"])
     reconcile.add_argument("--shape", action="append", default=[])
     reconcile.add_argument("--platform", action="append", default=[])

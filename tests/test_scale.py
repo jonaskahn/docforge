@@ -2,9 +2,10 @@
 backfill — Python/Node parity throughout.
 
 The classification helper (`compute_scale` / `computeScale`) is a shared
-library with three classes keyed on source-file count, a confirmed-profile
-nudge at class boundaries, and a layout suggestion that never overrides a
-user decision recorded on the manifest.
+library with three classes keyed on source-file count (small < 50), declared
+dependency and flow breadth promoting at most one class above that base, a
+confirmed-profile nudge at class boundaries, and a layout suggestion that
+never overrides a user decision recorded on the manifest.
 """
 
 from __future__ import annotations
@@ -20,6 +21,11 @@ from _support import ROOT, initialize, load_manifest, run
 
 SHARED_ROOT = ROOT / "skills" / "docforge" / "_shared"
 sys.path.insert(0, str(SHARED_ROOT))
+
+SIGNAL_KEYS = {
+    "tracked_files", "source_files", "confirmed_profiles",
+    "declared_dependencies", "flow_candidates",
+}
 
 
 def compute_scale_py(repo: Path) -> dict:
@@ -44,11 +50,45 @@ def compute_scale_js(repo: Path) -> dict:
     return json.loads(result.stdout)
 
 
+def assert_parity(test: unittest.TestCase, repo: Path) -> dict:
+    py = compute_scale_py(repo)
+    js = compute_scale_js(repo)
+    test.assertEqual(py, js)
+    test.assertEqual(set(py["signals"]), SIGNAL_KEYS)
+    return py
+
+
 def seed_source_files(repo: Path, count: int) -> None:
     src = repo / "src"
     src.mkdir(parents=True, exist_ok=True)
     for index in range(count):
         (src / f"mod_{index}.py").write_text("x = 1\n", encoding="utf-8")
+
+
+def seed_dependencies(repo: Path, count: int) -> None:
+    (repo / "package.json").write_text(
+        json.dumps({"dependencies": {f"dep-{index}": "1.0.0" for index in range(count)}}),
+        encoding="utf-8",
+    )
+
+
+def seed_flow_index(repo: Path, total: int) -> None:
+    target = repo / ".docforge" / "flow-index.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    flows = [
+        {
+            "id": f"flow-{index}", "name": f"Flow {index}", "slug": f"flow-{index}",
+            "priority": "main", "status": "main",
+        }
+        for index in range(total)
+    ]
+    target.write_text(json.dumps({
+        "version": "1.1",
+        "generated_at": "2026-07-29T00:00:00+00:00",
+        "sources": ["fixture"],
+        "summary": {"total": total, "main": total},
+        "flows": flows,
+    }, indent=2) + "\n", encoding="utf-8")
 
 
 def seed_three_confirmed_profiles(repo: Path) -> None:
@@ -69,37 +109,93 @@ class ScaleClassificationTests(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as tmp:
                     repo = Path(tmp)
                     seed_source_files(repo, count)
-                    py = compute_scale_py(repo)
-                    js = compute_scale_js(repo)
-                    self.assertEqual(py, js)
-                    self.assertEqual(py["class"], expected)
-                    self.assertEqual(py["suggested_layout"], layout)
-                    self.assertEqual(py["signals"]["tracked_files"], count)
-                    self.assertEqual(py["signals"]["source_files"], count)
-                    self.assertEqual(py["signals"]["confirmed_profiles"], 0)
+                    scale = assert_parity(self, repo)
+                    self.assertEqual(scale["class"], expected)
+                    self.assertEqual(scale["suggested_layout"], layout)
+                    signals = scale["signals"]
+                    self.assertEqual(signals["tracked_files"], count)
+                    self.assertEqual(signals["source_files"], count)
+                    self.assertEqual(signals["confirmed_profiles"], 0)
+                    self.assertEqual(signals["declared_dependencies"], 0)
+                    self.assertEqual(signals["flow_candidates"], 0)
+
+    def test_small_boundary_is_50_source_files(self) -> None:
+        for count, expected in ((49, "small"), (50, "medium")):
+            with self.subTest(count=count):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_source_files(repo, count)
+                    self.assertEqual(assert_parity(self, repo)["class"], expected)
+
+    def test_declared_dependencies_promote_one_class(self) -> None:
+        # 30 source files (small) + 40 declared deps -> medium.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_source_files(repo, 30)
+            seed_dependencies(repo, 40)
+            scale = assert_parity(self, repo)
+            self.assertEqual(scale["class"], "medium")
+            self.assertEqual(scale["signals"]["declared_dependencies"], 40)
+        # 39 deps stay small.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_source_files(repo, 30)
+            seed_dependencies(repo, 39)
+            self.assertEqual(assert_parity(self, repo)["class"], "small")
+        # 150 source files (medium) + 200 declared deps -> large.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_source_files(repo, 150)
+            seed_dependencies(repo, 200)
+            self.assertEqual(assert_parity(self, repo)["class"], "large")
+
+    def test_flow_candidates_promote_one_class(self) -> None:
+        # 30 source files (small) + 10 flow candidates -> medium.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_source_files(repo, 30)
+            seed_flow_index(repo, 10)
+            scale = assert_parity(self, repo)
+            self.assertEqual(scale["class"], "medium")
+            self.assertEqual(scale["signals"]["flow_candidates"], 10)
+        # 9 flow candidates stay small.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_source_files(repo, 30)
+            seed_flow_index(repo, 9)
+            self.assertEqual(assert_parity(self, repo)["class"], "small")
+        # 150 source files (medium) + 40 flow candidates -> large.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_source_files(repo, 150)
+            seed_flow_index(repo, 40)
+            self.assertEqual(assert_parity(self, repo)["class"], "large")
+
+    def test_nudges_never_promote_more_than_one_class(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            seed_source_files(repo, 30)
+            seed_dependencies(repo, 60)
+            seed_flow_index(repo, 20)
+            self.assertEqual(assert_parity(self, repo)["class"], "medium")
 
     def test_confirmed_profiles_nudge_boundary_up_one_class(self) -> None:
-        # 12 source files: below the nudge zone (80% of 16 is 12.8) — stays small.
+        # 39 source files: below the nudge zone (80% of 50 is 40) — stays small.
         with tempfile.TemporaryDirectory() as tmp:
-            small_repo = Path(tmp) / "twelve"
+            small_repo = Path(tmp) / "thirty-nine"
             small_repo.mkdir()
-            seed_source_files(small_repo, 12)
+            seed_source_files(small_repo, 39)
             seed_three_confirmed_profiles(small_repo)
-            py = compute_scale_py(small_repo)
-            self.assertEqual(py, compute_scale_js(small_repo))
-            self.assertEqual(py["class"], "small")
-            self.assertEqual(py["signals"]["confirmed_profiles"], 3)
-            self.assertEqual(py["signals"]["tracked_files"], 14)
-        # 13 source files: inside the nudge zone — nudged to medium.
+            scale = assert_parity(self, small_repo)
+            self.assertEqual(scale["class"], "small")
+            self.assertEqual(scale["signals"]["confirmed_profiles"], 3)
+        # 40 source files: inside the nudge zone — nudged to medium.
         with tempfile.TemporaryDirectory() as tmp:
-            nudge_repo = Path(tmp) / "thirteen"
+            nudge_repo = Path(tmp) / "forty"
             nudge_repo.mkdir()
-            seed_source_files(nudge_repo, 13)
+            seed_source_files(nudge_repo, 40)
             seed_three_confirmed_profiles(nudge_repo)
-            py = compute_scale_py(nudge_repo)
-            self.assertEqual(py, compute_scale_js(nudge_repo))
-            self.assertEqual(py["class"], "medium")
-            self.assertEqual(py["signals"]["confirmed_profiles"], 3)
+            self.assertEqual(assert_parity(self, nudge_repo)["class"], "medium")
 
     def test_ignored_directories_never_count(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -109,9 +205,29 @@ class ScaleClassificationTests(unittest.TestCase):
             (repo / "node_modules" / "pkg" / "index.js").write_text("x\n", encoding="utf-8")
             (repo / ".git").mkdir()
             (repo / ".docforge").mkdir()
-            py = compute_scale_py(repo)
-            self.assertEqual(py, compute_scale_js(repo))
-            self.assertEqual(py["signals"]["tracked_files"], 3)
+            scale = assert_parity(self, repo)
+            self.assertEqual(scale["signals"]["tracked_files"], 3)
+
+
+class GatePackScaleTests(unittest.TestCase):
+    def test_gate_pack_carries_scale(self) -> None:
+        """The discovery gate pack feeds intake's discovery brief; its `scale`
+        field must be present, complete, and identical across runtimes."""
+        packs = []
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                seed_source_files(repo, 30)
+                seed_dependencies(repo, 40)
+                result = run(runtime, "detect_profiles", "--repo", str(repo), "--emit-gate-pack")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                packs.append(json.loads(result.stdout))
+        self.assertEqual(packs[0]["scale"], packs[1]["scale"])
+        scale = packs[0]["scale"]
+        self.assertEqual(scale["class"], "medium")
+        self.assertEqual(scale["suggested_layout"], "standard")
+        self.assertEqual(set(scale["signals"]), SIGNAL_KEYS)
+        self.assertEqual(scale["signals"]["declared_dependencies"], 40)
 
 
 class ScaleRecordTests(unittest.TestCase):
@@ -127,7 +243,22 @@ class ScaleRecordTests(unittest.TestCase):
                     self.assertEqual(scale["layout"], "compact")
                     self.assertEqual(scale["decided_by"], "detected")
                     self.assertNotIn("detected_class", scale)
+                    self.assertEqual(set(scale["signals"]), SIGNAL_KEYS)
                     self.assertEqual(scale["signals"]["source_files"], 7)
+
+    def test_init_detects_promoted_class(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_source_files(repo, 30)
+                    seed_dependencies(repo, 40)
+                    self.assertEqual(initialize(runtime, repo, "spine", layout=None).returncode, 0)
+                    scale = load_manifest(repo)["project"]["scale"]
+                    self.assertEqual(scale["class"], "medium")
+                    self.assertEqual(scale["layout"], "standard")
+                    self.assertEqual(scale["decided_by"], "detected")
+                    self.assertEqual(scale["signals"]["declared_dependencies"], 40)
 
     def test_init_explicit_flags_record_user_override(self) -> None:
         for runtime in ("py", "js"):
@@ -148,8 +279,47 @@ class ScaleRecordTests(unittest.TestCase):
                     self.assertEqual(scale["detected_class"], "small")
                     self.assertEqual(scale["signals"]["source_files"], 7)
 
+    def test_reconcile_scale_class_records_user_override(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_source_files(repo, 7)
+                    self.assertEqual(initialize(runtime, repo, "spine", layout=None).returncode, 0)
+                    result = run(
+                        runtime, "manage_manifest", "reconcile", "--repo", str(repo),
+                        "--scale-class", "medium",
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("scale class: small -> medium", result.stdout)
+                    scale = load_manifest(repo)["project"]["scale"]
+                    self.assertEqual(scale["class"], "medium")
+                    self.assertEqual(scale["layout"], "standard")
+                    self.assertEqual(scale["decided_by"], "user")
+                    self.assertEqual(scale["detected_class"], "small")
+                    self.assertEqual(set(scale["signals"]), SIGNAL_KEYS)
+                    # Standard tree is now selected — compact entries are gone.
+                    ids = {doc["id"] for doc in load_manifest(repo)["documents"]}
+                    self.assertNotIn("product_compact", ids)
+                    self.assertIn("product_index", ids)
+
+    def test_reconcile_without_scale_flags_leaves_record_untouched(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_source_files(repo, 7)
+                    self.assertEqual(initialize(runtime, repo, "spine", layout=None).returncode, 0)
+                    before = load_manifest(repo)["project"]["scale"]
+                    result = run(
+                        runtime, "manage_manifest", "reconcile", "--repo", str(repo),
+                        "--audience", "operators",
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(load_manifest(repo)["project"]["scale"], before)
+
     def test_migrate_backfills_missing_scale(self) -> None:
-        for from_version in ("3.3", "3.4"):
+        for from_version in ("3.3", "3.4", "3.6"):
             for runtime in ("py", "js"):
                 with self.subTest(runtime=runtime, from_version=from_version):
                     with tempfile.TemporaryDirectory() as tmp:
@@ -164,14 +334,15 @@ class ScaleRecordTests(unittest.TestCase):
                         migrated = run(runtime, "migrate_metadata", "--repo", str(repo))
                         self.assertIn(migrated.returncode, (0, 1), migrated.stderr)
                         reloaded = load_manifest(repo)
-                        self.assertEqual(reloaded["version"], "3.6")
+                        self.assertEqual(reloaded["version"], "3.7")
                         scale = reloaded["project"]["scale"]
                         self.assertEqual(scale["class"], "small")
                         self.assertEqual(scale["layout"], "compact")
                         self.assertEqual(scale["decided_by"], "detected")
+                        self.assertEqual(set(scale["signals"]), SIGNAL_KEYS)
                         self.assertEqual(scale["signals"]["source_files"], 5)
 
-    def test_migrate_never_overwrites_existing_scale(self) -> None:
+    def test_migrate_refreshes_signals_but_never_user_decisions(self) -> None:
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime):
                 with tempfile.TemporaryDirectory() as tmp:
@@ -180,7 +351,7 @@ class ScaleRecordTests(unittest.TestCase):
                     self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
                     manifest_path = repo / ".docforge" / "manifest.json"
                     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                    manifest["version"] = "3.4"
+                    manifest["version"] = "3.6"
                     manifest["project"]["scale"] = {
                         "class": "large",
                         "layout": "standard",
@@ -193,11 +364,15 @@ class ScaleRecordTests(unittest.TestCase):
                     migrated = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertIn(migrated.returncode, (0, 1), migrated.stderr)
                     reloaded = load_manifest(repo)
-                    self.assertEqual(reloaded["version"], "3.6")
+                    self.assertEqual(reloaded["version"], "3.7")
                     scale = reloaded["project"]["scale"]
                     self.assertEqual(scale["class"], "large")
+                    self.assertEqual(scale["layout"], "standard")
                     self.assertEqual(scale["decided_by"], "user")
                     self.assertEqual(scale["decided_at"], "2026-01-01T00:00:00+00:00")
+                    self.assertEqual(scale["detected_class"], "small")
+                    self.assertEqual(set(scale["signals"]), SIGNAL_KEYS)
+                    self.assertEqual(scale["signals"]["source_files"], 5)
 
 
 class ScaleWalkCostTests(unittest.TestCase):
@@ -276,7 +451,7 @@ class ScaleBackfillGuardTests(unittest.TestCase):
                         self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
                         manifest_path = repo / ".docforge" / "manifest.json"
                         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                        manifest["version"] = "3.4"
+                        manifest["version"] = "3.6"
                         manifest["project"]["scale"] = bogus
                         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
                         migrated = run(runtime, "migrate_metadata", "--repo", str(repo))
@@ -295,6 +470,7 @@ class ScaleSchemaTests(unittest.TestCase):
         schema = json.loads(
             (SHARED_ROOT / ".metadata" / "manifest-schema.json").read_text(encoding="utf-8"),
         )
+        self.assertEqual(schema["properties"]["version"]["const"], "3.7")
         self.assertIn("scale", schema["properties"]["project"]["required"])
         scale = schema["properties"]["project"]["properties"]["scale"]
         self.assertEqual(
@@ -304,10 +480,7 @@ class ScaleSchemaTests(unittest.TestCase):
         self.assertEqual(scale["properties"]["class"]["enum"], ["small", "medium", "large"])
         self.assertEqual(scale["properties"]["layout"]["enum"], ["compact", "standard"])
         self.assertEqual(scale["properties"]["decided_by"]["enum"], ["detected", "user"])
-        self.assertEqual(
-            set(scale["properties"]["signals"]["required"]),
-            {"tracked_files", "source_files", "confirmed_profiles"},
-        )
+        self.assertEqual(set(scale["properties"]["signals"]["required"]), SIGNAL_KEYS)
 
 
 if __name__ == "__main__":

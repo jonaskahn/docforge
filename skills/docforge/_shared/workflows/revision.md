@@ -54,7 +54,20 @@ apply in scope:
     work.
 2. **Add documents from detect / catalog** — re-run profile detection and
    condition evidence when needed; select newly evidenced static and dynamic
-   types; add them to the manifest in `write_order`.
+   types; add them to the manifest in `write_order`. The same detect run
+   re-derives project scale from the gate pack's `scale` field; see "Scale /
+   layout on revise" below.
+2a. **Re-derive scale / layout** — compare the gate pack's detected class and
+    suggested layout with `project.scale` on the manifest. When
+    `decided_by: "detected"` and detection disagrees (for example the repo
+    grew past a threshold, or gained dependency / flow breadth), surface the
+    drift in the confirmation summary as a recommended change; when
+    `decided_by: "user"`, report the drift as a fact and change nothing
+    unless the user explicitly asks — a user decision is never silently
+    re-derived. Apply a confirmed change with
+    `manage_manifest.{py,js} reconcile --scale-class` / `--layout`
+    (class-only changes are a plain record update; layout changes flow
+    through the annotated tree and Retirement as in step 1c).
 3. **Fill missing documents** — any selected catalog type, new instruction,
    or contract that now requires a file and has no manifest entry is planned
    and written (via [`writing.md`](writing.md)). New craft instructions that
@@ -162,15 +175,20 @@ add action. Apply the explicitly confirmed result mechanically with
 ```sh
 python3 runtime/cli/python/manage_manifest.py reconcile --repo <repo> \
   [--tier <spine|diligence|portfolio>] \
+  [--scale-class <small|medium|large>] [--layout <compact|standard>] \
   [--shape <id> ...] [--platform <id> ...] [--framework <id> ...] \
   [--concern <id> ...] [--audience <id> ...]
 ```
 
 Rules:
 
-- Omitted dimension flags keep the manifest's current values.
+- Omitted dimension flags keep the manifest's current values, including the
+  scale record — reconcile only rewrites `project.scale` when `--scale-class`
+  or `--layout` is passed.
 - Pass `--audience none` (or the matching dimension flag with `none`) to clear
   that dimension entirely.
+- A scale flag records `decided_by: "user"` with fresh `signals` and the
+  detected class preserved as `detected_class`.
 - Newly applicable documents are added as `planned` in write order.
 - Planned documents that are no longer applicable are removed from the plan
   (`removed-planned` in the report).
@@ -281,13 +299,14 @@ dashboard.
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
 2. Migration is unconditional (see [`validation.md`](validation.md) "Manifest
-   and provenance"): upgrade manifest 3.5 / 3.4 / 3.3 (or
-   3.2 / 3.1 / 3.0 / provenance 1.0) to 3.6 / 2.1 — seeding each document's
+   and provenance"): upgrade manifest 3.6 / 3.5 / 3.4 / 3.3 (or
+   3.2 / 3.1 / 3.0 / provenance 1.0) to 3.7 / 2.1 — seeding each document's
    catalog-owned `description` from the catalog `summary`, normalizing
    `provenance_storage` to `json`, the project's `unmanaged_docs`
-   list (default empty), and the project's `scale` record
-   (`decided_by: "detected"` when absent) — and re-register
-   any pre-3.0 shape as 3.6
+   list (default empty), the project's `scale` record
+   (`decided_by: "detected"` when absent, and its measurement `signals`
+   refreshed with the 3.7 dependency and flow fields) — and re-register
+   any pre-3.0 shape as 3.7
    (adopting legacy written documents as `generated` with provenance 2.1,
    demoting incomplete or unconvertible documents to `in_progress`), and
    print the migration report. The same run moves

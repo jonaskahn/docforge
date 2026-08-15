@@ -33,7 +33,7 @@ gate's exit code reflects real defects only.
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `3.6`; there is no secondary runtime state file.
+Its schema version is `3.7`; there is no secondary runtime state file.
 
 **Migration is unconditional.** Every invocation that touches an existing
 manifest — every `/docforge-revise` path regardless of scope argument,
@@ -43,7 +43,7 @@ covering both manifest schema and provenance storage. Migration is idempotent,
 so an already-current manifest reports a clean no-op; that cheapness is why
 the run is unconditional, never "when needed".
 
-Manifest 3.5 (and 3.4 / 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
+Manifest 3.6 (and 3.5 / 3.4 / 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
 `migrate_metadata.{py,js}`
 (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
 resume, revision, or provenance synchronization — every run, version-agnostic
@@ -52,7 +52,9 @@ the catalog `summary`, normalizes `provenance_storage` to `json` (moving any
 surviving inline frontmatter into the sidecars), the project's
 `unmanaged_docs` list (empty by default), and the project's `scale` record
 (`decided_by: "detected"` from live detection when absent; a present record is
-never overwritten). A
+never overwritten — its measurement `signals` are refreshed on upgrade with
+the 3.7 dependency and flow fields, while `class`, `layout`, and
+`decided_by` stand). A
 legacy manifest of any
 pre-3.0 version (1.1 `project_context` / `document_groups`, 2.0 flat
 `documents` with overlays, or another shape) is re-registered by the same

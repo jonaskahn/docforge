@@ -45,7 +45,7 @@ python3 runtime/cli/python/validate_metadata.py   # node runtime/cli/js/validate
 ```
 
 No options. Read-only. Checks catalog validity and version (2.18.0), generated
-router freshness, schema versions (manifest 3.6, flow index 1.1, provenance
+router freshness, schema versions (manifest 3.7, flow index 1.1, provenance
 2.0/2.1), profile registry shape, discovery-gate schema, template provenance,
 Python/JS launcher peer presence, public CLI contract tokens, release-version
 agreement (plugin/marketplace/catalog), package descriptions, obsolete files,

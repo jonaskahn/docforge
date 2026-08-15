@@ -324,6 +324,10 @@ def emit_gate_pack(repo: Path) -> dict:
                 query_hints[profile["id"]] = list(profile["query_hints"])
     # Side effect for WRITE: tech-stack reads this scratch instead of re-deriving.
     persist_manifest_deps(repo, dependencies)
+    # Lazy import: common.scale imports this module, so a module-level import
+    # here would be circular. The pack reuses the same walk and extraction.
+    from runtime.common.python import scale as scale_module
+
     return {
         "repo": str(repo.resolve()),
         "detections": detections,
@@ -332,6 +336,7 @@ def emit_gate_pack(repo: Path) -> dict:
         "cues": cues,
         "excerpts": _excerpts(repo, evidence_paths, files),
         "dependencies": _dependency_summary(dependencies),
+        "scale": scale_module.compute_scale(repo, files=files, detections=detections, dependencies=dependencies),
         "catalog_ids": catalog_ids,
         "query_hints": query_hints,
         "cue_hints": query_catalog.load_index().get("cue_hints", []),

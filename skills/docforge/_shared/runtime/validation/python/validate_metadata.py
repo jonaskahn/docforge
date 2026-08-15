@@ -74,8 +74,8 @@ def validate() -> list[str]:
         errors.append("split catalog index.json is missing")
     if (metadata / "catalog.json").is_file():
         errors.append("obsolete monolith catalog.json remains; use .metadata/catalog/")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.6":
-        errors.append("manifest schema must require version 3.6")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.7":
+        errors.append("manifest schema must require version 3.7")
     project_required = set(manifest_schema.get("properties", {}).get("project", {}).get("required", []))
     if "provenance_storage" not in project_required:
         errors.append("manifest schema project must require provenance_storage")
@@ -86,8 +86,8 @@ def validate() -> list[str]:
         errors.append("shipped .metadata/manifest.json example is missing")
     else:
         example_manifest = read_json(example_manifest_path)
-        if example_manifest.get("version") != "3.6":
-            errors.append("shipped .metadata/manifest.json example must use version 3.6")
+        if example_manifest.get("version") != "3.7":
+            errors.append("shipped .metadata/manifest.json example must use version 3.7")
         example_project = example_manifest.get("project", {})
         missing_project_fields = project_required - set(example_project)
         if missing_project_fields:

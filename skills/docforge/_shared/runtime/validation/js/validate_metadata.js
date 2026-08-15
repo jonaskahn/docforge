@@ -71,8 +71,8 @@ function validate() {
   if (fs.existsSync(path.join(metadata, "catalog.json"))) {
     errors.push("obsolete monolith catalog.json remains; use .metadata/catalog/");
   }
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.6") {
-    errors.push("manifest schema must require version 3.6");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.7") {
+    errors.push("manifest schema must require version 3.7");
   }
   const projectRequired = new Set(((((manifestSchema.properties || {}).project || {}).required) || []));
   if (!projectRequired.has("provenance_storage")) {
@@ -86,8 +86,8 @@ function validate() {
     errors.push("shipped .metadata/manifest.json example is missing");
   } else {
     const exampleManifest = readJson(exampleManifestPath);
-    if (exampleManifest.version !== "3.6") {
-      errors.push("shipped .metadata/manifest.json example must use version 3.6");
+    if (exampleManifest.version !== "3.7") {
+      errors.push("shipped .metadata/manifest.json example must use version 3.7");
     }
     const exampleProject = exampleManifest.project || {};
     const missingProjectFields = [...projectRequired].filter((field) => !(field in exampleProject)).sort();
