@@ -19,10 +19,10 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
 
 | Script | js/py | Kind | Purpose |
 |---|---|---|---|
-| `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `reconcile` / `finish` |
+| `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `set-storage` / `reconcile` / `finish` |
 | `check_staleness` | both | CLI | Provenance blob drift report (raw / normalized / range-scoped); optional provenance sync |
 | `hash_evidence` | both | CLI | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one cited source |
-| `migrate_metadata` | both | CLI | Idempotent manifest 3.2 / provenance 2.1 upgrade |
+| `migrate_metadata` | both | CLI | Idempotent manifest 3.3 / provenance 2.1 upgrade + storage moves |
 
 ## Details
 
@@ -81,13 +81,20 @@ non-UTF-8 span).
 python3 runtime/cli/python/migrate_metadata.py --repo <repo> [--manifest <path>] [--dry-run] [--report]
 ```
 
-Upgrades manifest 3.1 (or 3.0 / provenance 1.0) to 3.2 / 2.1 — seeding each
-document's catalog-owned `description` from the catalog `summary` — and
+Upgrades manifest 3.2 (or 3.1 / 3.0 / provenance 1.0) to 3.3 / 2.1 —
+seeding each document's catalog-owned `description` from the catalog
+`summary` and the project's `provenance_storage` (default `json`) — and
 re-registers older
 shapes; adopts legacy written documents, scaffolds incomplete provenance,
 clears failed audits, demotes incomplete written documents to `in_progress`.
-`--dry-run` is read-only; `--report` changes output format **without** making
-the run read-only. Exit `1` on missing documents or failed conversion.
+In `json` storage the same run moves inline frontmatter into the folder
+sidecars (`.docforge/provenance/<folder>.json`) and strips it from the
+markdown. `--dry-run` is read-only; `--report` changes output format
+**without** making the run read-only. Exit `1` on missing documents or
+failed conversion.
+
+`manage_manifest set-storage json|markdown` flips the storage mode for every
+section-provenance document in either direction (`--dry-run` previews it).
 
 ## Where invoked
 
@@ -101,5 +108,5 @@ the run read-only. Exit `1` on missing documents or failed conversion.
 ## Boundaries
 
 Consumes `common/` libraries (`_util`, `plan`, `provenance_frontmatter`,
-`evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.2) and
+`evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.3) and
 flow-index schema (1.1) are enforced by `validation/validate_metadata`.

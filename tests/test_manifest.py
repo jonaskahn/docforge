@@ -72,7 +72,7 @@ class ManifestSelectionTests(unittest.TestCase):
                 result = initialize("py", repo, tier)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.2")
+                self.assertEqual(manifest["version"], "3.3")
                 self.assertEqual(manifest["project"]["tier"], tier)
                 self.assertEqual(
                     manifest["project"]["profiles"]["audiences"],
@@ -264,7 +264,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             )
             manifest = {
                 "version": "3.1",
-                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "provenance_storage": "markdown", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }},
@@ -328,7 +328,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             )
             doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
             manifest = {
-                "version": "3.1", "project": {"root": str(repo)},
+                "version": "3.1", "project": {"root": str(repo), "provenance_storage": "markdown"},
                 "documents": [{
                     "id": "root_readme", "type": "root-readme", "path": "README.md",
                     "status": "complete", "provenance_mode": "sections", "provenance": value,
@@ -361,7 +361,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             )
             doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
             manifest = {
-                "version": "3.1", "project": {"root": str(repo)},
+                "version": "3.1", "project": {"root": str(repo), "provenance_storage": "markdown"},
                 "documents": [{
                     "id": "root_readme", "type": "root-readme", "path": "README.md",
                     "status": "complete", "provenance_mode": "sections", "provenance": value,
@@ -394,7 +394,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             )
             doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
             manifest = {
-                "version": "3.1", "project": {"root": str(repo)},
+                "version": "3.1", "project": {"root": str(repo), "provenance_storage": "markdown"},
                 "documents": [{
                     "id": "root_readme", "type": "root-readme", "path": "README.md",
                     "status": "complete", "provenance_mode": "sections", "provenance": value,
@@ -427,7 +427,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             )
             doc.write_text(markdown_with_provenance(value, "# Readme\n"), encoding="utf-8")
             manifest = {
-                "version": "3.1", "project": {"root": str(repo)},
+                "version": "3.1", "project": {"root": str(repo), "provenance_storage": "markdown"},
                 "documents": [{
                     "id": "root_readme", "type": "root-readme", "path": "README.md",
                     "status": "complete", "provenance_mode": "sections", "provenance": value,
@@ -481,7 +481,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             stale_source.write_text("after\n", encoding="utf-8")
             manifest = {
                 "version": "3.1",
-                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "provenance_storage": "markdown", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }},
@@ -568,7 +568,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 "provenance": {"sections": []}, "audit": None,
             }
             manifest = {
-                "version": "3.1", "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                "version": "3.1", "project": {"name": "fixture", "root": str(repo), "tier": "spine", "provenance_storage": "markdown", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }}, "discovery": [],
@@ -618,6 +618,7 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             manifest = {
                 "version": "3.1", "project": {
                     "name": "fixture", "root": str(repo), "tier": "spine",
+                    "provenance_storage": "markdown",
                     "profiles": {"shapes": [], "platforms": [], "frameworks": [], "concerns": [], "audiences": []},
                 },
                 "discovery": [], "documents": [document], "metadata": {},
@@ -701,8 +702,9 @@ Body.
                 created = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--document", "arch_high_level")
                 self.assertEqual(created.returncode, 0, created.stderr)
                 text = (repo / "docs" / "architecture" / "high-level.md").read_text(encoding="utf-8")
-                self.assertTrue(text.startswith("---\nid: "))
-                self.assertIn(f'schema: "{SCHEMA_VERSION}"', text)
+                self.assertFalse(text.startswith("---"))
+                sidecar = json.loads((repo / ".docforge/provenance/docs/architecture.json").read_text(encoding="utf-8"))
+                self.assertEqual(sidecar["files"]["high-level.md"]["provenance"]["schema"], SCHEMA_VERSION)
                 result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
                 for category in (
                     "EMPTY PROVENANCE", "MISSING PROVENANCE", "LEGACY PROVENANCE",
@@ -725,7 +727,7 @@ Body.
                 "status": "complete", "provenance_mode": "sections", "provenance": value,
             }
             manifest = {
-                "version": "3.1", "project": {"root": str(repo)},
+                "version": "3.1", "project": {"root": str(repo), "provenance_storage": "markdown"},
                 "documents": [document],
             }
             manifest_path = repo / ".docforge" / "manifest.json"
@@ -973,7 +975,7 @@ Body.
             }
             manifest = {
                 "version": "3.1",
-                "project": {"name": "fixture", "root": str(repo), "tier": "diligence", "profiles": {
+                "project": {"name": "fixture", "root": str(repo), "tier": "diligence", "provenance_storage": "markdown", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }},
@@ -1155,6 +1157,10 @@ process.stdout.write(pf.emitYaml(value));
             manifest_path = repo / ".docforge" / "manifest.json"
             manifest_path.parent.mkdir()
             for runtime in ("py", "js"):
+                sidecar_dir = repo / ".docforge" / "provenance"
+                if sidecar_dir.exists():
+                    import shutil
+                    shutil.rmtree(sidecar_dir)
                 readme.write_text(
                     "---\n"
                     "docforge_provenance:\n"
@@ -1181,16 +1187,19 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 self.assertNotIn("REGENERATED", result.stdout)
                 text = readme.read_text(encoding="utf-8")
-                self.assertTrue(text.startswith("---\ndocforge_provenance:\n"), text[:80])
-                self.assertIn(f'schema: "{SCHEMA_VERSION}"', text)
-                self.assertIn('doc_id: "concepts_index"', text)
-                self.assertIn('generated_at: "2026-07-27T00:00:00Z"', text)
-                self.assertIn('tier: "diligence"', text)
-                self.assertIn('provider: "understand-anything"', text)
-                self.assertIn('flow: "native"', text)
-                self.assertIn('path: "docs/architecture/concepts/auth-rbac.md"', text)
-                self.assertIn(f'git_blob: "{blob}"', text)
-                self.assertIn('role: "doc"', text)
+                self.assertTrue(text.startswith("# Concepts"), text[:40])
+                sidecar = json.loads((repo / ".docforge/provenance/docs/architecture/concepts.json").read_text(encoding="utf-8"))
+                migrated = sidecar["files"]["README.md"]["provenance"]
+                self.assertEqual(migrated["schema"], SCHEMA_VERSION)
+                self.assertEqual(migrated["doc_id"], "concepts_index")
+                self.assertEqual(migrated["generated_at"], "2026-07-27T00:00:00Z")
+                self.assertEqual(migrated["tier"], "diligence")
+                self.assertEqual(migrated["graph"]["provider"], "understand-anything")
+                self.assertEqual(migrated["graph"]["flow"], "native")
+                source = migrated["sections"][0]["sources"][0]
+                self.assertEqual(source["path"], "docs/architecture/concepts/auth-rbac.md")
+                self.assertEqual(source["git_blob"], blob)
+                self.assertEqual(source["role"], "doc")
                 self.assertNotIn("graph_snapshot", text)
                 self.assertNotIn("<GENERATED_AT>", text)
                 self.assertNotIn("<TIER>", text)
@@ -1231,7 +1240,7 @@ process.stdout.write(pf.emitYaml(value));
             unparseable.write_text("---\n{\n---\n# Broken\n", encoding="utf-8")
             manifest = {
                 "version": "3.0",
-                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "provenance_storage": "markdown", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }},
@@ -1282,7 +1291,7 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertIn("# Broken", broken_text)
 
                 saved = load_manifest(repo)
-                self.assertEqual(saved["version"], "3.2")
+                self.assertEqual(saved["version"], "3.3")
                 self.assertEqual(saved["documents"][0]["provenance"]["schema"], SCHEMA_VERSION)
                 self.assertIn("generator", saved["documents"][0]["provenance"])
                 self.assertEqual(saved["documents"][1]["provenance"]["schema"], SCHEMA_VERSION)
@@ -1318,7 +1327,7 @@ process.stdout.write(pf.emitYaml(value));
             )
             manifest = {
                 "version": "3.1",
-                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "provenance_storage": "markdown", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }},
@@ -1341,7 +1350,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.2")
+                self.assertEqual(migrated["version"], "3.3")
                 self.assertIn("description", migrated["documents"][0])
                 self.assertEqual(migrated["documents"][0]["description"], "Self-introduction to the documentation: what the repo is, who it serves, and the reader question each selected section answers")
                 self.assertEqual(migrated["documents"][0]["provenance"]["schema"], "2.0")
@@ -1369,7 +1378,7 @@ process.stdout.write(pf.emitYaml(value));
             )
             manifest = {
                 "version": "3.1",
-                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "provenance_storage": "markdown", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }},
@@ -1392,7 +1401,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.2")
+                self.assertEqual(migrated["version"], "3.3")
                 self.assertEqual(migrated["documents"][0]["description"], "Writer-refined one-liner.")
 
     def test_obsolete_schema_defect_names_migrate_command(self) -> None:
@@ -1567,7 +1576,7 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.2")
+                    self.assertEqual(manifest["version"], "3.3")
                     self.assertEqual(manifest["project"]["tier"], "spine")
                     self.assertEqual(manifest["project"]["profiles"]["audiences"], ["coding-agents"])
                     docs = {doc["id"]: doc for doc in manifest["documents"]}
@@ -1582,8 +1591,10 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     self.assertEqual(source["path"], "src/main.ts")
                     self.assertEqual(source["role"], "code")
                     high_text = (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8")
-                    self.assertTrue(high_text.startswith(f'---\ndocforge_provenance:\n  schema: "{SCHEMA_VERSION}"\n'))
                     self.assertIn("# High-level\n\nContent.\n", high_text)
+                    arch_sidecar = json.loads((repo / ".docforge/provenance/docs/architecture.json").read_text(encoding="utf-8"))
+                    self.assertEqual(arch_sidecar["files"]["high-level.md"]["provenance"]["schema"], SCHEMA_VERSION)
+                    self.assertEqual(arch_sidecar["files"]["high-level.md"]["provenance"]["doc_id"], "arch_high_level")
 
                     overview = docs["product_overview"]
                     self.assertEqual(overview["status"], "generated")
@@ -1591,8 +1602,9 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     self.assertEqual(overview["provenance"]["sections"][0]["sources"][0]["path"], "package.json")
                     self.assertEqual(overview["provenance"]["sections"][0]["sources"][0]["role"], "manifest")
                     overview_text = (repo / "docs/product/overview.md").read_text(encoding="utf-8")
-                    self.assertTrue(overview_text.startswith(f'---\ndocforge_provenance:\n  schema: "{SCHEMA_VERSION}"\n'))
                     self.assertIn("# Overview\n\nBody.\n", overview_text)
+                    product_sidecar = json.loads((repo / ".docforge/provenance/docs/product.json").read_text(encoding="utf-8"))
+                    self.assertEqual(product_sidecar["files"]["overview.md"]["provenance"]["schema"], SCHEMA_VERSION)
 
                     self.assertEqual(docs["arch_low_level"]["status"], "planned")
                     self.assertEqual(docs["legacy_skip"]["status"], "skipped")
@@ -1745,9 +1757,9 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     try:
                         result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-                        self.assertIn("manifest: legacy manifest auto-migrated to 3.2", result.stdout)
+                        self.assertIn("manifest: legacy manifest auto-migrated to 3.3", result.stdout)
                         manifest = load_manifest(repo)
-                        self.assertEqual(manifest["version"], "3.2")
+                        self.assertEqual(manifest["version"], "3.3")
                         # scan/status must not perform the same auto-migration
                         # on a manifest that's already migrated -- this just
                         # confirms the migrated manifest is now readable by
@@ -1847,7 +1859,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.2")
+                    self.assertEqual(manifest["version"], "3.3")
                     self.assertEqual(manifest["project"]["tier"], "diligence")
                     self.assertEqual(manifest["project"]["name"], "legacy2")
                     self.assertEqual(manifest["project"]["profiles"]["shapes"], ["api-service"])
@@ -1865,8 +1877,10 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     self.assertEqual(high["provenance"]["generator"]["version"], "2.0")
                     self.assertEqual(high["provenance"]["sections"][0]["sources"][0]["role"], "code")
                     high_text = (repo / "docs/architecture/high-level.md").read_text(encoding="utf-8")
-                    self.assertTrue(high_text.startswith(f'---\ndocforge_provenance:\n  schema: "{SCHEMA_VERSION}"\n'))
                     self.assertIn("# High-level\n\nContent.\n", high_text)
+                    arch_sidecar = json.loads((repo / ".docforge/provenance/docs/architecture.json").read_text(encoding="utf-8"))
+                    self.assertEqual(arch_sidecar["files"]["high-level.md"]["provenance"]["schema"], SCHEMA_VERSION)
+                    self.assertEqual(arch_sidecar["files"]["high-level.md"]["provenance"]["generator"]["version"], "2.0")
 
                     notes = docs["po_release_notes"]
                     self.assertEqual(notes["type"], "release-notes")
@@ -1896,7 +1910,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     report = json.loads(result.stdout)
                     self.assertIn("re-registered from 0.9", report["results"][0]["detail"])
                     out = load_manifest(repo)
-                    self.assertEqual(out["version"], "3.2")
+                    self.assertEqual(out["version"], "3.3")
                     overview = next(doc for doc in out["documents"] if doc["id"] == "product_overview")
                     self.assertEqual(
                         overview["selection"]["origins"],

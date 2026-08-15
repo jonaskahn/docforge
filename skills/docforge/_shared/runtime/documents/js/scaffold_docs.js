@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { ensureDocforgeGitignore, fail, loadManifest } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
+const store = require("../../common/js/provenance_store.js");
 const { planEntries } = require("../../common/js/plan.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
@@ -84,6 +85,15 @@ function scaffoldProvenance(doc, manifest) {
   });
   return pf.emitDocumentFrontmatter(doc.id, titleFor(doc), provenance);
 }
+function scaffoldEntry(doc, manifest) {
+  const publicMeta = store.publicFromManifest(doc);
+  const entry = { ...publicMeta };
+  entry.provenance = pf.scaffoldProvenance(doc.id, doc.path, {
+    tier: (manifest.project || {}).tier || "<TIER>",
+    target_depth: doc.target_depth,
+  });
+  return entry;
+}
 function isDirectChild(directory, candidate) {
   const relative = path.posix.relative(directory, candidate.path);
   const parts = relative.split("/");
@@ -110,14 +120,15 @@ function expandChildrenBlock(body, doc, manifest) {
   const block = [CHILDREN_START, ...childRows(doc, manifest), CHILDREN_END].join("\n");
   return body.slice(0, start) + block + body.slice(end + CHILDREN_END.length);
 }
-function scaffoldBody(doc, manifest) {
+function scaffoldBody(doc, manifest, storage) {
   if (INDEX_TYPES.has(doc.type)) {
     const template = path.join(SKILL_ROOT, doc.scaffold_template);
     if (!fs.existsSync(template)) throw new Error(`template not found for ${doc.id}: ${doc.scaffold_template}`);
     let body = fs.readFileSync(template, "utf8");
     const parsed = pf.parseFrontmatter(body);
-    if (parsed.state !== "missing" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
-      body = scaffoldProvenance(doc, manifest) + body.slice(parsed.end);
+    if (parsed.state !== "missing") body = body.slice(parsed.end);
+    if (storage === store.STORAGE_MARKDOWN && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
+      body = scaffoldProvenance(doc, manifest) + body;
     }
     body = expandChildrenBlock(body, doc, manifest);
     return body.replace("{{TITLE}}", titleFor(doc));
@@ -126,8 +137,9 @@ function scaffoldBody(doc, manifest) {
   if (!fs.existsSync(template)) throw new Error(`template not found for ${doc.id}: ${doc.scaffold_template}`);
   let body = fs.readFileSync(template, "utf8");
   const parsed = pf.parseFrontmatter(body);
-  if (parsed.state !== "missing" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
-    body = scaffoldProvenance(doc, manifest) + body.slice(parsed.end);
+  if (parsed.state !== "missing") body = body.slice(parsed.end);
+  if (storage === store.STORAGE_MARKDOWN && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
+    body = scaffoldProvenance(doc, manifest) + body;
   }
   return body;
 }
@@ -149,8 +161,9 @@ function ensureLocalIgnore(repo) {
   }
 }
 function writeDocument(repo, doc, manifest) {
+  const storage = store.storageFor(manifest);
   const target = path.join(repo, ...doc.path.split("/"));
-  const body = scaffoldBody(doc, manifest);
+  const body = scaffoldBody(doc, manifest, storage);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   let action;
   if (doc.type === "machine-config" && fs.existsSync(target)) {
@@ -163,6 +176,15 @@ function writeDocument(repo, doc, manifest) {
   } else {
     fs.writeFileSync(target, body);
     action = "create";
+  }
+  if (
+    action === "create"
+    && storage === store.STORAGE_JSON
+    && doc.provenance_mode === "sections"
+    && doc.type !== "machine-config"
+    && !MARKDOWN_EXCEPTIONS.has(doc.path)
+  ) {
+    store.writeEntry(repo, doc.path, scaffoldEntry(doc, manifest));
   }
   if (doc.path === "CLAUDE.local.md") ensureLocalIgnore(repo);
   console.log(`${action}  ${doc.path}`);
@@ -191,30 +213,28 @@ function materialize(repo, manifest, docId) {
     return fail(error.message, 2);
   }
 }
-function provenanceDefects(repo, doc, text, tier) {
+function provenanceDefects(repo, doc, state, provenance, body, tier) {
   const result = {
     "missing provenance": [], "unparseable provenance": [],
     "legacy provenance": [], "obsolete schema": [], "empty provenance": [],
     "invalid blob": [], "unknown source": [], "unknown section": [],
   };
-  const parsed = pf.parseFrontmatter(text);
-  if (parsed.state === "missing") {
+  if (state === "missing") {
     result["missing provenance"].push(doc.path);
     return result;
   }
-  if (parsed.state === "unparseable") {
+  if (state === "unparseable") {
     result["unparseable provenance"].push(doc.path);
     return result;
   }
-  if (parsed.state === "obsolete") {
+  if (state === "obsolete") {
     result["obsolete schema"].push(`${doc.path}: run migrate_metadata.js`);
     return result;
   }
-  if (parsed.state === "legacy") {
+  if (state === "legacy") {
     result["legacy provenance"].push(doc.path);
     return result;
   }
-  const provenance = parsed.provenance;
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
     result["missing provenance"].push(doc.path);
     return result;
@@ -266,7 +286,7 @@ function provenanceDefects(repo, doc, text, tier) {
     if (!sections.length) result["empty provenance"].push(doc.path);
   }
   const anchors = new Set();
-  for (const line of text.slice(parsed.end).split(/\r?\n/)) {
+  for (const line of body.split(/\r?\n/)) {
     const match = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
     if (match) anchors.add(headingAnchor(match[2]));
   }
@@ -365,7 +385,21 @@ function audit(repo, manifest) {
     const forgeHits = [...new Set((text.match(FORGE) || []).map((item) => item.toLowerCase()))].sort();
     if (forgeHits.length) findings["forge leakage"].push(`${doc.path}: ${forgeHits.join(", ")}`);
     if (doc.provenance_mode === "sections" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
-      const defects = provenanceDefects(repo, doc, text, (manifest.project || {}).tier);
+      const storage = store.storageFor(manifest);
+      let state;
+      let provenance;
+      let body = text;
+      if (storage === store.STORAGE_JSON) {
+        const meta = store.readDocMetadata(repo, doc, storage);
+        state = meta.state === "inline" ? "legacy" : meta.state;
+        provenance = meta.provenance;
+      } else {
+        const parsed = pf.parseFrontmatter(text);
+        state = parsed.state;
+        provenance = parsed.provenance;
+        body = text.slice(parsed.end);
+      }
+      const defects = provenanceDefects(repo, doc, state, provenance, body, (manifest.project || {}).tier);
       for (const [kind, items] of Object.entries(defects)) findings[kind].push(...items);
     }
     for (const match of text.matchAll(LINK)) {

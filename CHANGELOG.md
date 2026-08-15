@@ -1,6 +1,28 @@
 # Changelog
 
-## 2.15.0 - Cosmetic-drift detection via normalized and range evidence hashes
+## 2.16.0 - External provenance store (markdown-clean output)
+
+- Manifest 3.3 adds `project.provenance_storage` — `json` (default) or
+  `markdown`. In `json` mode generated files carry **no frontmatter at all**;
+  each docs folder's public identity (`id`, `title`, `description`) and
+  `docforge_provenance` live in one git-tracked sidecar,
+  `.docforge/provenance/<folder>.json` (repo root → `root.json`), and the
+  whole pipeline — scaffold, lint, staleness, audit, flows, dashboard build,
+  planning — reads and writes through it.
+- `migrate_metadata` upgrades 3.2 → 3.3 and, under `json` storage, moves
+  existing inline frontmatter into the sidecars and strips it from the
+  markdown (`--dry-run` previews every move); `check_staleness
+  --sync-provenance` moves any straggler inline document it meets.
+- `manage_manifest init` seeds the storage mode (`--storage markdown` for the
+  legacy inline layout) and the new `set-storage json|markdown` subcommand
+  flips the whole tree in either direction with a `--dry-run` preview.
+- The dashboard reconciles metadata in the sidecars or frontmatter per the
+  storage mode, re-emits full frontmatter into the built site, and its render
+  signature now covers the provenance tree.
+- New Python/JS parity tests for the sidecar store, storage moves, migration,
+  sync auto-move, lint/audit on sidecars, and mode flipping.
+
+## 2.16.0 - Cosmetic-drift detection via normalized and range evidence hashes
 
 - Provenance schema 2.1 adds optional per-source evidence hashes:
   `git_blob_normalized` (CRLF/CR -> LF, trailing whitespace and blank-line

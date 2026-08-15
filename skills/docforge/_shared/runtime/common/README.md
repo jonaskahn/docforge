@@ -9,6 +9,9 @@ they exist to be imported, not executed.
 - You are implementing or modifying a runtime tool → `_util` (JSON, manifests,
   `.docforge` ignore/cleanup).
 - Reading or writing provenance frontmatter → `provenance_frontmatter`.
+- Resolving the storage mode or moving provenance between the folder sidecars
+  (`.docforge/provenance/<folder>.json`) and inline frontmatter →
+  `provenance_store`.
 - Planning manifest document actions → `plan`.
 - Linting documents → `evidence_locators`, `illustration_metrics`,
   `markdown_fences`.
@@ -32,6 +35,7 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | `plan` | Deterministic add/update/rewrite/unchanged/skip plans for documents | yes |
 | `prov_projection` | Project provenance 2.0 into ordered PROV relation rows | yes |
 | `provenance_frontmatter` | Restricted-YAML provenance codec, v1→v2 migration, hashing, frontmatter rewrite | yes |
+| `provenance_store` | Folder-mirrored JSON sidecar store: mode-aware reads, entry writes, inline↔sidecar moves | mixes — writes `.docforge/provenance/` and strips/restores frontmatter |
 | `special_files` | Constants: special output names and their template sources | yes |
 
 ## Details
@@ -43,6 +47,13 @@ All are paired libraries (Python snake_case / JS camelCase exports).
   `migrate_v1_to_v2`, `emit_yaml`, `wrap_document`, `parse_frontmatter`,
   `rewrite_frontmatter`, plus `PROVENANCE_FIELDS` / `SCHEMA_VERSION`. Rejects
   anchors, aliases, block scalars, and multi-document markers.
+- `provenance_store` — `storage_for(manifest)`, `sidecar_path(repo, folder)`,
+  `entry_for`, `write_entry`, `remove_entry`, `read_doc_metadata` (state:
+  `ok` / `inline` / `missing` / `unparseable`), `move_inline_to_sidecar`,
+  `move_sidecar_to_inline`, `public_from_manifest`. `json` storage (default)
+  keeps id/title/description + `docforge_provenance` in one git-tracked JSON
+  per folder under `.docforge/provenance/` and leaves markdown frontmatter-free;
+  `markdown` storage keeps the legacy inline layout.
 - `plan` — `flow_is_main_priority`, `document_action`, `plan_entries`,
   `plan_lines`.
 - `manifest_deps` — `normalize`, `extract_dependencies(files)`,
@@ -73,12 +84,16 @@ and `manifest_deps` for import compatibility only (no CLI behavior). Known
 consumers:
 
 - `documents/` — `_util`, `plan`, `special_files`, `provenance_frontmatter`,
-  `evidence_locators`, `illustration_metrics`, `markdown_fences`.
-- `manifest/` — `_util`, `plan`, `provenance_frontmatter`, `evidence_hash`.
+  `provenance_store`, `evidence_locators`, `illustration_metrics`,
+  `markdown_fences`.
+- `manifest/` — `_util`, `plan`, `provenance_frontmatter`, `provenance_store`,
+  `evidence_hash`.
 - `validation/` — `_util`, `provenance_frontmatter`, `special_files`.
 - `catalog/` — `manifest_deps` (via `detect_profiles`).
 - `portfolio/` — `manifest_deps` (via `discover_child_repos`).
-- `dashboard/` — `_util`, `provenance_frontmatter`, `evidence_hash`.
+- `dashboard/` — `_util`, `provenance_frontmatter`, `provenance_store`,
+  `evidence_hash`.
+- `flows/` — `_util`, `provenance_frontmatter`, `provenance_store`.
 - `graph/` — `_util` (via `graph_storage`).
 
 ## Boundaries

@@ -90,10 +90,10 @@ which this entrypoint's load order already pulls in.
 
 - **Legacy manifest** — a pre-3.0 `.docforge/manifest.json` (1.1
   `project_context` / `document_groups`, 2.0 flat `documents`, or any other
-  legacy shape) is auto-migrated to 3.2 automatically, never a stop-and-ask
+  legacy shape) is auto-migrated to 3.3 automatically, never a stop-and-ask
   gate: `migrate_metadata` (**any** legacy version, re-registered) is
-  idempotent and only ever touches the manifest and document frontmatter,
-  never bodies. The migration is always printed, never silent. `--plan-only`
+  idempotent and only ever touches the manifest, the `.docforge/provenance/`
+  sidecars, and document frontmatter, never bodies. The migration is always printed, never silent. `--plan-only`
   runs the `migrate_metadata.{py,js} --dry-run` preview instead of migrating;
   `scan`/`status` stay strictly read-only and never migrate.
 - **Scan** — findings (missing metadata, incomplete documents, stale sources,

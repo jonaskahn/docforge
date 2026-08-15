@@ -214,13 +214,18 @@ dashboard.
 
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
-2. When the manifest needs migration, apply it: upgrade manifest 3.1 (or
-   3.0 / provenance 1.0) to 3.2 / 2.0 — seeding each document's
-   catalog-owned `description` from the catalog `summary` — and re-register
-   any pre-3.0 shape as 3.2
+2. When the manifest needs migration, apply it: upgrade manifest 3.2 (or
+   3.1 / 3.0 / provenance 1.0) to 3.3 / 2.1 — seeding each document's
+   catalog-owned `description` from the catalog `summary` and the project's
+   `provenance_storage` (default `json`) — and re-register
+   any pre-3.0 shape as 3.3
    (adopting legacy written documents as `generated` with provenance 2.0,
    demoting incomplete or unconvertible documents to `in_progress`), and
-   print the migration report.
+   print the migration report. When storage is `json`, the same run moves
+   each section-provenance document's inline frontmatter into the folder
+   sidecar (`.docforge/provenance/<folder>.json`) and strips it from the
+   markdown, so generated files become pure content; the `--dry-run`
+   preview lists the moves before anything is written.
 3. When the manifest is already current, report that nothing needed
    migrating and stop — optionally point at the scoped invocations
    (`/docforge-revise all`, `<area>`, `flow`) for a structural refresh.
@@ -244,11 +249,17 @@ Flags combine with a scope argument, e.g.
 `migrate_metadata.{py,js}` also re-registers legacy manifests (any pre-3.0
 version —
 1.1 `project_context` / `document_groups`, 2.0 flat `documents` with
-overlays, or any other shape) as 3.2: written documents are adopted as
+overlays, or any other shape) as 3.3: written documents are adopted as
 `generated` with provenance 2.0 (bodies preserved) and plan entries are
 kept, so a revise run over an old manifest re-grounds and audits the adopted
 documents like any other written tree (steps 1 / 1a / 1b above). Adopted
-documents are never `complete` — they have no independent audit.
+documents are never `complete` — they have no independent audit. Both the
+bare and the scoped paths respect `project.provenance_storage`: `json`
+(default) stamps `.docforge/provenance/` sidecars and leaves markdown
+frontmatter-free; `markdown` keeps inline frontmatter. Flip the mode with
+`manage_manifest.{py,js} set-storage json|markdown` (preview with
+`--dry-run`); it moves every section-provenance document in both
+directions.
 
 ```sh
 python runtime/cli/python/check_staleness.py \

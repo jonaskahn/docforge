@@ -22,6 +22,13 @@ under `<repo>/.docforge/dashboard/`.
 The runtime consumes the shared codec/util (`runtime.common.python.*` /
 `runtime/common/js/*`) exactly like every other subsystem.
 
+## Provenance storage
+
+The build reconciles and reads document metadata per
+`project.provenance_storage`: `json` (default) sources the folder sidecars
+(`.docforge/provenance/<folder>.json`) and `markdown` sources inline
+frontmatter; the emitted site always carries full frontmatter.
+
 ## Where invoked
 
 - [`workflows/dashboard.md`](../../workflows/dashboard.md) — full lifecycle

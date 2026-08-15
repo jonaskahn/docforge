@@ -7,6 +7,7 @@ const path = require("path");
 const { fail, loadManifest } = require("../../common/js/_util.js");
 const { ensureMigrated } = require("./migrate_metadata.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
+const store = require("../../common/js/provenance_store.js");
 const { classifySource, gitBlobForPath } = require("../../common/js/evidence_hash.js");
 
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
@@ -20,46 +21,71 @@ function matchesDocument(doc, documentFilter) {
   return doc.id === documentFilter || doc.path === documentFilter;
 }
 
+function obsolete(provenance) {
+  return "tool_version" in provenance || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema);
+}
+
+function writeBack(repo, doc, storage, provenance) {
+  if (storage === store.STORAGE_JSON) {
+    const entry = store.entryFor(repo, doc.path) || {};
+    entry.provenance = provenance;
+    store.writeEntry(repo, doc.path, entry);
+  } else {
+    const filePath = path.join(repo, ...doc.path.split("/"));
+    const text = fs.readFileSync(filePath, "utf8");
+    fs.writeFileSync(filePath, pf.rewriteFrontmatter(text, provenance), "utf8");
+  }
+}
+
 function syncProvenance(manifest, repo, documentFilter) {
   let updated = 0;
   const results = [];
   const failed = new Set();
+  const storage = store.storageFor(manifest);
   for (const doc of manifest.documents) {
     if (!matchesDocument(doc, documentFilter)) continue;
     if (doc.provenance_mode === "manifest") continue;
-    const filePath = path.join(repo, ...doc.path.split("/"));
-    let parsed;
-    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile() || path.extname(filePath).toLowerCase() !== ".md") {
-      parsed = { state: "missing", provenance: null };
-    } else {
-      const codec = pf.parseFrontmatter(fs.readFileSync(filePath, "utf8"));
-      parsed = { state: codec.state, provenance: codec.provenance };
+    const meta = store.readDocMetadata(repo, doc, storage);
+    if (meta.state === "inline") {
+      if (store.moveInlineToSidecar(repo, doc, storage) !== "moved") {
+        failed.add(doc.path);
+        results.push({ doc: doc.path, status: "UNTRACKED", detail: "inline migration failed" });
+        continue;
+      }
+      let provenance = null;
+      const entry = store.entryFor(repo, doc.path);
+      if (entry) provenance = entry.provenance;
+      if (provenance && obsolete(provenance)) {
+        provenance = pf.migrateV1ToV2(provenance);
+        writeBack(repo, doc, storage, provenance);
+      }
+      doc.provenance = provenance;
+      updated += 1;
+      continue;
     }
-    if (parsed.state === "obsolete" && parsed.provenance) {
-      const text = fs.readFileSync(filePath, "utf8");
-      const { body } = pf.splitFrontmatter(text);
-      const migrated = pf.migrateV1ToV2(parsed.provenance, body);
-      fs.writeFileSync(filePath, pf.rewriteFrontmatter(text, migrated), "utf8");
+    if (meta.state !== "ok") {
+      failed.add(doc.path);
+      if (meta.state === "unparseable") {
+        results.push({ doc: doc.path, status: "UNPARSEABLE", detail: "invalid frontmatter" });
+      } else {
+        results.push({ doc: doc.path, status: "UNTRACKED", detail: "missing provenance" });
+      }
+      continue;
+    }
+    const provenance = meta.provenance;
+    if (!("schema" in provenance)) {
+      failed.add(doc.path);
+      results.push({ doc: doc.path, status: "UNTRACKED", detail: "legacy provenance" });
+      continue;
+    }
+    if (obsolete(provenance)) {
+      const migrated = pf.migrateV1ToV2(provenance);
+      writeBack(repo, doc, storage, migrated);
       doc.provenance = migrated;
       updated += 1;
       continue;
     }
-    if (parsed.state !== "ok") {
-      failed.add(doc.path);
-      if (parsed.state === "unparseable") {
-        results.push({ doc: doc.path, status: "UNPARSEABLE", detail: "invalid frontmatter" });
-      } else if (parsed.state === "obsolete") {
-        results.push({ doc: doc.path, status: "UNTRACKED", detail: "obsolete schema" });
-      } else {
-        results.push({
-          doc: doc.path,
-          status: "UNTRACKED",
-          detail: parsed.state === "legacy" ? "legacy provenance" : "missing provenance",
-        });
-      }
-      continue;
-    }
-    doc.provenance = parsed.provenance;
+    doc.provenance = provenance;
     updated += 1;
   }
   return { updated, results, failed };

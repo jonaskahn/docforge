@@ -20,7 +20,7 @@ class CatalogRecordTests(unittest.TestCase):
         cls.groups = set(cls.index["groups"])
 
     def test_catalog_version_is_2_15_0(self) -> None:
-        self.assertEqual(self.index["version"], "2.15.0")
+        self.assertEqual(self.index["version"], "2.16.0")
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]

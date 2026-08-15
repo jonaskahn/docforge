@@ -19,6 +19,7 @@ const crypto = require("crypto");
 const { spawnSync } = require("child_process");
 const { fail, readJson } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
+const store = require("../../common/js/provenance_store.js");
 const { ensureTmpDirGitignored } = require("../../graph/js/graph_storage.js");
 
 const INDEX_REL = path.join(".docforge", "flow-index.json");
@@ -508,7 +509,28 @@ function resolveDocPath(row) {
   }
   return null;
 }
-function stubBody(row) {
+function storageFor(repo) {
+  const manifestPath = path.join(repo, ".docforge", "manifest.json");
+  if (fs.existsSync(manifestPath)) {
+    try {
+      return store.storageFor(readJson(manifestPath));
+    } catch {
+      // fall through to default
+    }
+  }
+  return store.STORAGE_MARKDOWN;
+}
+
+function renderDoc(repo, docPath, provenance, title, body) {
+  if (storageFor(repo) === store.STORAGE_JSON) {
+    const entry = { id: provenance.doc_id, title, provenance };
+    store.writeEntry(repo, docPath, entry);
+    return body;
+  }
+  return pf.emitYaml(provenance) + body;
+}
+
+function stubBody(row, repo = null) {
   const name = row.display_name || row.name;
   const docPath = resolveDocPath(row) || defaultDocPath(row.slug, row.family);
   const entry = row.entry_ref;
@@ -520,7 +542,7 @@ function stubBody(row) {
     flow: "derived",
     generated_at: nowIso(),
   });
-  return pf.emitYaml(provenance) + [
+  const body = [
     `# ${name}`, "",
     "_Last reviewed: {{YYYY-MM-DD}}_", "",
     `Placeholder flow candidate for \`${signature}\`.`, "",
@@ -531,6 +553,8 @@ function stubBody(row) {
     `- Entry: \`${signature}\``, "",
     "{{Write this document from the evidence required by its catalog entry.}}", "",
   ].join("\n");
+  if (repo) return renderDoc(repo, docPath, provenance, String(name), body);
+  return pf.emitYaml(provenance) + body;
 }
 function isScaffoldOrPlaceholder(text) {
   return text.includes("{{") || text.includes("TODO(") || text.includes("Status: `placeholder`") || text.includes("<DOC_ID>");
@@ -715,7 +739,9 @@ function markdown(index, tier = "spine", repo = null) {
     appendTable(ungrouped);
   }
   lines.push(`_Generated ${generated}; source of truth: \`.docforge/flow-index.json\`._`, "");
-  return pf.emitYaml(provenance) + lines.join("\n");
+  const body = lines.join("\n");
+  if (repo) return renderDoc(repo, "docs/flows/README.md", provenance, "Flows", body);
+  return pf.emitYaml(provenance) + body;
 }
 function collectCandidates(args) {
   const rows = [];
@@ -1013,7 +1039,7 @@ function moveOrWriteStub(repo, row, previousPath) {
     const target = path.join(repo, newPath);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     if (!fs.existsSync(target) || isScaffoldOrPlaceholder(fs.readFileSync(target, "utf8"))) {
-      fs.writeFileSync(target, stubBody(row));
+      fs.writeFileSync(target, stubBody(row, repo));
     }
   }
 }

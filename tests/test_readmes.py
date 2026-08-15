@@ -42,10 +42,17 @@ class ReadmeScaffoldTests(unittest.TestCase):
             result = initialize("py", repo, "spine")
             self.assertEqual(result.returncode, 0, result.stderr)
             body = self._scaffold("py", repo, "architecture_index")
-            self.assertTrue(body.startswith("---\nid: "), body[:40])
-            self.assertIn("docforge_provenance:", body)
-            self.assertIn("# Architecture\n", body)
-            for heading in ("## At a glance", "## Scope and boundaries", "## Start here", "## Detailed documentation"):
+            self.assertTrue(body.startswith("# Architecture\n"), body[:40])
+            self.assertNotIn("docforge_provenance:", body)
+            sidecar = json.loads(
+                (repo / ".docforge" / "provenance" / "docs" / "architecture.json").read_text(encoding="utf-8")
+            )
+            entry = sidecar["files"]["README.md"]
+            self.assertEqual(entry["id"], "architecture_index")
+            self.assertEqual(entry["title"], "Architecture")
+            self.assertEqual(entry["provenance"]["schema"], "2.1")
+            self.assertIn("## At a glance", body)
+            for heading in ("## Scope and boundaries", "## Start here", "## Detailed documentation"):
                 self.assertIn(heading, body)
             self.assertIn("](high-level.md)", body)
             self.assertIn("docforge-children:start", body)
@@ -165,7 +172,7 @@ class ReadmeScaffoldTests(unittest.TestCase):
             manifest = {
                 "version": "3.2",
                 "generated_at": "2026-08-01T00:00:00+00:00",
-                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {
+                "project": {"name": "fixture", "root": str(repo), "tier": "spine", "provenance_storage": "markdown", "profiles": {
                     "shapes": [], "platforms": [], "frameworks": [],
                     "concerns": [], "audiences": [],
                 }},

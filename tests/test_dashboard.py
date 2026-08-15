@@ -227,7 +227,10 @@ def seed_repo(repo: Path) -> None:
     manifest = {
         "version": "3.2",
         "generated_at": "2026-08-01T00:00:00Z",
-        "project": {"name": "fixture", "root": str(repo), "tier": "spine", "profiles": {}},
+        "project": {
+            "name": "fixture", "root": str(repo), "tier": "spine",
+            "provenance_storage": "markdown", "profiles": {},
+        },
         "discovery": [],
         "documents": docs,
         "metadata": {},

@@ -18,7 +18,7 @@ validates illustration budgets and presentation-safe fences.
 When the user chooses Resume in intake or asks to continue an incomplete
 documentation run: run `migrate_metadata.{py,js}` when needed (see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md)), load the
-version-3.2
+version-3.3
 manifest, and continue the first non-complete, non-skipped document in write
 order. Then follow **Write one document** below for that document. May combine
 with `--auto-accept`.
@@ -47,13 +47,18 @@ otherwise keep the serial `write_order` loop. Contract
   artifact portion of **Write one document** — route, materialize, re-ground
   (native provider first, whole-file read last, per step 4 above), provenance,
   mechanical lint — on **only its own artifact file**. It never calls
-  `manage_manifest` and never edits shared indexes, other documents, or the
-  manifest.
+  `manage_manifest` and never edits shared indexes, other documents, the
+  manifest, or the shared `.docforge/provenance/` folder sidecars (json
+  storage mode) — the orchestrator owns those.
 - Each worker returns a result contract (see parallel-execution.md): claims
-  grounded with sources, unresolved gaps, lint findings, and any defect it
-  could not clear.
+  grounded with sources, unresolved gaps, lint findings, any defect it
+  could not clear, and — in `json` storage mode — its stamped provenance
+  payload (`id`/`title`/`description` + `docforge_provenance`) for the
+  orchestrator to merge.
 
-After all workers return, the orchestrator merges, applies the status
+After all workers return, the orchestrator merges (including serially
+merge-editing each worker's provenance payload into its folder sidecar when
+`project.provenance_storage` is `json`), applies the status
 transitions (`in_progress` → `generated`) serially per returned artifact, then
 proceeds to the independent audit (§5), which may also run concurrently with
 serial recording.
@@ -118,16 +123,25 @@ For the next document in `write_order` (serial mode):
 
    The writer gathers, verifies, and stamps all candidate `path` / `role` /
    `git_blob` evidence inline:
-   - Every written document emits the public frontmatter `id`, `title`, and
+   - Storage mode decides where provenance lives — read it from
+     `manifest["project"]["provenance_storage"]` (`json` is the default).
+     In `json` mode the generated markdown carries **no frontmatter at all**;
+     each document's public identity (`id`, `title`, `description`) and its
+     `docforge_provenance` object live in one git-tracked sidecar per docs
+     folder: `.docforge/provenance/<folder>.json` (e.g.
+     `docs/architecture` → `.docforge/provenance/docs/architecture.json`,
+     repo-root files → `root.json`). Stamp by merge-editing that folder's
+     `files[<name>.md]` entry — never rewrite sibling entries. In `markdown`
+     mode keep the legacy inline layout: public frontmatter `id`, `title`,
      `description` (a reader-facing one-liner, ≤ 160 chars, seeded from the
      catalog `summary` in the manifest) plus `docforge_provenance`; lint
      enforces a non-empty description for written documents.
    - One provenance `sections[]` entry per Markdown heading that makes claims;
      `id` is that heading's anchor.
-    - Each claim records at least one repository-relative `path` with `role`
-     (`code`, `config`, `manifest`, `doc`, `test`, or `history`) and
-     `git_blob` = the SHA-1 of `blob <len>\0` + file bytes (same value as
-      `git hash-object <path>` and `check_staleness.{py,js}`'s blob helper).
+     - Each claim records at least one repository-relative `path` with `role`
+      (`code`, `config`, `manifest`, `doc`, `test`, or `history`) and
+      `git_blob` = the SHA-1 of `blob <len>\0` + file bytes (same value as
+       `git hash-object <path>` and `check_staleness.{py,js}`'s blob helper).
    - Always additionally stamp `git_blob_normalized` — the same blob-style
      SHA-1 but over the file's bytes after normalizing line endings
      (CRLF/CR -> LF), stripping trailing whitespace per line, and stripping
@@ -150,6 +164,13 @@ For the next document in `write_order` (serial mode):
 
    After an update that touched only some sections, restamp those sections'
    sources and leave FRESH sections' provenance rows unchanged.
+
+   In `json` storage mode the folder sidecar is a **shared file** — parallel
+   workers never write it (see §Parallel fan-out): each worker returns its
+   stamped provenance payload in its result contract, and the orchestrator
+   merge-edits the sidecar entries serially per returned artifact, together
+   with the status transitions. Serial writers may merge-edit the sidecar
+   directly.
 5. Set it `generated`.
 6. Run the document linter and any audit-profile-specific mechanical checks.
    For the `agents-kernel` output (`AGENTS.md`, a `SPECIAL_DOC_OUTPUTS` member

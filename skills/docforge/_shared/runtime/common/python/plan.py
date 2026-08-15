@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from runtime.common.python import provenance_store as store
 from runtime.common.python.provenance_frontmatter import parse_frontmatter
 
 WRITTEN = {"generated", "needs_review", "complete"}
@@ -28,7 +29,7 @@ def flow_is_main_priority(row: dict) -> bool:
     return False
 
 
-def document_action(repo: Path, doc: dict, revise: bool = False) -> tuple[str, str]:
+def document_action(repo: Path, doc: dict, revise: bool = False, storage: str | None = None) -> tuple[str, str]:
     status = doc.get("status", "planned")
     if status == "skipped":
         return "skip", "explicitly skipped"
@@ -37,7 +38,22 @@ def document_action(repo: Path, doc: dict, revise: bool = False) -> tuple[str, s
         if status in WRITTEN:
             return "add", f"file missing despite {status}"
         return "add", "planned; will be scaffolded"
-    state, provenance, _ = parse_frontmatter(target.read_text(encoding="utf-8", errors="replace"))
+    if storage is None:
+        storage = store.STORAGE_MARKDOWN
+    if storage == store.STORAGE_JSON:
+        entry = store.entry_for(repo, doc["path"])
+        if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
+            state, provenance = "ok", entry["provenance"]
+        else:
+            state, provenance, _ = parse_frontmatter(target.read_text(encoding="utf-8", errors="replace"))
+            if state == "ok" and isinstance(provenance, dict):
+                state = "inline"
+    else:
+        state, provenance, _ = parse_frontmatter(target.read_text(encoding="utf-8", errors="replace"))
+        if state == "ok" and not isinstance(provenance, dict):
+            state = "missing"
+    if state == "inline":
+        return "update", "inline provenance pending sidecar migration"
     if state != "ok" or not isinstance(provenance, dict):
         return "rewrite", "provenance missing or unparseable"
     if status in {"in_progress", "needs_review"}:
@@ -58,8 +74,9 @@ def plan_entries(
     revise: bool = False,
 ) -> list[dict]:
     entries: list[dict] = []
+    storage = store.storage_for(manifest)
     for doc in manifest.get("documents", []):
-        action, reason = document_action(repo, doc, revise)
+        action, reason = document_action(repo, doc, revise, storage)
         entries.append({
             "id": doc.get("id"),
             "path": doc.get("path"),
@@ -90,7 +107,7 @@ def plan_entries(
             if doc is None:
                 action, reason = "add", f"flow {flow_id}: not yet planned"
             else:
-                action, reason = document_action(repo, doc, revise)
+                action, reason = document_action(repo, doc, revise, storage)
             entries.append({
                 "id": flow_id,
                 "path": path,

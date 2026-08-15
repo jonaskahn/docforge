@@ -28,12 +28,13 @@ again ([`writing.md`](writing.md)).
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `3.2`; there is no secondary runtime state file.
-Manifest 3.1 (and 3.0 / provenance 1.0) are migrated by
+Its schema version is `3.3`; there is no secondary runtime state file.
+Manifest 3.2 (and 3.1 / 3.0 / provenance 1.0) are migrated by
 `migrate_metadata.{py,js}`
 (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
-resume, revision, or provenance synchronization — the 3.1 → 3.2 step seeds
-each document's catalog-owned `description` from the catalog `summary`. A
+resume, revision, or provenance synchronization — the 3.2 → 3.3 step seeds
+each document's catalog-owned `description` from the catalog `summary` and
+the project's `provenance_storage` (`json` by default). A
 legacy manifest of any
 pre-3.0 version (1.1 `project_context` / `document_groups`, 2.0 flat
 `documents` with overlays, or another shape) is re-registered by the same
@@ -81,7 +82,9 @@ and the staleness report to that entry (used by single-document update in
 not require re-grounding); `UNPARSEABLE` identifies malformed document
 frontmatter; and `UNTRACKED` means provenance is absent, empty, or legacy.
 Synchronization reads every matching manifest path, including root documents,
-and changes only each document's provenance section.
+and changes only each document's provenance section — the folder sidecar
+entry in `json` storage mode, where inline documents still pending
+migration are moved automatically.
 
 ## Completion criteria
 

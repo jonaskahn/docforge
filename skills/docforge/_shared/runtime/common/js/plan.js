@@ -9,6 +9,7 @@
 const fs = require("fs");
 const path = require("path");
 const pf = require("./provenance_frontmatter.js");
+const store = require("./provenance_store.js");
 
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 
@@ -20,7 +21,7 @@ function flowIsMainPriority(row) {
   return false;
 }
 
-function documentAction(repo, doc, revise) {
+function documentAction(repo, doc, revise, storage = null) {
   const status = doc.status || "planned";
   if (status === "skipped") return ["skip", "explicitly skipped"];
   const target = path.join(repo, ...doc.path.split("/"));
@@ -28,8 +29,27 @@ function documentAction(repo, doc, revise) {
     if (WRITTEN.has(status)) return ["add", `file missing despite ${status}`];
     return ["add", "planned; will be scaffolded"];
   }
-  const parsed = pf.parseFrontmatter(fs.readFileSync(target, "utf8"));
-  if (parsed.state !== "ok" || !parsed.provenance || typeof parsed.provenance !== "object") {
+  let state;
+  let provenance;
+  const effectiveStorage = storage == null ? store.STORAGE_MARKDOWN : storage;
+  if (effectiveStorage === store.STORAGE_JSON) {
+    const entry = store.entryFor(repo, doc.path);
+    if (entry && entry.provenance && typeof entry.provenance === "object") {
+      state = "ok";
+      provenance = entry.provenance;
+    } else {
+      const parsed = pf.parseFrontmatter(fs.readFileSync(target, "utf8"));
+      state = parsed.state;
+      provenance = parsed.provenance;
+      if (state === "ok") state = "inline";
+    }
+  } else {
+    const parsed = pf.parseFrontmatter(fs.readFileSync(target, "utf8"));
+    state = parsed.state;
+    provenance = parsed.provenance;
+  }
+  if (state === "inline") return ["update", "inline provenance pending sidecar migration"];
+  if (state !== "ok" || !provenance || typeof provenance !== "object") {
     return ["rewrite", "provenance missing or unparseable"];
   }
   if (status === "in_progress" || status === "needs_review") {
@@ -43,8 +63,9 @@ function documentAction(repo, doc, revise) {
 
 function planEntries(repo, manifest, flowIndexPath, revise) {
   const entries = [];
+  const storage = store.storageFor(manifest);
   for (const doc of manifest.documents || []) {
-    const [action, reason] = documentAction(repo, doc, revise);
+    const [action, reason] = documentAction(repo, doc, revise, storage);
     entries.push({
       id: doc.id,
       path: doc.path,
@@ -76,7 +97,7 @@ function planEntries(repo, manifest, flowIndexPath, revise) {
         action = "add";
         reason = `flow ${flowId}: not yet planned`;
       } else {
-        [action, reason] = documentAction(repo, doc, revise);
+        [action, reason] = documentAction(repo, doc, revise, storage);
       }
       entries.push({
         id: flowId,

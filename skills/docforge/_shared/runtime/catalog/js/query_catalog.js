@@ -49,7 +49,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.15.0";
+const CATALOG_VERSION = "2.16.0";
 const PRESENTATION_VALUES = {
   code: new Set(["contract-only", "task-focused"]),
   related_docs: new Set(["none", "compact", "traceability"]),

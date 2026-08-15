@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from runtime.common.python._util import fail, read_json
+from runtime.common.python import provenance_store as store
 from runtime.common.python.provenance_frontmatter import emit_yaml, scaffold_provenance
 
 INDEX_REL = Path(".docforge/flow-index.json")
@@ -646,7 +647,26 @@ def resolve_doc_path(row: dict) -> str | None:
     return None
 
 
-def stub_body(row: dict) -> str:
+def _storage(repo: Path) -> str:
+    manifest_path = repo / ".docforge/manifest.json"
+    if manifest_path.is_file():
+        try:
+            return store.storage_for(read_json(manifest_path))
+        except ValueError:
+            pass
+    return store.STORAGE_MARKDOWN
+
+
+def _render_doc(repo: Path, doc_path: str, provenance: dict, title: str, body: str) -> str:
+    """Return the document text, stamping the folder sidecar in json mode."""
+    if _storage(repo) == store.STORAGE_JSON:
+        entry = {"id": provenance["doc_id"], "title": title, "provenance": provenance}
+        store.write_entry(repo, doc_path, entry)
+        return body
+    return emit_yaml(provenance) + body
+
+
+def stub_body(row: dict, repo: Path | None = None) -> str:
     name = row.get("display_name") or row["name"]
     doc_path = resolve_doc_path(row) or default_doc_path(row["slug"], row.get("family"))
     entry = row["entry_ref"]
@@ -660,7 +680,7 @@ def stub_body(row: dict) -> str:
         flow="derived",
         generated_at=now_iso(),
     )
-    return emit_yaml(provenance) + "\n".join([
+    body = "\n".join([
         f"# {name}",
         "",
         "_Last reviewed: {{YYYY-MM-DD}}_",
@@ -677,6 +697,9 @@ def stub_body(row: dict) -> str:
         "{{Write this document from the evidence required by its catalog entry.}}",
         "",
     ])
+    if repo is not None:
+        return _render_doc(repo, doc_path, provenance, str(name), body)
+    return emit_yaml(provenance) + body
 
 
 def is_scaffold_or_placeholder(text: str) -> bool:
@@ -712,7 +735,7 @@ def ensure_stubs(repo: Path, rows: list[dict]) -> list[dict]:
             existing = target.read_text(encoding="utf-8")
             if not is_scaffold_or_placeholder(existing):
                 continue
-        target.write_text(stub_body(row), encoding="utf-8")
+        target.write_text(stub_body(row, repo), encoding="utf-8")
         created.append({
             "id": row["id"],
             "slug": row["slug"],
@@ -881,7 +904,10 @@ def markdown(index: dict, tier: str = "spine", repo: Path | None = None) -> str:
         f"_Generated {generated}; source of truth: `.docforge/flow-index.json`._",
         "",
     ]
-    return emit_yaml(provenance) + "\n".join(lines)
+    body = "\n".join(lines)
+    if repo is not None:
+        return _render_doc(repo, "docs/flows/README.md", provenance, "Flows", body)
+    return emit_yaml(provenance) + body
 
 
 def collect_candidates(args: argparse.Namespace) -> tuple[list[dict], list[str], Path | None]:
@@ -1168,7 +1194,7 @@ def move_or_write_stub(repo: Path, row: dict, previous_path: str | None) -> None
         target = repo / new_path
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.is_file() or is_scaffold_or_placeholder(target.read_text(encoding="utf-8")):
-            target.write_text(stub_body(row), encoding="utf-8")
+            target.write_text(stub_body(row, repo), encoding="utf-8")
 
 
 def cmd_organize_apply(args: argparse.Namespace) -> int:

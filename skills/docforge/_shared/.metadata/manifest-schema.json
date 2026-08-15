@@ -1,18 +1,19 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Docforge Manifest 3.2",
+  "title": "Docforge Manifest 3.3",
   "type": "object",
   "required": ["version", "generated_at", "project", "discovery", "documents", "metadata"],
   "properties": {
-    "version": {"const": "3.2"},
+    "version": {"const": "3.3"},
     "generated_at": {"type": "string"},
     "project": {
       "type": "object",
-      "required": ["name", "root", "tier", "profiles"],
+      "required": ["name", "root", "tier", "profiles", "provenance_storage"],
       "properties": {
         "name": {"type": "string"},
         "root": {"type": "string"},
         "tier": {"enum": ["spine", "diligence", "portfolio"]},
+        "provenance_storage": {"enum": ["json", "markdown"]},
         "profiles": {
           "type": "object",
           "required": ["shapes", "platforms", "frameworks", "concerns", "audiences"],

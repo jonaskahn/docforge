@@ -46,6 +46,10 @@ Read-only. Exit `0` no defects, `1` defects, `2` usage error.
 
 ### `scaffold_docs`
 
+Materializes templates per `project.provenance_storage`: `json` (default)
+writes clean markdown plus a `.docforge/provenance/<folder>.json` sidecar
+entry; `markdown` emits inline frontmatter.
+
 ```sh
 python3 runtime/cli/python/scaffold_docs.py --repo <repo> --manifest <manifest> \
   (--dry-run [--revise] | --document <id> | --audit)

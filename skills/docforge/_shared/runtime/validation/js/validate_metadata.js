@@ -13,9 +13,9 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.15.0";
+const CATALOG_VERSION = "2.16.0";
 const PUBLIC_CONTRACTS = {
-  manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider"],
+  manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
@@ -71,12 +71,25 @@ function validate() {
   if (fs.existsSync(path.join(metadata, "catalog.json"))) {
     errors.push("obsolete monolith catalog.json remains; use .metadata/catalog/");
   }
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.2") {
-    errors.push("manifest schema must require version 3.2");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.3") {
+    errors.push("manifest schema must require version 3.3");
+  }
+  const projectRequired = new Set(((((manifestSchema.properties || {}).project || {}).required) || []));
+  if (!projectRequired.has("provenance_storage")) {
+    errors.push("manifest schema project must require provenance_storage");
   }
   const documentSchema = ((((manifestSchema.definitions || {}).document || {}).properties) || {});
   if (!("description" in documentSchema)) {
     errors.push("manifest schema must define document.description");
+  }
+  const sidecarSchemaPath = path.join(metadata, "provenance-sidecar-schema.json");
+  if (!fs.existsSync(sidecarSchemaPath)) {
+    errors.push("provenance-sidecar-schema.json is missing");
+  } else {
+    const sidecarSchema = readJson(sidecarSchemaPath);
+    if ((((sidecarSchema.properties || {}).schema || {}).const) !== "1.0") {
+      errors.push("provenance sidecar schema must require version 1.0");
+    }
   }
   if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.1") {
     errors.push("flow index schema must require version 1.1");

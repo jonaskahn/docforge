@@ -23,6 +23,7 @@ from runtime.common.python.provenance_frontmatter import (
     parse_frontmatter as codec_parse_frontmatter,
     scaffold_provenance as build_provenance,
 )
+from runtime.common.python import provenance_store as store
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 PLACEHOLDER = re.compile(r"\{\{[^}]+\}\}|TODO\([^)]*\)")
@@ -111,6 +112,20 @@ def scaffold_provenance(doc: dict, manifest: dict) -> str:
     return emit_document_frontmatter(doc["id"], title_for(doc), provenance)
 
 
+def scaffold_entry(doc: dict, manifest: dict) -> dict:
+    """Sidecar entry (public identity + provenance) for a fresh scaffold."""
+    public = store.public_from_manifest(doc)
+    provenance = build_provenance(
+        doc["id"],
+        doc["path"],
+        tier=manifest.get("project", {}).get("tier", "<TIER>"),
+        target_depth=doc["target_depth"],
+    )
+    entry = {key: value for key, value in public.items() if value}
+    entry["provenance"] = provenance
+    return entry
+
+
 def child_rows(doc: dict, manifest: dict) -> list[str]:
     directory = PurePosixPath(doc["path"]).parent
     children = []
@@ -146,15 +161,17 @@ def expand_children_block(body: str, doc: dict, manifest: dict) -> str:
     return body[:start] + block + body[end + len(CHILDREN_END):]
 
 
-def scaffold_body(doc: dict, manifest: dict) -> str:
+def scaffold_body(doc: dict, manifest: dict, storage: str) -> str:
     if doc["type"] in INDEX_TYPES:
         template = SKILL_ROOT / doc["scaffold_template"]
         if not template.is_file():
             raise ValueError(f"template not found for {doc['id']}: {doc['scaffold_template']}")
         body = template.read_text(encoding="utf-8")
         state, _, body_start = codec_parse_frontmatter(body)
-        if state != "missing" and doc["path"] not in MARKDOWN_EXCEPTIONS:
-            body = scaffold_provenance(doc, manifest) + body[body_start:]
+        if state != "missing":
+            body = body[body_start:]
+        if storage == store.STORAGE_MARKDOWN and doc["path"] not in MARKDOWN_EXCEPTIONS:
+            body = scaffold_provenance(doc, manifest) + body
         body = expand_children_block(body, doc, manifest)
         return body.replace("{{TITLE}}", title_for(doc), 1)
     template = SKILL_ROOT / doc["scaffold_template"]
@@ -162,8 +179,10 @@ def scaffold_body(doc: dict, manifest: dict) -> str:
         raise ValueError(f"template not found for {doc['id']}: {doc['scaffold_template']}")
     body = template.read_text(encoding="utf-8")
     state, _, body_start = codec_parse_frontmatter(body)
-    if state != "missing" and doc["path"] not in MARKDOWN_EXCEPTIONS:
-        body = scaffold_provenance(doc, manifest) + body[body_start:]
+    if state != "missing":
+        body = body[body_start:]
+    if storage == store.STORAGE_MARKDOWN and doc["path"] not in MARKDOWN_EXCEPTIONS:
+        body = scaffold_provenance(doc, manifest) + body
     return body
 
 
@@ -188,8 +207,9 @@ def ensure_local_ignore(repo: Path) -> None:
 
 
 def write_document(repo: Path, doc: dict, manifest: dict) -> str:
+    storage = store.storage_for(manifest)
     target = repo / doc["path"]
-    body = scaffold_body(doc, manifest)
+    body = scaffold_body(doc, manifest, storage)
     target.parent.mkdir(parents=True, exist_ok=True)
     if doc["type"] == "machine-config" and target.exists():
         existing = json.loads(target.read_text(encoding="utf-8"))
@@ -201,6 +221,14 @@ def write_document(repo: Path, doc: dict, manifest: dict) -> str:
     else:
         target.write_text(body, encoding="utf-8")
         action = "create"
+    if (
+        action == "create"
+        and storage == store.STORAGE_JSON
+        and doc.get("provenance_mode") == "sections"
+        and doc["type"] != "machine-config"
+        and doc["path"] not in MARKDOWN_EXCEPTIONS
+    ):
+        store.write_entry(repo, doc["path"], scaffold_entry(doc, manifest))
     if doc["path"] == "CLAUDE.local.md":
         ensure_local_ignore(repo)
     print(f"{action}  {doc['path']}")
@@ -241,13 +269,12 @@ def heading_anchor(value: str) -> str:
     return re.sub(r"[\s-]+", "-", value).strip("-")
 
 
-def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None) -> dict[str, list[str]]:
+def provenance_defects(repo: Path, doc: dict, state: str, provenance: dict | None, body: str, tier: str | None = None) -> dict[str, list[str]]:
     result = {
         "missing provenance": [], "unparseable provenance": [],
         "legacy provenance": [], "obsolete schema": [], "empty provenance": [],
         "invalid blob": [], "unknown source": [], "unknown section": [],
     }
-    state, provenance, body_start = codec_parse_frontmatter(text)
     if state == "missing":
         result["missing provenance"].append(doc["path"])
         return result
@@ -325,7 +352,6 @@ def provenance_defects(repo: Path, doc: dict, text: str, tier: str | None = None
             )
         if not sections:
             result["empty provenance"].append(doc["path"])
-    body = text[body_start:]
     anchors = {
         heading_anchor(match.group(2))
         for line in body.splitlines()
@@ -425,8 +451,17 @@ def audit(repo: Path, manifest: dict) -> int:
         if forge_hits:
             findings["forge leakage"].append(f"{doc['path']}: {', '.join(forge_hits)}")
         if doc["provenance_mode"] == "sections" and doc["path"] not in MARKDOWN_EXCEPTIONS:
+            storage = store.storage_for(manifest)
+            if storage == store.STORAGE_JSON:
+                meta = store.read_doc_metadata(repo, doc, storage)
+                state = "legacy" if meta["state"] == "inline" else meta["state"]
+                provenance = meta["provenance"]
+                body = text
+            else:
+                state, provenance, body_start = codec_parse_frontmatter(text)
+                body = text[body_start:]
             for kind, items in provenance_defects(
-                repo, doc, text, manifest.get("project", {}).get("tier")
+                repo, doc, state, provenance, body, manifest.get("project", {}).get("tier")
             ).items():
                 findings[kind].extend(items)
         for link in LINK.findall(text):

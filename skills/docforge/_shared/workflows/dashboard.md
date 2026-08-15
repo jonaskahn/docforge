@@ -31,8 +31,8 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan`, `start`, `export`, and `status` all require a manifest 3.2 (or 3.1,
-which `migrate_metadata.{py,js}` — see
+`scan`, `start`, `export`, and `status` all require a manifest 3.3 (or 3.2 /
+3.1, which `migrate_metadata.{py,js}` — see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md) — upgrades
 in place). What happens on an **older legacy manifest version** (1.1
 `project_context` / `document_groups`, 2.0 flat `documents` with overlays, or
@@ -40,16 +40,17 @@ any other pre-3.0 shape) depends on whether the command writes:
 
 - **`start` / `export`** auto-migrate it instead of stopping to ask.
   `migrate_metadata.{py,js}` is idempotent and only ever touches
-  `.docforge/manifest.json` and per-document frontmatter — document bodies
-  are never rewritten — so this is the same safe, metadata-only operation a
-  bare `/docforge-revise` already performs without a confirmation gate (see
+  `.docforge/manifest.json`, the `.docforge/provenance/` sidecars, and
+  per-document frontmatter — document bodies are never rewritten — so this
+  is the same safe, metadata-only operation a bare `/docforge-revise`
+  already performs without a confirmation gate (see
   [Bare `/docforge-revise`](revision.md#bare-docforge-revise--metadata-only-migration)).
   The migration is never silent — it always prints what changed — before
   continuing into the normal preflight/scan/build pipeline with the freshly
   migrated manifest:
 
   ```
-  manifest: legacy manifest auto-migrated to 3.2 (4 migrate, 1 skip)
+  manifest: legacy manifest auto-migrated to 3.3 (4 migrate, 1 skip)
   ```
 
   `--plan-only` runs the same `migrate_metadata.{py,js} --dry-run` preview
@@ -103,7 +104,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 -> INSTALL (if missing) -> EXPORT               (export)
 ```
 
-- **Preflight:** repository, manifest 3.2 (or 3.1), and a readable `docs/` tree.
+- **Preflight:** repository, manifest 3.3 (or 3.2 / 3.1), and a readable `docs/` tree.
   When the manifest is a legacy pre-3.0 version (or any other unsupported
   version), apply the [Legacy manifest gate](#legacy-manifest-gate)
   before continuing. The
@@ -120,15 +121,16 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
   [When the build fails](#when-the-build-fails-revise-before-the-dashboard);
   advisory-only findings (or none) let the pipeline continue.
 - **Metadata reconcile:** ensures each written document's public `id`,
-  `title`, and `description` frontmatter match the manifest (missing
+  `title`, and `description` match the manifest (missing
   descriptions are added; descriptions are catalog-owned, seeded from the
   catalog `summary` at init / migrate / reconcile) and that
   `docforge_provenance.doc_id` / `path` agree; bodies are preserved
   byte-for-byte. Idempotent and always run (it is the dashboard's required
-  input). Metadata is compared against the frontmatter head only — file
-  bodies are never read for reconcile, route planning, or navigation
-  ordering; they are read only for MDX conversion, asset copying, and link
-  validation.
+  input). In `json` storage mode the fields are reconciled in the folder
+  sidecar (`.docforge/provenance/<folder>.json`); in `markdown` mode in the
+  inline frontmatter. File bodies are never read for reconcile, route
+  planning, or navigation ordering; they are read only for MDX conversion,
+  asset copying, and link validation.
 - **Signature:** two working-tree signatures decide what to rebuild:
   - `render_sig` — `docs/**/*.md[x]` paths and bytes (including images),
     included root-document bytes, and a manifest projection (`id`, `title`,
@@ -231,11 +233,12 @@ carries a `blocking: true/false` field (printed as `(blocking)` in text
 output) so `start`/`export` know whether to stop before attempting a build or
 to proceed anyway. It reports:
 
-- **metadata** — documents under `docs/` whose frontmatter is missing,
-  unparseable, or not schema 2.0 (reconcile would skip or error); **blocking**
-  when the document would otherwise be included in the build (it would crash
+- **metadata** — documents under `docs/` whose provenance (sidecar entry in
+  `json` mode, frontmatter in `markdown` mode) is missing, unparseable, or
+  not schema 2.0 (reconcile would skip or error); **blocking** when the
+  document would otherwise be included in the build (it would crash
   conversion), advisory when the document is already excluded for another
-  reason (its frontmatter can't break a build it's never part of);
+  reason (its metadata can't break a build it's never part of);
 - **incomplete** — manifest documents that are not `generated` /
   `needs_review` / `complete` (planned, `in_progress`, ...), which the
   dashboard cannot render; always advisory — the document is simply absent
@@ -276,7 +279,8 @@ When `start`/`export` (or `scan`) report problems, the agent must:
 ## What the dashboard is not
 
 - Never write outside `<repo>/.docforge/dashboard/` except the metadata
-  reconciliation of `docs/` frontmatter (the dashboard's required input) and
+  reconciliation of `docs/` provenance (folder sidecars or frontmatter,
+  per `project.provenance_storage` — the dashboard's required input) and
   the `.docforge/.gitignore` rule.
 - Never touch the repository's `package.json`, lockfiles, or workspace
   configuration.
@@ -288,8 +292,10 @@ When `start`/`export` (or `scan`) report problems, the agent must:
 ## Conversion rules (deterministic, code-fence aware)
 
 - The public frontmatter (`id`, `title`, `description`,
-  `docforge_provenance`) is re-emitted from the manifest; the body is
-  otherwise untouched except for the rules below.
+  `docforge_provenance`) is re-emitted for the site — from the folder
+  sidecar in `json` storage mode, from the manifest / inline frontmatter in
+  `markdown` mode; the body is otherwise untouched except for the rules
+  below.
 - The frontmatter `title` is the document's **first H1 heading** (markers
   like `[!toc]` / `[#custom-id]` and link/formatting syntax stripped) so
   titles are fully meaningful ("Documentation", not "Docs Index"); it falls

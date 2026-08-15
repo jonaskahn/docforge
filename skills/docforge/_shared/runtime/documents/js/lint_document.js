@@ -32,6 +32,7 @@
 const fs = require("fs");
 const path = require("path");
 const pf = require("../../common/js/provenance_frontmatter.js");
+const store = require("../../common/js/provenance_store.js");
 const { validateLocators } = require("../../common/js/evidence_locators.js");
 const { illustrationDefects: budgetDefects } = require("../../common/js/illustration_metrics.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
@@ -113,14 +114,79 @@ function illustrationDefects(text) {
   }
   return defects;
 }
+function metadataContext(filePath, text) {
+  // Resolve { state, provenance, bodyStart, public } for one document.
+  // In json storage mode the folder sidecar wins; inline frontmatter that
+  // has not been migrated yet reports state `inline` so lint flags it.
+  const root = repositoryRoot(filePath);
+  let storage = store.STORAGE_MARKDOWN;
+  const manifestPath = path.join(root, ".docforge", "manifest.json");
+  if (fs.existsSync(manifestPath)) {
+    try {
+      storage = store.storageFor(JSON.parse(fs.readFileSync(manifestPath, "utf8")));
+    } catch {
+      // fall through to default
+    }
+  }
+  const rel = path.relative(root, filePath).split(path.sep).join("/");
+  if (storage === store.STORAGE_JSON) {
+    const entry = store.entryFor(root, rel);
+    if (entry && entry.provenance && typeof entry.provenance === "object") {
+      const publicMeta = {};
+      for (const key of store.PUBLIC_FIELDS) {
+        if (entry[key]) publicMeta[key] = entry[key];
+      }
+      return { state: "ok", provenance: entry.provenance, bodyStart: 0, public: publicMeta };
+    }
+    const parsedInline = pf.parseFrontmatter(text);
+    let inlineState = parsedInline.state;
+    if (inlineState === "ok") inlineState = "inline";
+    const publicInline = {};
+    if (inlineState === "ok" || inlineState === "inline") {
+      const split = pf.splitFrontmatter(text);
+      if (split.raw != null) {
+        try {
+          const data = pf.parseYamlMapping(split.raw);
+          for (const key of store.PUBLIC_FIELDS) {
+            if (data[key]) publicInline[key] = data[key];
+          }
+        } catch {
+          // provenance defects report parsing
+        }
+      }
+    }
+    return { state: inlineState, provenance: parsedInline.provenance, bodyStart: parsedInline.end, public: publicInline };
+  }
+  const parsed = pf.parseFrontmatter(text);
+  const publicMeta = {};
+  if (parsed.state === "ok") {
+    const split = pf.splitFrontmatter(text);
+    if (split.raw != null) {
+      try {
+        const data = pf.parseYamlMapping(split.raw);
+        for (const key of store.PUBLIC_FIELDS) {
+          if (data[key]) publicMeta[key] = data[key];
+        }
+      } catch {
+        // provenance defects report parsing
+      }
+    }
+  }
+  return { state: parsed.state, provenance: parsed.provenance, bodyStart: parsed.end, public: publicMeta };
+}
+
 function provenanceDefects(filePath, text) {
   const defects = [];
   if (MARKDOWN_EXCEPTIONS.has(path.basename(filePath))) return defects;
-  const parsed = pf.parseFrontmatter(text);
+  const context = metadataContext(filePath, text);
+  const parsed = { state: context.state, provenance: context.provenance, end: context.bodyStart };
   if (parsed.state === "missing") return [{ kind: "missing provenance", line: 1, detail: "frontmatter absent" }];
   if (parsed.state === "unparseable") return [{ kind: "unparseable provenance", line: 1, detail: "frontmatter unparseable" }];
   if (parsed.state === "obsolete") return [{ kind: "obsolete schema", line: 1, detail: "run migrate_metadata.js" }];
   if (parsed.state === "legacy") return [{ kind: "legacy provenance", line: 1, detail: "schema absent" }];
+  if (parsed.state === "inline") {
+    return [{ kind: "legacy provenance", line: 1, detail: "inline provenance in json mode; run migrate_metadata" }];
+  }
   const provenance = parsed.provenance;
   if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
     return [{ kind: "missing provenance", line: 1, detail: "docforge_provenance absent" }];
@@ -196,18 +262,12 @@ function provenanceDefects(filePath, text) {
 }
 
 function publicMetadataDefects(filePath, text) {
-  // Public frontmatter contract for written documents: a non-empty
+  // Public metadata contract for written documents: a non-empty
   // `description` of at most 160 characters.
   if (MARKDOWN_EXCEPTIONS.has(path.basename(filePath))) return [];
-  const split = pf.splitFrontmatter(text);
-  if (split.raw == null) return [];
-  let data;
-  try {
-    data = pf.parseYamlMapping(split.raw);
-  } catch {
-    return [];
-  }
-  const description = data.description;
+  const context = metadataContext(filePath, text);
+  if (context.state !== "ok" && context.state !== "inline") return [];
+  const description = context.public.description;
   if (typeof description !== "string" || !description.trim()) {
     return [{ kind: "missing description", line: 1, detail: "public description is required" }];
   }
@@ -229,9 +289,9 @@ function checkDocument(filePath, requireHeadings) {
   defects.push(...provenanceDefects(filePath, text));
   defects.push(...publicMetadataDefects(filePath, text));
   defects.push(...illustrationDefects(text));
-  const parsed = pf.parseFrontmatter(text);
-  const targetDepth = parsed.provenance && typeof parsed.provenance === "object"
-    ? parsed.provenance.target_depth || "deep-dive"
+  const context = metadataContext(filePath, text);
+  const targetDepth = context.provenance && typeof context.provenance === "object"
+    ? context.provenance.target_depth || "deep-dive"
     : "deep-dive";
   defects.push(...budgetDefects(text, targetDepth));
   defects.push(...validateLocators(filePath, text));

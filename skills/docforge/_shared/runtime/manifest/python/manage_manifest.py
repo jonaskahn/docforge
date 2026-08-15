@@ -20,6 +20,7 @@ from runtime.common.python._util import (
 )
 from runtime.common.python.plan import plan_lines
 from runtime.catalog.python.detect_profiles import detect as detect_profiles
+from runtime.common.python import provenance_store as store
 from runtime.common.python.provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 from runtime.catalog.python import query_catalog
 from runtime.graph.python.graph_source_registry import SOURCES as GRAPH_SOURCES, resolve_all_ready, resolve_first_ready
@@ -38,7 +39,7 @@ TRANSITIONS = {
     "skipped": {"planned"},
 }
 TOOL_VERSION = GENERATOR_VERSION
-MANIFEST_VERSION = "3.2"
+MANIFEST_VERSION = "3.3"
 USER_CONFIRMED_TRIGGERS = {
     "new-trust-boundary", "per-interaction-review", "regulated-workload",
     "high-criticality", "new-external-integration", "new-data-classification",
@@ -391,6 +392,7 @@ def cmd_init(args: argparse.Namespace) -> int:
             "root": str(args.repo.resolve()),
             "tier": args.tier,
             "profiles": profiles,
+            "provenance_storage": args.storage,
         },
         "discovery": detect_profiles(args.repo),
         "discovery_gate": None,
@@ -836,6 +838,49 @@ def cmd_set_graph(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_set_storage(args: argparse.Namespace) -> int:
+    try:
+        manifest = load_manifest(manifest_path(args.repo), unsupported_hint=MANIFEST_HINT)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    current = store.storage_for(manifest)
+    if current == args.storage:
+        print(f"storage already {current}; no changes.")
+        return 0
+    planned: list[str] = []
+    for doc in manifest.get("documents", []):
+        if doc.get("provenance_mode") != "sections":
+            continue
+        if args.storage == store.STORAGE_JSON:
+            if store.read_doc_metadata(args.repo, doc, store.STORAGE_JSON)["state"] == "inline":
+                planned.append(doc["path"])
+        elif store.entry_for(args.repo, doc["path"]) is not None:
+            planned.append(doc["path"])
+    if args.dry_run:
+        print(f"DRY RUN  {current} -> {args.storage} ({len(planned)} documents)")
+        for item in planned:
+            print(f"  {item}: inline -> sidecar" if args.storage == store.STORAGE_JSON else f"  {item}: sidecar -> inline")
+        return 0
+    moves: list[str] = []
+    for doc in manifest.get("documents", []):
+        if doc.get("provenance_mode") != "sections":
+            continue
+        if args.storage == store.STORAGE_JSON:
+            action = store.move_inline_to_sidecar(args.repo, doc, store.STORAGE_JSON)
+            if action == "moved":
+                moves.append(f"{doc['path']}: inline -> sidecar")
+        else:
+            action = store.move_sidecar_to_inline(args.repo, doc)
+            if action == "moved":
+                moves.append(f"{doc['path']}: sidecar -> inline")
+    manifest["project"]["provenance_storage"] = args.storage
+    save_manifest(args.repo, manifest)
+    print(f"storage  {current} -> {args.storage} ({len(moves)} documents moved)")
+    for item in moves:
+        print(f"  {item}")
+    return 0
+
+
 def cmd_finish(args: argparse.Namespace) -> int:
     docforge_dir = args.repo / ".docforge"
     if not docforge_dir.is_dir():
@@ -866,6 +911,12 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--name")
     init.add_argument("--force", action="store_true")
     init.add_argument("--graph-provider")
+    init.add_argument(
+        "--storage",
+        choices=[store.STORAGE_JSON, store.STORAGE_MARKDOWN],
+        default=store.STORAGE_JSON,
+        help="provenance storage: json sidecars under .docforge/provenance (default) or inline markdown",
+    )
     init.set_defaults(func=cmd_init)
 
     add = sub.add_parser("add")
@@ -910,6 +961,16 @@ def build_parser() -> argparse.ArgumentParser:
     set_graph.add_argument("--provider")
     set_graph.add_argument("--force", action="store_true")
     set_graph.set_defaults(func=cmd_set_graph)
+
+    set_storage = sub.add_parser("set-storage")
+    add_repo(set_storage)
+    set_storage.add_argument(
+        "--storage", required=True,
+        choices=[store.STORAGE_JSON, store.STORAGE_MARKDOWN],
+        help="target provenance storage",
+    )
+    set_storage.add_argument("--dry-run", action="store_true")
+    set_storage.set_defaults(func=cmd_set_storage)
 
     reconcile = sub.add_parser("reconcile")
     add_repo(reconcile)

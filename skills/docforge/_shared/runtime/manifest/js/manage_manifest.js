@@ -8,6 +8,7 @@ const { dumpJson, ensureDocforgeGitignore, ensureGitignoredDir, fail, finishDocf
 const { planLines } = require("../../common/js/plan.js");
 const { detect: detectProfiles } = require("../../catalog/js/detect_profiles.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
+const store = require("../../common/js/provenance_store.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 const { SOURCES: GRAPH_SOURCES, resolveAllReady, resolveFirstReady } = require("../../graph/js/graph_source_registry.js");
 const { reportFlowGraph } = require("../../graph/js/precheck_graph.js");
@@ -24,7 +25,7 @@ const TRANSITIONS = {
   skipped: new Set(["planned"]),
 };
 const TOOL_VERSION = pf.GENERATOR_VERSION;
-const MANIFEST_VERSION = "3.2";
+const MANIFEST_VERSION = "3.3";
 const USER_CONFIRMED_TRIGGERS = new Set([
   "new-trust-boundary", "per-interaction-review", "regulated-workload",
   "high-criticality", "new-external-integration", "new-data-classification",
@@ -254,12 +255,12 @@ function selectedStaticDocuments(catalog, repo, tier, profiles) {
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish"]);
+  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "set-storage"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence"]);
-  const boolean = new Set(["force", "keep-tmp", "reset"]);
+  const boolean = new Set(["force", "keep-tmp", "reset", "dry-run"]);
   const allowed = {
-    init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force", "graph-provider"]),
+    init: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force", "graph-provider", "storage"]),
     add: new Set(["repo", "type", "id", "path", "title", "evidence"]),
     set: new Set(["repo", "id", "status"]),
     presentation: new Set(["repo", "id", "primary-audience", "code", "related-docs", "repository-paths", "reset"]),
@@ -268,6 +269,7 @@ function parseArgs(argv) {
     "set-graph": new Set(["repo", "provider", "force"]),
     reconcile: new Set(["repo", "tier", "shape", "platform", "framework", "concern", "audience"]),
     finish: new Set(["repo", "keep-tmp"]),
+    "set-storage": new Set(["repo", "storage", "dry-run"]),
   }[command];
   const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], overlay: [], evidence: [] };
   for (let i = 1; i < argv.length; i++) {
@@ -310,6 +312,8 @@ function cmdInit(args) {
   required(args, ["repo", "tier"]);
   if (args.overlay.length) return fail("--overlay is unsupported in Docforge 2.0; use --shape, --platform, --framework, --concern, or --audience", 2);
   if (!["spine", "diligence", "portfolio"].includes(args.tier)) return fail(`invalid tier: ${args.tier}`, 2);
+  if (!args.storage) args.storage = store.STORAGE_JSON;
+  if (![store.STORAGE_JSON, store.STORAGE_MARKDOWN].includes(args.storage)) return fail(`invalid storage: ${args.storage}`, 2);
   const target = manifestPath(args.repo);
   if (fs.existsSync(target) && !args.force) return fail(`manifest already exists: ${target}; pass --force to replace it`);
   const catalog = loadCatalog();
@@ -332,6 +336,7 @@ function cmdInit(args) {
       root: path.resolve(args.repo),
       tier: args.tier,
       profiles,
+      provenance_storage: args.storage,
     },
     discovery: detectProfiles(fs.realpathSync(args.repo)),
     discovery_gate: null,
@@ -715,6 +720,57 @@ function cmdStatus(args) {
     return fail(error.message, 2);
   }
 }
+function cmdSetStorage(args) {
+  required(args, ["repo", "storage"]);
+  if (![store.STORAGE_JSON, store.STORAGE_MARKDOWN].includes(args.storage)) {
+    return fail(`invalid storage: ${args.storage}`, 2);
+  }
+  try {
+    const manifest = loadManifest(manifestPath(args.repo), {
+      unsupportedHint: MANIFEST_HINT,
+    });
+    const current = store.storageFor(manifest);
+    if (current === args.storage) {
+      console.log(`storage already ${current}; no changes.`);
+      return 0;
+    }
+    const planned = [];
+    for (const doc of manifest.documents) {
+      if (doc.provenance_mode !== "sections") continue;
+      if (args.storage === store.STORAGE_JSON) {
+        if (store.readDocMetadata(args.repo, doc, store.STORAGE_JSON).state === "inline") planned.push(doc.path);
+      } else if (store.entryFor(args.repo, doc.path) !== null) {
+        planned.push(doc.path);
+      }
+    }
+    if (args.dry_run) {
+      console.log(`DRY RUN  ${current} -> ${args.storage} (${planned.length} documents)`);
+      for (const item of planned) {
+        console.log(args.storage === store.STORAGE_JSON ? `  ${item}: inline -> sidecar` : `  ${item}: sidecar -> inline`);
+      }
+      return 0;
+    }
+    const moves = [];
+    for (const doc of manifest.documents) {
+      if (doc.provenance_mode !== "sections") continue;
+      if (args.storage === store.STORAGE_JSON) {
+        const action = store.moveInlineToSidecar(args.repo, doc, store.STORAGE_JSON);
+        if (action === "moved") moves.push(`${doc.path}: inline -> sidecar`);
+      } else {
+        const action = store.moveSidecarToInline(args.repo, doc);
+        if (action === "moved") moves.push(`${doc.path}: sidecar -> inline`);
+      }
+    }
+    manifest.project.provenance_storage = args.storage;
+    saveManifest(args.repo, manifest);
+    console.log(`storage  ${current} -> ${args.storage} (${moves.length} documents moved)`);
+    for (const item of moves) console.log(`  ${item}`);
+    return 0;
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+}
+
 function cmdFinish(args) {
   required(args, ["repo"]);
   const docforgeDir = path.join(args.repo, ".docforge");
@@ -729,7 +785,7 @@ function cmdFinish(args) {
   return 0;
 }
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | finish --repo <path> [--keep-tmp]");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--storage <json|markdown>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | set-storage --repo <path> --storage <json|markdown> [--dry-run] | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;
@@ -742,7 +798,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish }[args.command](args);
+    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, "set-storage": cmdSetStorage }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

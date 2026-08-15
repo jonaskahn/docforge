@@ -2,6 +2,45 @@
 
 This file owns metadata format, validation, and staleness semantics.
 
+## Storage modes
+
+`project.provenance_storage` in `.docforge/manifest.json` picks where each
+document's metadata lives:
+
+- **`json` (default)** — the generated markdown carries **no frontmatter at
+  all**. Each docs folder has one git-tracked sidecar,
+  `.docforge/provenance/<folder>.json` (`docs/architecture` →
+  `docs/architecture.json`, repo-root files → `root.json`), holding the
+  public identity and provenance of every document in that folder:
+
+  ```json
+  {
+    "schema": "1.0",
+    "folder": "docs/architecture",
+    "files": {
+      "constraints.md": {
+        "id": "architecture_constraints",
+        "title": "Architecture Constraints",
+        "description": "One-liner.",
+        "provenance": { "schema": "2.1", "doc_id": "architecture_constraints", "...": "…" }
+      }
+    }
+  }
+  ```
+
+  The `provenance` object is the exact provenance-2.0 block described below.
+  `migrate_metadata.{py,js}` moves existing inline frontmatter into the
+  sidecars (dry-run preview first); `check_staleness.{py,js}
+  --sync-provenance` moves any straggler inline document it meets; and
+  `manage_manifest.{py,js} set-storage json|markdown` flips the whole tree in
+  either direction.
+
+- **`markdown`** — the legacy inline layout: public frontmatter plus
+  `docforge_provenance` at byte one of each generated file.
+
+All readers (lint, staleness, audit, dashboard, plan) resolve the storage
+mode from the manifest and read the sidecar or the frontmatter accordingly.
+
 ## Markdown format
 
 Markdown that supports frontmatter begins at byte one with restricted YAML
@@ -127,7 +166,7 @@ preserves section evidence (inferring source `role` and adding empty
 `unresolved` when absent), migrates embedded manifest provenance objects,
 seeds each document's catalog-owned public `description` (from the catalog
 `summary`), and
-bumps the manifest from `3.1` (or `3.0`) to `3.2`.
+bumps the manifest from `3.2` (or `3.1` / `3.0`) to `3.3`.
 
 When frontmatter is missing or unparseable, conversion throws, or the result
 for a previously written document is still incomplete (scaffold tokens, empty

@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.15.0",
+  "version": "2.16.0",
   "category": "product",
   "purpose": "Product surface: overview, quickstart, and audience-specific product views.",
   "source": "../../index.json",

@@ -50,6 +50,7 @@ from runtime.common.python.provenance_frontmatter import (
     parse_yaml_mapping,
     split_frontmatter,
 )
+from runtime.common.python import provenance_store as store
 from runtime.common.python.evidence_locators import validate_locators
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.illustration_metrics import illustration_defects as budget_defects
@@ -136,11 +137,48 @@ def illustration_defects(text: str) -> list[dict]:
     return defects
 
 
+def _metadata_context(path: Path, text: str) -> tuple[str, dict | None, int, dict]:
+    """Resolve (state, provenance, body_start, public) for one document.
+
+    In json storage mode the folder sidecar wins; inline frontmatter that
+    has not been migrated yet reports state `inline` so lint flags it."""
+    root = repository_root(path)
+    storage = store.STORAGE_MARKDOWN
+    manifest_path = root / ".docforge" / "manifest.json"
+    if manifest_path.is_file():
+        try:
+            storage = store.storage_for(json.loads(manifest_path.read_text(encoding="utf-8")))
+        except (ValueError, OSError):
+            pass
+    rel = path.relative_to(root).as_posix()
+    if storage == store.STORAGE_JSON:
+        entry = store.entry_for(root, rel)
+        if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
+            public = {key: entry[key] for key in store.PUBLIC_FIELDS if entry.get(key)}
+            return "ok", entry["provenance"], 0, public
+        state, provenance, body_start = codec_parse_frontmatter(text)
+        if state == "ok":
+            state = "inline"
+    else:
+        state, provenance, body_start = codec_parse_frontmatter(text)
+    public: dict = {}
+    if state in {"ok", "inline"}:
+        raw, _body, _end = split_frontmatter(text)
+        if raw is not None:
+            try:
+                data = parse_yaml_mapping(raw)
+            except Exception:  # noqa: BLE001 - provenance defects report parsing
+                data = None
+            if isinstance(data, dict):
+                public = {key: data.get(key) for key in store.PUBLIC_FIELDS if data.get(key)}
+    return state, provenance, body_start, public
+
+
 def provenance_defects(path: Path, text: str) -> list[dict]:
     defects: list[dict] = []
     if path.name in MARKDOWN_EXCEPTIONS:
         return defects
-    state, provenance, body_start = codec_parse_frontmatter(text)
+    state, provenance, body_start, _public = _metadata_context(path, text)
     if state == "missing":
         return [{"kind": "missing provenance", "line": 1, "detail": "frontmatter absent"}]
     if state == "unparseable":
@@ -149,6 +187,8 @@ def provenance_defects(path: Path, text: str) -> list[dict]:
         return [{"kind": "obsolete schema", "line": 1, "detail": "run migrate_metadata.py"}]
     if state == "legacy":
         return [{"kind": "legacy provenance", "line": 1, "detail": "schema absent"}]
+    if state == "inline":
+        return [{"kind": "legacy provenance", "line": 1, "detail": "inline provenance in json mode; run migrate_metadata"}]
     if not isinstance(provenance, dict):
         return [{"kind": "missing provenance", "line": 1, "detail": "docforge_provenance absent"}]
     missing = sorted(PROVENANCE_FIELDS - set(provenance))
@@ -228,18 +268,14 @@ def provenance_defects(path: Path, text: str) -> list[dict]:
 
 
 def public_metadata_defects(path: Path, text: str) -> list[dict]:
-    """Public frontmatter contract for written documents: a non-empty
+    """Public metadata contract for written documents: a non-empty
     `description` of at most 160 characters."""
     if path.name in MARKDOWN_EXCEPTIONS:
         return []
-    raw, _body, _end = split_frontmatter(text)
-    if raw is None:
+    state, _provenance, _body_start, public = _metadata_context(path, text)
+    if state not in {"ok", "inline"}:
         return []
-    try:
-        data = parse_yaml_mapping(raw)
-    except Exception:  # noqa: BLE001 - provenance defects report parsing already
-        return []
-    description = data.get("description")
+    description = public.get("description")
     if not isinstance(description, str) or not description.strip():
         return [{"kind": "missing description", "line": 1, "detail": "public description is required"}]
     if len(description) > DESCRIPTION_LIMIT:
@@ -255,7 +291,7 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
     defects.extend(provenance_defects(path, text))
     defects.extend(public_metadata_defects(path, text))
     defects.extend(illustration_defects(text))
-    _state, provenance, _end = codec_parse_frontmatter(text)
+    _state, provenance, _end, _public = _metadata_context(path, text)
     target_depth = provenance.get("target_depth", "deep-dive") if isinstance(provenance, dict) else "deep-dive"
     defects.extend(budget_defects(text, target_depth))
     defects.extend(validate_locators(path, text))

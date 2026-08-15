@@ -22,10 +22,10 @@ from runtime.catalog.python import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
-CATALOG_VERSION = "2.15.0"
+CATALOG_VERSION = "2.16.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
-    "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider"],
+    "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run"],
     "detect_profiles": ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
@@ -74,8 +74,11 @@ def validate() -> list[str]:
         errors.append("split catalog index.json is missing")
     if (metadata / "catalog.json").is_file():
         errors.append("obsolete monolith catalog.json remains; use .metadata/catalog/")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.2":
-        errors.append("manifest schema must require version 3.2")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.3":
+        errors.append("manifest schema must require version 3.3")
+    project_required = set(manifest_schema.get("properties", {}).get("project", {}).get("required", []))
+    if "provenance_storage" not in project_required:
+        errors.append("manifest schema project must require provenance_storage")
     document_schema = (
         manifest_schema.get("definitions", {})
         .get("document", {})
@@ -83,6 +86,13 @@ def validate() -> list[str]:
     )
     if "description" not in document_schema:
         errors.append("manifest schema must define document.description")
+    sidecar_schema_path = metadata / "provenance-sidecar-schema.json"
+    if not sidecar_schema_path.is_file():
+        errors.append("provenance-sidecar-schema.json is missing")
+    else:
+        sidecar_schema = read_json(sidecar_schema_path)
+        if sidecar_schema.get("properties", {}).get("schema", {}).get("const") != "1.0":
+            errors.append("provenance sidecar schema must require version 1.0")
     if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.1":
         errors.append("flow index schema must require version 1.1")
     flow_item = (

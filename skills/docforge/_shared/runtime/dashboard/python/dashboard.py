@@ -54,13 +54,14 @@ from runtime.common.python.provenance_frontmatter import (
     parse_yaml_mapping,
     split_frontmatter,
 )
+from runtime.common.python import provenance_store as store
 from runtime.common.python.evidence_hash import classify_source, raw_blob_hash
 from runtime.manifest.python.migrate_metadata import (
     MANIFEST_CURRENT,
     migrate as migrate_manifest_metadata,
 )
 
-TOOL_VERSION = "2.15.0"
+TOOL_VERSION = "2.16.0"
 TEMPLATE_VERSION = "1"
 STATE_SCHEMA = 1
 STATE_FILE = ".docforge-dashboard.json"
@@ -105,9 +106,11 @@ def git_remote_url(repo: Path) -> str | None:
     return None
 
 
-def _root_doc_has_provenance(repo: Path, path: str) -> bool:
-    meta = file_metadata(repo, path)
-    return meta is not None and meta["provenance_schema"] in SUPPORTED_SCHEMA_VERSIONS
+def _root_doc_has_provenance(repo: Path, path: str, manifest: dict) -> bool:
+    meta = store.read_doc_metadata(repo, {"path": path}, store.storage_for(manifest))
+    if meta["state"] in {"ok", "inline"} and isinstance(meta["provenance"], dict):
+        return meta["provenance"].get("schema") in SUPPORTED_SCHEMA_VERSIONS
+    return False
 
 
 def read_frontmatter_head(target: Path) -> tuple[str, int] | None:
@@ -130,27 +133,6 @@ def read_frontmatter_head(target: Path) -> tuple[str, int] | None:
             return None
         return raw, len(text) - len(body)
     return head[4:end].decode("utf-8", errors="replace"), end + len("\n---\n")
-
-
-def file_metadata(repo: Path, rel: str) -> dict | None:
-    """Public metadata of a written document read from its frontmatter head
-    only: id, title, description, and provenance schema. None when the file
-    carries no parseable docforge frontmatter."""
-    result = read_frontmatter_head(repo / rel)
-    if result is None:
-        return None
-    raw, _body_start = result
-    try:
-        data = parse_yaml_mapping(raw)
-    except Exception:  # noqa: BLE001 - treated as not docforge-managed
-        return None
-    provenance = data.get("docforge_provenance")
-    return {
-        "id": data.get("id"),
-        "title": data.get("title"),
-        "description": data.get("description"),
-        "provenance_schema": provenance.get("schema") if isinstance(provenance, dict) else None,
-    }
 
 
 def _manifest_provenance(doc: dict) -> bool:
@@ -178,7 +160,7 @@ def included_documents(repo: Path, manifest: dict) -> list[dict]:
             continue
         if not (repo / path).is_file():
             continue
-        if "/" not in path and not (_root_doc_has_provenance(repo, path) or _manifest_provenance(doc)):
+        if "/" not in path and not (_root_doc_has_provenance(repo, path, manifest) or _manifest_provenance(doc)):
             continue
         out.append(doc)
     return sorted(out, key=lambda d: (d["path"], d["id"]))
@@ -271,6 +253,12 @@ def render_signature(repo: Path, manifest: dict) -> str:
         records.append("doc\x00" + json.dumps(doc, sort_keys=True, separators=(",", ":")))
     for rel in tree_files(repo):
         records.append(f"file\x00{rel}\x00{sha256_bytes((repo / rel).read_bytes())}")
+    provenance_root = repo / ".docforge" / store.SIDECAR_DIRNAME
+    if provenance_root.is_dir():
+        for path in sorted(provenance_root.rglob("*")):
+            if path.is_file():
+                rel = str(path.relative_to(repo)).replace("\\", "/")
+                records.append(f"provenance\x00{rel}\x00{sha256_bytes(path.read_bytes())}")
     for doc in projection:
         rel = doc["path"]
         if not rel or "/" in rel or not rel.endswith((".md", ".mdx")):
@@ -336,6 +324,7 @@ def public_frontmatter(
 
 def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dict:
     report = {"reconciled": [], "unchanged": [], "skipped": [], "errors": []}
+    storage = store.storage_for(manifest)
     for doc in manifest.get("documents", []):
         if doc.get("status") == "skipped" or doc.get("provenance_mode") == "manifest":
             continue
@@ -344,6 +333,47 @@ def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dic
             continue
         target = repo / path
         if not target.is_file():
+            continue
+        want_id = doc["id"]
+        want_title = title_for(doc)
+        want_description = doc.get("description") or ""
+        if storage == store.STORAGE_JSON:
+            entry = store.entry_for(repo, path)
+            if entry is None:
+                report["skipped"].append({"doc": doc["id"], "detail": "no provenance entry"})
+                continue
+            provenance = entry.get("provenance")
+            if not isinstance(provenance, dict) or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS:
+                report["skipped"].append({"doc": doc["id"], "detail": "provenance schema unsupported"})
+                continue
+            problems = []
+            if entry.get("id") != want_id:
+                problems.append("id")
+            if entry.get("title") != want_title:
+                problems.append("title")
+            if (entry.get("description") or "") != want_description:
+                problems.append("description")
+            if provenance.get("doc_id") != want_id:
+                problems.append("provenance.doc_id")
+            if provenance.get("path") != path:
+                problems.append("provenance.path")
+            if not problems:
+                report["unchanged"].append({"doc": doc["id"]})
+                continue
+            entry_data = {"doc": doc["id"], "path": path, "fixed": problems}
+            if not dry_run:
+                updated = dict(entry)
+                updated["id"] = want_id
+                updated["title"] = want_title
+                if want_description:
+                    updated["description"] = want_description
+                elif "description" in updated:
+                    del updated["description"]
+                provenance["doc_id"] = want_id
+                provenance["path"] = path
+                updated["provenance"] = provenance
+                store.write_entry(repo, path, updated)
+            report["reconciled"].append(entry_data)
             continue
         head = read_frontmatter_head(target)
         if head is None:
@@ -359,9 +389,6 @@ def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dic
         if not isinstance(provenance, dict) or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS:
             report["skipped"].append({"doc": doc["id"], "detail": "provenance schema unsupported"})
             continue
-        want_id = doc["id"]
-        want_title = title_for(doc)
-        want_description = doc.get("description") or ""
         problems = []
         if data.get("id") != want_id:
             problems.append("id")
@@ -750,12 +777,27 @@ def convert_documents(repo: Path, manifest: dict, ledger: dict, stage_docs: Path
     assets_needed: set[str] = set()
     anchors: dict[str, list[str]] = {}
     converted = []
+    storage = store.storage_for(manifest)
     for doc in ledger["pages"]:
         source = repo / doc["source_path"]
         text = source.read_text(encoding="utf-8", errors="replace")
+        manifest_doc = doc.get("doc") or {}
         raw, body, _end = split_frontmatter(text)
-        if raw is None:
-            manifest_doc = doc.get("doc") or {}
+        public: dict = {}
+        if raw is None and storage == store.STORAGE_JSON:
+            meta = store.read_doc_metadata(repo, {"path": doc["source_path"]}, storage)
+            if meta["state"] != "ok" or not isinstance(meta["provenance"], dict):
+                provenance = manifest_doc.get("provenance")
+                if (
+                    manifest_doc.get("provenance_mode") != "manifest"
+                    or not isinstance(provenance, dict)
+                    or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS
+                ):
+                    raise ValueError(f"document has no provenance entry: {doc['source_path']}")
+            else:
+                provenance = meta["provenance"]
+                public = {k: v for k, v in (meta["public"] or {}).items() if v}
+        elif raw is None:
             provenance = manifest_doc.get("provenance")
             if (
                 manifest_doc.get("provenance_mode") != "manifest"
@@ -771,17 +813,17 @@ def convert_documents(repo: Path, manifest: dict, ledger: dict, stage_docs: Path
             provenance = data.get("docforge_provenance")
             if not isinstance(provenance, dict) or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS:
                 raise ValueError(f"provenance schema unsupported: {doc['source_path']}")
+            public = {key: data.get(key) for key in ("id", "title", "description") if data.get(key)}
         mdx_body, unresolved = convert_body(body, doc["source_path"], ledger, assets_needed)
         h1_title = first_h1_title(body)
         if h1_title:
             doc["title"] = h1_title
-        page = {"id": doc["doc_id"], "title": doc["title"]}
-        manifest_doc = doc.get("doc") or {}
+        page = {"id": public.get("id") or doc["doc_id"], "title": doc["title"]}
         content = public_frontmatter(
             page["id"],
             page["title"],
             provenance,
-            manifest_doc.get("description"),
+            public.get("description") or manifest_doc.get("description"),
         ) + mdx_body
         target = stage_docs / doc["output_path"]
         target.parent.mkdir(parents=True, exist_ok=True)

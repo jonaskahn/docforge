@@ -72,7 +72,7 @@ state), `stop` (shut down the detached dev server).
 
 A legacy manifest (any pre-3.0 version — 1.1 `project_context` /
 `document_groups`, 2.0 flat `documents` with overlays, or another shape) is
-auto-migrated to 3.2 by `start`/`export` (never a stop-and-ask gate:
+auto-migrated to 3.3 by `start`/`export` (never a stop-and-ask gate:
 `migrate_metadata` is safe, idempotent, re-registers any legacy version, and
 never touches document bodies — the migration is always printed).
 `--plan-only` runs the `migrate_metadata --dry-run` preview instead of

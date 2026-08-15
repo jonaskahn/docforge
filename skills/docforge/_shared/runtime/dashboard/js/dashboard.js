@@ -29,10 +29,11 @@ const path = require("path");
 
 const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
+const store = require("../../common/js/provenance_store.js");
 const { classifySource, rawBlobHash } = require("../../common/js/evidence_hash.js");
 const { MANIFEST_CURRENT, migrate: migrateManifestMetadata } = require("../../manifest/js/migrate_metadata.js");
 
-const TOOL_VERSION = "2.15.0";
+const TOOL_VERSION = "2.16.0";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";
@@ -75,9 +76,12 @@ function gitRemoteUrl(repo) {
   return null;
 }
 
-function rootDocHasProvenance(repo, rel) {
-  const meta = fileMetadata(repo, rel);
-  return !!(meta && pf.SUPPORTED_SCHEMA_VERSIONS.has(meta.provenance_schema));
+function rootDocHasProvenance(repo, rel, manifest) {
+  const meta = store.readDocMetadata(repo, { path: rel }, store.storageFor(manifest));
+  if ((meta.state === "ok" || meta.state === "inline") && meta.provenance && typeof meta.provenance === "object") {
+    return pf.SUPPORTED_SCHEMA_VERSIONS.has(meta.provenance.schema);
+  }
+  return false;
 }
 
 function readFrontmatterHead(target) {
@@ -109,27 +113,6 @@ function readFrontmatterHead(target) {
   return { raw: head.subarray(4, end).toString("utf8"), bodyStart: end + marker.length };
 }
 
-function fileMetadata(repo, rel) {
-  // Public metadata of a written document read from its frontmatter head
-  // only: id, title, description, and provenance schema. null when the file
-  // carries no parseable docforge frontmatter.
-  const head = readFrontmatterHead(path.join(repo, rel));
-  if (!head) return null;
-  let data;
-  try {
-    data = pf.parseYamlMapping(head.raw);
-  } catch {
-    return null;
-  }
-  const provenance = data.docforge_provenance;
-  return {
-    id: data.id,
-    title: data.title,
-    description: data.description,
-    provenance_schema: provenance && typeof provenance === "object" ? provenance.schema : null,
-  };
-}
-
 function manifestProvenance(doc) {
   if (doc.provenance_mode !== "manifest") return false;
   return !!(doc.provenance && typeof doc.provenance === "object" && pf.SUPPORTED_SCHEMA_VERSIONS.has(doc.provenance.schema));
@@ -144,7 +127,7 @@ function includedDocuments(repo, manifest) {
     if (!(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
     if (!p.startsWith(DOC_PREFIX) && p.includes("/")) continue;
     if (!fs.existsSync(path.join(repo, p))) continue;
-    if (!p.startsWith(DOC_PREFIX) && !rootDocHasProvenance(repo, p) && !manifestProvenance(doc)) continue;
+    if (!p.startsWith(DOC_PREFIX) && !rootDocHasProvenance(repo, p, manifest) && !manifestProvenance(doc)) continue;
     out.push(doc);
   }
   return out.sort((a, b) => (a.path === b.path ? (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) : a.path < b.path ? -1 : 1));
@@ -242,6 +225,24 @@ function renderSignature(repo, manifest) {
   for (const rel of treeFiles(repo)) {
     records.push(`file\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
   }
+  const provenanceRoot = path.join(repo, ".docforge", store.SIDECAR_DIRNAME);
+  if (fs.existsSync(provenanceRoot) && fs.statSync(provenanceRoot).isDirectory()) {
+    const stack = [provenanceRoot];
+    const sidecarFiles = [];
+    while (stack.length) {
+      const current = stack.pop();
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) stack.push(full);
+        else if (entry.isFile()) sidecarFiles.push(full);
+      }
+    }
+    sidecarFiles.sort();
+    for (const full of sidecarFiles) {
+      const rel = path.relative(repo, full).split(path.sep).join("/");
+      records.push(`provenance\x00${rel}\x00${sha256Bytes(fs.readFileSync(full))}`);
+    }
+  }
   for (const doc of manifestProjection(manifest)) {
     const rel = doc.path;
     if (!rel || rel.includes("/") || !(rel.endsWith(".md") || rel.endsWith(".mdx"))) continue;
@@ -305,12 +306,51 @@ function splitFrontmatterRaw(text) {
 
 function reconcileMetadata(repo, manifest, dryRun = false) {
   const report = { reconciled: [], unchanged: [], skipped: [], errors: [] };
+  const storage = store.storageFor(manifest);
   for (const doc of manifest.documents || []) {
-    if (doc.status === "skipped") continue;
+    if (doc.status === "skipped" || doc.provenance_mode === "manifest") continue;
     const p = doc.path || "";
     if (!p.startsWith(DOC_PREFIX) || !p.endsWith(".md")) continue;
     const target = path.join(repo, p);
     if (!fs.existsSync(target)) continue;
+    const wantId = doc.id;
+    const wantTitle = titleFor(doc);
+    const wantDescription = doc.description || "";
+    if (storage === store.STORAGE_JSON) {
+      const entry = store.entryFor(repo, p);
+      if (!entry) {
+        report.skipped.push({ doc: doc.id, detail: "no provenance entry" });
+        continue;
+      }
+      const provenance = entry.provenance;
+      if (!provenance || typeof provenance !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)) {
+        report.skipped.push({ doc: doc.id, detail: "provenance schema unsupported" });
+        continue;
+      }
+      const problems = [];
+      if (entry.id !== wantId) problems.push("id");
+      if (entry.title !== wantTitle) problems.push("title");
+      if ((entry.description || "") !== wantDescription) problems.push("description");
+      if (provenance.doc_id !== wantId) problems.push("provenance.doc_id");
+      if (provenance.path !== p) problems.push("provenance.path");
+      if (problems.length === 0) {
+        report.unchanged.push({ doc: doc.id });
+        continue;
+      }
+      report.reconciled.push({ doc: doc.id, path: p, fixed: problems });
+      if (!dryRun) {
+        const updated = { ...entry };
+        updated.id = wantId;
+        updated.title = wantTitle;
+        if (wantDescription) updated.description = wantDescription;
+        else delete updated.description;
+        provenance.doc_id = wantId;
+        provenance.path = p;
+        updated.provenance = provenance;
+        store.writeEntry(repo, p, updated);
+      }
+      continue;
+    }
     const head = readFrontmatterHead(target);
     if (!head) {
       report.skipped.push({ doc: doc.id, detail: "no frontmatter" });
@@ -328,9 +368,6 @@ function reconcileMetadata(repo, manifest, dryRun = false) {
       report.skipped.push({ doc: doc.id, detail: "provenance schema unsupported" });
       continue;
     }
-    const wantId = doc.id;
-    const wantTitle = titleFor(doc);
-    const wantDescription = doc.description || "";
     const problems = [];
     if (data.id !== wantId) problems.push("id");
     if (data.title !== wantTitle) problems.push("title");
@@ -712,13 +749,29 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
   const assetsNeeded = new Set();
   const anchors = {};
   const converted = [];
+  const storage = store.storageFor(manifest);
   for (const doc of ledger.pages) {
     const source = path.join(repo, doc.source_path);
     const text = fs.readFileSync(source, "utf8");
     const { raw, body } = splitFrontmatterRaw(text);
+    const manifestDoc = doc.doc || {};
     let provenance;
-    if (raw == null) {
-      const manifestDoc = doc.doc || {};
+    let publicMeta = {};
+    if (raw == null && storage === store.STORAGE_JSON) {
+      const meta = store.readDocMetadata(repo, { path: doc.source_path }, storage);
+      if (meta.state !== "ok" || !meta.provenance || typeof meta.provenance !== "object") {
+        provenance = manifestDoc.provenance;
+        if (
+          manifestDoc.provenance_mode !== "manifest" ||
+          !provenance || typeof provenance !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)
+        ) {
+          throw new Error(`document has no provenance entry: ${doc.source_path}`);
+        }
+      } else {
+        provenance = meta.provenance;
+        if (meta.public) publicMeta = meta.public;
+      }
+    } else if (raw == null) {
       provenance = manifestDoc.provenance;
       if (
         manifestDoc.provenance_mode !== "manifest" ||
@@ -737,12 +790,22 @@ function convertDocuments(repo, manifest, ledger, stageDocs) {
       if (!provenance || typeof provenance !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(provenance.schema)) {
         throw new Error(`provenance schema unsupported: ${doc.source_path}`);
       }
+      publicMeta = {};
+      for (const key of ["id", "title", "description"]) {
+        if (data[key]) publicMeta[key] = data[key];
+      }
     }
     const [mdxBody] = convertBody(body, doc.source_path, ledger, assetsNeeded);
     const h1Title = firstH1Title(body);
     if (h1Title) doc.title = h1Title;
-    const manifestDoc = doc.doc || {};
-    const content = publicFrontmatter(doc.doc_id, doc.title, provenance, manifestDoc.description) + mdxBody;
+    const pageId = publicMeta.id || doc.doc_id;
+    const pageTitle = doc.title;
+    const content = publicFrontmatter(
+      pageId,
+      pageTitle,
+      provenance,
+      publicMeta.description || manifestDoc.description,
+    ) + mdxBody;
     const target = path.join(stageDocs, doc.output_path);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, content, "utf8");

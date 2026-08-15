@@ -25,6 +25,10 @@ graph exists. Both are paired Python/JS public commands.
 
 ### `flow_index`
 
+Emitted flow documents and stubs follow `project.provenance_storage`:
+`json` stamps the folder sidecar and leaves clean markdown; `markdown`
+emits inline frontmatter.
+
 ```sh
 python3 runtime/cli/python/flow_index.py <harvest|revise|organize|render> --repo <repo> \
   [--gitnexus-export <json>] [--main-limit N] [--output <path>] [--organization <json>]

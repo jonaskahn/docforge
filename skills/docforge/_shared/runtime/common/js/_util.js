@@ -100,7 +100,7 @@ function ensureGitignoredDir(dirPath) {
 }
 
 function loadManifest(target, options = {}) {
-  const allowedVersions = options.allowedVersions || ["3.2", "3.1"];
+  const allowedVersions = options.allowedVersions || ["3.3", "3.2", "3.1"];
   const requireDocuments = Boolean(options.requireDocuments);
   const unsupportedHint =
     options.unsupportedHint || "run migrate_metadata.js to re-register legacy manifests";
