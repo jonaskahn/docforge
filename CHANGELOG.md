@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.17.0 - Unmanaged documents (self-managed or archive)
+## Unreleased (2.17.0) - Unmanaged documents (self-managed or archive)
 
 - Foreign `.md` / `.mdx` files under `docs/` or `docs-portfolio/` — docs
   Docforge never generated — now get an explicit triage on fresh-start
