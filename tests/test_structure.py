@@ -72,6 +72,7 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Collect the applicable answers as one response", intake)
         for question in (
             "Goal or action",
+            "Documentation layout",
             "Documentation tier",
             "Repository profiles",
             "Output audience",
@@ -79,6 +80,11 @@ class SkillContentTests(unittest.TestCase):
             "Execution mode",
         ):
             self.assertIn(question, intake)
+        self.assertIn(
+            "**Documentation layout.** Always asked for a new or plan-only scope",
+            intake,
+        )
+        self.assertIn("always\n   before tier, profiles, and audiences", intake)
         self.assertIn("one multi-select per applicable dimension", intake)
         self.assertIn("silent-confirm them on the user's behalf", intake)
         self.assertIn("Never silent-confirm detections or gate judgments", intake)

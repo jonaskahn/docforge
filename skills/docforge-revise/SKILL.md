@@ -72,11 +72,13 @@ question pack and stop-and-ask mechanics are owned by
 [`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md)
 and
 [`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md):
-one confirmation covering Scope, Tier, Profiles, Output audience, and Execution
-mode, but scaled to what is actually unresolved or changed — each dimension
-shows either its persisted value as an unchanged baseline fact, or, only when
-it actually has a delta or a requested change, a `Change to <tier>` /
-`Add` / `Remove` control. Never proceed on silent defaults.
+one confirmation covering Scope, Layout, Tier, Profiles, Output audience, and
+Execution mode, but scaled to what is actually unresolved or changed — each
+dimension shows either its persisted value as an unchanged baseline fact, or,
+only when it actually has a delta or a requested change, a
+`Change to <layout>` / `Change to <tier>` /
+`Add` / `Remove` control. Layout leads the change controls when it is asked.
+Never proceed on silent defaults.
 
 When the revise finds foreign docs (`.md` / `.mdx` under `docs/` with no
 manifest entry), the same confirmation adds the **unmanaged-document

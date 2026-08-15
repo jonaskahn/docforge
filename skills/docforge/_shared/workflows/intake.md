@@ -120,8 +120,6 @@ Do not present a `Keep`
 choice, and do not make the user re-select values that are already selected.
 Instead, controls represent only requested changes:
 
-- **Tier:** show `Current tier: <tier>` and offer `Change to <other tier>` for
-  each alternative tier.
 - **Scale / layout:** re-derive scale from the same detect run and show
   `Current: <class> / <layout>` when detection disagrees with the manifest.
   When `decided_by` is `detected`, offer `Change to <detected class/layout>`
@@ -129,7 +127,10 @@ Instead, controls represent only requested changes:
   drift as a fact and offer the change without a recommendation — a user
   decision is never silently re-derived, and no change means the manifest
   values stand unchanged (see [`revision.md`](revision.md) "Applying the
-  answers to the manifest").
+  answers to the manifest"). Layout is the first control in the pack — it
+  shapes the plan tree every later answer describes.
+- **Tier:** show `Current tier: <tier>` and offer `Change to <other tier>` for
+  each alternative tier.
 - **Profiles and output audiences:** show `Currently selected: <values>` and
   offer `Add <value>` for unselected values and `Remove <value>` for selected
   values. Freshly detected profiles and suitable missing audiences are
@@ -158,7 +159,27 @@ Ask only what remains unresolved, in this order:
    distinguish inspection, planning, writing, and read-only reporting.
    Natural-language **update** / **refresh** of a named document routes to
    [`revision.md`](revision.md) (staleness-first), not a full rewrite.
-2. **Documentation tier.** For a new or plan-only scope, offer Spine
+2. **Documentation layout.** Always asked for a new or plan-only scope —
+   never silently defaulted, even when detection suggests one — and always
+   before tier, profiles, and audiences, because the layout shapes the plan
+   tree every later answer describes. Present a native single-select with
+   both layouts, each carrying the detected evidence from the discovery
+   brief's scale line:
+   - **Compact** — fewer, denser files; the same subjects as Standard at the
+     same depth (`docs/product.md` instead of `docs/product/README.md` +
+     overview, and so on).
+   - **Standard** — one file per subject.
+   Mark the detected layout `(suggested — <source_files> source files,
+   <declared_dependencies> declared dependencies, <flow_candidates> flow
+   candidates, <confirmed_profiles> confirmed profiles)` but never pre-select
+   it on the user's behalf. If the reply omits layout, ask one layout-only
+   follow-up. The confirmed pick is carried into `init`
+   ([`planning.md`](planning.md)): no flag when it matches detection
+   (`decided_by: "detected"`), `--layout <compact|standard>` (with
+   `--scale-class` when the user also changed the class) when it differs
+   (`decided_by: "user"`). Resume or Status omits layout — the manifest
+   already resolves it.
+3. **Documentation tier.** For a new or plan-only scope, offer Spine
    (essential repository documentation) and Diligence (Spine plus flows,
    risks, security, operations, dependencies, and ADRs) always, or a grounded
    recommendation that Docforge will explain after inspection. Offer
@@ -169,7 +190,7 @@ Ask only what remains unresolved, in this order:
    needs its own separate Diligence run first, rather than listing Portfolio
    as a normal choice (see [`../references/portfolio.md`](../references/portfolio.md)
    "Readiness gate").
-3. **Repository profiles.** Require one multi-select per applicable dimension
+4. **Repository profiles.** Require one multi-select per applicable dimension
    (shapes, platforms, frameworks, concerns): a native multi-select or lettered
    multi-select with **recommended** options pre-checked and **also possible**
    options unchecked, each with its evidence or gate reason from the discovery
@@ -181,7 +202,7 @@ Ask only what remains unresolved, in this order:
    framework-specific trees; concerns describe evidenced cross-cutting
    behavior. Detection and the gate never finalize profiles; do not
    silent-confirm them on the user's behalf.
-4. **Output audience.** Always present a native multi-select that lists
+5. **Output audience.** Always present a native multi-select that lists
    **every** catalog audience as a visible option — never drop BA/PO/agents
    from the control:
    - Engineers
@@ -218,9 +239,9 @@ Ask only what remains unresolved, in this order:
    - **Resume or Status**: omit audience when the manifest already resolves
      it; otherwise use the new/plan-only path. Single-document update/refresh
      does not re-prompt audience unless the named document's catalog
-     audiences are missing from the manifest — then offer only those suitable
-     missing audiences plus the current set (still list all seven).
-5. **Graph source, only when unresolved.** With several ready providers, offer
+   audiences are missing from the manifest — then offer only those suitable
+   missing audiences plus the current set (still list all seven).
+6. **Graph source, only when unresolved.** With several ready providers, offer
    only those providers. With no ready provider, explain setup paths and their
    approval requirements. With exactly one ready provider, record it as the
    proposed source and skip this question; include it in the final confirmation
@@ -231,7 +252,7 @@ Ask only what remains unresolved, in this order:
    [`../references/graph/graph-sources.md`](../references/graph/graph-sources.md)
    "Session persistence"). With exactly one ready provider, omit the flag; `init`
    locks it automatically.
-6. **Execution mode.** Required whenever the action will plan or write (new
+7. **Execution mode.** Required whenever the action will plan or write (new
    plan, plan-only, or resume writing). Only Status, staleness-only, or
    revise-flow inventory paths may omit it when no further tree pauses will
    occur. Present a native single-select with these exact labels:
@@ -260,6 +281,10 @@ changed, never a reflexive full re-ask of every dimension on every run:
   always asked, unless the invocation already supplies `--plan-only` or
   `--auto-accept` — these govern this run and are never read off the
   manifest.
+- **Layout** is asked only when scale detection disagrees with the manifest
+  or the user requested a change; it is the first control in the pack when
+  asked (see Revise selection changes). No delta means state the current
+  layout as unchanged instead.
 - **Tier** is asked only when the invocation requests a tier change, the
   manifest has no tier, or detection surfaces evidence the current tier no
   longer fits (for example, newly evidenced profiles that unlock a higher
@@ -279,33 +304,33 @@ changed, never a reflexive full re-ask of every dimension on every run:
   audiences or the user requested a change. No delta means state the current
   audiences as unchanged instead.
 
-When Tier, Profiles, and Output audience all resolve with no delta and no
-requested change, skip their controls and show one confirmation summary with
-that unchanged baseline plus Scope (if it was ambiguous) and Execution mode —
-still an explicit confirmation, not a silent default, just scoped to what is
-actually in question. When any of them does have a delta or a requested
-change, use the change-only controls in **Revise selection changes**
-(`Change to` for tier, `Add` / `Remove` for profiles and output audience) for
-those dimensions only, and show the rest as plain baseline facts in the same
-confirmation summary — with the manifest's current values displayed as the
-baseline throughout. Never proceed on silent defaults; collect the requested
-changes in one response, show the confirmation summary, and wait for explicit
-confirmation before continuing. If the reply leaves a material choice missing
-or ambiguous — including Output audience or Execution mode when required —
-ask one concise follow-up containing only those unresolved choices.
+When Layout, Tier, Profiles, and Output audience all resolve with no delta
+and no requested change, skip their controls and show one confirmation summary
+with that unchanged baseline plus Scope (if it was ambiguous) and Execution
+mode — still an explicit confirmation, not a silent default, just scoped to
+what is actually in question. When any of them does have a delta or a
+requested change, use the change-only controls in **Revise selection changes**
+(`Change to` for layout and tier, `Add` / `Remove` for profiles and output
+audience) for those dimensions only, and show the rest as plain baseline
+facts in the same confirmation summary — with the manifest's current values
+displayed as the baseline throughout. Never proceed on silent defaults;
+collect the requested changes in one response, show the confirmation summary,
+and wait for explicit confirmation before continuing. If the reply leaves a
+material choice missing or ambiguous — including Layout, Output audience, or
+Execution mode when required — ask one concise follow-up containing only
+those unresolved choices.
 
 After resolving the answers, display one confirmation summary containing the
-action, tier, every selected profile dimension, every selected audience,
-selected graph provider and its code/flow capabilities, and execution mode
-(include “permissionless” in the label when Auto-accept was selected). The
-summary also states the project scale and layout once, as a proposed default
-with the detected evidence: `Scale: small (34 source files, 28 declared
-dependencies, 3 flow candidates, 2 confirmed profiles) — layout: compact
-(suggested)`; the user may override either value (`Change to medium`, `Use
-standard layout`) in the same reply, which records `decided_by: "user"` on the
-manifest — never a silent re-derivation. A confirmed override is passed to
-`init` as `--scale-class` / `--layout` ([`planning.md`](planning.md)); a
-confirmed detection needs no flags. Ask
+action, the confirmed layout, tier, every selected profile dimension, and
+every selected audience, selected graph provider and its code/flow
+capabilities, and execution mode (include “permissionless” in the label when
+Auto-accept was selected). The summary restates the confirmed layout with its
+detected evidence: `Layout: compact (confirmed — 34 source files, 28 declared
+dependencies, 3 flow candidates, 2 confirmed profiles)`. A pick that differed
+from detection records `decided_by: "user"` on the manifest via
+`init --scale-class` / `--layout` ([`planning.md`](planning.md)); a pick
+matching detection records `decided_by: "detected"` with no flags — never a
+silent re-derivation either way. Ask
 whether to continue, edit a choice, or cancel. Always wait for explicit confirmation
 of this intake summary, including when Auto-accept was selected. Only after
 confirmation may Docforge initialize or replace a manifest or begin deeper
