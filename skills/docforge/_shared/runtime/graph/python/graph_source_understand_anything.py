@@ -125,6 +125,7 @@ def entry_points(repo: Path) -> list[dict]:
         if tags & NOISE_TAGS:
             continue
 
+        nid = node.get("id")
         if "api-handler" in tags:
             tier = 1000
         elif node_type in ("service", "pipeline"):
@@ -163,7 +164,6 @@ def entry_points(repo: Path) -> list[dict]:
         else:
             continue
 
-        nid = node.get("id")
         rank = tier + (200 if nid in service_ids else 0) + fanout.get(nid, 0)
         seeds.append({
             "id": nid,

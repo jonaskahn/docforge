@@ -7,7 +7,7 @@
  * .ua/knowledge-graph.json (or the legacy .understand-anything/ path). A
  * DB-backed source (GitNexus's ladybug .gitnexus/lbug) is not a JSON file and
  * is not read here: query it via the gitnexus MCP, or offline with
- * runtime/cli/python/graph_source_gitnexus_reader.js — see references/graph-sources.md.
+ * runtime/cli/python/graph_source_gitnexus_reader.js — see references/graph/graph-sources.md.
  *
  * The on-disk schema is not assumed. The script probes the JSON, reports the
  * shape it found, and extracts only fields it can actually see. Where a field
@@ -123,7 +123,7 @@ function loadGraph(p) {
   } catch {
     console.error(
       `No graph at ${p}. Build a code graph from any configured source ` +
-        "first — see references/graph-sources.md."
+        "first — see references/graph/graph-sources.md."
     );
     process.exit(1);
   }
@@ -212,7 +212,7 @@ function modules(nodes, limit) {
   if (counts.size > limit) console.log(`  ... ${counts.size - limit} more (raise --limit)`);
   console.log(
     "\n  Seeds the code map in docs/architecture/high-level.md. Confirm each\n" +
-      "  module's purpose with a subsystem deep-dive (references/graph-sources.md,\n" +
+      "  module's purpose with a subsystem deep-dive (references/graph/graph-sources.md,\n" +
       "  'Deep-dive a symbol') before describing it."
   );
 }
@@ -228,7 +228,7 @@ function layers(nodes) {
     console.log(
       "LAYERS\n  No layer field found on nodes. Derive grouping from the\n" +
         "  module inventory instead, or rebuild the code graph " +
-        "(references/graph-sources.md)."
+        "(references/graph/graph-sources.md)."
     );
     return;
   }
@@ -281,7 +281,7 @@ function deps(nodes, edges, limit) {
   console.log(
     "\n  Candidates for docs/architecture/dependencies.md. Versions and\n" +
       "  licences come from the manifest; criticality and failure behaviour\n" +
-      "  come from the team or a targeted graph query (references/graph-sources.md)."
+      "  come from the team or a targeted graph query (references/graph/graph-sources.md)."
   );
 }
 
@@ -377,7 +377,7 @@ function main() {
           "$PROJECT_ROOT/.understand-anything/ (searched the current directory " +
           "and every parent up to the repo root). If the active source is " +
           "GitNexus, its graph is a ladybug DB — read it via the gitnexus MCP " +
-          "or runtime/cli/python/graph_source_gitnexus_reader.js (references/graph-sources.md), " +
+          "or runtime/cli/python/graph_source_gitnexus_reader.js (references/graph/graph-sources.md), " +
           "not this script. Otherwise build a JSON code graph, or pass " +
           "--graph <path> explicitly."
       );
