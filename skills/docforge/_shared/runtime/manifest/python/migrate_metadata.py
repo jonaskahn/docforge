@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate Docforge manifest metadata to 3.4 / provenance 2.0.
+"""Migrate Docforge manifest metadata to 3.5 / provenance 2.0.
 
 Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
 manifest 3.2 / provenance 2.0 (seeding each document's catalog-owned
@@ -10,7 +10,7 @@ schema 1.0 and schema-less
 legacy frontmatter, including pre-schema `doc` / `graph_snapshot` shapes,
 while preserving section evidence), and re-registers any older legacy
 manifest — 1.1 (`project_context` / `document_groups`), 2.0 (flat
-`documents` with overlay profiles), or any other pre-3.0 shape — as 3.4:
+`documents` with overlay profiles), or any other pre-3.0 shape — as 3.5:
 written documents are adopted as `generated` with provenance 2.0, bodies
 preserved, and plan entries kept. When a document cannot be converted to
 complete provenance 2.0 (missing or unparseable frontmatter, conversion
@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from runtime.common.python._util import dump_json, fail, load_manifest
+from runtime.common.python import scale
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python import provenance_store as store
 from runtime.common.python.provenance_frontmatter import (
@@ -45,8 +46,8 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-MANIFEST_CURRENT = "3.4"
-MANIFEST_IN_PLACE = ("3.4", "3.3", "3.2", "3.1", "3.0")
+MANIFEST_CURRENT = "3.5"
+MANIFEST_IN_PLACE = ("3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
@@ -67,7 +68,7 @@ LEGACY_OVERLAY_MAP = {
 }
 PROFILE_DIMENSIONS = ("shapes", "platforms", "frameworks", "concerns", "audiences")
 ORIGIN_KINDS = {"tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor"}
-STATUSES = {"planned", "in_progress", "generated", "needs_review", "complete", "skipped"}
+STATUSES = {"planned", "in_progress", "generated", "needs_review", "complete", "skipped", "retired"}
 
 
 def needs_provenance_migration(provenance: dict | None) -> bool:
@@ -479,9 +480,27 @@ def seed_descriptions(
     return seeded
 
 
-def migrate_manifest_object(manifest: dict, *, demote_incomplete: bool = False) -> bool:
+def backfill_project_scale(repo: Path) -> dict:
+    """Detected-only scale record for backfill. A present `project.scale` is
+    never overwritten — this function is only called when the field is absent."""
+    detected = scale.compute_scale(repo)
+    return {
+        "class": detected["class"],
+        "layout": detected["suggested_layout"],
+        "decided_by": "detected",
+        "decided_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "signals": detected["signals"],
+    }
+
+
+def migrate_manifest_object(
+    manifest: dict,
+    repo: Path,
+    *,
+    demote_incomplete: bool = False,
+) -> bool:
     changed = False
-    if manifest.get("version") in {"3.3", "3.2", "3.1", "3.0"}:
+    if manifest.get("version") in {"3.4", "3.3", "3.2", "3.1", "3.0"}:
         manifest["version"] = MANIFEST_CURRENT
         changed = True
     project = manifest.get("project")
@@ -490,6 +509,9 @@ def migrate_manifest_object(manifest: dict, *, demote_incomplete: bool = False) 
         changed = True
     if isinstance(project, dict) and not isinstance(project.get("unmanaged_docs"), list):
         project["unmanaged_docs"] = []
+        changed = True
+    if isinstance(project, dict) and not isinstance(project.get("scale"), dict):
+        project["scale"] = backfill_project_scale(repo)
         changed = True
     docs = manifest.get("documents", [])
     if any(not doc.get("description") for doc in docs):
@@ -536,7 +558,7 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
         for doc in manifest.get("documents", [])
         if isinstance(doc.get("id"), str)
     }
-    object_changed = migrate_manifest_object(manifest, demote_incomplete=False)
+    object_changed = migrate_manifest_object(manifest, repo, demote_incomplete=False)
     try:
         manifest_label = str(manifest_path.relative_to(repo))
     except ValueError:
@@ -564,7 +586,7 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
             )
         )
     if not dry_run:
-        migrate_manifest_object(manifest, demote_incomplete=True)
+        migrate_manifest_object(manifest, repo, demote_incomplete=True)
         manifest_path.write_text(
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
@@ -999,6 +1021,7 @@ def migrate_legacy(
             "name": project["name"],
             "root": project["root"],
             "tier": project["tier"],
+            "scale": backfill_project_scale(repo),
             "profiles": project["profiles"],
             "provenance_storage": store.STORAGE_JSON,
             "unmanaged_docs": [],

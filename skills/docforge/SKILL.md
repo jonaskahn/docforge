@@ -68,8 +68,13 @@ A run is complete only after the whole-tree gate
 ([`./_shared/workflows/validation.md`](./_shared/workflows/validation.md))
 passes and — unless the invocation included `--plan-only` or `--no-dashboard`
 — the dashboard has been started and its URL reported in the final response
-(`validation.md` §7 Dashboard auto-serve). Never finish a run with the docs
-written but the dashboard never started or its URL never shown.
+(`validation.md` §7 Dashboard auto-serve). In compact layout
+(`project.scale.layout == "compact"`) the **offer**, not the started
+dashboard, is the non-waivable part: the run must end with either a started,
+reported dashboard or the compact-layout offer line and the user's answer —
+an unstated dashboard is never silently skipped in any layout. Never finish a run with the docs
+written but the dashboard never started (or offered and answered) and its
+URL never shown.
 
 ## Other routes
 

@@ -19,10 +19,10 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
 
 | Script | js/py | Kind | Purpose |
 |---|---|---|---|
-| `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `set-storage` / `reconcile` / `unmanaged` / `finish` |
+| `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `set-storage` / `reconcile` / `retire` / `unmanaged` / `finish` |
 | `check_staleness` | both | CLI | Provenance blob drift report (raw / normalized / range-scoped); optional provenance sync |
 | `hash_evidence` | both | CLI | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one cited source |
-| `migrate_metadata` | both | CLI | Idempotent manifest 3.4 / provenance 2.1 upgrade + storage moves |
+| `migrate_metadata` | both | CLI | Idempotent manifest 3.5 / provenance 2.1 upgrade + storage moves |
 
 ## Details
 
@@ -82,10 +82,12 @@ non-UTF-8 span).
 python3 runtime/cli/python/migrate_metadata.py --repo <repo> [--manifest <path>] [--dry-run] [--report]
 ```
 
-Upgrades manifest 3.3 / 3.2 (or 3.1 / 3.0 / provenance 1.0) to 3.4 / 2.1 —
+Upgrades manifest 3.4 / 3.3 (or 3.2 / 3.1 / 3.0 / provenance 1.0) to 3.5 / 2.1 —
 seeding each document's catalog-owned `description` from the catalog
-`summary`, the project's `provenance_storage` (default `json`), and the
-project's `unmanaged_docs` list (default empty) — and
+`summary`, the project's `provenance_storage` (default `json`), the project's
+`unmanaged_docs` list (default empty), and the project's `scale` record
+(`decided_by: "detected"` from live detection when absent; present records are
+never overwritten) — and
 re-registers older
 shapes; adopts legacy written documents, scaffolds incomplete provenance,
 clears failed audits, demotes incomplete written documents to `in_progress`.
@@ -110,5 +112,5 @@ section-provenance document in either direction (`--dry-run` previews it).
 ## Boundaries
 
 Consumes `common/` libraries (`_util`, `plan`, `provenance_frontmatter`,
-`evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.4) and
+`evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.5) and
 flow-index schema (1.1) are enforced by `validation/validate_metadata`.

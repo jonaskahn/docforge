@@ -261,6 +261,32 @@ def resolve_presentation(detail: dict, audiences: list[str] | None = None) -> tu
     return primary, presentation, origins
 
 
+def composed_compact_contract(detail: dict) -> tuple[str, list[dict]]:
+    """Compose the merged file's content contract at route time: the group's
+    short header contract plus each member's existing contract as a named
+    section, in `compact_members` order. Member contracts are reused, never
+    rewritten."""
+    parts: list[str] = []
+    members: list[dict] = []
+    header = detail.get("contract_file")
+    if header and (SKILL_ROOT / header).is_file():
+        parts.append((SKILL_ROOT / header).read_text(encoding="utf-8").rstrip())
+    for order, member_id in enumerate(detail.get("compact_members", []), start=1):
+        member = load_type(member_id)
+        member_contract = member.get("contract_file")
+        members.append({
+            "id": member_id,
+            "order": order,
+            "contract": member_contract,
+            "instruction": member.get("instruction_file"),
+            "template": member.get("template_file"),
+        })
+        if member_contract and (SKILL_ROOT / member_contract).is_file():
+            text = (SKILL_ROOT / member_contract).read_text(encoding="utf-8").rstrip()
+            parts.append(f"## {member_id}\n\n{text}")
+    return "\n\n".join(parts), members
+
+
 def route(value: str, audiences: list[str] | None = None) -> dict:
     doc_id = resolve_catalog_id(value)
     row = index_row(doc_id)
@@ -272,7 +298,8 @@ def route(value: str, audiences: list[str] | None = None) -> dict:
         if model in detail.get("model_depth", {})
     }
     primary_audience, presentation, presentation_origin = resolve_presentation(detail, audiences)
-    return {
+    compact_members = detail.get("compact_members")
+    result = {
         "id": doc_id,
         "group": detail.get("group"),
         "summary": detail.get("summary"),
@@ -290,6 +317,14 @@ def route(value: str, audiences: list[str] | None = None) -> dict:
         "presentation": presentation,
         "presentation_origin": presentation_origin,
     }
+    if compact_members:
+        composed, members = composed_compact_contract(detail)
+        result["contract"] = composed
+        result["compact"] = {
+            "header_contract": detail.get("contract_file"),
+            "members": members,
+        }
+    return result
 
 
 # Field order and shape of a pre-2.5 type-detail record. --id/--ids/--tier/
@@ -388,7 +423,7 @@ def applicable(
     for row in index["document_types"]:
         detail = load_type(row["id"])
         rule = detail["selection"]
-        if rule["mode"] == "dynamic" and not include_dynamic:
+        if rule["mode"] in {"dynamic", "compact"} and not include_dynamic:
             continue
         if ranks[rule["min_tier"]] > tier_rank:
             continue
@@ -606,8 +641,35 @@ def validate() -> list[str]:
             dynamic_types.add(doc["type"])
             if doc["type"] in index_ids and doc["type"] != doc_id:
                 errors.append(f"{doc_id}: dynamic type collides with catalog id {doc['type']}")
+        elif selection.get("mode") == "compact":
+            if not doc.get("compact_members"):
+                errors.append(f"{doc_id}: compact documents must declare compact_members")
+            if doc.get("compact_target") and doc.get("compact_target") != doc.get("path"):
+                errors.append(f"{doc_id}: compact_target must match path")
+            if doc["id"] in static_ids:
+                errors.append(f"duplicate static id: {doc['id']}")
+            if doc["path"] in static_paths:
+                errors.append(f"duplicate static path: {doc['path']}")
+            static_ids.add(doc["id"])
+            static_paths.add(doc["path"])
         else:
             errors.append(f"{doc_id}: selection.mode must be static or dynamic")
+    compact_ids = {
+        doc_id for doc_id in index_ids
+        if load_type(doc_id).get("selection", {}).get("mode") == "compact"
+    }
+    for doc_id in index_ids:
+        doc = load_type(doc_id)
+        group = doc.get("compact_group")
+        if group is not None and group not in compact_ids:
+            errors.append(f"{doc_id}: compact_group references missing compact document {group}")
+        for member_id in doc.get("compact_members", []):
+            if member_id not in index_ids:
+                errors.append(f"{doc_id}: compact_members references unknown document {member_id}")
+            elif load_type(member_id).get("compact_group") != doc_id:
+                errors.append(f"{doc_id}: member {member_id} does not declare compact_group {doc_id}")
+            if doc.get("selection", {}).get("mode") != "compact":
+                errors.append(f"{doc_id}: compact_members belongs on a compact document")
 
     # §0.10: infrastructure-platform must carry widened signals + aliases
     infra = next(

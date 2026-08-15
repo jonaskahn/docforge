@@ -131,11 +131,12 @@ def inventory(repo: Path) -> list[tuple[str, Path]]:
     return found
 
 
-def detect(repo: Path) -> list[dict]:
+def detect(repo: Path, *, persist: bool = True) -> list[dict]:
     profiles = query_catalog.load_profiles()
     files = inventory(repo)
     dependencies = manifest_deps.extract_dependencies(files)
-    persist_manifest_deps(repo, dependencies)
+    if persist:
+        persist_manifest_deps(repo, dependencies)
     cache: dict[Path, str] = {}
     cached_bytes = 0
     results: list[dict] = []

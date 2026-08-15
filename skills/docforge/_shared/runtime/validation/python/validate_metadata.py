@@ -25,7 +25,7 @@ REPO_ROOT = SKILL_ROOT.parent.parent.parent
 CATALOG_VERSION = "2.17.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
-    "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run"],
+    "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run", "--scale-class", "--layout"],
     "detect_profiles": ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
@@ -74,8 +74,8 @@ def validate() -> list[str]:
         errors.append("split catalog index.json is missing")
     if (metadata / "catalog.json").is_file():
         errors.append("obsolete monolith catalog.json remains; use .metadata/catalog/")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.4":
-        errors.append("manifest schema must require version 3.4")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.5":
+        errors.append("manifest schema must require version 3.5")
     project_required = set(manifest_schema.get("properties", {}).get("project", {}).get("required", []))
     if "provenance_storage" not in project_required:
         errors.append("manifest schema project must require provenance_storage")

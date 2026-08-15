@@ -49,6 +49,37 @@ docs/
   reference/limitations.md
 ```
 
+### Compact layout
+
+Layout is a second axis orthogonal to tier: `compact` and `standard` are both
+available at **every** tier, and scale suggests a layout — it never changes the
+tier default. A compact tier covers the **same subjects** as its standard
+counterpart at the same analytical depth; it stops giving each subject its own
+file. Documents sharing a catalog `compact_group` collapse into one merged
+file at the group's `compact_target`, one `##` section per member in
+`compact_order`, with the members recorded on the manifest entry so provenance
+and revise can trace them back. This is a file-count change, never a coverage
+or rigor change.
+
+Compact Spine (8 files, down from 15):
+
+```text
+README.md
+CHANGELOG.md
+docs/
+  README.md
+  product.md        (was product/README.md + product/overview.md)
+  architecture.md   (was architecture/README.md + architecture/high-level.md)
+  flows/README.md
+  engineering.md    (was engineering/README.md + setup.md + testing.md)
+  reference.md      (was reference/README.md + configuration.md + limitations.md + tech-stack.md)
+```
+
+The merge is safe precisely where it fires: at Spine these folder indexes have
+no dynamic children to route to. `project.scale.layout` records which tree was
+generated; switching layouts is a selection change like any other and flows
+through the revise preview and retirement (see `revision.md`).
+
 ### Diligence
 
 Diligence adds detailed architecture, discovered flows and decisions, risk and

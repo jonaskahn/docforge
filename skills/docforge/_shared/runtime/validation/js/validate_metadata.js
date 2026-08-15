@@ -15,7 +15,7 @@ const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
 const CATALOG_VERSION = "2.17.0";
 const PUBLIC_CONTRACTS = {
-  manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run"],
+  manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run", "--scale-class", "--layout"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
@@ -71,8 +71,8 @@ function validate() {
   if (fs.existsSync(path.join(metadata, "catalog.json"))) {
     errors.push("obsolete monolith catalog.json remains; use .metadata/catalog/");
   }
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.4") {
-    errors.push("manifest schema must require version 3.4");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.5") {
+    errors.push("manifest schema must require version 3.5");
   }
   const projectRequired = new Set(((((manifestSchema.properties || {}).project || {}).required) || []));
   if (!projectRequired.has("provenance_storage")) {

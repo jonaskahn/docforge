@@ -40,6 +40,7 @@ DOCFORGE_GITIGNORE_RULES: list[str] = [
     "scratch/",
     "backups/",
     "cache/",
+    "obsolete/",
     "*.tmp",
     "*.log",
 ]
@@ -97,7 +98,7 @@ def ensure_gitignored_dir(path: Path) -> Path:
     it so its contents are never committed, in whichever repo Docforge is
     documenting. Idempotent."""
     path.mkdir(parents=True, exist_ok=True)
-    if path.name in ("tmp", "audits", "scratch") and path.parent.name == ".docforge":
+    if path.name in ("tmp", "audits", "scratch", "obsolete") and path.parent.name == ".docforge":
         ensure_docforge_gitignore(path.parent)
     gitignore = path / ".gitignore"
     if not gitignore.is_file():
@@ -108,7 +109,7 @@ def ensure_gitignored_dir(path: Path) -> Path:
 def load_manifest(
     path: Path,
     *,
-    allowed_versions: Sequence[str] = ("3.4", "3.3", "3.2", "3.1"),
+    allowed_versions: Sequence[str] = ("3.5", "3.4", "3.3", "3.2", "3.1"),
     require_documents: bool = False,
     unsupported_hint: str = "run migrate_metadata.py to re-register legacy manifests",
 ) -> dict:

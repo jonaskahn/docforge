@@ -1,0 +1,31 @@
+{
+  "id": "architecture_compact",
+  "type": "compact-doc",
+  "title": "Architecture",
+  "summary": "Compact architecture section: system mental model and high-level architecture in one file",
+  "contract_file": "content/compact/contracts/architecture.md",
+  "path": "docs/architecture.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "compact",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/compact/instructions/architecture.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 9,
+  "nav_order": 20,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/compact/templates/architecture.template.md",
+  "contract_revision": "2.17.0",
+  "compact_target": "docs/architecture.md",
+  "compact_members": [
+    "architecture_index",
+    "arch_high_level"
+  ]
+}

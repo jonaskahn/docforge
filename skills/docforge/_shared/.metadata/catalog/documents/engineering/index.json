@@ -6,6 +6,11 @@
   "source": "../../index.json",
   "records": [
     {
+      "id": "engineering_compact",
+      "path": "engineering_compact.json",
+      "summary": "Compact engineering section: setup and testing practices in one file"
+    },
+    {
       "id": "engineering_index",
       "path": "engineering_index.json",
       "summary": "Engineering documentation overview: what this section covers and the reader question each engineering document answers"

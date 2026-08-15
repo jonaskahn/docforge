@@ -19,6 +19,8 @@ they exist to be imported, not executed.
 - Extracting declared dependencies from package manifests → `manifest_deps`.
 - Mapping provenance 2.0 to PROV relations → `prov_projection`.
 - Naming special outputs that bypass normal provenance → `special_files`.
+- Classifying project scale (`small` / `medium` / `large`) and suggesting a
+  layout → `scale`.
 
 ## Scripts
 
@@ -37,6 +39,7 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | `provenance_frontmatter` | Restricted-YAML provenance codec, v1→v2 migration, hashing, frontmatter rewrite | yes |
 | `provenance_store` | Folder-mirrored JSON sidecar store: mode-aware reads, entry writes, inline↔sidecar moves | mixes — writes `.docforge/provenance/` and strips/restores frontmatter |
 | `special_files` | Constants: special output names and their template sources | yes |
+| `scale` | Three-way project scale classification from the existing inventory walk + confirmed profile count; suggests `compact`/`standard` layout | yes |
 
 ## Details
 
@@ -79,6 +82,11 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 - `special_files` — `SPECIAL_DOC_OUTPUTS` (AGENTS.md, CLAUDE.md,
   CLAUDE.local.md) and `SPECIAL_DOC_SOURCES` (agents-kernel.md, claude-md.md,
   claude-local-md.md).
+- `scale` — `compute_scale(repo)` / `computeScale(repo)` returning
+  `{class, suggested_layout, signals}`; thresholds are tunable constants
+  (`SMALL_MAX_SOURCE_FILES`, `MEDIUM_MAX_SOURCE_FILES`,
+  `BOUNDARY_NUDGE_RATIO`, `PROFILE_NUDGE_THRESHOLD`). Read-only: reuses
+  `detect_profiles.inventory` and non-persisting detection.
 
 ## Where invoked
 

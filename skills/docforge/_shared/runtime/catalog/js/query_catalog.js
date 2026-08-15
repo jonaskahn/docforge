@@ -211,6 +211,37 @@ function resolvePresentation(detail, audiences = []) {
   return [primary, presentation, origins];
 }
 
+// Compose the merged file's content contract at route time: the group's
+// short header contract plus each member's existing contract as a named
+// section, in `compact_members` order. Member contracts are reused, never
+// rewritten.
+function composedCompactContract(detail) {
+  const parts = [];
+  const members = [];
+  const header = detail.contract_file;
+  if (header && fs.existsSync(path.join(SKILL_ROOT, header))) {
+    parts.push(fs.readFileSync(path.join(SKILL_ROOT, header), "utf8").trimEnd());
+  }
+  let order = 0;
+  for (const memberId of detail.compact_members || []) {
+    order += 1;
+    const member = loadType(memberId);
+    const memberContract = member.contract_file;
+    members.push({
+      id: memberId,
+      order,
+      contract: memberContract,
+      instruction: member.instruction_file === undefined ? null : member.instruction_file,
+      template: member.template_file,
+    });
+    if (memberContract && fs.existsSync(path.join(SKILL_ROOT, memberContract))) {
+      const text = fs.readFileSync(path.join(SKILL_ROOT, memberContract), "utf8").trimEnd();
+      parts.push(`## ${memberId}\n\n${text}`);
+    }
+  }
+  return [parts.join("\n\n"), members];
+}
+
 function route(value, audiences = []) {
   const docId = resolveCatalogId(value);
   const row = indexRow(docId);
@@ -223,7 +254,7 @@ function route(value, audiences = []) {
     }
   }
   const [primaryAudience, presentation, presentationOrigin] = resolvePresentation(detail, audiences);
-  return {
+  const result = {
     id: docId,
     group: detail.group,
     summary: detail.summary,
@@ -241,6 +272,15 @@ function route(value, audiences = []) {
     presentation,
     presentation_origin: presentationOrigin,
   };
+  if (detail.compact_members && detail.compact_members.length) {
+    const [composed, members] = composedCompactContract(detail);
+    result.contract = composed;
+    result.compact = {
+      header_contract: detail.contract_file,
+      members,
+    };
+  }
+  return result;
 }
 
 // Field order and shape of a pre-2.5 type-detail record. --id/--ids/--tier/
@@ -346,7 +386,7 @@ function applicable(options = {}) {
   for (const row of index.document_types) {
     const detail = loadType(row.id);
     const rule = detail.selection;
-    if (rule.mode === "dynamic" && !options.includeDynamic) continue;
+    if ((rule.mode === "dynamic" || rule.mode === "compact") && !options.includeDynamic) continue;
     if (ranks[rule.min_tier] > tierRank) continue;
     const selectors = rule.selectors || {};
     const hasSelectors = Object.values(selectors).some((v) => v && v.length);
@@ -602,8 +642,33 @@ function validate() {
       if (dynamicTypes.has(doc.type)) errors.push(`duplicate dynamic type: ${doc.type}`);
       dynamicTypes.add(doc.type);
       if (indexIds.includes(doc.type) && doc.type !== docId) errors.push(`${docId}: dynamic type collides with catalog id ${doc.type}`);
+    } else if (selection.mode === "compact") {
+      if (!doc.compact_members || !doc.compact_members.length) errors.push(`${docId}: compact documents must declare compact_members`);
+      if (doc.compact_target && doc.compact_target !== doc.path) errors.push(`${docId}: compact_target must match path`);
+      if (staticIds.has(doc.id)) errors.push(`duplicate static id: ${doc.id}`);
+      if (staticPaths.has(doc.path)) errors.push(`duplicate static path: ${doc.path}`);
+      staticIds.add(doc.id);
+      staticPaths.add(doc.path);
     } else {
       errors.push(`${docId}: selection.mode must be static or dynamic`);
+    }
+  }
+  const compactIds = new Set(indexIds.filter((docId) => (loadType(docId).selection || {}).mode === "compact"));
+  for (const docId of indexIds) {
+    const doc = loadType(docId);
+    const group = doc.compact_group;
+    if (group !== undefined && !compactIds.has(group)) {
+      errors.push(`${docId}: compact_group references missing compact document ${group}`);
+    }
+    for (const memberId of doc.compact_members || []) {
+      if (!indexIds.includes(memberId)) {
+        errors.push(`${docId}: compact_members references unknown document ${memberId}`);
+      } else if (loadType(memberId).compact_group !== docId) {
+        errors.push(`${docId}: member ${memberId} does not declare compact_group ${docId}`);
+      }
+      if ((doc.selection || {}).mode !== "compact") {
+        errors.push(`${docId}: compact_members belongs on a compact document`);
+      }
     }
   }
 

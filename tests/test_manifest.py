@@ -73,7 +73,7 @@ class ManifestSelectionTests(unittest.TestCase):
                 result = initialize("py", repo, tier)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.4")
+                self.assertEqual(manifest["version"], "3.5")
                 self.assertEqual(manifest["project"]["tier"], tier)
                 self.assertEqual(
                     manifest["project"]["profiles"]["audiences"],
@@ -1292,7 +1292,7 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertIn("# Broken", broken_text)
 
                 saved = load_manifest(repo)
-                self.assertEqual(saved["version"], "3.4")
+                self.assertEqual(saved["version"], "3.5")
                 self.assertEqual(saved["documents"][0]["provenance"]["schema"], SCHEMA_VERSION)
                 self.assertIn("generator", saved["documents"][0]["provenance"])
                 self.assertEqual(saved["documents"][1]["provenance"]["schema"], SCHEMA_VERSION)
@@ -1351,7 +1351,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.4")
+                self.assertEqual(migrated["version"], "3.5")
                 self.assertIn("description", migrated["documents"][0])
                 self.assertEqual(migrated["documents"][0]["description"], "Self-introduction to the documentation: what the repo is, who it serves, and the reader question each selected section answers")
                 self.assertEqual(migrated["documents"][0]["provenance"]["schema"], "2.0")
@@ -1402,7 +1402,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.4")
+                self.assertEqual(migrated["version"], "3.5")
                 self.assertEqual(migrated["documents"][0]["description"], "Writer-refined one-liner.")
 
     def test_obsolete_schema_defect_names_migrate_command(self) -> None:
@@ -1577,7 +1577,7 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.4")
+                    self.assertEqual(manifest["version"], "3.5")
                     self.assertEqual(manifest["project"]["tier"], "spine")
                     self.assertEqual(manifest["project"]["profiles"]["audiences"], ["coding-agents"])
                     docs = {doc["id"]: doc for doc in manifest["documents"]}
@@ -1692,6 +1692,8 @@ class ManifestV11MigrationTests(unittest.TestCase):
             py_manifest = load_manifest(repos["py"])
             js_manifest = load_manifest(repos["js"])
             py_manifest["project"]["root"] = js_manifest["project"]["root"]
+            for manifest in (py_manifest, js_manifest):
+                manifest["project"]["scale"]["decided_at"] = "<TIME>"
             self.assertEqual(py_manifest, js_manifest)
             self.assertEqual(
                 (repos["py"] / "docs/architecture/high-level.md").read_text(encoding="utf-8"),
@@ -1758,9 +1760,9 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     try:
                         result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-                        self.assertIn("manifest: legacy manifest auto-migrated to 3.4", result.stdout)
+                        self.assertIn("manifest: legacy manifest auto-migrated to 3.5", result.stdout)
                         manifest = load_manifest(repo)
-                        self.assertEqual(manifest["version"], "3.4")
+                        self.assertEqual(manifest["version"], "3.5")
                         # scan/status must not perform the same auto-migration
                         # on a manifest that's already migrated -- this just
                         # confirms the migrated manifest is now readable by
@@ -1860,7 +1862,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.4")
+                    self.assertEqual(manifest["version"], "3.5")
                     self.assertEqual(manifest["project"]["tier"], "diligence")
                     self.assertEqual(manifest["project"]["name"], "legacy2")
                     self.assertEqual(manifest["project"]["profiles"]["shapes"], ["api-service"])
@@ -1911,7 +1913,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     report = json.loads(result.stdout)
                     self.assertIn("re-registered from 0.9", report["results"][0]["detail"])
                     out = load_manifest(repo)
-                    self.assertEqual(out["version"], "3.4")
+                    self.assertEqual(out["version"], "3.5")
                     overview = next(doc for doc in out["documents"] if doc["id"] == "product_overview")
                     self.assertEqual(
                         overview["selection"]["origins"],
@@ -1932,6 +1934,8 @@ class ManifestV20MigrationTests(unittest.TestCase):
             py_manifest = load_manifest(repos["py"])
             js_manifest = load_manifest(repos["js"])
             py_manifest["project"]["root"] = js_manifest["project"]["root"]
+            for manifest in (py_manifest, js_manifest):
+                manifest["project"]["scale"]["decided_at"] = "<TIME>"
             self.assertEqual(py_manifest, js_manifest)
 
 
@@ -2182,7 +2186,7 @@ class UnmanagedDocsTests(unittest.TestCase):
                 self.assertIn(migrated.returncode, (0, 1), migrated.stderr)
                 self.assertNotIn("FAILED", migrated.stdout)
                 reloaded = load_manifest(repo)
-                self.assertEqual(reloaded["version"], "3.4")
+                self.assertEqual(reloaded["version"], "3.5")
                 self.assertEqual(reloaded["project"]["unmanaged_docs"], [])
                 # Second run is a clean no-op apart from the same MISSING files.
                 again = run(runtime, "migrate_metadata", "--repo", str(repo))

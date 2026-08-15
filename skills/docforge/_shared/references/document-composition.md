@@ -75,6 +75,22 @@ containing only README is a defect. Building a deep-dive means writing it
 and promoting in the same pass — never adding the link first and the file
 later.
 
+## Compact demotion
+
+Compact layout demotes a *sparse group* in the mirror direction, governed by
+the same **One owner per fact** table and the same **Depth brake**: several
+documents sharing one catalog `compact_group` become `##` sections of one
+merged file at the group's `compact_target`, ordered by `compact_order`.
+Demote only when the group's indexes have no dynamic children to route to —
+the merged file *is* the section; there is no child map to rebuild. Every
+member keeps owning its facts; the merged file presents them as named
+sections with per-section provenance, never as a merged narrative. One fact
+still has one owner — a compact section is a member document hosted in a
+shared file, not a rewrite. Reversing the demotion (compact → standard) is
+atomic promotion run backwards: scaffold the component files, migrate each
+section's prose to its component, retire the merged file — no content lost
+in either direction (see `revision.md`).
+
 ## Durability
 
 Write at the slowest-changing useful layer:

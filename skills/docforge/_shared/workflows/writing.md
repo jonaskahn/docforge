@@ -16,9 +16,11 @@ validates illustration budgets and presentation-safe fences.
 ## Continue incomplete run
 
 When the user chooses Resume in intake or asks to continue an incomplete
-documentation run: run `migrate_metadata.{py,js}` when needed (see
-[`../runtime/manifest/README.md`](../runtime/manifest/README.md)), load the
-version-3.4
+documentation run: always run `migrate_metadata.{py,js}` first (schema +
+provenance sidecars; see
+[`validation.md`](validation.md) "Manifest and provenance" — idempotent, a
+clean no-op when current), load the
+version-3.5
 manifest, and continue the first non-complete, non-skipped document in write
 order. Then follow **Write one document** below for that document. May combine
 with `--auto-accept`.

@@ -113,7 +113,7 @@
           "type": "object",
           "required": ["mode", "min_tier", "selectors", "condition"],
           "properties": {
-            "mode": {"enum": ["static", "dynamic"]},
+            "mode": {"enum": ["static", "dynamic", "compact"]},
             "min_tier": {"enum": ["spine", "diligence", "portfolio"]},
             "selectors": {"$ref": "#/definitions/selectors"},
             "condition": {"type": ["string", "null"]}
@@ -149,6 +149,10 @@
         },
         "contract_revision": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
         "selection_evidence_required": {"type": "boolean"},
+        "compact_group": {"type": "string"},
+        "compact_target": {"type": "string"},
+        "compact_order": {"type": "integer"},
+        "compact_members": {"type": "array", "items": {"type": "string"}},
         "presentation": {"$ref": "#/definitions/presentation"}
       }
     }

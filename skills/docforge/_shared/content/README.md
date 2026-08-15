@@ -40,6 +40,11 @@ Router/index documents orient and link. Procedure documents are executable in
 order. Reference documents optimize lookup. Explanation documents establish
 mechanism, constraints, and tradeoffs.
 
+Compact-layout documents are composed, not rewritten: a merged file presents
+each member as a `##` section following its member contract, per
+[`../references/document-composition.md`](../references/document-composition.md)
+"Compact demotion".
+
 Code, output, configuration, and diagrams follow
 [`../references/code-presentation.md`](../references/code-presentation.md).
 

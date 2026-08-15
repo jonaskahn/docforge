@@ -28,13 +28,13 @@
       "id": "product",
       "kind": "folder",
       "index": "product/index.json",
-      "count": 18
+      "count": 19
     },
     {
       "id": "architecture",
       "kind": "folder",
       "index": "architecture/index.json",
-      "count": 31
+      "count": 32
     },
     {
       "id": "flows",
@@ -57,7 +57,7 @@
       "id": "engineering",
       "kind": "folder",
       "index": "engineering/index.json",
-      "count": 8
+      "count": 9
     },
     {
       "id": "operations",
@@ -69,7 +69,7 @@
       "id": "reference",
       "kind": "folder",
       "index": "reference/index.json",
-      "count": 19
+      "count": 20
     },
     {
       "id": "security",

@@ -6,6 +6,11 @@
   "source": "../../index.json",
   "records": [
     {
+      "id": "reference_compact",
+      "path": "reference_compact.json",
+      "summary": "Compact reference section: configuration, limitations, and the technology stack in one file"
+    },
+    {
       "id": "reference_index",
       "path": "reference_index.json",
       "summary": "Reference documentation overview: what this section covers and the reader question each reference document answers"

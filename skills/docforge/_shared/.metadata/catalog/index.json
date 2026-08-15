@@ -89,6 +89,12 @@
       "record": "documents/architecture/architecture_index.json"
     },
     {
+      "id": "architecture_compact",
+      "tier": "spine",
+      "path": "docs/architecture.md",
+      "record": "documents/architecture/architecture_compact.json"
+    },
+    {
       "id": "arch_high_level",
       "tier": "spine",
       "path": "docs/architecture/high-level.md",
@@ -269,6 +275,12 @@
       "record": "documents/product/product_index.json"
     },
     {
+      "id": "product_compact",
+      "tier": "spine",
+      "path": "docs/product.md",
+      "record": "documents/product/product_compact.json"
+    },
+    {
       "id": "web_components",
       "tier": "spine",
       "path": "docs/architecture/ui-components.md",
@@ -395,6 +407,12 @@
       "record": "documents/engineering/engineering_index.json"
     },
     {
+      "id": "engineering_compact",
+      "tier": "spine",
+      "path": "docs/engineering.md",
+      "record": "documents/engineering/engineering_compact.json"
+    },
+    {
       "id": "po_release_notes",
       "tier": "spine",
       "path": "docs/product/product-owner/release-notes.md",
@@ -453,6 +471,12 @@
       "tier": "spine",
       "path": "docs/reference/README.md",
       "record": "documents/reference/reference_index.json"
+    },
+    {
+      "id": "reference_compact",
+      "tier": "spine",
+      "path": "docs/reference.md",
+      "record": "documents/reference/reference_compact.json"
     },
     {
       "id": "configuration",

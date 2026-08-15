@@ -1,0 +1,35 @@
+{
+  "id": "reference_compact",
+  "type": "compact-doc",
+  "title": "Reference",
+  "summary": "Compact reference section: configuration, limitations, and the technology stack in one file",
+  "contract_file": "content/compact/contracts/reference.md",
+  "path": "docs/reference.md",
+  "group": "reference",
+  "selection": {
+    "mode": "compact",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/compact/instructions/reference.md",
+  "requires": [
+    "code_graph",
+    "git_history",
+    "manifests"
+  ],
+  "target_depth": "orientation",
+  "write_order": 60,
+  "nav_order": 40,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/compact/templates/reference.template.md",
+  "contract_revision": "2.17.0",
+  "compact_target": "docs/reference.md",
+  "compact_members": [
+    "reference_index",
+    "configuration",
+    "limitations",
+    "tech_stack"
+  ]
+}

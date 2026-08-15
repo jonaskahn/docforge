@@ -33,14 +33,25 @@ gate's exit code reflects real defects only.
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `3.4`; there is no secondary runtime state file.
-Manifest 3.3 (and 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
+Its schema version is `3.5`; there is no secondary runtime state file.
+
+**Migration is unconditional.** Every invocation that touches an existing
+manifest — every `/docforge-revise` path regardless of scope argument,
+single-document update included, and `/docforge` planning when a manifest
+already exists — begins with an explicit `migrate_metadata.{py,js}` run
+covering both manifest schema and provenance storage. Migration is idempotent,
+so an already-current manifest reports a clean no-op; that cheapness is why
+the run is unconditional, never "when needed".
+
+Manifest 3.4 (and 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
 `migrate_metadata.{py,js}`
 (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
-resume, revision, or provenance synchronization — the 3.3 → 3.4 step seeds
+resume, revision, or provenance synchronization — the 3.4 → 3.5 step seeds
 each document's catalog-owned `description` from the catalog `summary`,
-the project's `provenance_storage` (`json` by default), and the project's
-`unmanaged_docs` list (empty by default). A
+the project's `provenance_storage` (`json` by default), the project's
+`unmanaged_docs` list (empty by default), and the project's `scale` record
+(`decided_by: "detected"` from live detection when absent; a present record is
+never overwritten). A
 legacy manifest of any
 pre-3.0 version (1.1 `project_context` / `document_groups`, 2.0 flat
 `documents` with overlays, or another shape) is re-registered by the same
@@ -95,8 +106,11 @@ migration are moved automatically.
 ## Completion criteria
 
 A document is `complete` only with a passing `cold-pass` audit
-record. A run is complete only when every selected document is `complete` or
-explicitly `skipped`, and the whole-tree gate above exits zero.
+record. A run is complete only when every selected document is `complete`,
+explicitly `skipped`, or `retired` (out of scope — the entry is preserved, the
+file moved or deleted by the approved retirement step; a `retired` document
+carries no whole-tree-gate coverage expectations, exactly like `skipped`), and
+the whole-tree gate above exits zero.
 
 ## 7. Dashboard auto-serve
 
@@ -110,20 +124,26 @@ reported in the final response:
 2. **Skip when the invocation included `--no-dashboard`** — the run still
    completes; the user renders later with `/docforge-dashboard` or the
    internal `dashboard.{py,js} start`.
-3. Run the dashboard lifecycle — preflight, metadata reconcile, signature,
+3. **Compact layout offers instead of serves** — when
+   `project.scale.layout == "compact"` and neither `--plan-only` nor
+   `--no-dashboard` was given, do not run items 4-7 automatically; append
+   one offer line to the final response ("Compact layout — start the local
+   dashboard? Reply yes, or run `/docforge-dashboard` later."). An explicit
+   yes in the same turn runs items 4-7 unchanged.
+4. Run the dashboard lifecycle — preflight, metadata reconcile, signature,
    build (when changed), serve, open — via
    [`./dashboard.md`](dashboard.md) (internal to this cartridge; the optional
    `/docforge-dashboard` skill is only a thin entrypoint into it):
    `python3 runtime/cli/python/dashboard.py start --repo <repo>` (or the
    locked JS peer).
-4. The first run takes longer: it scaffolds `.docforge/dashboard/`, runs
+5. The first run takes longer: it scaffolds `.docforge/dashboard/`, runs
    `npm install`, and starts the detached dev server; later runs reuse the
    healthy recorded server when the signature is unchanged.
-5. When Node.js 22+ / npm is unavailable or preflight fails, state the
+6. When Node.js 22+ / npm is unavailable or preflight fails, state the
    dashboard requirement and continue — a missing dashboard never blocks
    completion, but a successful run must print the `dashboard: <url>` line
    and name the URL in the final summary.
-6. The dev server runs detached; `dashboard.{py,js} stop` shuts it down
+7. The dev server runs detached; `dashboard.{py,js} stop` shuts it down
    without affecting the written documentation or manifest state (see
    [`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)).
 

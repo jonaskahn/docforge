@@ -54,7 +54,7 @@ def resolve_manifest(value: Path, repo: Path) -> Path:
 
 
 def active_documents(manifest: dict) -> list[dict]:
-    return [doc for doc in manifest["documents"] if doc.get("status") != "skipped"]
+    return [doc for doc in manifest["documents"] if doc.get("status") not in {"skipped", "retired"}]
 
 
 def preview(manifest: dict, repo: Path, revise: bool = False) -> int:

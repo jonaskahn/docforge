@@ -24,6 +24,7 @@ function flowIsMainPriority(row) {
 function documentAction(repo, doc, revise, storage = null) {
   const status = doc.status || "planned";
   if (status === "skipped") return ["skip", "explicitly skipped"];
+  if (status === "retired") return ["retired", "out of scope; content moved by retire; entry preserved"];
   const target = path.join(repo, ...doc.path.split("/"));
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
     if (WRITTEN.has(status)) return ["add", `file missing despite ${status}`];
@@ -118,7 +119,7 @@ function planEntries(repo, manifest, flowIndexPath, revise) {
 }
 
 function planLines(repo, manifest, flowIndexPath, revise) {
-  const docs = (manifest.documents || []).filter((doc) => doc.status !== "skipped");
+  const docs = (manifest.documents || []).filter((doc) => !["skipped", "retired"].includes(doc.status));
   const project = manifest.project || {};
   const lines = [`Generation plan — tier: ${project.tier || "unknown"}`];
   const profiles = project.profiles || {};

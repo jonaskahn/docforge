@@ -24,7 +24,7 @@ it is either in or out of scope.
 
 For every included repository:
 
-1. Check for a version-3.4 manifest, its tier, and the selected baseline
+1. Check for a version-3.5 manifest, its tier, and the selected baseline
    documents.
 2. Run staleness checks for an existing baseline.
 3. Build a missing Spine or Diligence baseline before representing the member

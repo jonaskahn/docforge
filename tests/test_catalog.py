@@ -24,7 +24,7 @@ class CatalogRecordTests(unittest.TestCase):
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]
-        self.assertEqual(len(document_types), 129)
+        self.assertEqual(len(document_types), 133)
         ids = [entry["id"] for entry in document_types]
         self.assertEqual(len(ids), len(set(ids)), "duplicate document ids in index.json")
 

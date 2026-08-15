@@ -97,8 +97,13 @@ def initialize(
     frameworks: tuple[str, ...] = (),
     concerns: tuple[str, ...] = (),
     audiences: tuple[str, ...] = (),
+    layout: str | None = "standard",
 ) -> subprocess.CompletedProcess:
+    """Standard layout by default so tree-shape assertions stay stable; pass
+    `layout=None` to let scale detection (and the compact fold) apply."""
     args = ["init", "--repo", str(repo), "--tier", tier]
+    if layout is not None:
+        args += ["--layout", layout]
     for flag, values in (
         ("shape", shapes),
         ("platform", platforms),

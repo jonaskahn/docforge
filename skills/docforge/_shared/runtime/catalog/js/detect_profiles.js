@@ -147,11 +147,11 @@ function persistManifestDeps(repo, dependencies) {
   return target;
 }
 
-function detect(repo) {
+function detect(repo, persist = true) {
   const profiles = queryCatalog.loadProfiles();
   const files = inventory(repo);
   const dependencies = manifestDeps.extractDependencies(files);
-  persistManifestDeps(repo, dependencies);
+  if (persist) persistManifestDeps(repo, dependencies);
   const cache = new Map();
   let cachedBytes = 0;
   const results = [];
@@ -363,4 +363,4 @@ function main() {
   return 0;
 }
 if (require.main === module) process.exit(main());
-module.exports = { detect, emitGatePack, main };
+module.exports = { detect, emitGatePack, inventory, main };

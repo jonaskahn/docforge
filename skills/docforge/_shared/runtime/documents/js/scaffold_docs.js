@@ -33,7 +33,7 @@ function resolveManifest(value, repo) {
   return fs.existsSync(direct) ? direct : repoRelative;
 }
 function activeDocuments(manifest) {
-  return manifest.documents.filter((doc) => doc.status !== "skipped");
+  return manifest.documents.filter((doc) => doc.status !== "skipped" && doc.status !== "retired");
 }
 function preview(manifest, repo, revise) {
   const docs = activeDocuments(manifest);

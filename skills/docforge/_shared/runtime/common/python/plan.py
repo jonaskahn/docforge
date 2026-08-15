@@ -33,6 +33,8 @@ def document_action(repo: Path, doc: dict, revise: bool = False, storage: str | 
     status = doc.get("status", "planned")
     if status == "skipped":
         return "skip", "explicitly skipped"
+    if status == "retired":
+        return "retired", "out of scope; content moved by retire; entry preserved"
     target = repo / doc["path"]
     if not target.is_file():
         if status in WRITTEN:
@@ -130,7 +132,7 @@ def plan_lines(
     flow_index_path: Path | None = None,
     revise: bool = False,
 ) -> list[str]:
-    docs = [doc for doc in manifest.get("documents", []) if doc.get("status") != "skipped"]
+    docs = [doc for doc in manifest.get("documents", []) if doc.get("status") not in {"skipped", "retired"}]
     project = manifest.get("project", {})
     lines = [f"Generation plan — tier: {project.get('tier', 'unknown')}"]
     profiles = project.get("profiles", {})

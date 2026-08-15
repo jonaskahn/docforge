@@ -6,6 +6,11 @@
   "source": "../../index.json",
   "records": [
     {
+      "id": "architecture_compact",
+      "path": "architecture_compact.json",
+      "summary": "Compact architecture section: system mental model and high-level architecture in one file"
+    },
+    {
       "id": "architecture_index",
       "path": "architecture_index.json",
       "summary": "What the system is and how it is built: section overview and one-line purpose of every selected architecture document"

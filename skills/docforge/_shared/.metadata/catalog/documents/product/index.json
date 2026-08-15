@@ -6,6 +6,11 @@
   "source": "../../index.json",
   "records": [
     {
+      "id": "product_compact",
+      "path": "product_compact.json",
+      "summary": "Compact product section: what the product is, who it serves, and the problem it solves — in one file"
+    },
+    {
       "id": "product_index",
       "path": "product_index.json",
       "summary": "Product documentation overview: what the product is, scope, and the reader question each product document answers"
