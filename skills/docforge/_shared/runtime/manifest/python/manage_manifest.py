@@ -19,7 +19,9 @@ from runtime.common.python._util import (
     load_manifest,
 )
 from runtime.common.python.plan import plan_lines
+from runtime.common.python import scale
 from runtime.catalog.python.detect_profiles import detect as detect_profiles
+from runtime.catalog.python.detect_profiles import inventory as inventory_files
 from runtime.common.python import provenance_store as store
 from runtime.common.python.provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 from runtime.catalog.python import query_catalog
@@ -29,7 +31,8 @@ from runtime.graph.python.precheck_graph import report_flow_graph
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 MANIFEST_REL = Path(".docforge/manifest.json")
 FLOW_INDEX_REL = Path(".docforge/flow-index.json")
-STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]
+STATUSES = ["planned", "in_progress", "generated", "needs_review", "complete", "skipped", "retired"]
+WRITTEN = {"generated", "needs_review", "complete"}
 TRANSITIONS = {
     "planned": {"in_progress", "skipped"},
     "in_progress": {"generated", "needs_review", "skipped"},
@@ -37,9 +40,10 @@ TRANSITIONS = {
     "needs_review": {"in_progress", "skipped"},
     "complete": {"in_progress"},
     "skipped": {"planned"},
+    "retired": {"planned"},
 }
 TOOL_VERSION = GENERATOR_VERSION
-MANIFEST_VERSION = "3.4"
+MANIFEST_VERSION = "3.6"
 USER_CONFIRMED_TRIGGERS = {
     "new-trust-boundary", "per-interaction-review", "regulated-workload",
     "high-criticality", "new-external-integration", "new-data-classification",
@@ -111,6 +115,7 @@ def save_manifest(repo: Path, manifest: dict) -> None:
         "needs_review": sum(d["status"] == "needs_review" for d in docs),
         "complete": sum(d["status"] == "complete" for d in docs),
         "skipped": sum(d["status"] == "skipped" for d in docs),
+        "retired": sum(d["status"] == "retired" for d in docs),
         "last_updated": now_iso(),
     }
     path = manifest_path(repo)
@@ -278,7 +283,70 @@ def matching_origins(rule: dict, profiles: dict[str, list[str]]) -> list[dict]:
     return origins
 
 
-def add_ancestor_indexes(catalog: dict, selected: list[dict], audiences: list[str]) -> None:
+def _compact_member_key(pair: tuple[int, dict]) -> tuple[int, str]:
+    """Order members by `compact_order`, then id. The id tiebreak is required:
+    `compact_order` defaults to 0, so two members without an explicit order
+    would otherwise fall through to comparing the document dicts themselves."""
+    order, doc = pair
+    return (order, doc["id"])
+
+
+def fold_compact_groups(
+    catalog: dict,
+    selected: list[dict],
+    audiences: list[str],
+) -> tuple[list[dict], set[str]]:
+    """Compact-layout fold: replace every selected document whose catalog
+    record declares a `compact_group` with the group's single merged entry at
+    its `compact_target`, members recorded on the entry so provenance and
+    revise can trace them back. Strictly gated on `layout == "compact"` by the
+    caller — a standard run never folds. Member entries are synthesized from
+    catalog data only; folded member ids are returned so ancestor-index
+    computation skips resurrecting them."""
+    by_id = {doc["id"]: doc for doc in catalog["documents"]}
+    groups: dict[str, list[tuple[int, dict]]] = {}
+    kept: list[dict] = []
+    for doc in selected:
+        detail = query_catalog.load_type(doc["id"])
+        group_id = detail.get("compact_group")
+        if group_id:
+            order = detail.get("compact_order", 0)
+            groups.setdefault(group_id, []).append((order, doc))
+        else:
+            kept.append(doc)
+    folded_ids: set[str] = set()
+    for group_id, members in sorted(groups.items()):
+        definition = by_id.get(group_id)
+        if definition is None or definition.get("selection", {}).get("mode") != "compact":
+            kept.extend(doc for _, doc in sorted(members, key=_compact_member_key))
+            continue
+        members.sort(key=_compact_member_key)
+        merged = make_document(
+            definition,
+            [
+                {"kind": "tier", "id": definition["selection"]["min_tier"]},
+                {"kind": "compact", "id": group_id},
+            ],
+            audiences=audiences,
+        )
+        merged["compact_members"] = [doc["id"] for _, doc in members]
+        merged["requires"] = sorted({
+            requirement
+            for _, doc in members
+            for requirement in doc.get("requires", [])
+        })
+        folded_ids.update(doc["id"] for _, doc in members)
+        kept.append(merged)
+    return kept, folded_ids
+
+
+def add_ancestor_indexes(
+    catalog: dict,
+    selected: list[dict],
+    audiences: list[str],
+    *,
+    skip_ids: set[str] | None = None,
+) -> None:
     definitions = {
         item["path"]: item for item in catalog["documents"]
         if item["selection"]["mode"] == "static" and item["type"] in {
@@ -286,6 +354,7 @@ def add_ancestor_indexes(catalog: dict, selected: list[dict], audiences: list[st
             "decision-index", "portfolio-decisions-index", "flow-index",
         }
     }
+    skipped = skip_ids or set()
     selected_paths = {item["path"] for item in selected}
     changed = True
     while changed:
@@ -296,7 +365,11 @@ def add_ancestor_indexes(catalog: dict, selected: list[dict], audiences: list[st
             while str(parent) not in (".", ""):
                 candidate = str(parent / "README.md")
                 definition = definitions.get(candidate)
-                if definition and candidate not in selected_paths:
+                if (
+                    definition
+                    and definition["id"] not in skipped
+                    and candidate not in selected_paths
+                ):
                     selected.append(make_document(
                         definition,
                         [{"kind": "ancestor", "id": child["id"]}],
@@ -312,6 +385,7 @@ def selected_static_documents(
     repo: Path,
     tier: str,
     profiles: dict[str, list[str]],
+    layout: str = "standard",
 ) -> list[dict]:
     ranks = {item["id"]: item["order"] for item in catalog["tiers"]}
     selected: list[dict] = []
@@ -334,7 +408,10 @@ def selected_static_documents(
         if rule.get("condition"):
             origins.append({"kind": "condition", "id": rule["condition"]})
         selected.append(make_document(definition, origins, evidence, audiences=profiles["audiences"]))
-    add_ancestor_indexes(catalog, selected, profiles["audiences"])
+    folded_ids: set[str] = set()
+    if layout == "compact":
+        selected, folded_ids = fold_compact_groups(catalog, selected, profiles["audiences"])
+    add_ancestor_indexes(catalog, selected, profiles["audiences"], skip_ids=folded_ids)
     return sorted(selected, key=lambda item: (item["write_order"], item["path"], item["id"]))
 
 
@@ -362,6 +439,38 @@ def resolve_graph_lock(repo: Path, provider: str | None) -> dict | None:
     return {"provider": chosen, "flow": report_flow_graph(repo), "locked_at": now_iso()}
 
 
+def resolve_scale(
+    repo: Path,
+    scale_class: str | None,
+    layout: str | None,
+    files: list | None = None,
+    detections: list[dict] | None = None,
+) -> dict:
+    """Build the `project.scale` record. Omitted flags adopt detection; any
+    explicit flag records `decided_by: "user"` with `detected_class` preserved
+    so a later run never silently re-classifies an override. `files` and
+    `detections` let a caller that already walked the repo avoid a second walk."""
+    detected = scale.compute_scale(repo, files=files, detections=detections)
+    if scale_class is None and layout is None:
+        return {
+            "class": detected["class"],
+            "layout": detected["suggested_layout"],
+            "decided_by": "detected",
+            "decided_at": now_iso(),
+            "signals": detected["signals"],
+        }
+    chosen_class = scale_class or detected["class"]
+    chosen_layout = layout or scale.LAYOUT_BY_CLASS[chosen_class]
+    return {
+        "class": chosen_class,
+        "layout": chosen_layout,
+        "detected_class": detected["class"],
+        "decided_by": "user",
+        "decided_at": now_iso(),
+        "signals": detected["signals"],
+    }
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     if args.obsolete_overlay:
         return fail(
@@ -383,7 +492,15 @@ def cmd_init(args: argparse.Namespace) -> int:
         })
     except ValueError as exc:
         return fail(str(exc), 2)
-    docs = selected_static_documents(catalog, args.repo, args.tier, profiles)
+    # One walk feeds both the discovery record and the scale record.
+    walked = inventory_files(args.repo)
+    discovery = detect_profiles(args.repo, files=walked)
+    project_scale = resolve_scale(
+        args.repo, args.scale_class, args.layout, files=walked, detections=discovery
+    )
+    docs = selected_static_documents(
+        catalog, args.repo, args.tier, profiles, layout=project_scale["layout"]
+    )
     manifest = {
         "version": MANIFEST_VERSION,
         "generated_at": now_iso(),
@@ -391,11 +508,12 @@ def cmd_init(args: argparse.Namespace) -> int:
             "name": args.name or args.repo.resolve().name,
             "root": str(args.repo.resolve()),
             "tier": args.tier,
+            "scale": project_scale,
             "profiles": profiles,
-            "provenance_storage": args.storage,
+            "provenance_storage": store.STORAGE_JSON,
             "unmanaged_docs": [],
         },
-        "discovery": detect_profiles(args.repo),
+        "discovery": discovery,
         "discovery_gate": None,
         "documents": docs,
         "metadata": {},
@@ -616,6 +734,9 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         return fail(str(exc), 2)
     catalog = load_catalog()
     new_tier = args.tier or manifest["project"]["tier"]
+    project = manifest["project"]
+    current_scale = project.get("scale") or {}
+    new_layout = args.layout or current_scale.get("layout", "standard")
     raw: dict[str, list[str]] = {}
     for dimension in PROFILE_DIMENSIONS:
         singular = "audience" if dimension == "audiences" else dimension[:-1]
@@ -625,18 +746,26 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         profiles = normalize_profiles(catalog, raw)
     except ValueError as exc:
         return fail(str(exc), 2)
-    selected = selected_static_documents(catalog, args.repo, new_tier, profiles)
+    selected = selected_static_documents(catalog, args.repo, new_tier, profiles, layout=new_layout)
     selected_ids = {doc["id"] for doc in selected}
     kept: list[dict] = []
     removed: list[str] = []
+    retire: list[str] = []
     kept_ids: set[str] = set()
     for doc in manifest["documents"]:
         origins = doc.get("selection", {}).get("origins", [])
         is_dynamic = any(origin.get("kind") == "dynamic" for origin in origins)
         if doc["id"] in selected_ids:
+            if doc.get("status") == "retired":
+                doc["status"] = "planned"
+                doc["audit"] = None
+                doc.pop("retired_at", None)
+                doc.pop("retired_destination", None)
             kept.append(doc)
             kept_ids.add(doc["id"])
         elif is_dynamic or doc.get("status") != "planned":
+            if not is_dynamic and doc.get("status") in WRITTEN:
+                retire.append(doc["id"])
             kept.append(doc)
             kept_ids.add(doc["id"])
         else:
@@ -649,15 +778,44 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
     manifest["project"]["tier"] = new_tier
     manifest["project"]["profiles"] = profiles
+    if args.layout and args.layout != current_scale.get("layout"):
+        if current_scale.get("class"):
+            scale_record = dict(current_scale)
+            if "signals" not in scale_record:
+                scale_record["signals"] = scale.compute_scale(args.repo)["signals"]
+        else:
+            # A pre-3.5 manifest reconciled before migrate has no usable prior
+            # record. Detect a complete one rather than emit a record missing
+            # the schema-required `class`.
+            scale_record = resolve_scale(args.repo, None, args.layout)
+        scale_record["layout"] = args.layout
+        scale_record["decided_by"] = "user"
+        scale_record["decided_at"] = now_iso()
+        manifest["project"]["scale"] = scale_record
+        print(f"  layout: {current_scale.get('layout', 'standard')} -> {args.layout}")
     save_manifest(args.repo, manifest)
     print(f"Reconcile {args.repo}:")
     print(f"  tier: {old_tier} -> {new_tier}")
     for dimension in PROFILE_DIMENSIONS:
         print(f"  {dimension}: {', '.join(profiles[dimension]) or '(none)'}")
+    count_parts = []
+    if added:
+        count_parts.append(f"{len(added)} add")
+    if removed:
+        count_parts.append(f"{len(removed)} removed-planned")
+    if retire:
+        count_parts.append(f"{len(retire)} retire")
+    if contract_updated:
+        count_parts.append(f"{len(contract_updated)} contract-updated")
+    if presentation_updated:
+        count_parts.append(f"{len(presentation_updated)} presentation-updated")
+    print(f"  counts: {', '.join(count_parts) or 'no change'}")
     if added:
         print(f"  added: {', '.join(doc['id'] for doc in sorted(added, key=lambda d: d['id']))}")
     if removed:
         print(f"  removed-planned: {', '.join(sorted(removed))}")
+    if retire:
+        print(f"  retire: {', '.join(sorted(retire))} (written, out of scope — approve the retire step to move or delete)")
     if contract_updated:
         print(f"  contract-updated: {', '.join(sorted(contract_updated))}")
     if presentation_updated:
@@ -689,7 +847,7 @@ def cmd_set(args: argparse.Namespace) -> int:
     if args.status == old:
         print(f"{args.id}: {old} -> {args.status}")
         return 0
-    if args.status not in TRANSITIONS[old]:
+    if args.status not in TRANSITIONS.get(old, set()):
         return fail(f"invalid status transition for {args.id}: {old} -> {args.status}", 2)
     if args.status == "complete":
         audit = doc.get("audit")
@@ -805,7 +963,8 @@ def cmd_status(args: argparse.Namespace) -> int:
         f"{counts['total_documents']} documents: "
         f"planned={counts['planned']} in_progress={counts['in_progress']} "
         f"generated={counts['generated']} needs_review={counts['needs_review']} "
-        f"complete={counts['complete']} skipped={counts['skipped']}"
+        f"complete={counts['complete']} skipped={counts['skipped']} "
+        f"retired={counts.get('retired', 0)}"
     )
     return 0
 
@@ -836,49 +995,6 @@ def cmd_set_graph(args: argparse.Namespace) -> int:
     manifest["graph"] = lock
     save_manifest(args.repo, manifest)
     print(f"{verb} graph provider: {lock['provider']} (flow: {lock['flow']})")
-    return 0
-
-
-def cmd_set_storage(args: argparse.Namespace) -> int:
-    try:
-        manifest = load_manifest(manifest_path(args.repo), unsupported_hint=MANIFEST_HINT)
-    except ValueError as exc:
-        return fail(str(exc), 2)
-    current = store.storage_for(manifest)
-    if current == args.storage:
-        print(f"storage already {current}; no changes.")
-        return 0
-    planned: list[str] = []
-    for doc in manifest.get("documents", []):
-        if doc.get("provenance_mode") != "sections":
-            continue
-        if args.storage == store.STORAGE_JSON:
-            if store.read_doc_metadata(args.repo, doc, store.STORAGE_JSON)["state"] == "inline":
-                planned.append(doc["path"])
-        elif store.entry_for(args.repo, doc["path"]) is not None:
-            planned.append(doc["path"])
-    if args.dry_run:
-        print(f"DRY RUN  {current} -> {args.storage} ({len(planned)} documents)")
-        for item in planned:
-            print(f"  {item}: inline -> sidecar" if args.storage == store.STORAGE_JSON else f"  {item}: sidecar -> inline")
-        return 0
-    moves: list[str] = []
-    for doc in manifest.get("documents", []):
-        if doc.get("provenance_mode") != "sections":
-            continue
-        if args.storage == store.STORAGE_JSON:
-            action = store.move_inline_to_sidecar(args.repo, doc, store.STORAGE_JSON)
-            if action == "moved":
-                moves.append(f"{doc['path']}: inline -> sidecar")
-        else:
-            action = store.move_sidecar_to_inline(args.repo, doc)
-            if action == "moved":
-                moves.append(f"{doc['path']}: sidecar -> inline")
-    manifest["project"]["provenance_storage"] = args.storage
-    save_manifest(args.repo, manifest)
-    print(f"storage  {current} -> {args.storage} ({len(moves)} documents moved)")
-    for item in moves:
-        print(f"  {item}")
     return 0
 
 
@@ -990,6 +1106,64 @@ def cmd_unmanaged(args: argparse.Namespace) -> int:
     return fail(f"unknown unmanaged action: {action}", 2)
 
 
+def cmd_retire(args: argparse.Namespace) -> int:
+    """Move out-of-scope written documents to a git-ignored obsolete location
+    (default) or delete them, marking the manifest entry `retired` — the entry
+    itself is always preserved. A file operation: never under `--auto-accept`,
+    always an explicitly approved step after `reconcile` reports the delta."""
+    try:
+        manifest = load_manifest(manifest_path(args.repo), unsupported_hint=MANIFEST_HINT)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    year = str(datetime.now(timezone.utc).year)
+    if not args.dry_run:
+        ensure_docforge_gitignore(args.repo / ".docforge")
+    moved_any = False
+    for doc_id in args.doc:
+        try:
+            doc = find_document(manifest, doc_id)
+        except ValueError as exc:
+            return fail(str(exc), 2)
+        if doc.get("status") == "retired":
+            print(f"retire  {doc_id}: already retired; no changes.")
+            continue
+        if doc.get("status") not in WRITTEN:
+            return fail(f"{doc_id} has status {doc.get('status')}; only written documents can be retired", 2)
+        value = PurePosixPath(doc["path"])
+        if args.mode == "obsolete":
+            target = PurePosixPath(".docforge") / "obsolete" / year / value
+            label = f"move {value.as_posix()} -> {target.as_posix()}"
+            if args.dry_run:
+                print(f"DRY RUN  retire {doc_id}: {label}")
+                continue
+            source = args.repo / value
+            if not source.is_file():
+                return fail(f"file not found: {value.as_posix()}", 2)
+            destination = args.repo / target
+            if destination.exists():
+                return fail(f"retire target already exists: {target.as_posix()}", 2)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            ensure_gitignored_dir(args.repo / ".docforge" / "obsolete" / year)
+            source.rename(destination)
+            doc["retired_destination"] = target.as_posix()
+        else:
+            label = f"delete {value.as_posix()}"
+            if args.dry_run:
+                print(f"DRY RUN  retire {doc_id}: {label}")
+                continue
+            source = args.repo / value
+            if source.is_file():
+                source.unlink()
+        doc["retired_at"] = now_iso()
+        doc["status"] = "retired"
+        doc["audit"] = None
+        moved_any = True
+        print(f"retire  {doc_id}: {label} (status -> retired; entry preserved)")
+    if not args.dry_run and moved_any:
+        save_manifest(args.repo, manifest)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1000,6 +1174,8 @@ def build_parser() -> argparse.ArgumentParser:
     init = sub.add_parser("init")
     add_repo(init)
     init.add_argument("--tier", required=True, choices=["spine", "diligence", "portfolio"])
+    init.add_argument("--scale-class", choices=["small", "medium", "large"])
+    init.add_argument("--layout", choices=["compact", "standard"])
     init.add_argument("--shape", action="append", default=[])
     init.add_argument("--platform", action="append", default=[])
     init.add_argument("--framework", action="append", default=[])
@@ -1009,12 +1185,6 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--name")
     init.add_argument("--force", action="store_true")
     init.add_argument("--graph-provider")
-    init.add_argument(
-        "--storage",
-        choices=[store.STORAGE_JSON, store.STORAGE_MARKDOWN],
-        default=store.STORAGE_JSON,
-        help="provenance storage: json sidecars under .docforge/provenance (default) or inline markdown",
-    )
     init.set_defaults(func=cmd_init)
 
     add = sub.add_parser("add")
@@ -1060,19 +1230,10 @@ def build_parser() -> argparse.ArgumentParser:
     set_graph.add_argument("--force", action="store_true")
     set_graph.set_defaults(func=cmd_set_graph)
 
-    set_storage = sub.add_parser("set-storage")
-    add_repo(set_storage)
-    set_storage.add_argument(
-        "--storage", required=True,
-        choices=[store.STORAGE_JSON, store.STORAGE_MARKDOWN],
-        help="target provenance storage",
-    )
-    set_storage.add_argument("--dry-run", action="store_true")
-    set_storage.set_defaults(func=cmd_set_storage)
-
     reconcile = sub.add_parser("reconcile")
     add_repo(reconcile)
     reconcile.add_argument("--tier", choices=["spine", "diligence", "portfolio"])
+    reconcile.add_argument("--layout", choices=["compact", "standard"])
     reconcile.add_argument("--shape", action="append", default=[])
     reconcile.add_argument("--platform", action="append", default=[])
     reconcile.add_argument("--framework", action="append", default=[])
@@ -1089,6 +1250,19 @@ def build_parser() -> argparse.ArgumentParser:
     unmanaged.add_argument("--path", help="repository-relative path of the unmanaged doc")
     unmanaged.add_argument("--dry-run", action="store_true")
     unmanaged.set_defaults(func=cmd_unmanaged)
+
+    retire = sub.add_parser("retire")
+    add_repo(retire)
+    retire.add_argument(
+        "--doc", action="append", required=True,
+        help="manifest document id to retire (repeatable)",
+    )
+    retire.add_argument(
+        "--mode", required=True, choices=["obsolete", "delete"],
+        help="obsolete: move to .docforge/obsolete/<year>/; delete: remove the file",
+    )
+    retire.add_argument("--dry-run", action="store_true")
+    retire.set_defaults(func=cmd_retire)
 
     finish = sub.add_parser("finish")
     add_repo(finish)

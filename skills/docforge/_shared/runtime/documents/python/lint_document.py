@@ -140,27 +140,17 @@ def illustration_defects(text: str) -> list[dict]:
 def _metadata_context(path: Path, text: str) -> tuple[str, dict | None, int, dict]:
     """Resolve (state, provenance, body_start, public) for one document.
 
-    In json storage mode the folder sidecar wins; inline frontmatter that
-    has not been migrated yet reports state `inline` so lint flags it."""
+    The folder sidecar wins; inline frontmatter that has not been migrated
+    yet reports state `inline` so lint flags it."""
     root = repository_root(path)
-    storage = store.STORAGE_MARKDOWN
-    manifest_path = root / ".docforge" / "manifest.json"
-    if manifest_path.is_file():
-        try:
-            storage = store.storage_for(json.loads(manifest_path.read_text(encoding="utf-8")))
-        except (ValueError, OSError):
-            pass
     rel = path.relative_to(root).as_posix()
-    if storage == store.STORAGE_JSON:
-        entry = store.entry_for(root, rel)
-        if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
-            public = {key: entry[key] for key in store.PUBLIC_FIELDS if entry.get(key)}
-            return "ok", entry["provenance"], 0, public
-        state, provenance, body_start = codec_parse_frontmatter(text)
-        if state == "ok":
-            state = "inline"
-    else:
-        state, provenance, body_start = codec_parse_frontmatter(text)
+    entry = store.entry_for(root, rel)
+    if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
+        public = {key: entry[key] for key in store.PUBLIC_FIELDS if entry.get(key)}
+        return "ok", entry["provenance"], 0, public
+    state, provenance, body_start = codec_parse_frontmatter(text)
+    if state == "ok":
+        state = "inline"
     public: dict = {}
     if state in {"ok", "inline"}:
         raw, _body, _end = split_frontmatter(text)
@@ -188,7 +178,7 @@ def provenance_defects(path: Path, text: str) -> list[dict]:
     if state == "legacy":
         return [{"kind": "legacy provenance", "line": 1, "detail": "schema absent"}]
     if state == "inline":
-        return [{"kind": "legacy provenance", "line": 1, "detail": "inline provenance in json mode; run migrate_metadata"}]
+        return [{"kind": "legacy provenance", "line": 1, "detail": "inline provenance; run migrate_metadata to move it into the sidecar"}]
     if not isinstance(provenance, dict):
         return [{"kind": "missing provenance", "line": 1, "detail": "docforge_provenance absent"}]
     missing = sorted(PROVENANCE_FIELDS - set(provenance))
@@ -291,10 +281,12 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
     defects.extend(provenance_defects(path, text))
     defects.extend(public_metadata_defects(path, text))
     defects.extend(illustration_defects(text))
-    _state, provenance, _end, _public = _metadata_context(path, text)
+    _state, provenance, body_start, _public = _metadata_context(path, text)
     target_depth = provenance.get("target_depth", "deep-dive") if isinstance(provenance, dict) else "deep-dive"
     defects.extend(budget_defects(text, target_depth))
-    defects.extend(validate_locators(path, text))
+    # Hand over the resolved provenance: under sidecar storage the markdown has
+    # no frontmatter, and a locator check that re-parsed it would find nothing.
+    defects.extend(validate_locators(path, text, provenance, body_start))
     defects.extend(visible_presentation_defects(text))
 
     # scaffold markers + tokens, with line numbers

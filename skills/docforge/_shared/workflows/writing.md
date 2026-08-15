@@ -16,9 +16,11 @@ validates illustration budgets and presentation-safe fences.
 ## Continue incomplete run
 
 When the user chooses Resume in intake or asks to continue an incomplete
-documentation run: run `migrate_metadata.{py,js}` when needed (see
-[`../runtime/manifest/README.md`](../runtime/manifest/README.md)), load the
-version-3.4
+documentation run: always run `migrate_metadata.{py,js}` first (schema +
+provenance sidecars; see
+[`validation.md`](validation.md) "Manifest and provenance" — idempotent, a
+clean no-op when current), load the
+version-3.5
 manifest, and continue the first non-complete, non-skipped document in write
 order. Then follow **Write one document** below for that document. May combine
 with `--auto-accept`.
@@ -45,7 +47,7 @@ otherwise keep the serial `write_order` loop. Contract
   presentation), evidence budget, one target artifact, and the session's
   locked graph provider/flow (`manifest["graph"]`, read-only). It runs the
   artifact portion of **Write one document** — route, materialize, re-ground
-  (native provider first, whole-file read last, per step 4 above), provenance,
+  (native provider first, whole-file read last, per step 4 below), provenance,
   mechanical lint — on **only its own artifact file**. It never calls
   `manage_manifest` and never edits shared indexes, other documents, the
   manifest, or the shared `.docforge/provenance/` folder sidecars (json
@@ -97,7 +99,7 @@ For the next document in `write_order` (serial mode):
    ```
 
 4. Set it `in_progress`, re-ground every required claim, replace all scaffold
-   markers and provenance tokens, and stamp complete provenance 2.0. Re-ground
+   markers and provenance tokens, and stamp complete provenance 2.1. Re-ground
    in this order — native tool first, whole-file read last:
    1. Read the session's locked provider from `manifest["graph"]`
       (`.docforge/manifest.json`). Never re-detect and never re-ask; it was
@@ -123,19 +125,15 @@ For the next document in `write_order` (serial mode):
 
    The writer gathers, verifies, and stamps all candidate `path` / `role` /
    `git_blob` evidence inline:
-   - Storage mode decides where provenance lives — read it from
-     `manifest["project"]["provenance_storage"]` (`json` is the default).
-     In `json` mode the generated markdown carries **no frontmatter at all**;
-     each document's public identity (`id`, `title`, `description`) and its
-     `docforge_provenance` object live in one git-tracked sidecar per docs
-     folder: `.docforge/provenance/<folder>.json` (e.g.
+   - The generated markdown carries **no frontmatter at all**. Each
+     document's public identity (`id`, `title`, `description` — a
+     reader-facing one-liner, ≤ 160 chars, seeded from the catalog `summary`
+     in the manifest) and its provenance object live in one git-tracked
+     sidecar per docs folder: `.docforge/provenance/<folder>.json` (e.g.
      `docs/architecture` → `.docforge/provenance/docs/architecture.json`,
      repo-root files → `root.json`). Stamp by merge-editing that folder's
-     `files[<name>.md]` entry — never rewrite sibling entries. In `markdown`
-     mode keep the legacy inline layout: public frontmatter `id`, `title`,
-     `description` (a reader-facing one-liner, ≤ 160 chars, seeded from the
-     catalog `summary` in the manifest) plus `docforge_provenance`; lint
-     enforces a non-empty description for written documents.
+     `files[<name>.md]` entry — never rewrite sibling entries. Lint enforces
+     a non-empty description for written documents.
    - One provenance `sections[]` entry per Markdown heading that makes claims;
      `id` is that heading's anchor.
      - Each claim records at least one repository-relative `path` with `role`

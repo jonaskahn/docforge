@@ -37,6 +37,11 @@ Exactly one mode: `--tier`, `--id`, `--ids`, `--profile`, `--applicable`,
 `load_profile(s)`, `applicable`, `category`, `route`, `resolve_presentation`,
 `validate`; JS exports camelCase peers.
 
+For a compact document id, `--route` composes the contract at route time: the
+group's header contract plus each `compact_members` member contract as a named
+`##` section, in member order, with the member list mirrored under `compact`.
+Standard routes keep `contract` as a plain file path.
+
 ### `detect_profiles`
 
 Read-only recommendations of shape/platform/framework/concern candidates from

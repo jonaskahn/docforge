@@ -1,10 +1,15 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "category": "product",
   "purpose": "Product surface: overview, quickstart, and audience-specific product views.",
   "source": "../../index.json",
   "records": [
+    {
+      "id": "product_compact",
+      "path": "product_compact.json",
+      "summary": "Compact product section: what the product is, who it serves, and the problem it solves — in one file"
+    },
     {
       "id": "product_index",
       "path": "product_index.json",

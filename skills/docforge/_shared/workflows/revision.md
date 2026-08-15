@@ -39,6 +39,19 @@ apply in scope:
     structure and only patch stale content: the current template is the
     structure the document must have, not a suggestion. Applied before source
     rework so a rewritten document is re-grounded once, not twice.
+1c. **Apply layout switches** — a compact↔standard switch is a selection
+    change like any other: it flows through the selection-change preview
+    and Retirement, not its own mechanism. **standard → compact**: the
+    group's component documents are `merge`d into the target file —
+    scaffold the merged entry, migrate valid prose from each member using
+    the Template rewrite mechanics, then `retire` the now-empty component
+    files. **compact → standard**: the merged file is `split` — scaffold
+    the component entries, migrate each section's prose to its component,
+    then `retire` the merged file. Step 1b resolves templates by the
+    manifest's own document id, so a compact project routes to composed
+    compact contracts and a standard project to standard ones — the
+    steady state is already correct; only the transition above is extra
+    work.
 2. **Add documents from detect / catalog** — re-run profile detection and
    condition evidence when needed; select newly evidenced static and dynamic
    types; add them to the manifest in `write_order`.
@@ -110,42 +123,24 @@ Revise always **stops and asks first** — never proceed on silent defaults. A
 migration and asks nothing (see Commands below). For every other revise
 invocation, before migration, detection, or writing, revise presents a
 discovery brief and a question set that is **delta-aware**, not a reflexive
-full re-ask of every dimension on every run — [`intake.md`](intake.md)'s
-Scope intake owns the exact per-dimension rule:
+full re-ask of every dimension on every run.
 
-1. **Scope** — `flow`, `<area>`, or `all` (pre-checked from invocation; asked
-   only for natural-language revise requests, never for a bare
-   `/docforge-revise`).
-2. **Tier** — asked only when the invocation requests a tier change, the
-   manifest has no tier, or detection surfaces evidence the current tier no
-   longer fits; when asked, display the manifest tier and
-   offer only `Change to <tier>` alternatives.
-   No delta and no requested change means state the current tier as
-   unchanged in the confirmation summary instead.
-3. **Profiles** — shape, platform, framework, concern: asked only for
-   dimensions with an actual delta (a fresh detection not already selected,
-   or a requested change); when asked, display each current selection and
-   offer `Add` / `Remove` actions, with fresh detections as recommended `Add`
-   actions. A dimension with no delta is reported unchanged, not
-   re-presented.
-4. **Output audience** — asked only when there are suitable missing
-   audiences (step 3a) or a requested change; when asked, display current
-   audiences and offer `Add` / `Remove` actions, with suitable missing
-   audiences as recommended `Add` actions with unlock reasons (see
-   [`intake.md`](intake.md)). No delta means state the current audiences as
-   unchanged instead.
-5. **Execution mode** — review or Auto-accept; always asked unless the
-   invocation already supplies `--plan-only` / `--auto-accept`, since this
-   governs the current run and is never read off the manifest.
+**Scope** — `flow`, `<area>`, or `all` (pre-checked from invocation; asked
+only for natural-language revise requests, never for a bare
+`/docforge-revise`).
 
-When Tier, Profiles, and Output audience all resolve with no delta and no
-requested change, revise skips their controls entirely and shows one
-confirmation summary with the unchanged baseline plus Scope (if it was
-ambiguous) and Execution mode. This still requires explicit confirmation — it
-answers only what is actually in question instead of every dimension on every
-run. Display one confirmation summary ([`intake.md`](intake.md)), covering
-every dimension whether changed or unchanged, and wait for explicit
-confirmation before continuing.
+[`intake.md`](intake.md) "Scope intake" owns the exact per-dimension rule —
+which of Scope, Tier, Profiles, Output audience, and Execution mode get
+asked versus reported as an unchanged baseline fact, including the
+tier-naming exception (`/docforge-revise all` or any invocation that names a
+tier always shows the tier control and the selection-change preview below,
+even with no delta) and the execution-mode exception (skipped only when the
+invocation already supplies `--plan-only` / `--auto-accept`). Display one
+confirmation summary ([`intake.md`](intake.md)), covering every dimension
+whether changed or unchanged, and wait for explicit confirmation before
+continuing — this still requires explicit confirmation even when every
+dimension resolves unchanged; it answers only what is actually in question
+instead of every dimension on every run.
 
 The **unmanaged-document triage** (step 7) joins that same confirmation
 summary when this revise finds foreign docs: one line per file with the
@@ -165,7 +160,7 @@ add action. Apply the explicitly confirmed result mechanically with
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md)):
 
 ```sh
-python runtime/cli/python/manage_manifest.py reconcile --repo <repo> \
+python3 runtime/cli/python/manage_manifest.py reconcile --repo <repo> \
   [--tier <spine|diligence|portfolio>] \
   [--shape <id> ...] [--platform <id> ...] [--framework <id> ...] \
   [--concern <id> ...] [--audience <id> ...]
@@ -180,15 +175,19 @@ Rules:
 - Planned documents that are no longer applicable are removed from the plan
   (`removed-planned` in the report).
 - Written, skipped, and dynamic documents are always preserved — reconcile
-  never deletes content or dynamic instances.
+  never deletes content or dynamic instances. **Written** static documents
+  that fall out of the selection are reported as `retire` candidates (never
+  touched by reconcile itself); retirement is a separate, explicitly
+  approved step after the delta is confirmed — see Retirement below.
 - Ancestor indexes are recomputed with the new selection.
 - Kept documents have their catalog-owned metadata refreshed (title,
   template, instruction, depth, write order, audit profile, requires); written
   documents whose `contract_revision` drifted are demoted to `in_progress` with
   cleared audits and reported under `contract-updated` — re-ground them as in
   step 1a even when source blobs are `FRESH`.
-- The command prints the delta (tier, profiles, added, removed-planned,
-  contract-updated, kept)
+- The command prints the delta — a counts summary first (`3 add, 2 retire`)
+  so the shape of the change is legible, then the detail lines (tier,
+  profiles, added, removed-planned, retire, contract-updated, kept)
   and the annotated plan tree; then continue with `scaffold_docs.{py,js}
   --dry-run --revise` and the writing workflow.
 
@@ -198,7 +197,7 @@ Before any writing, revise (and fresh-start planning) displays the plan tree
 with a per-document action comment, so the user sees exactly what will happen:
 
 - `add` — not planned yet, or planned with no file (will be scaffolded).
-- `update` — file exists; changed sections will be re-grounded.
+- `update` — file exists; changed sections will be re-ground.
 - `rewrite` — full re-ground (provenance missing/unparseable, status is
   `in_progress` / `needs_review`, or structure / format / content deviates
   from the current template per step 1b). A template rewrite is annotated
@@ -207,10 +206,60 @@ with a per-document action comment, so the user sees exactly what will happen:
 - `unchanged` — fresh with valid provenance; re-checked only when a structural
   change touches it.
 - `skip` — explicitly skipped.
+- `retire` — **written** but no longer selected (tier downgrade, profile /
+  audience removal, or a layout switch); the entry stays in the manifest and
+  the file is moved or deleted by the approved retire step, destination shown
+  per Retirement below.
+- `removed-planned` — planned, never written; dropped silently from the plan.
+- `split` — compact → standard layout: one merged file becomes its N
+  component files.
+- `merge` — standard → compact layout: N component files become one merged
+  file.
 
 Main-priority flows are listed under a `Flows:` section mapping each flow to its
 document path (`docs/flows/<slug>.md`) with the same action annotation. Run it
 directly with `scaffold_docs.{py,js} --dry-run --revise`.
+
+## Retirement
+
+Three selection changes retire documents, all sharing this one mechanism: a
+**tier downgrade**, a **profile or audience removal**, and a **compact↔standard
+layout switch**. `reconcile` reports every affected written document as a
+`retire` candidate before anything moves; the retirement itself is a separate
+step the user explicitly approves.
+
+Two destinations, chosen per run:
+
+- **Move to the git-ignored obsolete location (default)** —
+  `.docforge/obsolete/<year>/` (same relative path below the year folder).
+  `.docforge/` already has maintained ignore machinery, so nothing is added
+  to the repository's own `.gitignore`, and the location is outside `docs/`,
+  so the dashboard and the audit's `unexpected` check skip it for free.
+- **Delete** — the file is removed entirely. Offered as an explicit choice;
+  never the default.
+
+Apply an approved retirement mechanically:
+
+```sh
+python3 runtime/cli/python/manage_manifest.py retire --repo <repo> \
+  --doc <id> [--doc <id> ...] --mode obsolete|delete [--dry-run]
+```
+
+Both modes are file operations: **always explicitly approved, never under
+`--auto-accept`**, consistent with [`flags.md`](../flags.md) ("never authorizes
+… file archive/deletion"). Reconcile itself still never deletes content —
+retirement runs only after the delta is confirmed. The manifest entry is
+kept with `status: retired`, `retired_at`, and (for `obsolete`) the
+`retired_destination` path — history is preserved and a later revise can
+report what happened and where the content went. A `retired` document is
+excluded from the whole-tree gate's coverage expectations exactly like a
+`skipped` one, and a later selection change that re-selects a retired
+document returns it to `planned` for a fresh scaffold.
+
+Distinct from `docs/_archive/<year>/`, which stays what it is today: tracked,
+audit-known, and used for *unmanaged* (user-authored) document triage.
+Retired documents are Docforge-generated content leaving scope — a different
+thing, hence a different destination.
 
 ## Commands
 
@@ -219,8 +268,8 @@ directly with `scaffold_docs.{py,js} --dry-run --revise`.
 | Invocation | Behavior |
 |---|---|
 | `/docforge-revise` | **Metadata-only migration**: upgrade the manifest to current schema/version via `migrate_metadata.{py,js}`. No scope question, no detection, no writing, no dashboard (see below) |
-| `/docforge-revise all` / `/docforge-revise <area>` | Run `migrate_metadata.{py,js}` when needed, then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. If the manifest has no audiences, run the full audience multi-select. |
-| `/docforge-revise flow` | Full flow pipeline (see below) |
+| `/docforge-revise all` / `/docforge-revise <area>` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars, see [`validation.md`](validation.md) "Manifest and provenance"), then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. If the manifest has no audiences, run the full audience multi-select. |
+| `/docforge-revise flow` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars), then the full flow pipeline (see below) |
 
 ### Bare `/docforge-revise` — metadata-only migration
 
@@ -231,15 +280,17 @@ dashboard.
 
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
-2. When the manifest needs migration, apply it: upgrade manifest 3.3 / 3.2 (or
-   3.1 / 3.0 / provenance 1.0) to 3.4 / 2.1 — seeding each document's
-   catalog-owned `description` from the catalog `summary`, the project's
-   `provenance_storage` (default `json`), and the project's `unmanaged_docs`
-   list (default empty) — and re-register
-   any pre-3.0 shape as 3.4
-   (adopting legacy written documents as `generated` with provenance 2.0,
+2. Migration is unconditional (see [`validation.md`](validation.md) "Manifest
+   and provenance"): upgrade manifest 3.5 / 3.4 / 3.3 (or
+   3.2 / 3.1 / 3.0 / provenance 1.0) to 3.6 / 2.1 — seeding each document's
+   catalog-owned `description` from the catalog `summary`, normalizing
+   `provenance_storage` to `json`, the project's `unmanaged_docs`
+   list (default empty), and the project's `scale` record
+   (`decided_by: "detected"` when absent) — and re-register
+   any pre-3.0 shape as 3.6
+   (adopting legacy written documents as `generated` with provenance 2.1,
    demoting incomplete or unconvertible documents to `in_progress`), and
-   print the migration report. When storage is `json`, the same run moves
+   print the migration report. The same run moves
    each section-provenance document's inline frontmatter into the folder
    sidecar (`.docforge/provenance/<folder>.json`) and strips it from the
    markdown, so generated files become pure content; the `--dry-run`
@@ -259,28 +310,22 @@ up-to-date manifest is a clean no-op (scripts and README:
 | Flag | Effect on revise |
 |---|---|
 | `--plan-only` | Run migrate, staleness sync, detect/catalog, suitable-missing-audiences prompt, and show the structure update / dry-run tree; stop before writing or re-grounding document bodies |
-| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, manifest initialization, root `README.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](../flags.md)) |
+| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, root `README.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](../flags.md)) |
 
 Flags combine with a scope argument, e.g.
 `/docforge-revise flow --plan-only`.
 
-`migrate_metadata.{py,js}` also re-registers legacy manifests (any pre-3.0
-version —
-1.1 `project_context` / `document_groups`, 2.0 flat `documents` with
-overlays, or any other shape) as 3.4: written documents are adopted as
-`generated` with provenance 2.0 (bodies preserved) and plan entries are
-kept, so a revise run over an old manifest re-grounds and audits the adopted
-documents like any other written tree (steps 1 / 1a / 1b above). Adopted
-documents are never `complete` — they have no independent audit. Both the
-bare and the scoped paths respect `project.provenance_storage`: `json`
-(default) stamps `.docforge/provenance/` sidecars and leaves markdown
-frontmatter-free; `markdown` keeps inline frontmatter. Flip the mode with
-`manage_manifest.{py,js} set-storage json|markdown` (preview with
-`--dry-run`); it moves every section-provenance document in both
-directions.
+`migrate_metadata.{py,js}` also re-registers legacy manifests the same way
+here as in the bare path above (see [`validation.md`](validation.md)
+"Manifest and provenance" for the full adoption mechanics), so a revise run
+over an old manifest re-grounds and audits the adopted documents like any
+other written tree (steps 1 / 1a / 1b above). Both the bare and the scoped
+paths stamp `.docforge/provenance/` sidecars and leave markdown
+frontmatter-free; a document still carrying inline frontmatter from before
+the sidecar store existed is moved in the same migration pass.
 
 ```sh
-python runtime/cli/python/check_staleness.py \
+python3 runtime/cli/python/check_staleness.py \
 node runtime/cli/js/check_staleness.js \
 # bun  runtime/cli/js/check_staleness.js \
 # deno run -A runtime/cli/js/check_staleness.js \
@@ -311,11 +356,14 @@ triage first (see
 documents") and apply it with `manage_manifest.{py,js} unmanaged`, then update
 the doc wherever it now lives.
 
-1. Run `migrate_metadata.{py,js}` when needed.
+1. **Always** run `migrate_metadata.{py,js}` first (schema + provenance
+   sidecars; see [`validation.md`](validation.md) "Manifest and provenance") —
+   unconditionally, even for a single-document update. An already-current
+   manifest reports a clean no-op.
 2. Scan only that document:
 
    ```sh
-   python runtime/cli/python/check_staleness.py \
+   python3 runtime/cli/python/check_staleness.py \
      --manifest <repo>/.docforge/manifest.json \
      --document <id|path> --sync-provenance --json
    ```
@@ -345,7 +393,8 @@ It is not a blob-only pass. New flow connections force re-ground of existing
 flow docs and big-picture surfaces even when their cited `git_blob` values are
 still `FRESH`.
 
-1. Run `migrate_metadata.{py,js}` when needed, then precheck `--need flow`
+1. **Always** run `migrate_metadata.{py,js}` first (schema + provenance
+   sidecars), then precheck `--need flow`
    (`precheck_graph.{py,js}`, see
    [`../runtime/graph/README.md`](../runtime/graph/README.md)).
 2. Run the read-only harvest, rank, organization, and provisional-derivation
@@ -413,4 +462,7 @@ whole-tree gate exactly as a fresh-start run does
 [`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)),
 wait for the healthy server, and report the `dashboard: <url>` line and URL
 in the final response — a revised tree without a started, reported dashboard
-is not a finished revise run.
+is not a finished revise run. The compact-layout exception of
+`validation.md` §8 applies unchanged: when `project.scale.layout ==
+"compact"`, append the offer line instead of starting the dashboard, and an
+explicit yes in the same turn runs the lifecycle unchanged.

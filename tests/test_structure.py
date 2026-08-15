@@ -121,17 +121,18 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("flow-analysis.json", revision)
         self.assertIn("main-priority", revision)
         self.assertIn("agent/LLM analyzes", revision)
-        self.assertIn("offer only `Change to <tier>` alternatives", revision)
-        self.assertIn("offer `Add` / `Remove` actions", revision)
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn("offer `Change to <other tier>`", intake)
+        self.assertIn("offer `Add <value>` for unselected values and `Remove <value>` for selected", intake)
 
     def test_revision_questions_are_delta_aware_not_a_reflexive_full_ask(self) -> None:
         """Revise scales its question pack to what actually changed instead
-        of always re-asking Tier/Profiles/Output audience on every run."""
+        of always re-asking Tier/Profiles/Output audience on every run.
+        intake.md owns the exact per-dimension rule; revision.md links to it
+        rather than restating it (de-duplicated)."""
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
         self.assertIn("**delta-aware**", revision)
-        self.assertIn("asked only when the invocation requests a tier change", revision)
-        self.assertIn("asked only for\n   dimensions with an actual delta", revision)
-        self.assertIn("skips their controls entirely", revision)
+        self.assertIn('[`intake.md`](intake.md) "Scope intake" owns the exact per-dimension rule', revision)
         self.assertNotIn("exactly like a fresh start", revision)
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
         self.assertIn("never a reflexive full re-ask of every dimension on every run", intake)
@@ -139,6 +140,9 @@ class SkillContentTests(unittest.TestCase):
             "`/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`",
             intake,
         )
+        self.assertIn("asked only when the invocation requests a tier change", intake)
+        self.assertIn("are asked only for\n  dimensions with an actual delta", intake)
+        self.assertIn("skip their controls and show one confirmation summary", intake)
         self.assertNotIn("exactly like a fresh start", intake)
 
     def test_planning_workflow_never_writes_against_stale_tree(self) -> None:
@@ -304,7 +308,7 @@ class SkillContentTests(unittest.TestCase):
 
     def test_validation_workflow_auto_serves_dashboard_on_completion(self) -> None:
         validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
-        self.assertIn("## 7. Dashboard auto-serve", validation)
+        self.assertIn("## 8. Dashboard auto-serve", validation)
         self.assertIn("Never under `--plan-only`", validation)
         self.assertIn("`--no-dashboard`", validation)
         self.assertIn("every completed\n`/docforge` (fresh start) and `/docforge-revise` run", validation)
@@ -395,7 +399,7 @@ class SkillContentTests(unittest.TestCase):
         # wording lives in workflows/dashboard.md (asserted above).
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**Legacy manifest**", thin)
-        self.assertIn("auto-migrated to 3.4 automatically, never a stop-and-ask", thin)
+        self.assertIn("auto-migrated to 3.6 automatically, never a stop-and-ask", thin)
         self.assertIn("never migrate", thin)
         self.assertNotIn("three-option gate", thin)
         self.assertNotIn("Legacy manifest gate (v1.1)", thin)
@@ -427,7 +431,7 @@ class SkillContentTests(unittest.TestCase):
         a bare /docforge-revise is metadata-only migration, not a scope ask."""
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
         scope_line = next(
-            line for line in revision.splitlines() if line.strip().startswith("1. **Scope**")
+            line for line in revision.splitlines() if line.strip().startswith("**Scope**")
         )
         self.assertLess(scope_line.index("flow"), scope_line.index("<area>"))
         self.assertLess(scope_line.index("<area>"), scope_line.index("all"))
@@ -600,8 +604,7 @@ class SkillContentTests(unittest.TestCase):
 
 class RuntimeReadmeTests(unittest.TestCase):
     """Every runtime subsystem documents its scripts so agents can pick the
-    right tool without reading sources. Runtime READMEs are agent/operator
-    documentation and are exempt from the obsolete-nested-README rule."""
+    right tool without reading sources."""
 
     SUBSYSTEMS = [
         "catalog", "cli", "common", "dashboard", "documents", "flows",
@@ -632,15 +635,14 @@ class RuntimeReadmeTests(unittest.TestCase):
                         f"{name}/README.md does not document {lang}/{stem}",
                     )
 
-    def test_runtime_readmes_are_exempt_from_obsolete_readme_rule(self) -> None:
-        runtime_readmes = {
-            f"skills/docforge/_shared/runtime/{name}/README.md"
-            for name in self.SUBSYSTEMS
-        }
+    def test_validate_metadata_passes_cleanly_on_both_runtimes(self) -> None:
+        """The repository's own release/registry self-checks (catalog and
+        schema version agreement, plugin/marketplace/SKILL.md description
+        agreement, peer parity, obsolete-file checks) must all be clean —
+        not just the checks this test file happens to assert on individually."""
         for runtime in ("py", "js"):
             result = run(runtime, "validate_metadata")
-            for rel in sorted(runtime_readmes):
-                self.assertNotIn(rel, result.stdout, runtime)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

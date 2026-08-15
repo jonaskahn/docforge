@@ -20,11 +20,11 @@ class CatalogRecordTests(unittest.TestCase):
         cls.groups = set(cls.index["groups"])
 
     def test_catalog_version_is_2_15_0(self) -> None:
-        self.assertEqual(self.index["version"], "2.17.0")
+        self.assertEqual(self.index["version"], "2.18.0")
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]
-        self.assertEqual(len(document_types), 129)
+        self.assertEqual(len(document_types), 137)
         ids = [entry["id"] for entry in document_types]
         self.assertEqual(len(ids), len(set(ids)), "duplicate document ids in index.json")
 
@@ -146,6 +146,23 @@ class CatalogRecordTests(unittest.TestCase):
         for runtime in ("py", "js"):
             result = run(runtime, "query_catalog", "--validate")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_query_catalog_validate_enforces_compact_member_cap(self) -> None:
+        record_path = CATALOG_DIR / "documents" / "architecture" / "architecture_compact.json"
+        original = record_path.read_text(encoding="utf-8")
+        try:
+            record = json.loads(original)
+            record["compact_members"] = record["compact_members"] + [
+                f"fake_member_{i}" for i in range(9 - len(record["compact_members"]))
+            ]
+            record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                with self.subTest(runtime=runtime):
+                    result = run(runtime, "query_catalog", "--validate")
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("depth brake", result.stdout + result.stderr)
+        finally:
+            record_path.write_text(original, encoding="utf-8")
 
 
 if __name__ == "__main__":

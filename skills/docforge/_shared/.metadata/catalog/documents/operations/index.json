@@ -1,10 +1,15 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "category": "operations",
   "purpose": "Deployment, observability, and operational runbooks.",
   "source": "../../index.json",
   "records": [
+    {
+      "id": "operations_compact",
+      "path": "operations_compact.json",
+      "summary": "Compact operations section: deployment and observability in one file"
+    },
     {
       "id": "operations_index",
       "path": "operations_index.json",

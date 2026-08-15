@@ -14,6 +14,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
+- `operations_compact` — Compact operations section: deployment and observability in one file → [index.json](index.json)
 - `operations_index` — Operations documentation overview: what this section covers and the reader question each operations document answers → [index.json](index.json)
 - `deployment` — Environments, artifact path, rollout, rollback, verification → [index.json](index.json)
 - `distribution` — Artifact, build, signing, packaging, channels, verification, update/rollback → [index.json](index.json)

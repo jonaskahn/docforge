@@ -22,8 +22,10 @@ from _support import (
     normalized_blob_hash,
     provenance,
     range_blob_hash,
+    remove_sidecar_entry,
     run,
     write_flow_index,
+    write_written_doc,
 )
 from test_dashboard import fake_npm_env, run_dashboard, stop_dashboard
 from runtime.common.python.provenance_frontmatter import (
@@ -31,7 +33,6 @@ from runtime.common.python.provenance_frontmatter import (
     emit_yaml,
     migrate_v1_to_v2,
     parse_frontmatter,
-    wrap_document,
 )
 
 
@@ -73,7 +74,7 @@ class ManifestSelectionTests(unittest.TestCase):
                 result = initialize("py", repo, tier)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.4")
+                self.assertEqual(manifest["version"], "3.6")
                 self.assertEqual(manifest["project"]["tier"], tier)
                 self.assertEqual(
                     manifest["project"]["profiles"]["audiences"],
@@ -128,8 +129,12 @@ class ManifestSelectionTests(unittest.TestCase):
                 audiences=("product-owners", "coding-agents"),
             )
             self.assertNotEqual(result.returncode, 0)
+            # This test is about conditional/dynamic selection, not layout —
+            # force standard so a small fixture's auto-detected scale doesn't
+            # fold `conventions` into the compact `docs/engineering.md`.
             result = run("py", "manage_manifest", "init", "--repo", str(repo), "--tier", "diligence",
-                         "--audience", "product-owners", "--audience", "coding-agents", "--force")
+                         "--audience", "product-owners", "--audience", "coding-agents",
+                         "--layout", "standard", "--force")
             self.assertEqual(result.returncode, 0, result.stderr)
             paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
             self.assertIn("docs/engineering/conventions.md", paths)
@@ -582,18 +587,14 @@ class ProvenanceAndAuditTests(unittest.TestCase):
                 self.assertEqual(run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit").returncode, 1)
             source = repo / "source.txt"
             source.write_text("evidence\n", encoding="utf-8")
-            target = repo / "docs" / "only.md"
-            target.parent.mkdir()
-            target.write_text(
-                markdown_with_provenance(
-                    provenance(
-                        doc_id="only", path="docs/only.md", tier="spine",
-                        target_depth="reference", section_id="only",
-                        source_path="source.txt", source_blob=blob_hash(source.read_bytes()),
-                    ),
-                    "# Only\n\nComplete evidence-backed content.\n",
-                ),
-                encoding="utf-8",
+            good_provenance = provenance(
+                doc_id="only", path="docs/only.md", tier="spine",
+                target_depth="reference", section_id="only",
+                source_path="source.txt", source_blob=blob_hash(source.read_bytes()),
+            )
+            write_written_doc(
+                repo, {**document, "provenance": good_provenance},
+                "# Only\n\nComplete evidence-backed content.\n",
             )
             for runtime in ("py", "js"):
                 result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
@@ -629,7 +630,10 @@ class ProvenanceAndAuditTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             target = repo / "docs" / "only.md"
             target.parent.mkdir()
-            cases = {
+            body = "# Only\n\nBody.\n"
+            # States a document reaches before it has ever been migrated: no
+            # sidecar entry exists yet, so these stay pure inline fixtures.
+            inline_cases = {
                 "MISSING PROVENANCE": "# Only\n\nBody.\n",
                 "UNPARSEABLE PROVENANCE": "---\n{\n---\n# Only\n\nBody.\n",
                 "LEGACY PROVENANCE": """---
@@ -664,27 +668,44 @@ Body.
                         "sections": good["sections"],
                     },
                 }, indent=2) + "\n---\n# Only\n\nBody.\n",
-                "EMPTY PROVENANCE": markdown_with_provenance({**good, "sections": []}, "# Only\n\nBody.\n"),
-                "INVALID BLOB": markdown_with_provenance({
+            }
+            # Structurally current provenance with a deliberate content defect
+            # — the sidecar is what makes lint treat it as "ok" and validate
+            # the section/source shape below the top-level state check.
+            sidecar_cases = {
+                "EMPTY PROVENANCE": {**good, "sections": []},
+                "INVALID BLOB": {
                     **good,
                     "sections": [{**good["sections"][0], "sources": [{
                         "path": "source.txt", "git_blob": "placeholder", "role": "code",
                     }]}],
-                }, "# Only\n\nBody.\n"),
-                "UNKNOWN SOURCE": markdown_with_provenance({
+                },
+                "UNKNOWN SOURCE": {
                     **good,
                     "sections": [{**good["sections"][0], "sources": [{
                         "path": "missing.txt", "git_blob": "0" * 40, "role": "code",
                     }]}],
-                }, "# Only\n\nBody.\n"),
-                "UNKNOWN SECTION": markdown_with_provenance({
+                },
+                "UNKNOWN SECTION": {
                     **good,
                     "sections": [{**good["sections"][0], "id": "not-a-heading"}],
-                }, "# Only\n\nBody.\n"),
+                },
             }
-            for category, text in cases.items():
+            for category, text in inline_cases.items():
                 with self.subTest(category=category):
+                    remove_sidecar_entry(repo, "docs/only.md")
                     target.write_text(text, encoding="utf-8")
+                    outputs = []
+                    for runtime in ("py", "js"):
+                        result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
+                        self.assertEqual(result.returncode, 1)
+                        self.assertIn(category, result.stdout)
+                        outputs.append(normalized(result.stdout, [repo]))
+                    self.assertEqual(outputs[0], outputs[1])
+            for category, case_provenance in sidecar_cases.items():
+                with self.subTest(category=category):
+                    remove_sidecar_entry(repo, "docs/only.md")
+                    write_written_doc(repo, {**document, "provenance": case_provenance}, body)
                     outputs = []
                     for runtime in ("py", "js"):
                         result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--audit")
@@ -714,6 +735,16 @@ Body.
                     self.assertNotIn(category, result.stdout)
 
     def test_staleness_reports_no_blob_unparseable_and_legacy(self) -> None:
+        """A pre-sidecar document keeps its frontmatter until something moves
+        it. `--sync-provenance` is that something: on every path (garbage
+        frontmatter, schema-less legacy, obsolete schema 1.0) the target ends
+        up frontmatter-free and the provenance lands in the folder sidecar —
+        there is no other destination now that `markdown` storage is gone."""
+
+        def sidecar_provenance(repo: Path) -> dict:
+            path = repo / ".docforge" / "provenance" / "docs.json"
+            return json.loads(path.read_text(encoding="utf-8"))["files"]["only.md"]["provenance"]
+
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             source = repo / "source.txt"
@@ -728,7 +759,7 @@ Body.
                 "status": "complete", "provenance_mode": "sections", "provenance": value,
             }
             manifest = {
-                "version": "3.1", "project": {"root": str(repo), "provenance_storage": "markdown"},
+                "version": "3.1", "project": {"root": str(repo), "provenance_storage": "json"},
                 "documents": [document],
             }
             manifest_path = repo / ".docforge" / "manifest.json"
@@ -744,27 +775,27 @@ Body.
             target.write_text("---\n{\n---\n# Only\n", encoding="utf-8")
             outputs = []
             for runtime in ("py", "js"):
-                # Reset broken frontmatter and written status so each runtime
-                # exercises failed migration + agent demotion.
+                # Reset broken frontmatter, written status, and any sidecar
+                # entry the previous runtime's iteration stamped — the sidecar
+                # wins over the file, so a stale entry would hide the garbage
+                # frontmatter this iteration means to exercise.
+                remove_sidecar_entry(repo, "docs/only.md")
                 document["status"] = "complete"
                 document["provenance"] = value
                 document["audit"] = {"mode": "cold-pass", "verdict": "PASS"}
                 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
                 target.write_text("---\n{\n---\n# Only\n", encoding="utf-8")
                 result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
-                self.assertTrue(
-                    target.read_text(encoding="utf-8").startswith("---\ndocforge_provenance:\n"),
-                    target.read_text(encoding="utf-8")[:80],
-                )
-                self.assertIn('schema: "2.0"', target.read_text(encoding="utf-8"))
+                self.assertEqual(target.read_text(encoding="utf-8"), "# Only\n")
+                self.assertEqual(sidecar_provenance(repo)["schema"], "2.0")
                 saved = load_manifest(repo)
                 self.assertEqual(saved["documents"][0]["status"], "in_progress")
                 self.assertIsNone(saved["documents"][0].get("audit"))
                 outputs.append(normalized(result.stdout, [repo]))
             self.assertEqual(outputs[0], outputs[1])
             # Schema-less legacy is reported when not syncing; --sync-provenance
-            # converts it to provenance 2.0 and demotes incomplete written docs
-            # to in_progress for agent regeneration.
+            # converts it to current provenance and demotes incomplete written
+            # docs to in_progress for agent regeneration.
             target.write_text("""---
 docforge_provenance:
   doc_id: "x"
@@ -792,6 +823,7 @@ Body.
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("UNTRACKED", result.stdout)
             for runtime in ("py", "js"):
+                remove_sidecar_entry(repo, "docs/only.md")
                 document["status"] = "complete"
                 document["provenance"] = {"sections": []}
                 document["audit"] = {"mode": "cold-pass", "verdict": "PASS"}
@@ -816,17 +848,13 @@ docforge_provenance:
 Body.
 """, encoding="utf-8")
                 result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
-                self.assertTrue(target.read_text(encoding="utf-8").startswith("---\ndocforge_provenance:\n"))
-                self.assertIn(f'schema: "{SCHEMA_VERSION}"', target.read_text(encoding="utf-8"))
+                self.assertEqual(target.read_text(encoding="utf-8"), "# Only\n\nBody.\n")
+                self.assertEqual(sidecar_provenance(repo)["schema"], SCHEMA_VERSION)
                 saved = load_manifest(repo)
                 self.assertEqual(saved["documents"][0]["status"], "in_progress")
                 self.assertIsNone(saved["documents"][0].get("audit"))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-            document["status"] = "complete"
-            document["provenance"] = value
-            document["audit"] = {"mode": "cold-pass", "verdict": "PASS"}
-            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            target.write_text(
+            obsolete_frontmatter = (
                 "---\n" + json.dumps({
                     "docforge_provenance": {
                         "schema": "1.0",
@@ -839,17 +867,21 @@ Body.
                         "graph": {"provider": "gitnexus", "flow": "native"},
                         "sections": value["sections"],
                     },
-                }, indent=2) + "\n---\n# Only\n",
-                encoding="utf-8",
+                }, indent=2) + "\n---\n# Only\n"
             )
             for runtime in ("py", "js"):
+                remove_sidecar_entry(repo, "docs/only.md")
+                document["status"] = "complete"
+                document["provenance"] = value
+                document["audit"] = {"mode": "cold-pass", "verdict": "PASS"}
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                target.write_text(obsolete_frontmatter, encoding="utf-8")
                 result = run(runtime, "check_staleness", "--manifest", str(manifest_path), "--sync-provenance")
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("Synchronized provenance", result.stdout)
                 self.assertIn("NO_BLOB", result.stdout)
-                migrated = target.read_text(encoding="utf-8")
-                self.assertTrue(migrated.startswith("---\ndocforge_provenance:\n"), migrated[:80])
-                self.assertIn(f'schema: "{SCHEMA_VERSION}"', migrated)
+                self.assertEqual(target.read_text(encoding="utf-8"), "# Only\n")
+                self.assertEqual(sidecar_provenance(repo)["schema"], SCHEMA_VERSION)
 
     def test_lint_placeholder_token_link_and_forge_cases(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -882,10 +914,7 @@ Body.
                 source_path="source.txt", source_blob="placeholder",
             )
             subject = repo / "subject.md"
-            subject.write_text(
-                markdown_with_provenance(value, "# Subject\n\nBody.\n"),
-                encoding="utf-8",
-            )
+            write_written_doc(repo, {"id": "subject", "path": "subject.md", "provenance": value}, "# Subject\n\nBody.\n")
             outputs = []
             for runtime in ("py", "js"):
                 result = run(runtime, "lint_document", "--file", str(subject), "--json")
@@ -1019,10 +1048,6 @@ process.stdout.write(pf.emitYaml(value));
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, py_out)
-
-        wrapped = wrap_document(value, "# Wrapped\n")
-        self.assertTrue(wrapped.startswith("---\ndocforge_provenance:\n"))
-        self.assertIn("# Wrapped\n", wrapped)
 
     def test_rejected_yaml_constructs(self) -> None:
         from runtime.common.python.provenance_frontmatter import YamlCodecError, parse_yaml_mapping
@@ -1265,7 +1290,12 @@ process.stdout.write(pf.emitYaml(value));
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
             for runtime in ("py", "js"):
-                # Reset fixtures between runtimes so each starts from JSON 1.0 / broken.
+                # Reset fixtures between runtimes so each starts from JSON 1.0 /
+                # broken — including the sidecar, which wins over a stale file
+                # and would otherwise carry the previous runtime's migration
+                # forward instead of exercising a fresh one.
+                remove_sidecar_entry(repo, "README.md")
+                remove_sidecar_entry(repo, "docs/broken.md")
                 readme.write_text(
                     "---\n" + json.dumps({"docforge_provenance": legacy_provenance}, indent=2) + "\n---\n# Readme\n",
                     encoding="utf-8",
@@ -1279,20 +1309,22 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertIn("docs/broken.md", result.stdout)
                 self.assertIn("agent must regenerate provenance", result.stdout)
 
-                readme_text = readme.read_text(encoding="utf-8")
-                self.assertTrue(readme_text.startswith("---\ndocforge_provenance:\n"), readme_text[:80])
-                self.assertIn(f'schema: "{SCHEMA_VERSION}"', readme_text)
-                self.assertIn("generator:", readme_text)
-                self.assertIn("# Readme", readme_text)
+                self.assertEqual(readme.read_text(encoding="utf-8"), "# Readme\n")
+                readme_provenance = json.loads(
+                    (repo / ".docforge" / "provenance" / "root.json").read_text(encoding="utf-8"),
+                )["files"]["README.md"]["provenance"]
+                self.assertEqual(readme_provenance["schema"], SCHEMA_VERSION)
+                self.assertIn("generator", readme_provenance)
 
-                broken_text = unparseable.read_text(encoding="utf-8")
-                self.assertTrue(broken_text.startswith("---\ndocforge_provenance:\n"), broken_text[:80])
-                self.assertIn(f'schema: "{SCHEMA_VERSION}"', broken_text)
-                self.assertIn('doc_id: "broken"', broken_text)
-                self.assertIn("# Broken", broken_text)
+                self.assertEqual(unparseable.read_text(encoding="utf-8"), "# Broken\n")
+                broken_provenance = json.loads(
+                    (repo / ".docforge" / "provenance" / "docs.json").read_text(encoding="utf-8"),
+                )["files"]["broken.md"]["provenance"]
+                self.assertEqual(broken_provenance["schema"], SCHEMA_VERSION)
+                self.assertEqual(broken_provenance["doc_id"], "broken")
 
                 saved = load_manifest(repo)
-                self.assertEqual(saved["version"], "3.4")
+                self.assertEqual(saved["version"], "3.6")
                 self.assertEqual(saved["documents"][0]["provenance"]["schema"], SCHEMA_VERSION)
                 self.assertIn("generator", saved["documents"][0]["provenance"])
                 self.assertEqual(saved["documents"][1]["provenance"]["schema"], SCHEMA_VERSION)
@@ -1351,7 +1383,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.4")
+                self.assertEqual(migrated["version"], "3.6")
                 self.assertIn("description", migrated["documents"][0])
                 self.assertEqual(migrated["documents"][0]["description"], "Self-introduction to the documentation: what the repo is, who it serves, and the reader question each selected section answers")
                 self.assertEqual(migrated["documents"][0]["provenance"]["schema"], "2.0")
@@ -1402,7 +1434,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.4")
+                self.assertEqual(migrated["version"], "3.6")
                 self.assertEqual(migrated["documents"][0]["description"], "Writer-refined one-liner.")
 
     def test_obsolete_schema_defect_names_migrate_command(self) -> None:
@@ -1577,7 +1609,7 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.4")
+                    self.assertEqual(manifest["version"], "3.6")
                     self.assertEqual(manifest["project"]["tier"], "spine")
                     self.assertEqual(manifest["project"]["profiles"]["audiences"], ["coding-agents"])
                     docs = {doc["id"]: doc for doc in manifest["documents"]}
@@ -1692,6 +1724,8 @@ class ManifestV11MigrationTests(unittest.TestCase):
             py_manifest = load_manifest(repos["py"])
             js_manifest = load_manifest(repos["js"])
             py_manifest["project"]["root"] = js_manifest["project"]["root"]
+            for manifest in (py_manifest, js_manifest):
+                manifest["project"]["scale"]["decided_at"] = "<TIME>"
             self.assertEqual(py_manifest, js_manifest)
             self.assertEqual(
                 (repos["py"] / "docs/architecture/high-level.md").read_text(encoding="utf-8"),
@@ -1758,9 +1792,9 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     try:
                         result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-                        self.assertIn("manifest: legacy manifest auto-migrated to 3.4", result.stdout)
+                        self.assertIn("manifest: legacy manifest auto-migrated to 3.6", result.stdout)
                         manifest = load_manifest(repo)
-                        self.assertEqual(manifest["version"], "3.4")
+                        self.assertEqual(manifest["version"], "3.6")
                         # scan/status must not perform the same auto-migration
                         # on a manifest that's already migrated -- this just
                         # confirms the migrated manifest is now readable by
@@ -1860,7 +1894,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.4")
+                    self.assertEqual(manifest["version"], "3.6")
                     self.assertEqual(manifest["project"]["tier"], "diligence")
                     self.assertEqual(manifest["project"]["name"], "legacy2")
                     self.assertEqual(manifest["project"]["profiles"]["shapes"], ["api-service"])
@@ -1911,7 +1945,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     report = json.loads(result.stdout)
                     self.assertIn("re-registered from 0.9", report["results"][0]["detail"])
                     out = load_manifest(repo)
-                    self.assertEqual(out["version"], "3.4")
+                    self.assertEqual(out["version"], "3.6")
                     overview = next(doc for doc in out["documents"] if doc["id"] == "product_overview")
                     self.assertEqual(
                         overview["selection"]["origins"],
@@ -1932,6 +1966,8 @@ class ManifestV20MigrationTests(unittest.TestCase):
             py_manifest = load_manifest(repos["py"])
             js_manifest = load_manifest(repos["js"])
             py_manifest["project"]["root"] = js_manifest["project"]["root"]
+            for manifest in (py_manifest, js_manifest):
+                manifest["project"]["scale"]["decided_at"] = "<TIME>"
             self.assertEqual(py_manifest, js_manifest)
 
 
@@ -2182,7 +2218,7 @@ class UnmanagedDocsTests(unittest.TestCase):
                 self.assertIn(migrated.returncode, (0, 1), migrated.stderr)
                 self.assertNotIn("FAILED", migrated.stdout)
                 reloaded = load_manifest(repo)
-                self.assertEqual(reloaded["version"], "3.4")
+                self.assertEqual(reloaded["version"], "3.6")
                 self.assertEqual(reloaded["project"]["unmanaged_docs"], [])
                 # Second run is a clean no-op apart from the same MISSING files.
                 again = run(runtime, "migrate_metadata", "--repo", str(repo))

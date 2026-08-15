@@ -1,5 +1,74 @@
 # Changelog
 
+## 2.18.0 - Project scale, compact layout at every tier, retirement, and a markdown-only-JSON provenance store
+
+- **Project scale awareness.** `manage_manifest init` classifies a repository
+  as `small` / `medium` / `large` from its tracked/source-file counts and
+  confirmed profile count, and suggests a layout — `compact` for small,
+  `standard` otherwise — recorded in `project.scale` (manifest 3.5) as a
+  proposed default the user can override (`decided_by: "user"`). `reconcile
+  --layout` and `init --layout` force either layout explicitly.
+- **Compact layout now covers every tier**, not just Spine: Diligence gains
+  six merged files (`docs/architecture.md`, `docs/engineering.md`,
+  `docs/reference.md`, `docs/operations.md`, `docs/security.md`,
+  `docs/contributing.md`) folding 18 statics, and Portfolio gains one
+  (`docs-portfolio.md`) folding all seven portfolio-layer statics — a
+  Diligence fixture goes from 34 written documents to 16, Portfolio from 43
+  to 19. Dynamic-child indexes (`concepts/`, `decisions/`, `runbooks/`,
+  `docs-portfolio/decisions/`, `docs-portfolio/epics/`) and conditional
+  members never fold. A merged file hosts at most 8 member sections
+  (`COMPACT_MEMBER_CAP`), enforced by `query_catalog --validate`.
+- **Document retirement.** A tier downgrade, profile/audience removal, or
+  layout switch that drops a written document out of selection is reported
+  as a `retire` candidate by `reconcile`; `manage_manifest retire` then moves
+  it to `.docforge/obsolete/<year>/` (git-ignored, default) or deletes it
+  (explicit choice only) — never silently, never under `--auto-accept`. The
+  manifest entry is kept with `status: retired`; re-selecting it later
+  returns it to `planned`.
+- **Selection-change previews.** A revise that names a tier, or
+  `/docforge-revise all`, always shows the tier control and the selection
+  delta (adds, retires, contract-updated) even with no detected drift, so a
+  tier-naming run can never change the tree silently.
+- **Provenance storage is now JSON-only.** The `markdown` inline-frontmatter
+  storage mode is removed entirely — manifest 3.6 narrows
+  `provenance_storage` to a single legal value, and generated markdown is
+  unconditionally frontmatter-free. `migrate_metadata` strips any
+  surviving inline frontmatter into the folder sidecar
+  (`.docforge/provenance/<folder>.json`) in the same pass it upgrades the
+  schema, so no document survives a migrate run still carrying frontmatter.
+  `set-storage` and `init --storage` are gone.
+- **Eight runtime defects fixed**, each with a regression test: `manage_manifest
+  set` on a retired document crashed instead of transitioning it back to
+  `planned`; the metadata bucket counts didn't sum to `total_documents` once
+  a document was retired; dashboard reconcile reported noise for retired
+  documents; `reconcile --layout` on a manifest with no scale record wrote a
+  schema-invalid one; the compact-member sort crashed (Python) or ignored
+  `compact_order` (Node) when two members tied; a non-object `project.scale`
+  was repaired by one peer and left broken by the other; and
+  evidence-locator validation (`validate_locators`) had been silently dead
+  since 2.16.0's move to sidecars — it parsed frontmatter that json-mode
+  documents no longer have, so every locator defect class went undetected
+  until the caller was fixed to hand it the already-resolved provenance
+  instead.
+- **Instruction corpus de-duplication and conflict resolution.** Thirteen
+  confirmed contradictions in the always-loaded skill instructions are
+  resolved — migration-confirmation wording, dashboard auto-serve's
+  compact-layout exception, the undefined "revise-vs-render prompt," stale
+  version/subcommand/path-count references, a section-numbering collision
+  across `planning.md`/`writing.md`/`validation.md`, and a wrong catalog
+  group description, among others — plus the clearest repeated passages
+  (session-engine lock ladder, legacy-manifest re-registration mechanics)
+  collapsed to one owner with a link, and ownership-registry gaps filled for
+  scale/layout, retirement, and template conformance.
+- **Release self-checks fixed:** `plugin.json` / `marketplace.json` /
+  `skills/docforge/SKILL.md`'s descriptions had drifted apart; the catalog
+  JSON Schema's version constant was stale against the catalog itself; and a
+  "no nested `README.md` files" validator check — written for an earlier,
+  flatter layout — flagged every legitimate navigational README in
+  `content/`, `references/`, and `.metadata/catalog/` (all ~50 of them) and
+  is removed.
+- Manifest 3.5 → 3.6; catalog and package version → 2.18.0.
+
 ## 2.17.0 - Unmanaged documents (self-managed or archive)
 
 - Foreign `.md` / `.mdx` files under `docs/` or `docs-portfolio/` — docs
@@ -23,7 +92,7 @@
   `migrate_metadata` upgrades 3.3 → 3.4 by seeding the empty list, and
   schema/README/tests are bumped across Python and JS peers.
 
-## 2.17.0 - External provenance store (markdown-clean output)
+## 2.16.0 - External provenance store (markdown-clean output)
 
 - Converted dashboard pages now carry **`id`, `title`, and `description`**
   frontmatter only: `docforge_provenance` is no longer emitted into the
@@ -49,7 +118,7 @@
 - New Python/JS parity tests for the sidecar store, storage moves, migration,
   sync auto-move, lint/audit on sidecars, and mode flipping.
 
-## 2.17.0 - Cosmetic-drift detection via normalized and range evidence hashes
+## 2.15.0 - Cosmetic-drift detection via normalized and range evidence hashes
 
 - Provenance schema 2.1 adds optional per-source evidence hashes:
   `git_blob_normalized` (CRLF/CR -> LF, trailing whitespace and blank-line
@@ -65,7 +134,7 @@
 - New Python/JS parity tests for cosmetic classification, evidence hash
   normalization, and evidence locators.
 
-## 2.17.0 - Deeper source grounding, graph provider session lock
+## 2.14.0 - Deeper source grounding, graph provider session lock
 
 - The graph provider is now locked into the manifest once, automatically, by
   `manage_manifest.{py,js} init` (registry-priority pick; pass
@@ -85,7 +154,7 @@
 - New tests for manifest `set-graph`, depth ladders, graph/flows, structure,
   and CLI parity.
 
-## 2.17.0 - Dashboard `export` subcommand
+## 2.13.1 - Dashboard `export` subcommand
 
 - The static HTML export is now its own standalone `dashboard export`
   subcommand (`dashboard export --repo <repo>`) instead of
@@ -96,7 +165,7 @@
 - `--skip-install` is gone: `start` and `export` always install the
   dashboard's npm dependencies when `node_modules` is missing.
 
-## 2.17.0 - Manifest 3.2 with document descriptions
+## 2.13.0 - Manifest 3.2 with document descriptions
 
 - Manifest schema bumped to `3.2`: every document entry gains a catalog-owned
   `description` (≤ 160 chars), seeded from the catalog `summary` at init,
@@ -114,7 +183,7 @@
   `/docs` → `out/docs/index.html`, a page at `/docs/a/b` →
   `out/docs/a/b/index.html`; no more flat `docs.html` / `<page>.html`.
 
-## 2.17.0 - Audience-aware presentation
+## 2.12.0 - Audience-aware presentation
 
 - Routes now resolve an audience-aware presentation policy and manifests retain
   that policy with an optional per-document `presentation` override command.
@@ -127,10 +196,10 @@
   locators, and high-confidence explanatory prose placed in code-oriented
   fences. Dashboard conversion now leaves links inside fenced examples intact.
 - Flow, data-flow, architecture, BA, conventions, migration, and permissions
-  contracts use the new presentation rules through targeted `2.17.0` revision
+  contracts use the new presentation rules through targeted `2.12.0` revision
   markers; unaffected documents adopt the policy on their next revision.
 
-## 2.17.0 - Legacy manifest re-registration
+## 2.11.0 - Legacy manifest re-registration
 
 - `migrate_metadata` now re-registers **any** pre-3.0 legacy manifest (1.1
   `project_context` / `document_groups`, 2.0 flat `documents` with overlays,
@@ -142,7 +211,7 @@
 - Python and Node peers stay equivalent; added adoption, dry-run,
   idempotency, and parity tests.
 
-## 2.17.0 - Inline workflow execution
+## 2.10.0 - Inline workflow execution
 
 - Removed the optional Claude Code wrapper files and their dispatch paths.
   Precheck, grounding, flow analysis, document audit, and whole-tree review now
@@ -172,7 +241,7 @@
   normalizing inside `docs/` or to a repository-root `.md`/`.mdx` file);
   other unresolved targets remain warnings.
 
-## 2.17.0 - Standalone core and dashboard simplification
+## 2.9.0 - Standalone core and dashboard simplification
 
 - **`docforge` is now the required core bundle.** The dashboard capability
   (workflow, Python/Node runtime, and the Fumadocs app template) moved from
@@ -214,7 +283,7 @@
   bundle carries the dashboard capability with no sibling runtime
   dependencies and that the entry skills declare the core dependency.
 
-## 2.17.0 - Revise re-ask deltas and attached dashboard serve
+## 2.8.0 - Revise re-ask deltas and attached dashboard serve
 
 - Revise re-asks persisted manifest choices as changes only: current tier,
   profiles, and audiences are displayed as the baseline, and controls offer
@@ -227,7 +296,7 @@
   Python and Node peers stay equivalent and are covered by an end-to-end signal
   test in `tests/test_dashboard.py`.
 
-## Dashboard (local Fumadocs site)
+## 2.8.0 - Dashboard (local Fumadocs site)
 
 - Added `/docforge-dashboard` (`skills/docforge-dashboard/SKILL.md`,
   `commands/docforge-dashboard.md`, registered in both plugin manifests)
@@ -261,7 +330,7 @@
   unchanged fingerprint performs no content writes and reuses the server.
 - Added `tests/test_dashboard.py` (9 tests, Python/Node parity asserted).
 
-## Enforced coding-agents kernel lint
+## 2.8.0 - Enforced coding-agents kernel lint
 
 - Wired the orphaned `lint_agents_kernel` into the completion gate: the
   document-audit mechanical gate now runs it in place of `lint_document` for
@@ -279,18 +348,18 @@
 - Added `tests/test_agents_kernel.py` (clean golden fixture + per-check dirty
   fixtures, Python/Node parity asserted).
 
-## Two-mode fluency and de-duplication pass
+## 2.8.0 - Two-mode fluency and de-duplication pass
 
 - Standardized mode terminology to canonical "fresh start" for `/docforge` vs "revise" for `/docforge-revise`.
 - Harmonized the interactive question pack across `intake.md`, `revision.md`, and `docforge-revise/SKILL.md` to identical order, profile dimensions (`shape / platform / framework / concern`), and gate sentence (`never proceed on silent defaults`).
 - Smoothed prose in `intake.md` and `docforge-revise/SKILL.md`, aligned flag table descriptions with `flags.md`, and mirrored cross-references between the two skills for symmetry.
 
-## 2.17.0 - Model-native depth ladders
+## 2.7.0 - Model-native depth ladders
 
 - Added model-depth routing, evidence locators, illustration budgets, deterministic PROV core projection, and the conditional STRIDE interaction register.
 - Normalized target depths and added body-preserving metadata reconciliation prerequisites.
 
-## 2.17.0 — Trusted sources and root README policy
+## 2.6.1 - Trusted sources and root README policy
 
 - Plan reporting names only READY graph providers; Understand Anything,
   GitNexus, and CodeGraph are equally trusted for `code_graph`. Native
@@ -308,14 +377,14 @@
   Claude Code exposes `/docforge` and `/docforge-revise` (plugin skills alone
   appear as `/docforge:docforge` and `/docforge:docforge-revise`).
 
-## 2.17.0 — Claude-native Docforge agents
+## 2.6.0 - Claude-native Docforge agents
 
 - Added six read-only, Claude-plugin-native `docforge-*` agents: audit,
   tree-review, graph-precheck, catalog-validator, flow, and ground.
 - Agents are thin advisory wrappers over `_shared`; workflows retain inline
   fallbacks so non-Claude hosts follow the same canonical procedure.
 
-## 2.17.0 — Context-bounded repository refactor
+## 2.5.0 - Context-bounded repository refactor
 
 Internal reorganization for agent retrieval efficiency. No behavior change
 for existing users; see "Stable public interfaces" below for what did not
@@ -359,7 +428,7 @@ move.
   codes.
 - `query_catalog`'s existing modes (`--tier`, `--id`, `--ids`, `--profile`,
   `--applicable`, `--legacy`, `--validate`) — serialized output is
-  byte-identical to 2.17.0, including for the now-renamed `template_file`
+  byte-identical to 2.4.0, including for the now-renamed `template_file`
   field, which still prints as `scaffold_template` in these modes.
 - Manifest schema `3.1` and provenance schema `2.0` — unchanged.
 - Document IDs, type IDs, profile IDs, group IDs, tier names, and capability

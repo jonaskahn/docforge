@@ -1,5 +1,5 @@
 {
-  "version": "2.17.0",
+  "version": "2.18.0",
   "source": "../index.json",
   "groups": [
     {
@@ -28,13 +28,13 @@
       "id": "product",
       "kind": "folder",
       "index": "product/index.json",
-      "count": 18
+      "count": 19
     },
     {
       "id": "architecture",
       "kind": "folder",
       "index": "architecture/index.json",
-      "count": 31
+      "count": 32
     },
     {
       "id": "flows",
@@ -57,25 +57,25 @@
       "id": "engineering",
       "kind": "folder",
       "index": "engineering/index.json",
-      "count": 8
+      "count": 9
     },
     {
       "id": "operations",
       "kind": "folder",
       "index": "operations/index.json",
-      "count": 12
+      "count": 13
     },
     {
       "id": "reference",
       "kind": "folder",
       "index": "reference/index.json",
-      "count": 19
+      "count": 20
     },
     {
       "id": "security",
       "kind": "folder",
       "index": "security/index.json",
-      "count": 8
+      "count": 9
     },
     {
       "id": "contributing",
@@ -85,6 +85,11 @@
           "id": "contributing_root",
           "path": "contributing_root.json",
           "summary": "Verified contribution path, required checks, conventions and ownership links"
+        },
+        {
+          "id": "contributing_compact",
+          "path": "contributing_compact.json",
+          "summary": "Compact contributing section: ownership in one file"
         },
         {
           "id": "contributing_index",
@@ -97,7 +102,7 @@
           "summary": "Owned areas, responsibility boundaries, escalation tokens"
         }
       ],
-      "count": 3
+      "count": 4
     },
     {
       "id": "records",
@@ -120,7 +125,7 @@
       "id": "portfolio",
       "kind": "folder",
       "index": "portfolio/index.json",
-      "count": 11
+      "count": 12
     },
     {
       "id": "agent-context",

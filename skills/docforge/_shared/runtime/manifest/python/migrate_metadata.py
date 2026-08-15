@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate Docforge manifest metadata to 3.4 / provenance 2.0.
+"""Migrate Docforge manifest metadata to 3.5 / provenance 2.0.
 
 Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
 manifest 3.2 / provenance 2.0 (seeding each document's catalog-owned
@@ -10,7 +10,7 @@ schema 1.0 and schema-less
 legacy frontmatter, including pre-schema `doc` / `graph_snapshot` shapes,
 while preserving section evidence), and re-registers any older legacy
 manifest — 1.1 (`project_context` / `document_groups`), 2.0 (flat
-`documents` with overlay profiles), or any other pre-3.0 shape — as 3.4:
+`documents` with overlay profiles), or any other pre-3.0 shape — as 3.5:
 written documents are adopted as `generated` with provenance 2.0, bodies
 preserved, and plan entries kept. When a document cannot be converted to
 complete provenance 2.0 (missing or unparseable frontmatter, conversion
@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from runtime.common.python._util import dump_json, fail, load_manifest
+from runtime.common.python import scale
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python import provenance_store as store
 from runtime.common.python.provenance_frontmatter import (
@@ -37,7 +38,6 @@ from runtime.common.python.provenance_frontmatter import (
     SCAFFOLD_TOKEN,
     SCHEMA_VERSION,
     SUPPORTED_SCHEMA_VERSIONS,
-    emit_yaml,
     migrate_v1_to_v2,
     normalize_sections,
     parse_frontmatter,
@@ -45,8 +45,8 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-MANIFEST_CURRENT = "3.4"
-MANIFEST_IN_PLACE = ("3.4", "3.3", "3.2", "3.1", "3.0")
+MANIFEST_CURRENT = "3.6"
+MANIFEST_IN_PLACE = ("3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
@@ -66,8 +66,11 @@ LEGACY_OVERLAY_MAP = {
     "data-pipeline": ("shapes", "data-pipeline"),
 }
 PROFILE_DIMENSIONS = ("shapes", "platforms", "frameworks", "concerns", "audiences")
-ORIGIN_KINDS = {"tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor"}
-STATUSES = {"planned", "in_progress", "generated", "needs_review", "complete", "skipped"}
+ORIGIN_KINDS = {
+    "tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor",
+    "compact",
+}
+STATUSES = {"planned", "in_progress", "generated", "needs_review", "complete", "skipped", "retired"}
 
 
 def needs_provenance_migration(provenance: dict | None) -> bool:
@@ -226,20 +229,18 @@ def _write_output(
     text: str,
     provenance: dict,
     dry_run: bool,
-    storage: str,
 ) -> None:
-    """Persist provenance: sidecar + clean markdown in json mode, inline
-    frontmatter in markdown mode."""
+    """Persist provenance to the folder sidecar and leave the markdown clean.
+
+    Stripping is unconditional: this is the one pass that guarantees no
+    generated document keeps a frontmatter block."""
+    if dry_run:
+        return
     body = body_for_rewrite(text)
-    path = repo / doc["path"]
-    if storage == store.STORAGE_JSON:
-        if not dry_run:
-            entry = _public_for(text, doc)
-            entry["provenance"] = provenance
-            store.write_entry(repo, doc["path"], entry)
-            path.write_text(body.lstrip("\n"), encoding="utf-8")
-    elif not dry_run:
-        path.write_text(emit_yaml(provenance) + body.lstrip("\n"), encoding="utf-8")
+    entry = _public_for(text, doc)
+    entry["provenance"] = provenance
+    store.write_entry(repo, doc["path"], entry)
+    (repo / doc["path"]).write_text(body.lstrip("\n"), encoding="utf-8")
 
 
 def fail_document(
@@ -266,7 +267,7 @@ def fail_document(
         "action": "failed",
         "detail": detail,
     }
-    _write_output(repo, doc, text, generated, dry_run, store.storage_for(manifest))
+    _write_output(repo, doc, text, generated, dry_run)
     doc["provenance"] = generated
     return result
 
@@ -286,7 +287,7 @@ def regenerate_planned(
         "action": "regenerate",
         "detail": f"{reason}; wrote provenance {SCHEMA_VERSION} scaffold from manifest",
     }
-    _write_output(repo, doc, text, generated, dry_run, store.storage_for(manifest))
+    _write_output(repo, doc, text, generated, dry_run)
     doc["provenance"] = generated
     return result
 
@@ -314,7 +315,7 @@ def write_migrated(
             text=text,
         )
     result = {"doc": doc["path"], "action": "migrate", "detail": detail}
-    _write_output(repo, doc, text, migrated, dry_run, store.storage_for(manifest))
+    _write_output(repo, doc, text, migrated, dry_run)
     doc["provenance"] = migrated
     return result
 
@@ -328,7 +329,6 @@ def migrate_document_file(
     require_complete: bool | None = None,
 ) -> dict:
     path = repo / doc["path"]
-    storage = store.storage_for(manifest)
     result = {"doc": doc["path"], "action": "skip", "detail": ""}
     if doc.get("provenance_mode") == "manifest" or path.name in MARKDOWN_EXCEPTIONS:
         result["detail"] = "manifest-only provenance"
@@ -342,34 +342,33 @@ def migrate_document_file(
         if require_complete is not None
         else doc.get("status") in WRITTEN
     )
-    if storage == store.STORAGE_JSON:
-        entry = store.entry_for(repo, doc["path"])
-        if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
-            provenance = entry["provenance"]
-            defaults = migration_defaults(doc, manifest)
-            if needs_provenance_migration(provenance):
-                try:
-                    migrated = migrate_v1_to_v2(provenance, defaults=defaults)
-                except Exception:
-                    migrated = provenance_from_manifest(doc, manifest)
-                if not dry_run:
-                    updated = dict(entry)
-                    updated["provenance"] = migrated
-                    store.write_entry(repo, doc["path"], updated)
-                doc["provenance"] = migrated
-                return {"doc": doc["path"], "action": "migrate", "detail": f"sidecar schema -> {SCHEMA_VERSION}"}
-            if must_complete:
-                gaps = provenance_gaps(provenance)
-                if gaps:
-                    demoted = mark_for_agent_regen(doc)
-                    detail = f"incomplete provenance 2.0 ({', '.join(gaps)}); agent must regenerate provenance"
-                    if demoted:
-                        detail += "; status -> in_progress"
-                    doc["provenance"] = provenance
-                    return {"doc": doc["path"], "action": "failed", "detail": detail}
-            doc["provenance"] = provenance
-            result["detail"] = f"already sidecar schema {provenance.get('schema')}"
-            return result
+    entry = store.entry_for(repo, doc["path"])
+    if isinstance(entry, dict) and isinstance(entry.get("provenance"), dict):
+        provenance = entry["provenance"]
+        defaults = migration_defaults(doc, manifest)
+        if needs_provenance_migration(provenance):
+            try:
+                migrated = migrate_v1_to_v2(provenance, defaults=defaults)
+            except Exception:
+                migrated = provenance_from_manifest(doc, manifest)
+            if not dry_run:
+                updated = dict(entry)
+                updated["provenance"] = migrated
+                store.write_entry(repo, doc["path"], updated)
+            doc["provenance"] = migrated
+            return {"doc": doc["path"], "action": "migrate", "detail": f"sidecar schema -> {SCHEMA_VERSION}"}
+        if must_complete:
+            gaps = provenance_gaps(provenance)
+            if gaps:
+                demoted = mark_for_agent_regen(doc)
+                detail = f"incomplete provenance 2.0 ({', '.join(gaps)}); agent must regenerate provenance"
+                if demoted:
+                    detail += "; status -> in_progress"
+                doc["provenance"] = provenance
+                return {"doc": doc["path"], "action": "failed", "detail": detail}
+        doc["provenance"] = provenance
+        result["detail"] = f"already sidecar schema {provenance.get('schema')}"
+        return result
     text = path.read_text(encoding="utf-8", errors="replace")
     state, provenance, _end = parse_frontmatter(text)
     defaults = migration_defaults(doc, manifest)
@@ -414,17 +413,14 @@ def migrate_document_file(
                     text=text,
                 )
         doc["provenance"] = provenance
-        if storage == store.STORAGE_JSON:
-            if dry_run:
-                return {"doc": doc["path"], "action": "migrate", "detail": "inline -> sidecar"}
-            action = store.move_inline_to_sidecar(repo, doc, storage)
-            return {
-                "doc": doc["path"],
-                "action": "migrate" if action == "moved" else "skip",
-                "detail": "inline -> sidecar" if action == "moved" else action,
-            }
-        result["detail"] = f"already schema {provenance.get('schema')}"
-        return result
+        if dry_run:
+            return {"doc": doc["path"], "action": "migrate", "detail": "inline -> sidecar"}
+        action = store.move_inline_to_sidecar(repo, doc)
+        return {
+            "doc": doc["path"],
+            "action": "migrate" if action == "moved" else "skip",
+            "detail": "inline -> sidecar" if action == "moved" else action,
+        }
     if state not in {"ok", "obsolete"} or not isinstance(provenance, dict):
         if must_complete:
             return fail_document(
@@ -479,17 +475,40 @@ def seed_descriptions(
     return seeded
 
 
-def migrate_manifest_object(manifest: dict, *, demote_incomplete: bool = False) -> bool:
+def backfill_project_scale(repo: Path) -> dict:
+    """Detected-only scale record for backfill. A present `project.scale` is
+    never overwritten — this function is only called when the field is absent."""
+    detected = scale.compute_scale(repo)
+    return {
+        "class": detected["class"],
+        "layout": detected["suggested_layout"],
+        "decided_by": "detected",
+        "decided_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "signals": detected["signals"],
+    }
+
+
+def migrate_manifest_object(
+    manifest: dict,
+    repo: Path,
+    *,
+    demote_incomplete: bool = False,
+) -> bool:
     changed = False
-    if manifest.get("version") in {"3.3", "3.2", "3.1", "3.0"}:
+    if manifest.get("version") in {"3.5", "3.4", "3.3", "3.2", "3.1", "3.0"}:
         manifest["version"] = MANIFEST_CURRENT
         changed = True
     project = manifest.get("project")
-    if isinstance(project, dict) and not project.get("provenance_storage"):
+    # `markdown` storage is gone: normalize the field, and the per-document
+    # pass below strips whatever frontmatter that mode left behind.
+    if isinstance(project, dict) and project.get("provenance_storage") != store.STORAGE_JSON:
         project["provenance_storage"] = store.STORAGE_JSON
         changed = True
     if isinstance(project, dict) and not isinstance(project.get("unmanaged_docs"), list):
         project["unmanaged_docs"] = []
+        changed = True
+    if isinstance(project, dict) and not isinstance(project.get("scale"), dict):
+        project["scale"] = backfill_project_scale(repo)
         changed = True
     docs = manifest.get("documents", [])
     if any(not doc.get("description") for doc in docs):
@@ -536,7 +555,7 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
         for doc in manifest.get("documents", [])
         if isinstance(doc.get("id"), str)
     }
-    object_changed = migrate_manifest_object(manifest, demote_incomplete=False)
+    object_changed = migrate_manifest_object(manifest, repo, demote_incomplete=False)
     try:
         manifest_label = str(manifest_path.relative_to(repo))
     except ValueError:
@@ -564,7 +583,7 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
             )
         )
     if not dry_run:
-        migrate_manifest_object(manifest, demote_incomplete=True)
+        migrate_manifest_object(manifest, repo, demote_incomplete=True)
         manifest_path.write_text(
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
@@ -999,6 +1018,7 @@ def migrate_legacy(
             "name": project["name"],
             "root": project["root"],
             "tier": project["tier"],
+            "scale": backfill_project_scale(repo),
             "profiles": project["profiles"],
             "provenance_storage": store.STORAGE_JSON,
             "unmanaged_docs": [],
@@ -1096,9 +1116,7 @@ def migrate_legacy(
         ):
             target = repo / path
             text = target.read_text(encoding="utf-8", errors="replace")
-            _write_output(
-                repo, legacy_doc, text, provenance, dry_run, store.STORAGE_JSON
-            )
+            _write_output(repo, legacy_doc, text, provenance, dry_run)
     if not dry_run:
         manifest_path.write_text(dump_json(new_manifest), encoding="utf-8")
     try:

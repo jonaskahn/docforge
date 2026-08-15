@@ -157,7 +157,10 @@ parallel writers, relies on.
 
 The dry run is the exact active manifest tree and prints, for every selected
 document, its group/type, target depth, required evidence, selection origin,
-and write order.
+and write order. When the confirmed layout is `compact`, `init` /
+`selected_static_documents` already returns the folded set — the merged files
+stand in for their member groups — so the dry-run tree displays it verbatim,
+with the merged entries' `compact_members` traceable in the manifest.
 
 ## Pre-write structure checkpoint
 

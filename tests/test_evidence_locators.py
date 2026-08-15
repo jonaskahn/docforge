@@ -17,14 +17,25 @@ SHARED_ROOT = ROOT / "skills" / "docforge" / "_shared"
 JS_MODULE = SHARED_ROOT / "runtime" / "common" / "js" / "evidence_locators.js"
 
 
-def js_validate_locators(document: Path, text: str) -> list[dict]:
+def js_validate_locators(
+    document: Path,
+    text: str,
+    provenance: dict | None = None,
+    body_start: int | None = None,
+) -> list[dict]:
     script = (
         "const m = require(process.argv[1]);"
-        "const defects = m.validateLocators(process.argv[2], process.argv[3]);"
+        "const prov = process.argv[4] === '' ? null : JSON.parse(process.argv[4]);"
+        "const start = process.argv[5] === '' ? null : Number(process.argv[5]);"
+        "const defects = m.validateLocators(process.argv[2], process.argv[3], prov, start);"
         "process.stdout.write(JSON.stringify(defects));"
     )
     result = subprocess.run(
-        ["node", "-e", script, str(JS_MODULE), str(document), text],
+        [
+            "node", "-e", script, str(JS_MODULE), str(document), text,
+            "" if provenance is None else json.dumps(provenance),
+            "" if body_start is None else str(body_start),
+        ],
         text=True, capture_output=True, check=True,
     )
     return json.loads(result.stdout)
@@ -127,6 +138,93 @@ class EvidenceLocatorsDualHashTests(unittest.TestCase):
             self.assertEqual(py_defects, js_defects)
             kinds = {d["kind"] for d in py_defects}
             self.assertIn("stale evidence blob", kinds)
+
+
+class EvidenceLocatorsSidecarStorageTests(unittest.TestCase):
+    """Under the default `json` storage the markdown carries no frontmatter, so
+    a locator check that parses frontmatter finds no provenance and returns
+    clean for every document. The caller hands over the resolved provenance
+    instead."""
+
+    @staticmethod
+    def sidecar_fixture(repo: Path, content: bytes, citation_blob: str) -> tuple[Path, str, dict]:
+        (repo / ".git").mkdir()
+        (repo / "src.py").write_bytes(content)
+        doc = repo / "doc.md"
+        text = "# main\n\n" f"Citing src.py#L2-L2 @ {citation_blob}\n"
+        doc.write_text(text, encoding="utf-8")
+        provenance = {
+            "schema": "2.1",
+            "doc_id": "d",
+            "path": "doc.md",
+            "sections": [
+                {"id": "main", "sources": [
+                    {"path": "src.py", "git_blob": raw_blob_hash(content), "role": "code"},
+                ], "unresolved": []},
+            ],
+        }
+        return doc, text, provenance
+
+    def test_stale_blob_is_detected_without_frontmatter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            content = b"line1\nline2\nline3\nline4\n"
+            doc, text, provenance = self.sidecar_fixture(repo, content, "0" * 40)
+            py_defects = validate_locators(doc, text, provenance, 0)
+            js_defects = js_validate_locators(doc, text, provenance, 0)
+            self.assertEqual(py_defects, js_defects)
+            self.assertIn("stale evidence blob", {d["kind"] for d in py_defects})
+
+    def test_matching_citation_is_clean_without_frontmatter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            content = b"line1\nline2\nline3\nline4\n"
+            blob = raw_blob_hash(content)
+            doc, text, provenance = self.sidecar_fixture(repo, content, blob)
+            py_defects = validate_locators(doc, text, provenance, 0)
+            js_defects = js_validate_locators(doc, text, provenance, 0)
+            self.assertEqual(py_defects, js_defects)
+            self.assertEqual(py_defects, [])
+
+    def test_missing_source_is_detected_without_frontmatter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            content = b"line1\nline2\nline3\nline4\n"
+            doc, text, provenance = self.sidecar_fixture(repo, content, raw_blob_hash(content))
+            (repo / "src.py").unlink()
+            py_defects = validate_locators(doc, text, provenance, 0)
+            js_defects = js_validate_locators(doc, text, provenance, 0)
+            self.assertEqual(py_defects, js_defects)
+            self.assertIn("evidence source missing", {d["kind"] for d in py_defects})
+
+    def test_without_provenance_a_frontmatterless_document_is_not_checked(self) -> None:
+        """Documents the gap the caller closes: with nothing handed over and no
+        frontmatter to parse, there is no provenance to check against."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            content = b"line1\nline2\nline3\nline4\n"
+            doc, text, _provenance = self.sidecar_fixture(repo, content, "0" * 40)
+            self.assertEqual(validate_locators(doc, text), [])
+            self.assertEqual(js_validate_locators(doc, text), [])
+
+
+class EvidenceLocatorsHeadingOffsetTests(unittest.TestCase):
+    def test_peers_agree_on_heading_line_numbers_under_frontmatter(self) -> None:
+        """The two peers computed the body's starting line differently — one
+        counted newlines, the other counted lines — so a locator sitting just
+        after a heading could bind to a different heading in each runtime."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            content = b"line1\nline2\nline3\nline4\n"
+            doc, text = build_fixture(repo, content, "0" * 40, 2, 2)
+            py_defects = validate_locators(doc, text)
+            js_defects = js_validate_locators(doc, text)
+            self.assertEqual(py_defects, js_defects)
+            self.assertTrue(py_defects)
+            # The citation sits under `# main`, whose provenance section is
+            # `main` — so the only complaint is the blob, never the heading.
+            kinds = {d["kind"] for d in py_defects}
+            self.assertNotIn("unknown evidence heading", kinds)
 
 
 if __name__ == "__main__":

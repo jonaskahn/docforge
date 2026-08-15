@@ -131,11 +131,20 @@ def inventory(repo: Path) -> list[tuple[str, Path]]:
     return found
 
 
-def detect(repo: Path) -> list[dict]:
+def detect(
+    repo: Path,
+    *,
+    persist: bool = True,
+    files: list[tuple[str, Path]] | None = None,
+) -> list[dict]:
+    """Pass `files` to reuse an `inventory(repo)` the caller already has —
+    the walk is the expensive part, and several callers need both."""
     profiles = query_catalog.load_profiles()
-    files = inventory(repo)
+    if files is None:
+        files = inventory(repo)
     dependencies = manifest_deps.extract_dependencies(files)
-    persist_manifest_deps(repo, dependencies)
+    if persist:
+        persist_manifest_deps(repo, dependencies)
     cache: dict[Path, str] = {}
     cached_bytes = 0
     results: list[dict] = []
@@ -256,7 +265,7 @@ def emit_gate_pack(repo: Path) -> dict:
     profiles = query_catalog.load_profiles()
     files = inventory(repo)
     dependencies = manifest_deps.extract_dependencies(files)
-    detections = detect(repo)
+    detections = detect(repo, files=files)
     strong = [item for item in detections if item["confidence"] == "confirmed"]
     weak = [item for item in detections if item["confidence"] == "candidate"]
     cue_map: dict[str, dict] = {}

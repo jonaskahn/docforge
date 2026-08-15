@@ -15,6 +15,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 ## Contents
 
 - `security_root` — Supported scope, reporting path, response expectations, safe harbor → [index.json](index.json)
+- `security_compact` — Compact security section: threat model and data handling in one file → [index.json](index.json)
 - `security_index` — Security documentation overview: what this section covers and the reader question each security document answers → [index.json](index.json)
 - `threat_model` — Assets, trust boundaries, threats, controls, accepted residual risk → [index.json](index.json)
 - `data_handling` — Data classes, lifecycle, access, retention, deletion → [index.json](index.json)

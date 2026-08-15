@@ -14,6 +14,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
+- `reference_compact` — Compact reference section: configuration, limitations, tech stack, plus (Diligence) the glossary — in one file → [index.json](index.json)
 - `reference_index` — Reference documentation overview: what this section covers and the reader question each reference document answers → [index.json](index.json)
 - `configuration` — Every read setting, default, scope, sensitivity, validation → [index.json](index.json)
 - `limitations` — Known bounds, trigger, impact, workaround, source evidence → [index.json](index.json)

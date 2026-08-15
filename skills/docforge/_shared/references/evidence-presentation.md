@@ -6,8 +6,8 @@ concerns.
 
 ## Policy
 
-- Every substantive heading retains complete provenance 2.0, including source
-  paths, roles, and blob hashes.
+- Every substantive heading has a complete provenance entry in the document's
+  folder sidecar, including source paths, roles, and blob hashes.
 - Never show source paths, line ranges, blob hashes, or source-code links as
   claim citations in generated documentation.
 - Show a repository path only when the reader must open, edit, run, or inspect

@@ -57,15 +57,15 @@ For deterministic inventory or environments without the interactive MCP/skill
 path, read the JSON in place:
 
 ```sh
-python runtime/cli/python/read_graph.py --graph <repo>/.ua/knowledge-graph.json --probe
+python3 runtime/cli/python/read_graph.py --graph <repo>/.ua/knowledge-graph.json --probe
 node runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --probe
 # bun  runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --probe
 # deno run -A runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --probe
-python runtime/cli/python/read_graph.py --graph <repo>/.ua/knowledge-graph.json --layers
+python3 runtime/cli/python/read_graph.py --graph <repo>/.ua/knowledge-graph.json --layers
 node runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --layers
 # bun  runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --layers
 # deno run -A runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --layers
-python runtime/cli/python/read_graph.py --graph <repo>/.ua/knowledge-graph.json --entry-points
+python3 runtime/cli/python/read_graph.py --graph <repo>/.ua/knowledge-graph.json --entry-points
 node runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --entry-points
 # bun  runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --entry-points
 # deno run -A runtime/cli/js/read_graph.js --graph <repo>/.ua/knowledge-graph.json --entry-points

@@ -22,7 +22,7 @@ that lists every script, its purpose, and when to use it:
   here, never the implementations directly).
 - [`common/`](common/README.md) — shared libraries: `_util`, `manifest_deps`,
   `provenance_frontmatter`, `plan`, `special_files`, `evidence_locators`,
-  `illustration_metrics`, `markdown_fences`, `prov_projection`.
+  `illustration_metrics`, `markdown_fences`.
 - [`catalog/`](catalog/README.md) — catalog query and profile detection:
   `query_catalog`, `detect_profiles`, `discovery_gate`.
 - [`graph/`](graph/README.md) — graph-provider adapters, storage, and

@@ -1,10 +1,15 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "category": "portfolio",
   "purpose": "Cross-repository portfolio layer for multi-repo diligence.",
   "source": "../../index.json",
   "records": [
+    {
+      "id": "portfolio_compact",
+      "path": "portfolio_compact.json",
+      "summary": "Compact portfolio section: inventory, system context, security, operations, diligence index, and glossary in one file"
+    },
     {
       "id": "portfolio_readme",
       "path": "portfolio_readme.json",

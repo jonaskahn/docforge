@@ -8,6 +8,9 @@ const { dumpJson, fail } = require("../../common/js/_util.js");
 
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const CATALOG_DIR = path.join(SKILL_ROOT, ".metadata", "catalog");
+// Depth brake for a compact merge: beyond this, prefer authoring the group as
+// fewer, denser sections elsewhere rather than one file with too many.
+const COMPACT_MEMBER_CAP = 8;
 const INDEX_PATH = path.join(CATALOG_DIR, "index.json");
 const TYPES_DIR = path.join(CATALOG_DIR, "types");
 const PROFILES_DIR = path.join(CATALOG_DIR, "profiles");
@@ -49,7 +52,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.17.0";
+const CATALOG_VERSION = "2.18.0";
 const PRESENTATION_VALUES = {
   code: new Set(["contract-only", "task-focused"]),
   related_docs: new Set(["none", "compact", "traceability"]),
@@ -122,7 +125,7 @@ function loadAllTypes() {
 // writing procedure, regardless of group.
 const ROUTE_WORKFLOW = "workflows/writing.md";
 const GROUP_SUMMARIES = {
-  root: "Root-level entrypoints: README, SKILL.md, and package descriptors.",
+  root: "Root-level entrypoints: repository README, changelog, and the docs index.",
   product: "Product surface: overview, quickstart, and audience-specific product views.",
   architecture: "System architecture: structure, boundaries, and integration surfaces.",
   flows: "End-to-end flow documentation derived from the flow index.",
@@ -211,7 +214,71 @@ function resolvePresentation(detail, audiences = []) {
   return [primary, presentation, origins];
 }
 
-function route(value, audiences = []) {
+// The manifest's own folded `compact_members` for docId, or null when no
+// manifest is available or the entry has none.
+//
+// A compact group spanning tiers (e.g. `architecture_compact` at Spine and
+// Diligence) declares its *full* member roster in the catalog, but only a
+// tier-appropriate subset is ever actually selected and folded for one
+// project. The manifest entry — built by foldCompactGroups from the
+// tier-filtered selection — already carries the correct subset; prefer it
+// over the catalog's full list whenever a manifest is available.
+function manifestCompactMembers(repo, docId) {
+  if (!repo) return null;
+  const manifestPath = path.join(repo, ".docforge", "manifest.json");
+  if (!fs.existsSync(manifestPath)) return null;
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    return null;
+  }
+  for (const doc of manifest.documents || []) {
+    if (doc.id === docId) {
+      return Array.isArray(doc.compact_members) && doc.compact_members.length ? doc.compact_members : null;
+    }
+  }
+  return null;
+}
+
+// Compose the merged file's content contract at route time: the group's
+// short header contract plus each member's existing contract as a named
+// section, in `compact_members` order. Member contracts are reused, never
+// rewritten. `repo`, when given, narrows a tier-spanning group's full
+// catalog roster to what this project's manifest actually folded — see
+// manifestCompactMembers.
+function composedCompactContract(detail, repo = null) {
+  const parts = [];
+  const members = [];
+  const header = detail.contract_file;
+  if (header && fs.existsSync(path.join(SKILL_ROOT, header))) {
+    parts.push(fs.readFileSync(path.join(SKILL_ROOT, header), "utf8").trimEnd());
+  }
+  let order = 0;
+  const memberIds = manifestCompactMembers(repo, detail.id) || detail.compact_members || [];
+  for (const memberId of memberIds) {
+    order += 1;
+    const member = loadType(memberId);
+    const memberContract = member.contract_file;
+    members.push({
+      id: memberId,
+      order,
+      contract: memberContract,
+      instruction: member.instruction_file === undefined ? null : member.instruction_file,
+      template: member.template_file,
+      target_depth: member.target_depth === undefined ? null : member.target_depth,
+      model_depth: member.model_depth || {},
+      dominant_form: member.dominant_form === undefined ? null : member.dominant_form,
+    });
+    if (memberContract && fs.existsSync(path.join(SKILL_ROOT, memberContract))) {
+      const text = fs.readFileSync(path.join(SKILL_ROOT, memberContract), "utf8").trimEnd();
+      parts.push(`## ${memberId}\n\n${text}`);
+    }
+  }
+  return [parts.join("\n\n"), members];
+}
+
+function route(value, audiences = [], repo = null) {
   const docId = resolveCatalogId(value);
   const row = indexRow(docId);
   const detail = loadType(docId);
@@ -223,7 +290,7 @@ function route(value, audiences = []) {
     }
   }
   const [primaryAudience, presentation, presentationOrigin] = resolvePresentation(detail, audiences);
-  return {
+  const result = {
     id: docId,
     group: detail.group,
     summary: detail.summary,
@@ -241,6 +308,15 @@ function route(value, audiences = []) {
     presentation,
     presentation_origin: presentationOrigin,
   };
+  if (detail.compact_members && detail.compact_members.length) {
+    const [composed, members] = composedCompactContract(detail, repo);
+    result.contract = composed;
+    result.compact = {
+      header_contract: detail.contract_file,
+      members,
+    };
+  }
+  return result;
 }
 
 // Field order and shape of a pre-2.5 type-detail record. --id/--ids/--tier/
@@ -346,7 +422,7 @@ function applicable(options = {}) {
   for (const row of index.document_types) {
     const detail = loadType(row.id);
     const rule = detail.selection;
-    if (rule.mode === "dynamic" && !options.includeDynamic) continue;
+    if ((rule.mode === "dynamic" || rule.mode === "compact") && !options.includeDynamic) continue;
     if (ranks[rule.min_tier] > tierRank) continue;
     const selectors = rule.selectors || {};
     const hasSelectors = Object.values(selectors).some((v) => v && v.length);
@@ -602,8 +678,39 @@ function validate() {
       if (dynamicTypes.has(doc.type)) errors.push(`duplicate dynamic type: ${doc.type}`);
       dynamicTypes.add(doc.type);
       if (indexIds.includes(doc.type) && doc.type !== docId) errors.push(`${docId}: dynamic type collides with catalog id ${doc.type}`);
+    } else if (selection.mode === "compact") {
+      if (!doc.compact_members || !doc.compact_members.length) errors.push(`${docId}: compact documents must declare compact_members`);
+      if (doc.compact_target && doc.compact_target !== doc.path) errors.push(`${docId}: compact_target must match path`);
+      if (staticIds.has(doc.id)) errors.push(`duplicate static id: ${doc.id}`);
+      if (staticPaths.has(doc.path)) errors.push(`duplicate static path: ${doc.path}`);
+      staticIds.add(doc.id);
+      staticPaths.add(doc.path);
     } else {
       errors.push(`${docId}: selection.mode must be static or dynamic`);
+    }
+  }
+  const compactIds = new Set(indexIds.filter((docId) => (loadType(docId).selection || {}).mode === "compact"));
+  for (const docId of indexIds) {
+    const doc = loadType(docId);
+    const group = doc.compact_group;
+    if (group !== undefined && !compactIds.has(group)) {
+      errors.push(`${docId}: compact_group references missing compact document ${group}`);
+    }
+    for (const memberId of doc.compact_members || []) {
+      if (!indexIds.includes(memberId)) {
+        errors.push(`${docId}: compact_members references unknown document ${memberId}`);
+      } else if (loadType(memberId).compact_group !== docId) {
+        errors.push(`${docId}: member ${memberId} does not declare compact_group ${docId}`);
+      }
+      if ((doc.selection || {}).mode !== "compact") {
+        errors.push(`${docId}: compact_members belongs on a compact document`);
+      }
+    }
+    if ((doc.compact_members || []).length > COMPACT_MEMBER_CAP) {
+      errors.push(
+        `${docId}: ${doc.compact_members.length} compact_members exceeds the `
+        + `${COMPACT_MEMBER_CAP}-member depth brake (document-composition.md)`,
+      );
     }
   }
 
@@ -681,6 +788,7 @@ function parseArgs(argv) {
     else if (arg === "--validate") args.validate = true;
     else if (arg === "--category") args.category = next();
     else if (arg === "--route") args.routeId = next();
+    else if (arg === "--repo") args.repo = next();
     else throw new Error(`unknown flag: ${arg}`);
   }
   return args;
@@ -763,7 +871,7 @@ function main(argv = process.argv.slice(2)) {
       return 0;
     }
     if (args.routeId) {
-      process.stdout.write(dumpJson(route(args.routeId, args.audience)));
+      process.stdout.write(dumpJson(route(args.routeId, args.audience, args.repo || null)));
       return 0;
     }
   } catch (error) {

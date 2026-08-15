@@ -53,6 +53,6 @@ Write `references/graph-source-<name>.md` (the source-specific binding — what 
 
 ## Verify
 
-- `python runtime/cli/python/precheck_graph.py --repo <path> --need code` detects your graph with zero orchestrator edits; the miss path prints your `setup_hint` alongside the others, and a ready one prints your `read_mode`'s mechanism.
+- `python3 runtime/cli/python/precheck_graph.py --repo <path> --need code` detects your graph with zero orchestrator edits; the miss path prints your `setup_hint` alongside the others, and a ready one prints your `read_mode`'s mechanism.
 - Run the Python and Node forms on the same fixture and diff stdout — they must be byte-identical apart from the runtime's own command name.
 - For a `"json"` source, `read_graph.{py,js}` reads your code graph if it lands in `.ua/`; if your source uses a different location, add it to `read_graph`'s `DEFAULT_RELPATHS` (both languages). For a `"db"` source, ship the `graph_source_<name>_reader` (both languages) and confirm its graceful path when the driver is not installed. For an `"mcp"` source (no reader at all, like CodeGraph), confirm the reference doc states the two-gate check explicitly — on-disk presence alone must never be presented to the agent as "readable."

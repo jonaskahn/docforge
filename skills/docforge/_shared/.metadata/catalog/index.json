@@ -1,6 +1,6 @@
 {
   "$schema": "catalog-index-schema.json",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "profiles": {
     "shapes": "profiles/shapes.json",
     "platforms": "profiles/platforms.json",
@@ -25,13 +25,41 @@
       "agent-context": "coding-agents"
     },
     "by_audience": {
-      "engineers": {"code": "task-focused", "related_docs": "compact", "repository_paths": "actionable-only"},
-      "beginners": {"code": "task-focused", "related_docs": "compact", "repository_paths": "actionable-only"},
-      "business-analysts": {"code": "contract-only", "related_docs": "compact", "repository_paths": "hidden"},
-      "product-owners": {"code": "contract-only", "related_docs": "compact", "repository_paths": "hidden"},
-      "coding-agents": {"code": "task-focused", "related_docs": "traceability", "repository_paths": "actionable-only"},
-      "operators": {"code": "task-focused", "related_docs": "compact", "repository_paths": "actionable-only"},
-      "security-reviewers": {"code": "contract-only", "related_docs": "traceability", "repository_paths": "actionable-only"}
+      "engineers": {
+        "code": "task-focused",
+        "related_docs": "compact",
+        "repository_paths": "actionable-only"
+      },
+      "beginners": {
+        "code": "task-focused",
+        "related_docs": "compact",
+        "repository_paths": "actionable-only"
+      },
+      "business-analysts": {
+        "code": "contract-only",
+        "related_docs": "compact",
+        "repository_paths": "hidden"
+      },
+      "product-owners": {
+        "code": "contract-only",
+        "related_docs": "compact",
+        "repository_paths": "hidden"
+      },
+      "coding-agents": {
+        "code": "task-focused",
+        "related_docs": "traceability",
+        "repository_paths": "actionable-only"
+      },
+      "operators": {
+        "code": "task-focused",
+        "related_docs": "compact",
+        "repository_paths": "actionable-only"
+      },
+      "security-reviewers": {
+        "code": "contract-only",
+        "related_docs": "traceability",
+        "repository_paths": "actionable-only"
+      }
     }
   },
   "tiers": {
@@ -87,6 +115,12 @@
       "tier": "spine",
       "path": "docs/architecture/README.md",
       "record": "documents/architecture/architecture_index.json"
+    },
+    {
+      "id": "architecture_compact",
+      "tier": "spine",
+      "path": "docs/architecture.md",
+      "record": "documents/architecture/architecture_compact.json"
     },
     {
       "id": "arch_high_level",
@@ -269,6 +303,12 @@
       "record": "documents/product/product_index.json"
     },
     {
+      "id": "product_compact",
+      "tier": "spine",
+      "path": "docs/product.md",
+      "record": "documents/product/product_compact.json"
+    },
+    {
       "id": "web_components",
       "tier": "spine",
       "path": "docs/architecture/ui-components.md",
@@ -395,6 +435,12 @@
       "record": "documents/engineering/engineering_index.json"
     },
     {
+      "id": "engineering_compact",
+      "tier": "spine",
+      "path": "docs/engineering.md",
+      "record": "documents/engineering/engineering_compact.json"
+    },
+    {
       "id": "po_release_notes",
       "tier": "spine",
       "path": "docs/product/product-owner/release-notes.md",
@@ -453,6 +499,12 @@
       "tier": "spine",
       "path": "docs/reference/README.md",
       "record": "documents/reference/reference_index.json"
+    },
+    {
+      "id": "reference_compact",
+      "tier": "spine",
+      "path": "docs/reference.md",
+      "record": "documents/reference/reference_compact.json"
     },
     {
       "id": "configuration",
@@ -569,6 +621,12 @@
       "record": "documents/operations/operations_index.json"
     },
     {
+      "id": "operations_compact",
+      "tier": "diligence",
+      "path": "docs/operations.md",
+      "record": "documents/operations/operations_compact.json"
+    },
+    {
       "id": "deployment",
       "tier": "diligence",
       "path": "docs/operations/deployment.md",
@@ -647,6 +705,12 @@
       "record": "documents/security/security_index.json"
     },
     {
+      "id": "security_compact",
+      "tier": "diligence",
+      "path": "docs/security.md",
+      "record": "documents/security/security_compact.json"
+    },
+    {
       "id": "threat_model",
       "tier": "diligence",
       "path": "docs/security/threat-model.md",
@@ -707,6 +771,12 @@
       "record": "documents/contributing_index.json"
     },
     {
+      "id": "contributing_compact",
+      "tier": "diligence",
+      "path": "docs/contributing.md",
+      "record": "documents/contributing_compact.json"
+    },
+    {
       "id": "ownership",
       "tier": "diligence",
       "path": "docs/contributing/ownership.md",
@@ -723,6 +793,12 @@
       "tier": "portfolio",
       "path": "docs-portfolio/README.md",
       "record": "documents/portfolio/portfolio_readme.json"
+    },
+    {
+      "id": "portfolio_compact",
+      "tier": "portfolio",
+      "path": "docs-portfolio.md",
+      "record": "documents/portfolio/portfolio_compact.json"
     },
     {
       "id": "portfolio_repo_inventory",

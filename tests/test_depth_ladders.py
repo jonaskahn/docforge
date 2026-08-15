@@ -10,29 +10,9 @@ from pathlib import Path
 
 from _support import CLI_JS, ROOT, initialize, load_manifest, run, write_flow_index
 from runtime.common.python.illustration_metrics import illustration_defects
-from runtime.common.python.prov_projection import project_core
 
 
 class DepthLadderTests(unittest.TestCase):
-    def test_prov_core_projection_is_sorted_and_deduplicated(self) -> None:
-        provenance = {
-            "doc_id": "architecture", "generated_at": "2026-07-31T00:00:00Z",
-            "generator": {"name": "docforge", "version": "2.17.0"},
-            "sections": [{"sources": [
-                {"path": "z.py", "git_blob": "b" * 40, "role": "code"},
-                {"path": "a.py", "git_blob": "a" * 40, "role": "config"},
-                {"path": "z.py", "git_blob": "b" * 40, "role": "code"},
-            ]}],
-        }
-        projected = project_core(provenance)
-        self.assertEqual(len(projected), 7)
-        self.assertEqual(projected[3]["object"], f"source:a.py@{'a' * 40}")
-        node = subprocess.run(
-            ["node", "-e", "const p=require(process.argv[1]); console.log(JSON.stringify(p.projectCore(JSON.parse(process.argv[2]))));", str(CLI_JS.parent.parent / "common" / "js" / "prov_projection.js"), json.dumps(provenance)],
-            text=True, capture_output=True, check=True,
-        )
-        self.assertEqual(projected, json.loads(node.stdout))
-
     def test_illustration_budget_rejects_router_visual(self) -> None:
         document = "```mermaid\nflowchart TD\nA --> B\n```\n"
         self.assertTrue(illustration_defects(document, "router"))
@@ -121,6 +101,7 @@ class DepthLadderTests(unittest.TestCase):
             for manifest in (py_manifest, js_manifest):
                 manifest["generated_at"] = "<TIME>"
                 manifest["metadata"]["last_updated"] = "<TIME>"
+                manifest["project"]["scale"]["decided_at"] = "<TIME>"
                 manifest["project"]["root"] = "<REPO>"
                 manifest["project"]["name"] = "<NAME>"
             self.assertEqual(py_manifest, js_manifest)

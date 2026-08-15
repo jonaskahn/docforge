@@ -1,6 +1,6 @@
 # root
 
-Root-level entrypoints: README, SKILL.md, and package descriptors.
+Root-level entrypoints: repository README, changelog, and the docs index.
 
 ## Load this when
 

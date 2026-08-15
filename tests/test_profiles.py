@@ -27,7 +27,7 @@ class ProfileSelectionTests(unittest.TestCase):
             base_repo.mkdir()
             profile_repo.mkdir()
             self.assertEqual(initialize("py", base_repo, "spine").returncode, 0)
-            args = ["init", "--repo", str(profile_repo), "--tier", "spine"]
+            args = ["init", "--repo", str(profile_repo), "--tier", "spine", "--layout", "standard"]
             flag_for = {
                 "shapes": "--shape",
                 "platforms": "--platform",
@@ -57,6 +57,7 @@ class ProfileSelectionTests(unittest.TestCase):
             framework_result = run(
                 "py", "manage_manifest", "init",
                 "--repo", str(framework_repo), "--tier", "spine",
+                "--layout", "standard",
                 *framework_args,
             )
             self.assertEqual(framework_result.returncode, 0, framework_result.stderr)

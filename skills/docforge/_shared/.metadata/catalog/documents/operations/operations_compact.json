@@ -1,0 +1,33 @@
+{
+  "id": "operations_compact",
+  "type": "compact-doc",
+  "title": "Operations",
+  "summary": "Compact operations section: deployment and observability in one file",
+  "contract_file": "content/compact/contracts/operations.md",
+  "path": "docs/operations.md",
+  "group": "operations",
+  "selection": {
+    "mode": "compact",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/compact/instructions/operations.md",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "orientation",
+  "write_order": 70,
+  "nav_order": 50,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/compact/templates/operations.template.md",
+  "contract_revision": "2.18.0",
+  "compact_target": "docs/operations.md",
+  "compact_members": [
+    "operations_index",
+    "deployment",
+    "observability"
+  ]
+}

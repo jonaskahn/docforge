@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "category": "security",
   "purpose": "Security posture, permissions, and threat model.",
   "source": "../../index.json",
@@ -9,6 +9,11 @@
       "id": "security_root",
       "path": "security_root.json",
       "summary": "Supported scope, reporting path, response expectations, safe harbor"
+    },
+    {
+      "id": "security_compact",
+      "path": "security_compact.json",
+      "summary": "Compact security section: threat model and data handling in one file"
     },
     {
       "id": "security_index",

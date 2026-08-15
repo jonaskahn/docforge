@@ -10,7 +10,7 @@ Start a separate cold artifact-only pass after writing. Review only:
 - its catalog content contract and audit profile;
 - target depth;
 - applicable quality checks;
-- sources cited by validated provenance 2.0, after the mechanical gate has
+- sources cited by validated current provenance, after the mechanical gate has
   confirmed concrete metadata, source blobs, and heading-matched sections;
 - for a template rewrite or revision only, the document's prior committed
   version, solely to check illustration continuity (see Verdict).

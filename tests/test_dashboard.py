@@ -23,9 +23,10 @@ from _support import (
     ROOT,
     blob_hash,
     load_manifest,
-    markdown_with_provenance,
     normalized_blob_hash,
     provenance,
+    remove_sidecar_entry,
+    write_written_doc,
 )
 
 DASH_CLI_PY = ROOT / "skills" / "docforge" / "_shared" / "runtime" / "cli" / "python"
@@ -225,11 +226,11 @@ def seed_repo(repo: Path) -> None:
         written_doc("product_overview", "docs/product/overview.md", bodies["product_overview"], write_order=19),
     ]
     manifest = {
-        "version": "3.2",
+        "version": "3.6",
         "generated_at": "2026-08-01T00:00:00Z",
         "project": {
             "name": "fixture", "root": str(repo), "tier": "spine",
-            "provenance_storage": "markdown", "profiles": {},
+            "provenance_storage": "json", "profiles": {},
         },
         "discovery": [],
         "documents": docs,
@@ -239,12 +240,60 @@ def seed_repo(repo: Path) -> None:
     manifest_path.parent.mkdir(parents=True)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     for doc in docs:
-        target = repo / doc["path"]
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(markdown_with_provenance(doc["provenance"], bodies[doc["id"]]), encoding="utf-8")
+        write_written_doc(repo, doc, bodies[doc["id"]])
 
 
 SIG_RE = re.compile(r"render_sig: ([0-9a-f]{64})")
+
+
+def reconcile_report(runtime: str, repo: Path) -> dict:
+    """Call `reconcile_metadata` directly in either runtime — the npm-free way
+    to exercise the stage on its own."""
+    manifest_path = repo / ".docforge" / "manifest.json"
+    if runtime == "py":
+        from runtime.dashboard.python.dashboard import reconcile_metadata
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return reconcile_metadata(repo, manifest, dry_run=True)
+    script = (
+        "const d=require(process.argv[1]);const fs=require('fs');"
+        "const m=JSON.parse(fs.readFileSync(process.argv[3],'utf8'));"
+        "console.log(JSON.stringify(d.reconcileMetadata(process.argv[2],m,true)));"
+    )
+    result = subprocess.run(
+        ["node", "-e", script, str(DASH_CLI_JS / "dashboard.js"), str(repo), str(manifest_path)],
+        text=True, capture_output=True, check=True,
+    )
+    return json.loads(result.stdout)
+
+
+class DashboardRetiredDocumentTests(unittest.TestCase):
+    def test_reconcile_leaves_retired_documents_alone(self) -> None:
+        """`retire` moves or deletes the file, so the existence guard usually
+        hides retired entries from reconcile. When the file is still on disk —
+        restored by hand, or a retire that stopped half way — reconcile must
+        still leave an out-of-scope document's metadata untouched, the way
+        `plan` and `scaffold_docs --audit` already do."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_repo(repo)
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    target = next(d for d in manifest["documents"] if d["id"] == "product_overview")
+                    target["status"] = "retired"
+                    # Drift that reconcile would otherwise "fix" in place.
+                    target["title"] = "Renamed After Retirement"
+                    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+                    report = reconcile_report(runtime, repo)
+                    touched = {
+                        entry["doc"]
+                        for key in ("reconciled", "unchanged", "skipped", "errors")
+                        for entry in report[key]
+                    }
+                    self.assertNotIn("product_overview", touched)
+                    self.assertIn("docs_index", touched)
 
 
 class DashboardStartTests(unittest.TestCase):
@@ -258,11 +307,21 @@ class DashboardStartTests(unittest.TestCase):
                 try:
                     result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                     self.assertEqual(result.returncode, 0, result.stderr)
-                    text = (repo / "docs" / "product" / "overview.md").read_text(encoding="utf-8")
-                    self.assertTrue(text.startswith('---\nid: "product_overview"\n'))
-                    self.assertIn('title: "Product Overview"', text)
-                    self.assertIn('description: "Fixture description for product overview."', text)
-                    self.assertIn('# Overview\n\nBody.\n', text)
+                    source = (repo / "docs" / "product" / "overview.md").read_text(encoding="utf-8")
+                    self.assertEqual(source, "# Overview\n\nBody.\n", "the source file must stay frontmatter-free")
+                    sidecar = json.loads((repo / ".docforge" / "provenance" / "docs" / "product.json").read_text(encoding="utf-8"))
+                    entry = sidecar["files"]["overview.md"]
+                    self.assertEqual(entry["id"], "product_overview")
+                    self.assertEqual(entry["title"], "Product Overview")
+                    self.assertEqual(entry["description"], "Fixture description for product overview.")
+                    # The rendered page's own title follows the body's H1
+                    # instead — a deliberate, separate mechanism from sidecar
+                    # reconcile, unrelated to what this test is checking.
+                    page = (repo / ".docforge" / "dashboard" / "content" / "docs" / "product" / "overview.mdx").read_text(encoding="utf-8")
+                    self.assertTrue(page.startswith('---\nid: "product_overview"\n'))
+                    self.assertIn('title: "Overview"', page)
+                    self.assertIn('description: "Fixture description for product overview."', page)
+                    self.assertIn('# Overview\n\nBody.\n', page)
                     self.assertIn("converted 3 documents", result.stdout)
                     second = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                     self.assertEqual(second.returncode, 0, second.stderr)
@@ -284,15 +343,9 @@ class DashboardStartTests(unittest.TestCase):
             manifest = load_manifest(repo)
             manifest["documents"].append(written_doc("collision_a", "docs/architecture.md", "# Architecture\n"))
             manifest["documents"].append(written_doc("collision_b", "docs/architecture/README.md", "# Architecture\n"))
-            (repo / "docs" / "architecture.md").write_text(
-                markdown_with_provenance(manifest["documents"][-2]["provenance"], "# Architecture\n"),
-                encoding="utf-8",
-            )
-            (repo / "docs" / "architecture" / "README.md").write_text(
-                markdown_with_provenance(manifest["documents"][-1]["provenance"], "# Architecture\n"),
-                encoding="utf-8",
-            )
             (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            write_written_doc(repo, manifest["documents"][-2], "# Architecture\n")
+            write_written_doc(repo, manifest["documents"][-1], "# Architecture\n")
             for runtime in ("py", "js"):
                 result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
                 self.assertEqual(result.returncode, 1)
@@ -306,14 +359,8 @@ class DashboardStartTests(unittest.TestCase):
             manifest["documents"].append(written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5))
             manifest["documents"].append(written_doc("root_readme", "README.md", "# Root Readme\n", write_order=6))
             (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            (repo / "CHANGELOG.md").write_text(
-                markdown_with_provenance(manifest["documents"][-2]["provenance"], "# Changelog\n"),
-                encoding="utf-8",
-            )
-            (repo / "README.md").write_text(
-                markdown_with_provenance(manifest["documents"][-1]["provenance"], "# Root Readme\n"),
-                encoding="utf-8",
-            )
+            write_written_doc(repo, manifest["documents"][-2], "# Changelog\n")
+            write_written_doc(repo, manifest["documents"][-1], "# Root Readme\n")
             for runtime in ("py", "js"):
                 result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -346,9 +393,7 @@ class DashboardNavigationTests(unittest.TestCase):
                         doc["nav_order"] = 30
                 (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
                 for doc, body in paired:
-                    target = repo / doc["path"]
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_text(markdown_with_provenance(doc["provenance"], body), encoding="utf-8")
+                    write_written_doc(repo, doc, body)
                 try:
                     result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                     self.assertEqual(result.returncode, 0, result.stderr)
@@ -377,10 +422,7 @@ class DashboardNavigationTests(unittest.TestCase):
                 manifest = load_manifest(repo)
                 manifest["documents"].append(written_doc("product_index", "docs/product/README.md", "# Product\n", write_order=19))
                 (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-                (repo / "docs" / "product" / "README.md").write_text(
-                    markdown_with_provenance(manifest["documents"][-1]["provenance"], "# Product\n"),
-                    encoding="utf-8",
-                )
+                write_written_doc(repo, manifest["documents"][-1], "# Product\n")
                 try:
                     result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                     self.assertEqual(result.returncode, 0, result.stderr)
@@ -399,14 +441,8 @@ class DashboardNavigationTests(unittest.TestCase):
             manifest["documents"].append(written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5))
             manifest["documents"].append(written_doc("claude_local", "CLAUDE.local.md", "# Local\n", write_order=202))
             (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-            (repo / "CHANGELOG.md").write_text(
-                markdown_with_provenance(manifest["documents"][-2]["provenance"], "# Changelog\n"),
-                encoding="utf-8",
-            )
-            (repo / "CLAUDE.local.md").write_text(
-                markdown_with_provenance(manifest["documents"][-1]["provenance"], "# Local\n"),
-                encoding="utf-8",
-            )
+            write_written_doc(repo, manifest["documents"][-2], "# Changelog\n")
+            write_written_doc(repo, manifest["documents"][-1], "# Local\n")
             for runtime in ("py", "js"):
                 result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -471,9 +507,7 @@ class DashboardBuildTests(unittest.TestCase):
                 doc = written_doc("reference_glossary", "docs/reference/glossary.md", body, write_order=25)
                 manifest["documents"].append(doc)
                 (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-                target = repo / "docs" / "reference" / "glossary.md"
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(markdown_with_provenance(doc["provenance"], body), encoding="utf-8")
+                write_written_doc(repo, doc, body)
                 try:
                     result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                     self.assertEqual(result.returncode, 0, result.stderr)
@@ -529,14 +563,8 @@ class DashboardBuildTests(unittest.TestCase):
                 manifest["documents"].append(agents_index)
                 (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
                 (repo / "AGENTS.md").write_text(agents_body, encoding="utf-8")
-                readme_path = repo / "docs" / "agents" / "README.md"
-                readme_path.parent.mkdir(parents=True, exist_ok=True)
-                readme_path.write_text(
-                    markdown_with_provenance(
-                        agents_index["provenance"],
-                        "# Agents\n\nKernel lives at [AGENTS.md](../../AGENTS.md).\n",
-                    ),
-                    encoding="utf-8",
+                write_written_doc(
+                    repo, agents_index, "# Agents\n\nKernel lives at [AGENTS.md](../../AGENTS.md).\n",
                 )
                 try:
                     plan = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
@@ -572,10 +600,7 @@ class DashboardBuildTests(unittest.TestCase):
                 )
                 manifest["documents"].append(doc)
                 (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-                (repo / "docs" / "architecture" / "extras.md").write_text(
-                    markdown_with_provenance(doc["provenance"], "# Extras\n\nSee [missing](../missing.md).\n"),
-                    encoding="utf-8",
-                )
+                write_written_doc(repo, doc, "# Extras\n\nSee [missing](../missing.md).\n")
                 try:
                     result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                     self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
@@ -605,7 +630,7 @@ class DashboardBuildTests(unittest.TestCase):
                 stop_dashboard("py", repo)
 
     def test_failed_conversion_leaves_previous_dashboard_untouched(self) -> None:
-        # A doc/*.md doc with no frontmatter is a `metadata` scan finding,
+        # A doc/*.md doc with no sidecar entry is a `metadata` scan finding,
         # blocking because the doc is included: `start` short-circuits on
         # scan before staging anything, so `.staging` is never even created.
         env, _bin = fake_npm_env()
@@ -620,6 +645,7 @@ class DashboardBuildTests(unittest.TestCase):
                     index = repo / ".docforge" / "dashboard" / "content" / "docs" / "index.mdx"
                     self.assertTrue(index.is_file())
                     (repo / "docs" / "product" / "overview.md").write_text("# Broken\n\nNo frontmatter.\n", encoding="utf-8")
+                    remove_sidecar_entry(repo, "docs/product/overview.md")
                     broken = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                     self.assertEqual(broken.returncode, 1)
                     self.assertIn("[metadata] (blocking)", broken.stdout + broken.stderr)
@@ -641,10 +667,7 @@ class DashboardSignatureTests(unittest.TestCase):
             js = run_dashboard("js", "start", "--repo", str(repo), "--plan-only").stdout
             self.assertEqual(SIG_RE.search(py).group(1), SIG_RE.search(js).group(1))
             before = SIG_RE.search(py).group(1)
-            (repo / "docs" / "README.md").write_text(
-                markdown_with_provenance(load_manifest(repo)["documents"][0]["provenance"], "# Documentation\n\nChanged.\n"),
-                encoding="utf-8",
-            )
+            write_written_doc(repo, load_manifest(repo)["documents"][0], "# Documentation\n\nChanged.\n")
             after = run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout
             self.assertNotEqual(before, SIG_RE.search(after).group(1))
 
@@ -808,13 +831,13 @@ class DashboardScanTests(unittest.TestCase):
                     (incomplete, "# Incomplete\n"),
                     (drift, "# Drift\n"),
                 ):
-                    target = repo / doc["path"]
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_text(markdown_with_provenance(doc["provenance"], body), encoding="utf-8")
+                    write_written_doc(repo, doc, body)
                 src = repo / "src"
                 src.mkdir()
                 (src / "main.ts").write_bytes(b"changed after provenance")
-                (repo / "docs" / "product" / "overview.md").write_text("# Overview\n\nNo frontmatter.\n", encoding="utf-8")
+                # The json-mode equivalent of "no frontmatter": drop the
+                # sidecar entry reconcile needs, rather than corrupt the body.
+                remove_sidecar_entry(repo, "docs/product/overview.md")
                 (repo / "docs" / "product" / "untracked.md").write_text("# Untracked\n", encoding="utf-8")
                 result = run_dashboard(runtime, "scan", "--repo", str(repo))
                 self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
@@ -871,9 +894,7 @@ class DashboardScanTests(unittest.TestCase):
                 manifest = load_manifest(repo)
                 manifest["documents"].append(doc)
                 (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-                target = repo / doc["path"]
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(markdown_with_provenance(value, "# Drift\n"), encoding="utf-8")
+                write_written_doc(repo, doc, "# Drift\n")
                 # Whitespace/EOL-only change relative to git_blob; git_blob_normalized still matches.
                 (src / "extra.ts").write_bytes(b"one\r\ntwo  \r\n")
                 result = run_dashboard(runtime, "scan", "--repo", str(repo))

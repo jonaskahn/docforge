@@ -10,17 +10,17 @@ Choose the subject area below, then use its generated group index to identify a 
 
 ## Contents
 
-- root — Root-level entrypoints: README, SKILL.md, and package descriptors. (3 documents, flat)
-- [product/](product/index.json) — Product surface: overview, quickstart, and audience-specific product views. (18 documents)
-- [architecture/](architecture/index.json) — System architecture: structure, boundaries, and integration surfaces. (31 documents)
+- root — Root-level entrypoints: repository README, changelog, and the docs index. (3 documents, flat)
+- [product/](product/index.json) — Product surface: overview, quickstart, and audience-specific product views. (19 documents)
+- [architecture/](architecture/index.json) — System architecture: structure, boundaries, and integration surfaces. (32 documents)
 - flows — End-to-end flow documentation derived from the flow index. (2 documents, flat)
-- [engineering/](engineering/index.json) — Engineering practices: conventions, testing, and tech debt. (8 documents)
-- [operations/](operations/index.json) — Deployment, observability, and operational runbooks. (12 documents)
-- [reference/](reference/index.json) — Reference lookups: APIs, configuration, and glossary. (19 documents)
-- [security/](security/index.json) — Security posture, permissions, and threat model. (8 documents)
-- contributing — Contribution guidelines and root-level contributor docs. (3 documents, flat)
+- [engineering/](engineering/index.json) — Engineering practices: conventions, testing, and tech debt. (9 documents)
+- [operations/](operations/index.json) — Deployment, observability, and operational runbooks. (13 documents)
+- [reference/](reference/index.json) — Reference lookups: APIs, configuration, and glossary. (20 documents)
+- [security/](security/index.json) — Security posture, permissions, and threat model. (9 documents)
+- contributing — Contribution guidelines and root-level contributor docs. (4 documents, flat)
 - records — Architecture decision records. (2 documents, flat)
-- [portfolio/](portfolio/index.json) — Cross-repository portfolio layer for multi-repo diligence. (11 documents)
+- [portfolio/](portfolio/index.json) — Cross-repository portfolio layer for multi-repo diligence. (12 documents)
 - [agent-context/](agent-context/index.json) — Agent-facing context: AGENTS.md and coding-agent views. (12 documents)
 
 ## Boundaries

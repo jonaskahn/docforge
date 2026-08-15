@@ -20,5 +20,7 @@
   "write_order": 78,
   "provenance_mode": "sections",
   "audit_profile": "risk",
-  "template_file": "content/security/templates/data-handling.md"
+  "template_file": "content/security/templates/data-handling.md",
+  "compact_group": "security_compact",
+  "compact_order": 3
 }

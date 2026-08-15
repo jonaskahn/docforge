@@ -1,19 +1,41 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Docforge Manifest 3.4",
+  "title": "Docforge Manifest 3.6",
   "type": "object",
   "required": ["version", "generated_at", "project", "discovery", "documents", "metadata"],
   "properties": {
-    "version": {"const": "3.4"},
+    "version": {"const": "3.6"},
     "generated_at": {"type": "string"},
     "project": {
       "type": "object",
-      "required": ["name", "root", "tier", "profiles", "provenance_storage", "unmanaged_docs"],
+      "required": ["name", "root", "tier", "scale", "profiles", "provenance_storage", "unmanaged_docs"],
       "properties": {
         "name": {"type": "string"},
         "root": {"type": "string"},
         "tier": {"enum": ["spine", "diligence", "portfolio"]},
-        "provenance_storage": {"enum": ["json", "markdown"]},
+        "scale": {
+          "type": "object",
+          "required": ["class", "layout", "decided_by", "decided_at", "signals"],
+          "properties": {
+            "class": {"enum": ["small", "medium", "large"]},
+            "layout": {"enum": ["compact", "standard"]},
+            "detected_class": {"enum": ["small", "medium", "large"]},
+            "decided_by": {"enum": ["detected", "user"]},
+            "decided_at": {"type": "string"},
+            "signals": {
+              "type": "object",
+              "required": ["tracked_files", "source_files", "confirmed_profiles"],
+              "properties": {
+                "tracked_files": {"type": "integer", "minimum": 0},
+                "source_files": {"type": "integer", "minimum": 0},
+                "confirmed_profiles": {"type": "integer", "minimum": 0}
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "provenance_storage": {"enum": ["json"]},
         "unmanaged_docs": {
           "type": "array",
           "items": {
@@ -90,7 +112,7 @@
       "type": "object",
       "required": ["kind", "id"],
       "properties": {
-        "kind": {"enum": ["tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor"]},
+        "kind": {"enum": ["tier", "shape", "platform", "framework", "concern", "audience", "condition", "dynamic", "ancestor", "compact"]},
         "id": {"type": "string"}
       }
     },
@@ -137,7 +159,10 @@
             "evidence": {"type": "array", "items": {"type": "string"}}
           }
         },
-        "status": {"enum": ["planned", "in_progress", "generated", "needs_review", "complete", "skipped"]},
+        "status": {"enum": ["planned", "in_progress", "generated", "needs_review", "complete", "skipped", "retired"]},
+        "retired_at": {"type": "string"},
+        "retired_destination": {"type": "string"},
+        "compact_members": {"type": "array", "items": {"type": "string"}},
         "requires": {"type": "array", "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}},
         "scaffold_template": {"type": "string"},
         "instruction_file": {"type": ["string", "null"]},

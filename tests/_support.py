@@ -97,8 +97,13 @@ def initialize(
     frameworks: tuple[str, ...] = (),
     concerns: tuple[str, ...] = (),
     audiences: tuple[str, ...] = (),
+    layout: str | None = "standard",
 ) -> subprocess.CompletedProcess:
+    """Standard layout by default so tree-shape assertions stay stable; pass
+    `layout=None` to let scale detection (and the compact fold) apply."""
     args = ["init", "--repo", str(repo), "--tier", tier]
+    if layout is not None:
+        args += ["--layout", layout]
     for flag, values in (
         ("shape", shapes),
         ("platform", platforms),
@@ -177,8 +182,33 @@ def provenance(
 
 
 def markdown_with_provenance(value: dict, body: str) -> str:
+    """Build legacy inline-frontmatter markdown — for migration fixtures
+    only. The steady-state store never writes this; use `write_written_doc`
+    for a document that should already look migrated."""
     from runtime.common.python.provenance_frontmatter import emit_yaml
     return emit_yaml(value) + (body if body.endswith("\n") or not body else body + "\n")
+
+
+def write_written_doc(repo: Path, doc: dict, body: str) -> None:
+    """Write a document's frontmatter-free body and stamp its folder sidecar
+    entry — what the real write pipeline produces under the (only) json
+    storage mode. Overwrites any prior sidecar entry for the same path."""
+    from runtime.common.python import provenance_store as store
+    target = repo / doc["path"]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(body if body.endswith("\n") or not body else body + "\n", encoding="utf-8")
+    entry: dict = {"id": doc["id"], "title": doc.get("title") or doc["id"]}
+    if doc.get("description"):
+        entry["description"] = doc["description"]
+    entry["provenance"] = doc["provenance"]
+    store.write_entry(repo, doc["path"], entry)
+
+
+def remove_sidecar_entry(repo: Path, doc_path: str) -> None:
+    """Drop a document's sidecar entry — the json-mode equivalent of a
+    legacy document losing its frontmatter block."""
+    from runtime.common.python import provenance_store as store
+    store.remove_entry(repo, doc_path)
 
 
 def normalized(text: str, roots: list[Path]) -> str:

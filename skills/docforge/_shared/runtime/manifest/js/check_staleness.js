@@ -21,30 +21,23 @@ function matchesDocument(doc, documentFilter) {
   return doc.id === documentFilter || doc.path === documentFilter;
 }
 
-function writeBack(repo, doc, storage, provenance) {
-  if (storage === store.STORAGE_JSON) {
-    const entry = store.entryFor(repo, doc.path) || {};
-    entry.provenance = provenance;
-    store.writeEntry(repo, doc.path, entry);
-  } else {
-    const filePath = path.join(repo, ...doc.path.split("/"));
-    const text = fs.readFileSync(filePath, "utf8");
-    fs.writeFileSync(filePath, pf.rewriteFrontmatter(text, provenance), "utf8");
-  }
+function writeBack(repo, doc, provenance) {
+  const entry = store.entryFor(repo, doc.path) || {};
+  entry.provenance = provenance;
+  store.writeEntry(repo, doc.path, entry);
 }
 
 function syncProvenance(manifest, repo, documentFilter) {
   let updated = 0;
   const results = [];
   const failed = new Set();
-  const storage = store.storageFor(manifest);
   for (const doc of manifest.documents) {
     if (!matchesDocument(doc, documentFilter)) continue;
     if (doc.provenance_mode === "manifest") continue;
-    const meta = store.readDocMetadata(repo, doc, storage);
+    const meta = store.readDocMetadata(repo, doc);
     const state = meta.state;
     if (state === "inline") {
-      if (store.moveInlineToSidecar(repo, doc, storage) !== "moved") {
+      if (store.moveInlineToSidecar(repo, doc) !== "moved") {
         failed.add(doc.path);
         results.push({ doc: doc.path, status: "UNTRACKED", detail: "inline migration failed" });
         continue;
@@ -60,7 +53,7 @@ function syncProvenance(manifest, repo, documentFilter) {
     }
     if (state === "obsolete") {
       const migrated = pf.migrateV1ToV2(meta.provenance);
-      writeBack(repo, doc, storage, migrated);
+      writeBack(repo, doc, migrated);
       doc.provenance = migrated;
       updated += 1;
       continue;

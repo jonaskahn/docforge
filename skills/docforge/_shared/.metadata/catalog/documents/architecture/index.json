@@ -1,10 +1,15 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "category": "architecture",
   "purpose": "System architecture: structure, boundaries, and integration surfaces.",
   "source": "../../index.json",
   "records": [
+    {
+      "id": "architecture_compact",
+      "path": "architecture_compact.json",
+      "summary": "Compact architecture section: mental model, high-level design, plus (Diligence) components, constraints, dependencies, tech debt"
+    },
     {
       "id": "architecture_index",
       "path": "architecture_index.json",

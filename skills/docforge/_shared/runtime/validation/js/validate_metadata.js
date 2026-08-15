@@ -13,9 +13,9 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.17.0";
+const CATALOG_VERSION = "2.18.0";
 const PUBLIC_CONTRACTS = {
-  manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run"],
+  manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
   scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
@@ -23,7 +23,7 @@ const PUBLIC_CONTRACTS = {
   hash_evidence: ["--repo", "--path", "--range", "--json"],
   flow_index: ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
-  query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route"],
+  query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo"],
   generate_indexes: ["--write", "--check"],
   dashboard: ["start", "export", "status", "stop", "--force", "--plan-only", "--no-open", "--port"],
 };
@@ -71,8 +71,8 @@ function validate() {
   if (fs.existsSync(path.join(metadata, "catalog.json"))) {
     errors.push("obsolete monolith catalog.json remains; use .metadata/catalog/");
   }
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.4") {
-    errors.push("manifest schema must require version 3.4");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.6") {
+    errors.push("manifest schema must require version 3.6");
   }
   const projectRequired = new Set(((((manifestSchema.properties || {}).project || {}).required) || []));
   if (!projectRequired.has("provenance_storage")) {
@@ -80,6 +80,20 @@ function validate() {
   }
   if (!projectRequired.has("unmanaged_docs")) {
     errors.push("manifest schema project must require unmanaged_docs");
+  }
+  const exampleManifestPath = path.join(metadata, "manifest.json");
+  if (!fs.existsSync(exampleManifestPath)) {
+    errors.push("shipped .metadata/manifest.json example is missing");
+  } else {
+    const exampleManifest = readJson(exampleManifestPath);
+    if (exampleManifest.version !== "3.6") {
+      errors.push("shipped .metadata/manifest.json example must use version 3.6");
+    }
+    const exampleProject = exampleManifest.project || {};
+    const missingProjectFields = [...projectRequired].filter((field) => !(field in exampleProject)).sort();
+    if (missingProjectFields.length) {
+      errors.push(`shipped .metadata/manifest.json example project is missing required fields: ${missingProjectFields.join(", ")}`);
+    }
   }
   const documentSchema = ((((manifestSchema.definitions || {}).document || {}).properties) || {});
   if (!("description" in documentSchema)) {
@@ -190,35 +204,15 @@ function validate() {
   for (const name of ["audit-report.template.md", "audience-deepdive.template.md"]) {
     templatePaths.add(path.join(SKILL_ROOT, "content", "shared", name));
   }
+  // Provenance lives in `.docforge/provenance/` sidecars, so a template must
+  // not carry a frontmatter block: scaffolding would strip it anyway, and a
+  // copy in every template is one more place the schema can go stale.
   for (const templatePath of [...templatePaths].sort()) {
     const name = path.basename(templatePath);
     if (EXCEPTIONS.has(name)) continue;
     const text = fs.readFileSync(templatePath, "utf8");
-    if (!text.startsWith("---\ndocforge_provenance:\n")) {
-      errors.push(`${name}: provenance frontmatter must be YAML docforge_provenance at byte one`);
-      continue;
-    }
-    const parsed = pf.parseFrontmatter(text);
-    if (parsed.state !== "ok") {
-      errors.push(`${name}: provenance frontmatter state is ${parsed.state}`);
-      continue;
-    }
-    const provenance = parsed.provenance;
-    if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
-      errors.push(`${name}: provenance frontmatter is not valid YAML`);
-      continue;
-    }
-    const missing = [...pf.PROVENANCE_FIELDS].filter((key) => !(key in provenance));
-    const graph = provenance.graph;
-    const generator = provenance.generator;
-    if (missing.length || !graph || typeof graph !== "object" || !("provider" in graph) || !("flow" in graph)) {
-      errors.push(`${name}: provenance frontmatter is missing required fields`);
-    }
-    if (!generator || typeof generator !== "object" || !("name" in generator) || !("version" in generator)) {
-      errors.push(`${name}: provenance frontmatter is missing generator`);
-    }
-    if (provenance.schema !== pf.SCHEMA_VERSION || "graph_snapshot" in provenance) {
-      errors.push(`${name}: provenance frontmatter must use schema ${pf.SCHEMA_VERSION}`);
+    if (text.startsWith("---\ndocforge_provenance:\n")) {
+      errors.push(`${name}: templates must not embed provenance frontmatter; provenance belongs in the folder sidecar`);
     }
   }
   const cliPy = path.join(SKILL_ROOT, "runtime", "cli", "python");
@@ -278,20 +272,6 @@ function validate() {
   if (fs.existsSync(path.join(REPO_ROOT, "meta.json"))) {
     errors.push("obsolete meta.json remains; Agent Skills install uses SKILL.md only");
   }
-  const IGNORED_DIRS = new Set([".git", ".pytest_cache", "__pycache__", ".venv", "venv", "node_modules"]);
-  const RUNTIME_ROOT = path.join(SKILL_ROOT, "runtime");
-  function collectReadmes(dir, out) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory() && !IGNORED_DIRS.has(entry.name)) collectReadmes(full, out);
-      else if (entry.isFile() && entry.name === "README.md" && full !== path.join(REPO_ROOT, "README.md")) {
-        const rel = path.relative(REPO_ROOT, full).split(path.sep).join("/");
-        if (!full.startsWith(RUNTIME_ROOT + path.sep)) out.push(rel); // runtime READMEs are agent/operator docs
-      }
-    }
-  }
-  const readmes = []; collectReadmes(REPO_ROOT, readmes);
-  if (readmes.length) errors.push(`nested README.md files are obsolete; use README.md: ${readmes.sort().join(", ")}`);
   const forbidden = new Set(["document" + "-templates.json", "generation" + "-status.json", "status" + "-schema.json", "template" + "-schema.json"]);
   const present = fs.readdirSync(metadata).filter((name) => forbidden.has(name)).sort();
   if (present.length) errors.push(`obsolete metadata files remain: ${present.join(", ")}`);

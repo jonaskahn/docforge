@@ -260,10 +260,13 @@ class ReadmeFlowIndexTests(unittest.TestCase):
                 matrix = (repo / "docs" / "flows" / "README.md").read_text(encoding="utf-8")
                 self.assertIn("## How to read this index", matrix)
                 self.assertIn("| Role |", matrix)
-                frontmatter = matrix.split("---", 2)[1]
-                self.assertIn("sections:", frontmatter)
-                self.assertIn(".docforge/flow-index.json", frontmatter)
-                self.assertIn("git_blob:", frontmatter)
+                self.assertFalse(matrix.startswith("---"), "rendered matrix must stay frontmatter-free")
+                sidecar = json.loads((repo / ".docforge" / "provenance" / "docs" / "flows.json").read_text(encoding="utf-8"))
+                entry_provenance = sidecar["files"]["README.md"]["provenance"]
+                self.assertTrue(entry_provenance["sections"])
+                sources = entry_provenance["sections"][0]["sources"]
+                self.assertIn(".docforge/flow-index.json", [source["path"] for source in sources])
+                self.assertTrue(sources[0]["git_blob"])
                 payload = json.loads(run(runtime, "query_catalog", "--route", "flows_index").stdout)
                 self.assertEqual(payload["contract_revision"], "2.17.0")
 

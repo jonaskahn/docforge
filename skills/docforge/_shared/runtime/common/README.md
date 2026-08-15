@@ -9,16 +9,17 @@ they exist to be imported, not executed.
 - You are implementing or modifying a runtime tool → `_util` (JSON, manifests,
   `.docforge` ignore/cleanup).
 - Reading or writing provenance frontmatter → `provenance_frontmatter`.
-- Resolving the storage mode or moving provenance between the folder sidecars
-  (`.docforge/provenance/<folder>.json`) and inline frontmatter →
-  `provenance_store`.
+- Reading or writing a document's provenance sidecar
+  (`.docforge/provenance/<folder>.json`), or moving a pre-migration
+  document's inline frontmatter into one → `provenance_store`.
 - Planning manifest document actions → `plan`.
 - Linting documents → `evidence_locators`, `illustration_metrics`,
   `markdown_fences`.
 - Classifying a source's drift (fresh / cosmetic / stale) → `evidence_hash`.
 - Extracting declared dependencies from package manifests → `manifest_deps`.
-- Mapping provenance 2.0 to PROV relations → `prov_projection`.
 - Naming special outputs that bypass normal provenance → `special_files`.
+- Classifying project scale (`small` / `medium` / `large`) and suggesting a
+  layout → `scale`.
 
 ## Scripts
 
@@ -33,10 +34,10 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | `manifest_deps` | Extract dependency names + own-package identities from manifests (9 ecosystems) | yes |
 | `markdown_fences` | CommonMark fence scanning and visible-presentation policy checks | yes |
 | `plan` | Deterministic add/update/rewrite/unchanged/skip plans for documents | yes |
-| `prov_projection` | Project provenance 2.0 into ordered PROV relation rows | yes |
-| `provenance_frontmatter` | Restricted-YAML provenance codec, v1→v2 migration, hashing, frontmatter rewrite | yes |
-| `provenance_store` | Folder-mirrored JSON sidecar store: mode-aware reads, entry writes, inline↔sidecar moves | mixes — writes `.docforge/provenance/` and strips/restores frontmatter |
+| `provenance_frontmatter` | Restricted-YAML provenance codec: parse, v1→v2 migration, hashing; `emit_yaml` remains only to build pre-migration test fixtures | yes |
+| `provenance_store` | Folder-mirrored JSON sidecar store: sidecar-first reads, entry writes, inline-to-sidecar moves | mixes — writes `.docforge/provenance/` and strips migrated frontmatter |
 | `special_files` | Constants: special output names and their template sources | yes |
+| `scale` | Three-way project scale classification from the existing inventory walk + confirmed profile count; suggests `compact`/`standard` layout | yes |
 
 ## Details
 
@@ -44,20 +45,24 @@ All are paired libraries (Python snake_case / JS camelCase exports).
   `ensure_gitignored_dir`, `finish_docforge`. Mutating helpers create/update
   `.docforge/.gitignore` and may delete contents of `tmp/` and `scratch/`.
 - `provenance_frontmatter` — `content_hash`, `scaffold_provenance`,
-  `migrate_v1_to_v2`, `emit_yaml`, `wrap_document`, `parse_frontmatter`,
-  `rewrite_frontmatter`, plus `PROVENANCE_FIELDS` / `SCHEMA_VERSION`. Rejects
-  anchors, aliases, block scalars, and multi-document markers.
-- `provenance_store` — `storage_for(manifest)`, `sidecar_path(repo, folder)`,
-  `entry_for`, `write_entry`, `remove_entry`, `read_doc_metadata` (explicit
-  state: `ok` / `inline` / `legacy` / `obsolete` / `missing` /
-  `unparseable`), `move_inline_to_sidecar`, `move_sidecar_to_inline`,
-  `public_from_manifest`. `json` storage (default)
-  keeps id/title/description + `docforge_provenance` in one git-tracked JSON
-  per folder under `.docforge/provenance/` and leaves markdown frontmatter-free;
-  `markdown` storage keeps the legacy inline layout. Old-schema metadata
-  (schema-less legacy or schema 1.0 / `tool_version`) is always reported
-  explicitly — never folded into `ok`, never silently moved; there is no
-  opt-in/opt-out.
+  `migrate_v1_to_v2`, `parse_frontmatter`, `parse_yaml_mapping`,
+  `split_frontmatter`, plus `PROVENANCE_FIELDS` / `SCHEMA_VERSION`. `emit_yaml`
+  remains for constructing pre-migration inline fixtures in tests; nothing in
+  the runtime writes frontmatter. Rejects anchors, aliases, block scalars, and
+  multi-document markers.
+- `provenance_store` — `sidecar_path(repo, folder)`, `entry_for`,
+  `write_entry`, `remove_entry`, `read_doc_metadata` (explicit state: `ok` /
+  `inline` / `legacy` / `obsolete` / `missing` / `unparseable`),
+  `move_inline_to_sidecar`, `public_from_manifest`. Public identity
+  (`id`/`title`/`description`) and `docforge_provenance` live in one
+  git-tracked JSON per folder under `.docforge/provenance/`; generated
+  markdown carries no frontmatter. A document written before the sidecar
+  store still carries inline frontmatter until `move_inline_to_sidecar` (via
+  `migrate_metadata` or `check_staleness --sync-provenance`) moves it —
+  `read_doc_metadata` falls back to reading that layout and reports it as
+  `inline`. Old-schema metadata (schema-less legacy or schema 1.0 /
+  `tool_version`) is always reported explicitly — never folded into `ok`,
+  never silently moved; there is no opt-in/opt-out.
 - `plan` — `flow_is_main_priority`, `document_action`, `plan_entries`,
   `plan_lines`.
 - `manifest_deps` — `normalize`, `extract_dependencies(files)`,
@@ -74,11 +79,17 @@ All are paired libraries (Python snake_case / JS camelCase exports).
   per depth (e.g. orientation 1 illustration / 5 elements, router 0/0).
 - `markdown_fences` — `inferred_role`, `scan_fences`,
   `visible_presentation_defects`.
-- `prov_projection` — `project_core(provenance)`; raises on conflicting
-  source/blob roles.
 - `special_files` — `SPECIAL_DOC_OUTPUTS` (AGENTS.md, CLAUDE.md,
   CLAUDE.local.md) and `SPECIAL_DOC_SOURCES` (agents-kernel.md, claude-md.md,
   claude-local-md.md).
+- `scale` — `compute_scale(repo, files=None, detections=None)` /
+  `computeScale(repo, files, detections)` returning
+  `{class, suggested_layout, signals}`; thresholds are tunable constants
+  (`SMALL_MAX_SOURCE_FILES`, `MEDIUM_MAX_SOURCE_FILES`,
+  `BOUNDARY_NUDGE_RATIO`, `PROFILE_NUDGE_THRESHOLD`). Read-only: reuses
+  `detect_profiles.inventory` and non-persisting detection. Pass `files` and
+  `detections` when the caller already walked the repository — `init` does, so
+  one walk serves both the discovery record and the scale record.
 
 ## Where invoked
 

@@ -22,10 +22,10 @@ from runtime.catalog.python import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
-CATALOG_VERSION = "2.17.0"
+CATALOG_VERSION = "2.18.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
-    "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "set-storage", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--storage", "--dry-run"],
+    "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
     "detect_profiles": ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
     "scaffold_docs": ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
     "precheck_graph": ["--repo", "--need", "code", "flow"],
@@ -33,7 +33,7 @@ PUBLIC_CONTRACTS = {
     "hash_evidence": ["--repo", "--path", "--range", "--json"],
     "flow_index": ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
     "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
-    "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route"],
+    "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo"],
     "generate_indexes": ["--write", "--check"],
     "dashboard": ["start", "export", "status", "stop", "--force", "--plan-only", "--no-open", "--port"],
 }
@@ -74,13 +74,26 @@ def validate() -> list[str]:
         errors.append("split catalog index.json is missing")
     if (metadata / "catalog.json").is_file():
         errors.append("obsolete monolith catalog.json remains; use .metadata/catalog/")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.4":
-        errors.append("manifest schema must require version 3.4")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.6":
+        errors.append("manifest schema must require version 3.6")
     project_required = set(manifest_schema.get("properties", {}).get("project", {}).get("required", []))
     if "provenance_storage" not in project_required:
         errors.append("manifest schema project must require provenance_storage")
     if "unmanaged_docs" not in project_required:
         errors.append("manifest schema project must require unmanaged_docs")
+    example_manifest_path = metadata / "manifest.json"
+    if not example_manifest_path.is_file():
+        errors.append("shipped .metadata/manifest.json example is missing")
+    else:
+        example_manifest = read_json(example_manifest_path)
+        if example_manifest.get("version") != "3.6":
+            errors.append("shipped .metadata/manifest.json example must use version 3.6")
+        example_project = example_manifest.get("project", {})
+        missing_project_fields = project_required - set(example_project)
+        if missing_project_fields:
+            errors.append(
+                f"shipped .metadata/manifest.json example project is missing required fields: {', '.join(sorted(missing_project_fields))}"
+            )
     document_schema = (
         manifest_schema.get("definitions", {})
         .get("document", {})
@@ -192,29 +205,15 @@ def validate() -> list[str]:
         SKILL_ROOT / "content" / "shared" / name
         for name in ("audit-report.template.md", "audience-deepdive.template.md")
     }
+    # Provenance lives in `.docforge/provenance/` sidecars, so a template must
+    # not carry a frontmatter block: scaffolding would strip it anyway, and a
+    # copy in every template is one more place the schema can go stale.
     for template in sorted(template_paths):
         if template.name in MARKDOWN_EXCEPTIONS:
             continue
         text = template.read_text(encoding="utf-8")
-        if not text.startswith("---\ndocforge_provenance:\n"):
-            errors.append(f"{template.name}: provenance frontmatter must be YAML docforge_provenance at byte one")
-            continue
-        state, provenance, _ = parse_frontmatter(text)
-        if state != "ok":
-            errors.append(f"{template.name}: provenance frontmatter state is {state}")
-            continue
-        if not isinstance(provenance, dict):
-            errors.append(f"{template.name}: provenance frontmatter is not valid YAML")
-            continue
-        missing = sorted(PROVENANCE_FIELDS - set(provenance))
-        graph = provenance.get("graph")
-        generator = provenance.get("generator")
-        if missing or not isinstance(graph, dict) or not {"provider", "flow"} <= set(graph):
-            errors.append(f"{template.name}: provenance frontmatter is missing required fields")
-        if not isinstance(generator, dict) or not {"name", "version"} <= set(generator):
-            errors.append(f"{template.name}: provenance frontmatter is missing generator")
-        if provenance.get("schema") != SCHEMA_VERSION or "graph_snapshot" in provenance:
-            errors.append(f"{template.name}: provenance frontmatter must use schema {SCHEMA_VERSION}")
+        if text.startswith("---\ndocforge_provenance:\n"):
+            errors.append(f"{template.name}: templates must not embed provenance frontmatter; provenance belongs in the folder sidecar")
     cli_py = SKILL_ROOT / "runtime" / "cli" / "python"
     cli_js = SKILL_ROOT / "runtime" / "cli" / "js"
     py_names = {path.stem for path in cli_py.glob("*.py")}
@@ -265,17 +264,6 @@ def validate() -> list[str]:
         errors.append("package descriptions disagree (plugin, marketplace, docforge SKILL.md)")
     if (REPO_ROOT / "meta.json").exists():
         errors.append("obsolete meta.json remains; Agent Skills install uses SKILL.md only")
-    ignored_dirs = {".git", ".pytest_cache", "__pycache__", ".venv", "venv", "node_modules"}
-    runtime_root = SKILL_ROOT / "runtime"
-    readmes = sorted(
-        path.relative_to(REPO_ROOT).as_posix()
-        for path in REPO_ROOT.rglob("README.md")
-        if path != REPO_ROOT / "README.md"
-        and not any(part in ignored_dirs for part in path.relative_to(REPO_ROOT).parts)
-        and runtime_root not in path.parents  # agent/operator docs, not generated docs
-    )
-    if readmes:
-        errors.append(f"nested README.md files are obsolete; use README.md: {', '.join(readmes)}")
     forbidden_files = {
         "document" + "-templates.json",
         "generation" + "-status.json",

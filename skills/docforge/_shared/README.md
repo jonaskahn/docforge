@@ -4,9 +4,9 @@ Not a skill. Hosts must not register this folder as an Agent Skill (no
 `SKILL.md` frontmatter). Lives under `skills/docforge/_shared/` so Agent
 Skills install (`npx skills add`) copies it with the `docforge` skill —
 a top-level `skills/_shared/` sibling is skipped by that installer and
-also collides with unrelated hub `_shared/` folders. Both `/docforge` and
-`/docforge-revise` load from here (`docforge-revise` resolves
-`../docforge/_shared/`).
+also collides with unrelated hub `_shared/` folders. `/docforge`,
+`/docforge-revise`, and `/docforge-dashboard` all load from here (the latter
+two thin entrypoints resolve `../docforge/_shared/`).
 
 ## Always-load policy
 

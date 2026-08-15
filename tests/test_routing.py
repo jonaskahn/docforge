@@ -42,7 +42,17 @@ class RoutingTests(unittest.TestCase):
                     payload = json.loads(result.stdout)
                     self.assertEqual(payload["id"], doc_id)
                     self.assertTrue(payload["contract"])
-                    self.assertTrue((SKILL_ROOT / payload["contract"]).is_file())
+                    if payload.get("compact"):
+                        # Compact entries compose their contract inline: the
+                        # group header plus each member's contract as a named
+                        # section — not a single file path.
+                        header = (SKILL_ROOT / payload["compact"]["header_contract"]).read_text(encoding="utf-8")
+                        self.assertIn(header, payload["contract"])
+                        for member in payload["compact"]["members"]:
+                            self.assertIn(f"## {member['id']}", payload["contract"])
+                            self.assertTrue((SKILL_ROOT / member["contract"]).is_file())
+                    else:
+                        self.assertTrue((SKILL_ROOT / payload["contract"]).is_file())
                     self.assertTrue(payload["template"])
                     self.assertTrue((SKILL_ROOT / payload["template"]).is_file())
                     if payload["instruction"] is not None:
@@ -50,8 +60,9 @@ class RoutingTests(unittest.TestCase):
                     if doc_id == "concept":
                         self.assertEqual(payload["instruction"], "content/architecture/instructions/concept.md")
                     self.assertTrue((SKILL_ROOT / payload["definition"]).is_file())
-                    self.assertLess(len(result.stdout.encode("utf-8")), 4096)
-                    for value in (payload["definition"], payload["contract"], payload["template"]):
+                    if not payload.get("compact"):
+                        self.assertLess(len(result.stdout.encode("utf-8")), 4096)
+                    for value in (payload["definition"], payload["template"]):
                         self.assertNotIn("\\", value)
                     if payload["instruction"]:
                         self.assertNotIn("\\", payload["instruction"])
