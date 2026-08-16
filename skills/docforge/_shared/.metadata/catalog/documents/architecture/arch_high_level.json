@@ -26,7 +26,7 @@
     "arc42": "building-block-l1",
     "mermaid": "annotated"
   },
-  "contract_revision": "2.17.0",
+  "contract_revision": "2.19.0",
   "template_file": "content/architecture/templates/architecture-high-level.md",
   "compact_group": "architecture_compact",
   "compact_order": 2

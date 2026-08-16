@@ -20,6 +20,6 @@
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
   "dominant_form": "sequenceDiagram",
-  "schema_min": "2.17.0",
+  "schema_min": "2.19.0",
   "template_file": "content/portfolio/templates/epic.md"
 }

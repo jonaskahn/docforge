@@ -643,7 +643,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.17.0"
+    version: "2.19.0"
   tier: "spine"
   target_depth: "orientation"
   graph:
@@ -661,7 +661,7 @@ Body.
                         "doc_id": "only",
                         "path": "docs/only.md",
                         "generated_at": "2026-07-27T09:12:44Z",
-                        "tool_version": "2.17.0",
+                        "tool_version": "2.19.0",
                         "tier": "spine",
                         "target_depth": "reference",
                         "graph": {"provider": "gitnexus", "flow": "native"},
@@ -803,7 +803,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.17.0"
+    version: "2.19.0"
   tier: "spine"
   target_depth: "orientation"
   graph:
@@ -835,7 +835,7 @@ docforge_provenance:
   generated_at: "2026-07-27T09:12:44Z"
   generator:
     name: "docforge"
-    version: "2.17.0"
+    version: "2.19.0"
   tier: "spine"
   target_depth: "orientation"
   graph:
@@ -861,7 +861,7 @@ Body.
                         "doc_id": "only",
                         "path": "docs/only.md",
                         "generated_at": "2026-07-27T09:12:44Z",
-                        "tool_version": "2.17.0",
+                        "tool_version": "2.19.0",
                         "tier": "spine",
                         "target_depth": "reference",
                         "graph": {"provider": "gitnexus", "flow": "native"},
@@ -1062,7 +1062,7 @@ process.stdout.write(pf.emitYaml(value));
             "doc_id": "legacy",
             "path": "legacy.md",
             "generated_at": "2026-07-27T09:12:44Z",
-            "tool_version": "2.17.0",
+            "tool_version": "2.19.0",
             "tier": "spine",
             "target_depth": "reference",
             "graph": {"provider": "gitnexus", "flow": "native"},
@@ -1070,7 +1070,7 @@ process.stdout.write(pf.emitYaml(value));
         }
         migrated = migrate_v1_to_v2(legacy, "# Body\n")
         self.assertEqual(migrated["schema"], SCHEMA_VERSION)
-        self.assertEqual(migrated["generator"], {"name": "docforge", "version": "2.17.0"})
+        self.assertEqual(migrated["generator"], {"name": "docforge", "version": "2.19.0"})
         self.assertEqual(migrated["sections"], legacy["sections"])
         self.assertTrue(migrated["content_hash"].startswith("sha256:"))
 
@@ -1246,7 +1246,7 @@ process.stdout.write(pf.emitYaml(value));
                 "doc_id": "readme",
                 "path": "README.md",
                 "generated_at": "2026-07-27T09:12:44Z",
-                "tool_version": "2.17.0",
+                "tool_version": "2.19.0",
                 "tier": "spine",
                 "target_depth": "overview",
                 "graph": {"provider": "gitnexus", "flow": "native"},
@@ -1347,7 +1347,7 @@ process.stdout.write(pf.emitYaml(value));
                 "---\n" + json.dumps({"docforge_provenance": {
                     "schema": "2.0", "doc_id": "docs_index", "path": "docs/README.md",
                     "generated_at": "2026-08-01T00:00:00Z",
-                    "generator": {"name": "docforge", "version": "2.17.0"},
+                    "generator": {"name": "docforge", "version": "2.19.0"},
                     "tier": "spine", "target_depth": "orientation",
                     "graph": {"provider": "gitnexus", "flow": "native"},
                     "sections": [{
@@ -1445,7 +1445,7 @@ process.stdout.write(pf.emitYaml(value));
                 "doc_id": "subject",
                 "path": "subject.md",
                 "generated_at": "2026-07-27T09:12:44Z",
-                "tool_version": "2.17.0",
+                "tool_version": "2.19.0",
                 "tier": "spine",
                 "target_depth": "reference",
                 "graph": {"provider": "gitnexus", "flow": "native"},

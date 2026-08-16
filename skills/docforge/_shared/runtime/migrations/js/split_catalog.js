@@ -2,7 +2,7 @@
 "use strict";
 /* One-shot: split .metadata/catalog.json into catalog/index.json + types/ + profiles/.
  *
- * Applies Phase 0.10 infrastructure-platform signal widening and bumps version to 2.17.0.
+ * Applies Phase 0.10 infrastructure-platform signal widening and bumps version to 2.19.0.
  * Re-runnable: overwrites the split tree from the monolith when present, otherwise from
  * the already-split index + types (round-trip). Mirrors migrations/python/split_catalog.py.
  */
@@ -11,7 +11,7 @@ const fs = require("fs");
 const path = require("path");
 
 const DEFAULT_ROOT = path.resolve(__dirname, "..", "..", "..");
-const TARGET_VERSION = "2.17.0";
+const TARGET_VERSION = "2.19.0";
 
 const INFRA_EXTRA_SIGNALS = [
   { kind: "path", pattern: "ansible.cfg" },

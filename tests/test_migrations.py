@@ -39,7 +39,7 @@ def seed_skill_root(root: Path) -> None:
     ]
     catalog = {
         "$schema": "catalog-schema.json",
-        "version": "2.17.0",
+        "version": "2.19.0",
         "tiers": [{"id": "spine", "order": 10}, {"id": "diligence", "order": 20}],
         "profiles": {
             "shapes": shapes,
@@ -88,7 +88,7 @@ class SplitCatalogParityTests(unittest.TestCase):
             self.assertEqual(js_result.returncode, 0, js_result.stderr)
             self.assertEqual(py_result.stdout, js_result.stdout)
             summary = json.loads(py_result.stdout)
-            self.assertEqual(summary["version"], "2.17.0")
+            self.assertEqual(summary["version"], "2.19.0")
             self.assertEqual(summary["document_types"], 2)
             self.assertEqual(summary["infra_signals"], 9)
             self.assertEqual(summary["infra_aliases"], ["infra", "deployment-config", "iac"])
@@ -104,10 +104,10 @@ class SplitCatalogParityTests(unittest.TestCase):
             for runtime, root in (("py", py_root), ("js", js_root)):
                 result = self._run(runtime, root)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn(f"Wrote .metadata/catalog/index.json + 2 types + 5 profile files (version 2.17.0).", result.stdout)
+                self.assertIn(f"Wrote .metadata/catalog/index.json + 2 types + 5 profile files (version 2.19.0).", result.stdout)
             for runtime, root in (("py", py_root), ("js", js_root)):
                 index = json.loads((root / ".metadata" / "catalog" / "index.json").read_text(encoding="utf-8"))
-                self.assertEqual(index["version"], "2.17.0")
+                self.assertEqual(index["version"], "2.19.0")
                 self.assertEqual(index["tiers"], {"spine": {"order": 10}, "diligence": {"order": 20}})
                 self.assertEqual(
                     [row["id"] for row in index["document_types"]],
@@ -135,7 +135,7 @@ class SplitCatalogParityTests(unittest.TestCase):
                 (root / ".metadata" / "catalog.json").unlink()
                 again = self._run(runtime, root)
                 self.assertEqual(again.returncode, 0, again.stderr)
-                self.assertIn("Wrote .metadata/catalog/index.json + 2 types + 5 profile files (version 2.17.0).", again.stdout)
+                self.assertIn("Wrote .metadata/catalog/index.json + 2 types + 5 profile files (version 2.19.0).", again.stdout)
             for rel in rel_files:
                 self.assertEqual(
                     (py_root / rel).read_text(encoding="utf-8"),

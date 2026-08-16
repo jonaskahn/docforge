@@ -147,7 +147,7 @@ class StoreParityTests(unittest.TestCase):
             "---\n"
             "docforge_provenance:\n"
             '  schema: "1.0"\n'
-            '  tool_version: "2.17.0"\n'
+            '  tool_version: "2.19.0"\n'
             '  doc_id: "only"\n'
             '  path: "docs/only.md"\n'
             '  generated_at: "2026-07-27T09:12:44Z"\n'
@@ -188,7 +188,7 @@ class StoreParityTests(unittest.TestCase):
             meta = store.read_doc_metadata(repo, doc)
             self.assertEqual(meta["state"], "legacy")
             self.assertEqual(meta["source"], "sidecar")
-            store.write_entry(repo, "docs/only.md", {"id": "only", "title": "Only", "provenance": {"schema": "1.0", "tool_version": "2.17.0"}})
+            store.write_entry(repo, "docs/only.md", {"id": "only", "title": "Only", "provenance": {"schema": "1.0", "tool_version": "2.19.0"}})
             meta = store.read_doc_metadata(repo, doc)
             self.assertEqual(meta["state"], "obsolete")
             self.assertEqual(meta["source"], "sidecar")

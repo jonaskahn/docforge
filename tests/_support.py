@@ -169,7 +169,7 @@ def provenance(
         "doc_id": doc_id,
         "path": path,
         "generated_at": "2026-07-27T09:12:44Z",
-        "generator": {"name": "docforge", "version": "2.17.0"},
+        "generator": {"name": "docforge", "version": "2.19.0"},
         "tier": tier,
         "target_depth": target_depth,
         "graph": {"provider": "gitnexus", "flow": "native"},
