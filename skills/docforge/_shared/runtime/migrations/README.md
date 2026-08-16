@@ -31,7 +31,7 @@ node   runtime/cli/js/split_catalog.js    [--dry-run] [--root <skill-root>]
 
 Rewrites `.metadata/catalog/index.json`, `types/*.json`, and `profiles/*.json`
 with a hard-coded catalog version **2.17.0**. The current catalog requires
-**2.18.0** — running it against the current tree would regress the catalog
+**2.19.0** — running it against the current tree would regress the catalog
 version and shape. Use only to reproduce the original migration. `--root`
 overrides the skill root (used by the parity tests).
 
