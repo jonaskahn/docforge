@@ -271,6 +271,14 @@ function foldCompactGroups(catalog, selected, audiences) {
       continue;
     }
     members.sort(compactMemberOrder);
+    // A group whose selected membership exceeds COMPACT_SECTION_CAP spills:
+    // the merged file keeps its core members plus profile-driven ones in
+    // `compact_order` until the cap is reached, and the overflow stays at its
+    // own standard path, linked from the merged file. That is the pre-fold
+    // behavior, so a pathological many-shape repository degrades to the
+    // standard tree instead of producing one unreadable file.
+    const spilled = members.splice(queryCatalog.COMPACT_SECTION_CAP);
+    kept.push(...spilled.map(([, doc]) => doc));
     const merged = makeDocument(
       definition,
       [
@@ -287,6 +295,18 @@ function foldCompactGroups(catalog, selected, audiences) {
     kept.push(merged);
   }
   return [kept, foldedIds];
+}
+// Every catalog id that declares a `compact_group`, selected this run or not.
+// addAncestorIndexes needs the full set, not just what folded: a Diligence-only
+// index such as `security_index` is never selected at Spine, so it never folds,
+// and the ancestor pass would otherwise resurrect `docs/security/README.md`
+// inside a compact tree.
+function compactGroupIds(catalog) {
+  return new Set(
+    catalog.documents
+      .filter((item) => queryCatalog.loadType(item.id).compact_group)
+      .map((item) => item.id),
+  );
 }
 function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standard") {
   const ranks = Object.fromEntries(catalog.tiers.map((item) => [item.id, item.order]));
@@ -305,11 +325,12 @@ function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standa
     if (rule.condition) origins.push({ kind: "condition", id: rule.condition });
     selected.push(makeDocument(definition, origins, evidence, null, profiles.audiences));
   }
-  let foldedIds = new Set();
+  let skipIds = new Set();
   if (layout === "compact") {
-    [selected, foldedIds] = foldCompactGroups(catalog, selected, profiles.audiences);
+    [selected] = foldCompactGroups(catalog, selected, profiles.audiences);
+    skipIds = compactGroupIds(catalog);
   }
-  addAncestorIndexes(catalog, selected, profiles.audiences, foldedIds);
+  addAncestorIndexes(catalog, selected, profiles.audiences, skipIds);
   return selected.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
 }
 function parseArgs(argv) {
@@ -515,6 +536,54 @@ function pathMatches(pattern, actual) {
   const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace("\\{slug\\}", "[a-z0-9][a-z0-9-]*");
   return new RegExp(`^${escaped}$`).test(actual);
 }
+// The merged manifest entry that hosts this dynamic type as a `##` section, or
+// null when the instance gets its own file. Null covers every standard-layout
+// project, a type with no `compact_group`, and a group that spilled past
+// COMPACT_SECTION_CAP — in all three the pre-fold path is correct.
+function compactHostFor(manifest, fullDefinition) {
+  if ((manifest.project.scale || {}).layout !== "compact") return null;
+  const groupId = fullDefinition.compact_group;
+  if (!groupId) return null;
+  for (const doc of manifest.documents) {
+    if (doc.id === groupId && Array.isArray(doc.compact_members)) return doc;
+  }
+  return null;
+}
+function sectionSlug(value) {
+  return path.posix.basename(value, path.posix.extname(value));
+}
+// Record a discovered instance as a `##` section of its group's merged file
+// instead of a document of its own. The section descriptor keeps the dynamic
+// type id — so the section is still written from that type's contract and
+// template — plus the slug and title that name it, which is what provenance
+// and a later compact -> standard `split` need to rebuild the component file.
+function addCompactSection(args, manifest, definition, merged, flowIndex, flowRow) {
+  const slug = sectionSlug(args.path);
+  const existing = merged.compact_members;
+  const sections = existing.filter((item) => item && typeof item === "object");
+  if (sections.some((item) => item.id === definition.id && item.slug === slug)) {
+    return fail(`section already exists in ${merged.path}: ${slug}`, 2);
+  }
+  const sameType = sections.filter((item) => item.id === definition.id);
+  if (sameType.length >= queryCatalog.COMPACT_DYNAMIC_CAP) {
+    return fail(
+      `${merged.path} already carries ${queryCatalog.COMPACT_DYNAMIC_CAP} ${definition.type} `
+      + `sections, the compact section budget; '${slug}' stays a row in that file's candidate matrix`,
+      2,
+    );
+  }
+  const fallback = slug.replace(/[-_]/g, " ");
+  const title = args.title || (fallback.charAt(0).toUpperCase() + fallback.slice(1));
+  existing.push({ id: definition.id, slug, title });
+  merged.requires = [...new Set([...(merged.requires || []), ...definition.requires])].sort();
+  saveManifest(args.repo, manifest);
+  if (flowIndex && flowRow) {
+    flowRow.status = "documented";
+    fs.writeFileSync(path.join(args.repo, FLOW_INDEX_REL), dumpJson(flowIndex));
+  }
+  console.log(`Added ${slug} as a ${definition.type} section of ${merged.path} (compact layout).`);
+  return 0;
+}
 function cmdAdd(args) {
   required(args, ["repo", "type", "id", "path"]);
   try {
@@ -550,6 +619,8 @@ function cmdAdd(args) {
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(args.id)) return fail(`document id must use lowercase letters, digits, hyphens, or underscores: ${args.id}`, 2);
     if (manifest.documents.some((doc) => doc.id === args.id)) return fail(`document id already exists: ${args.id}`, 2);
     if (manifest.documents.some((doc) => doc.path === args.path)) return fail(`document path already exists: ${args.path}`, 2);
+    const merged = compactHostFor(manifest, fullDefinition);
+    if (merged) return addCompactSection(args, manifest, definition, merged, flowIndex, flowRow);
     const actual = { ...definition, id: args.id, path: args.path };
     if (args.title) actual.title = args.title;
     const origins = [{ kind: "dynamic", id: definition.type }, ...profileOrigins];
@@ -641,6 +712,72 @@ function syncPresentations(catalog, docs, audiences) {
   }
   return updated;
 }
+// Move discovered instances across a layout switch, so neither direction loses
+// one. Returns `[extraDocuments, foldedIds]`.
+//
+// compact -> standard: every `{id, slug, title}` section on a merged entry
+// becomes a dynamic document again, at the type's own path with the section's
+// slug. Without this the merged entry is dropped as unselected and takes its
+// sections with it.
+//
+// standard -> compact: every dynamic document whose type declares a
+// `compact_group` present in the new selection becomes a section on that
+// group's merged entry, and its id is returned so the caller retires or removes
+// the standalone document. Instances past COMPACT_DYNAMIC_CAP keep their own
+// file rather than being dropped — a section budget must never silently
+// discard written work.
+function relayoutDynamicDocuments(catalog, documents, selected, oldLayout, newLayout, audiences) {
+  if (oldLayout === newLayout) return [[], new Set()];
+  const byCatalogId = new Map(catalog.documents.map((item) => [item.id, item]));
+  if (newLayout === "standard") {
+    const extra = [];
+    const taken = new Set([...documents.map((d) => d.id), ...selected.map((d) => d.id)]);
+    for (const doc of documents) {
+      for (const member of doc.compact_members || []) {
+        if (!member || typeof member !== "object") continue;
+        const definition = byCatalogId.get(member.id);
+        if (!definition) continue;
+        const { slug } = member;
+        const docId = taken.has(slug) ? `${member.id}_${slug}` : slug;
+        taken.add(docId);
+        const actual = {
+          ...definition,
+          id: docId,
+          path: definition.path.replace("{slug}", slug),
+          title: member.title || slug,
+        };
+        extra.push(makeDocument(
+          actual,
+          [{ kind: "dynamic", id: definition.type }],
+          [],
+          definition.id,
+          audiences,
+        ));
+      }
+    }
+    return [extra, new Set()];
+  }
+  const mergedByGroup = new Map(
+    selected.filter((doc) => Array.isArray(doc.compact_members)).map((doc) => [doc.id, doc]),
+  );
+  const folded = new Set();
+  for (const doc of documents) {
+    const origins = ((doc.selection || {}).origins) || [];
+    if (!origins.some((origin) => origin.kind === "dynamic")) continue;
+    const catalogId = catalogIdForDocument(catalog, doc);
+    if (!catalogId) continue;
+    const groupId = queryCatalog.loadType(catalogId).compact_group;
+    const merged = groupId ? mergedByGroup.get(groupId) : null;
+    if (!merged) continue;
+    const sections = merged.compact_members.filter((item) => item && typeof item === "object");
+    if (sections.filter((item) => item.id === catalogId).length >= queryCatalog.COMPACT_DYNAMIC_CAP) continue;
+    const slug = sectionSlug(doc.path);
+    merged.compact_members.push({ id: catalogId, slug, title: doc.title || slug });
+    merged.requires = [...new Set([...(merged.requires || []), ...(doc.requires || [])])].sort();
+    folded.add(doc.id);
+  }
+  return [[], folded];
+}
 function cmdReconcile(args) {
   let manifest;
   try {
@@ -683,6 +820,14 @@ function cmdReconcile(args) {
   }
   const selected = selectedStaticDocuments(catalog, args.repo, newTier, profiles, newLayout);
   const selectedIds = new Set(selected.map((doc) => doc.id));
+  const [relaidOut, foldedAway] = relayoutDynamicDocuments(
+    catalog,
+    manifest.documents,
+    selected,
+    currentScale.layout || "standard",
+    newLayout,
+    profiles.audiences,
+  );
   const kept = [];
   const removed = [];
   const retire = [];
@@ -690,6 +835,19 @@ function cmdReconcile(args) {
   for (const doc of manifest.documents) {
     const origins = ((doc.selection || {}).origins) || [];
     const isDynamic = origins.some((origin) => origin.kind === "dynamic");
+    if (foldedAway.has(doc.id)) {
+      // Its subject now lives as a `##` in the merged file. A written file
+      // still has prose to migrate, so it retires rather than vanishing; a
+      // planned one just drops out of the plan.
+      if (WRITTEN.has(doc.status)) {
+        retire.push(doc.id);
+        kept.push(doc);
+        keptIds.add(doc.id);
+      } else {
+        removed.push(doc.id);
+      }
+      continue;
+    }
     if (selectedIds.has(doc.id)) {
       if (doc.status === "retired") {
         doc.status = "planned";
@@ -707,7 +865,10 @@ function cmdReconcile(args) {
       removed.push(doc.id);
     }
   }
-  const added = selected.filter((doc) => !keptIds.has(doc.id));
+  const added = [
+    ...selected.filter((doc) => !keptIds.has(doc.id)),
+    ...relaidOut.filter((doc) => !keptIds.has(doc.id)),
+  ];
   const contractUpdated = syncContractRevisions(catalog, kept);
   const presentationUpdated = syncPresentations(catalog, kept, profiles.audiences);
   const oldTier = manifest.project.tier;
@@ -1134,6 +1295,22 @@ function cmdPreview(args) {
     || a.dimension.localeCompare(b.dimension) || a.value.localeCompare(b.value));
   report.attribution = attribution;
 
+  // Compact trades files for sections, so a file count alone hides how dense
+  // the result is. Report the densest merged files, and name any group that
+  // spilled past the section cap — a spilled group keeps standard-layout
+  // children, which is the one case where compact stops being bounded.
+  if (layout === "compact") {
+    const merged = selectedStaticDocuments(catalog, args.repo, args.tier, profiles, "compact")
+      .filter((doc) => (doc.compact_members || []).length);
+    report.sections = merged
+      .map((doc) => ({ path: doc.path, sections: doc.compact_members.length }))
+      .sort((a, b) => (b.sections - a.sections) || a.path.localeCompare(b.path));
+    report.spilled = report.sections
+      .filter((item) => item.sections >= queryCatalog.COMPACT_SECTION_CAP)
+      .map((item) => item.path)
+      .sort();
+  }
+
   if (args.json) {
     process.stdout.write(dumpJson(report));
     return 0;
@@ -1153,6 +1330,15 @@ function cmdPreview(args) {
         ? ` — ${Math.round(100 * item.documents / baseline)}% of the tree` : "";
       console.log(`    ${item.dimension.slice(0, -1)}=${item.value}: ${item.documents}${share}`);
     }
+  }
+  for (const item of (report.sections || []).slice(0, 3)) {
+    console.log(`  densest: ${item.path} — ${item.sections} sections`);
+  }
+  for (const spilledPath of report.spilled || []) {
+    console.log(
+      `  spilled: ${spilledPath} reached the ${queryCatalog.COMPACT_SECTION_CAP}-section `
+      + "cap; the overflow keeps its own standard paths",
+    );
   }
   console.log("  (read-only: nothing was written)");
   return 0;

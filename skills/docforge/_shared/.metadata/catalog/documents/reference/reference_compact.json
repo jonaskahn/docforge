@@ -24,13 +24,27 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "template_file": "content/compact/templates/reference.template.md",
-  "contract_revision": "2.18.0",
+  "contract_revision": "2.19.0",
   "compact_target": "docs/reference.md",
   "compact_members": [
     "reference_index",
     "configuration",
     "limitations",
     "tech_stack",
-    "glossary"
+    "glossary",
+    "api_reference",
+    "api_errors",
+    "api_rate_limits",
+    "cli_commands",
+    "cli_output",
+    "extension_points",
+    "library_compatibility",
+    "data_types",
+    "model_card",
+    "browser_support",
+    "platform_compatibility",
+    "performance_budgets",
+    "infra_resources",
+    "infra_access"
   ]
 }

@@ -23,13 +23,16 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "template_file": "content/compact/templates/engineering.template.md",
-  "contract_revision": "2.18.0",
+  "contract_revision": "2.19.0",
   "compact_target": "docs/engineering.md",
   "compact_members": [
     "engineering_index",
     "setup_guide",
     "testing_guide",
     "conventions",
-    "release_guide"
+    "release_guide",
+    "data_quality",
+    "library_publishing",
+    "web_styling"
   ]
 }

@@ -25,5 +25,7 @@
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
-  "template_file": "content/architecture/templates/platform-integration.md"
+  "template_file": "content/architecture/templates/platform-integration.md",
+  "compact_group": "architecture_compact",
+  "compact_order": 26
 }

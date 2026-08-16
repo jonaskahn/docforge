@@ -178,6 +178,20 @@ and write order. When the confirmed layout is `compact`, `init` /
 stand in for their member groups — so the dry-run tree displays it verbatim,
 with the merged entries' `compact_members` traceable in the manifest.
 
+A compact dry run shows fewer entries than the discovery brief's subject count
+implies, and that is correct: every profile- and audience-driven document
+folds into its group's merged file, so a confirmed shape adds sections rather
+than entries (see [`../references/docs-tree.md`](../references/docs-tree.md)
+"Compact layout"). Do not add documents back to compensate. The one exception
+is a group that spilled past `COMPACT_SECTION_CAP`; `manage_manifest preview`
+names it, and its overflow appears in the tree at standard paths.
+
+Dynamic entries behave the same way. In compact layout
+`manage_manifest add --type <t>` records the instance as a `##` section on its
+group's merged entry instead of creating a document, and refuses past
+`COMPACT_DYNAMIC_CAP` — an instance over budget belongs in the merged file's
+candidate matrix, not in a new file.
+
 ## Pre-write structure checkpoint
 
 For **every new plan**, finish repository inspection and dynamic-document

@@ -19,14 +19,15 @@ class CatalogRecordTests(unittest.TestCase):
         cls.tiers = set(cls.index["tiers"])
         cls.groups = set(cls.index["groups"])
 
-    def test_catalog_version_is_2_15_0(self) -> None:
-        self.assertEqual(self.index["version"], "2.18.0")
+    def test_catalog_version_is_current(self) -> None:
+        self.assertEqual(self.index["version"], "2.19.0")
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]
-        # 136 after portfolio_compact was removed (Portfolio is standard-only),
-        # +1 for agents_compact.
-        self.assertEqual(len(document_types), 137)
+        # 137, +5 for the compact groups that make the compact tree bounded:
+        # flows_compact, decisions_compact, concepts_compact, ba_compact,
+        # po_compact.
+        self.assertEqual(len(document_types), 142)
         ids = [entry["id"] for entry in document_types]
         self.assertEqual(len(ids), len(set(ids)), "duplicate document ids in index.json")
 
@@ -149,13 +150,18 @@ class CatalogRecordTests(unittest.TestCase):
             result = run(runtime, "query_catalog", "--validate")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_query_catalog_validate_enforces_compact_member_cap(self) -> None:
+    def test_query_catalog_validate_enforces_compact_core_cap(self) -> None:
+        """The core cap counts only tier-driven members — no selector, no
+        condition — because those are the ones the catalog can see. Profile-
+        driven members depend on a project's confirmed profiles, so they are
+        bounded at plan time by COMPACT_SECTION_CAP instead."""
         record_path = CATALOG_DIR / "documents" / "architecture" / "architecture_compact.json"
         original = record_path.read_text(encoding="utf-8")
         try:
             record = json.loads(original)
+            # Real ungated records, so they count as core members.
             record["compact_members"] = record["compact_members"] + [
-                f"fake_member_{i}" for i in range(9 - len(record["compact_members"]))
+                "root_readme", "changelog", "docs_index",
             ]
             record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
             for runtime in ("py", "js"):
@@ -165,6 +171,46 @@ class CatalogRecordTests(unittest.TestCase):
                     self.assertIn("depth brake", result.stdout + result.stderr)
         finally:
             record_path.write_text(original, encoding="utf-8")
+
+    def test_profile_driven_members_do_not_count_against_the_core_cap(self) -> None:
+        """`architecture_compact` declares far more than eight members today —
+        21 of them profile-driven. The catalog must still validate, or the
+        bounded compact tree could not exist."""
+        record = json.loads(
+            (CATALOG_DIR / "documents" / "architecture" / "architecture_compact.json")
+            .read_text(encoding="utf-8")
+        )
+        self.assertGreater(len(record["compact_members"]), 8)
+        core = []
+        for member_id in record["compact_members"]:
+            row = next(r for r in self.index["document_types"] if r["id"] == member_id)
+            member = json.loads((CATALOG_DIR / row["record"]).read_text(encoding="utf-8"))
+            rule = member["selection"]
+            if not any((rule.get("selectors") or {}).values()) and not rule.get("condition"):
+                core.append(member_id)
+        self.assertLessEqual(len(core), 8, core)
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                self.assertEqual(run(runtime, "query_catalog", "--validate").returncode, 0)
+
+    def test_every_foldable_record_declares_a_compact_group(self) -> None:
+        """The bounded-tree invariant, enforced at the catalog level: anything
+        that is neither a fixed tooling path nor portfolio-tier must fold, or a
+        confirmed profile would add a file to a compact tree."""
+        fixed = {
+            "root_readme", "changelog", "docs_index", "contributing_root",
+            "security_root", "agents_kernel", "claude_shim", "claude_local",
+            "claude_settings",
+        }
+        missing = []
+        for row in self.index["document_types"]:
+            record = json.loads((CATALOG_DIR / row["record"]).read_text(encoding="utf-8"))
+            if record["group"] == "portfolio" or record["selection"]["mode"] == "compact":
+                continue
+            if record["id"] in fixed or record.get("compact_group"):
+                continue
+            missing.append(record["id"])
+        self.assertEqual(missing, [], "records that would stay standalone in a compact tree")
 
     def test_agents_compact_registered_and_within_member_cap(self) -> None:
         row = next(r for r in self.index["document_types"] if r["id"] == "agents_compact")

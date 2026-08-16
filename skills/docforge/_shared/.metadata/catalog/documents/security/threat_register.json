@@ -8,18 +8,28 @@
   "selection": {
     "mode": "dynamic",
     "min_tier": "diligence",
-    "selectors": {"audiences": ["security-reviewers"]},
+    "selectors": {
+      "audiences": [
+        "security-reviewers"
+      ]
+    },
     "condition": "discovered_high_criticality"
   },
   "instruction_file": "content/security/threat-register.instruction.md",
-  "requires": ["code_graph"],
+  "requires": [
+    "code_graph"
+  ],
   "target_depth": "reference",
   "write_order": 78,
   "provenance_mode": "sections",
   "audit_profile": "risk",
   "dominant_form": "table",
   "template_file": "content/security/templates/threat-register.md",
-  "model_depth": {"stride": "interaction-risk"},
+  "model_depth": {
+    "stride": "interaction-risk"
+  },
   "contract_revision": "2.17.0",
-  "selection_evidence_required": true
+  "selection_evidence_required": true,
+  "compact_group": "security_compact",
+  "compact_order": 51
 }

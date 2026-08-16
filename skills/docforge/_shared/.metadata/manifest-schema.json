@@ -164,7 +164,24 @@
         "status": {"enum": ["planned", "in_progress", "generated", "needs_review", "complete", "skipped", "retired"]},
         "retired_at": {"type": "string"},
         "retired_destination": {"type": "string"},
-        "compact_members": {"type": "array", "items": {"type": "string"}},
+        "compact_members": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"type": "string"},
+              {
+                "type": "object",
+                "required": ["id", "slug", "title"],
+                "properties": {
+                  "id": {"type": "string"},
+                  "slug": {"type": "string"},
+                  "title": {"type": "string"}
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
         "requires": {"type": "array", "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}},
         "scaffold_template": {"type": "string"},
         "instruction_file": {"type": ["string", "null"]},

@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.18.0",
+  "version": "2.19.0",
   "category": "architecture",
   "purpose": "System architecture: structure, boundaries, and integration surfaces.",
   "source": "../../index.json",
@@ -39,6 +39,11 @@
       "id": "tech_debt",
       "path": "tech_debt.json",
       "summary": "Shortcut, consequence, evidence, remediation direction"
+    },
+    {
+      "id": "concepts_compact",
+      "path": "concepts_compact.json",
+      "summary": "Compact concepts section: the concept register plus one section per discovered domain concept"
     },
     {
       "id": "concepts_index",

@@ -73,38 +73,91 @@ the collection root is standard; Docforge never propagates a layout across a
 repository boundary.
 
 Scale suggests a layout — it never changes the tier default. A compact tier
-covers the **same subjects** as its standard counterpart at the same
-analytical depth; it stops giving each subject its own file. Documents sharing
-a catalog `compact_group` collapse into one merged file at the group's
-`compact_target`, one `##` section per member in `compact_order`, with the
-members recorded on the manifest entry so provenance and revise can trace them
-back. This is a file-count change, never a coverage or rigor change.
+covers the **same subjects** as its standard counterpart; it stops giving each
+subject its own file. Documents sharing a catalog `compact_group` collapse
+into one merged file at the group's `compact_target`, one `##` section per
+member in `compact_order`, with the members recorded on the manifest entry so
+provenance and revise can trace them back.
 
-Compact Spine for a repository with no confirmed profiles and the default
-audiences (8 files, down from 15). A profile or audience adds unfolded files
-on top — see the routing rule below:
+**In compact layout the file count is a function of layout and tier alone.**
+Confirming a shape adds sections, not files. Discovering ten flows adds
+sections, not files. That bound is the point of the layout: a reader can hold
+the whole tree in their head, and a user picking compact at intake knows what
+they are getting before discovery runs.
+
+#### Compact reference trees
+
+A repository with no confirmed profiles and the default audiences:
 
 ```text
-README.md
-CHANGELOG.md
-docs/
-  README.md
-  product.md        (was product/README.md + product/overview.md)
-  architecture.md   (was architecture/README.md + architecture/high-level.md)
-  flows/README.md
-  engineering.md    (was engineering/README.md + setup.md + testing.md)
-  reference.md      (was reference/README.md + configuration.md + limitations.md + tech-stack.md)
+Compact Spine (8 files, down from 15)     Compact Diligence (15 files, down from 34)
+
+README.md                                 README.md
+CHANGELOG.md                              CHANGELOG.md
+docs/                                     CONTRIBUTING.md
+  README.md                               SECURITY.md
+  product.md                              docs/
+  architecture.md                           README.md
+  flows.md                                  product.md
+  engineering.md                            architecture.md
+  reference.md                              concepts.md
+                                            flows.md
+                                            decisions.md
+                                            engineering.md
+                                            reference.md
+                                            operations.md
+                                            security.md
+                                            contributing.md
 ```
 
-**Only documents carrying a `compact_group` fold.** Profile-driven and
-audience-driven documents never do, so a folded folder routinely keeps static
-children: `docs/reference.md` merges the reference index away while
-`docs/reference/api.md` stays a separate file with no `docs/reference/README.md`
-above it. Two routing rules follow, and both are mechanically checked by
+Three groups appear only when their audience is confirmed, and each folds to
+one file of its own rather than swelling a neighbour: `docs/agents.md`
+(coding agents), `docs/business-analyst.md`, `docs/product-owner.md`. Coding
+agents additionally bring the fixed host-contract paths `AGENTS.md`,
+`CLAUDE.md`, `CLAUDE.local.md`, and `.claude/settings.json`, which are
+tooling-owned locations and never fold. With three shapes, a platform, three
+concerns, and all seven audiences confirmed, Compact Diligence is 22 files
+against Standard's 71 — the standard tree grew by 37, the compact one by 7.
+
+#### What folds
+
+| Member kind | Folds | Section it becomes |
+|---|---|---|
+| Tier-driven core (no selector, no condition) | Always | One `##` per member, in `compact_order` |
+| Profile- and audience-driven | Always | One `##` per selected member, after the core |
+| Dynamic instances (flows, decisions, concepts, runbooks, datasets, migrations) | Up to the section budget | One `##` per instance, plus a row in the file's candidate matrix |
+| Fixed tooling paths (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, agent shims) | Never | — |
+
+**Two caps bound a merged file**, both owned by
+[`document-composition.md`](document-composition.md) "Depth brakes":
+`COMPACT_CORE_CAP` (8) limits the tier-driven members a group may *declare*
+and is enforced by `query_catalog --validate`; `COMPACT_SECTION_CAP` (14)
+limits the sections a project actually *materializes* and is enforced by
+`manage_manifest` when it folds.
+
+`COMPACT_DYNAMIC_CAP` (6) is the section budget for one dynamic type in one
+file. Every discovered instance still appears in the merged file's candidate
+matrix — coverage is stated in full — but only the first six are expanded into
+sections; the rest stay matrix rows, the same main/deferred split the flow
+index already uses. `manage_manifest add --type <t>` refuses past the budget
+rather than silently dropping the instance.
+
+**A group that exceeds `COMPACT_SECTION_CAP` spills.** The merged file keeps
+its core members plus profile sections in `compact_order` until the cap is
+reached; the overflow stays at its own standard path and is linked from the
+merged file. Spilling is the pre-fold behavior applied as a safety valve, so a
+repository that is simultaneously five shapes degrades to the standard tree
+for the excess instead of producing one unreadable file. `manage_manifest
+preview` names any group that spilled.
+
+Two routing rules follow, and both are mechanically checked by
 `scaffold_docs --audit`:
 
-- A merged file links every selected, materialized document in the folder it
-  stands for that is not one of its own `compact_members`.
+- A merged file links every selected, materialized document in the folders it
+  stands for that is not one of its own `compact_members`. A merged file can
+  stand for a folder its own path does not name — `docs/decisions.md` stands
+  for `docs/architecture/decisions/` — and for more than one, so the folders
+  come from the members it merged, not from its path.
 - An index links a folded member at `<compact_target>#<member-anchor>`, never
   at the standard path that compact never materialized. `docs/README.md`
   linking `reference/configuration.md` in a compact tree is a broken link;
@@ -126,6 +179,11 @@ matrix backed by `.docforge/flow-index.json`. Revise flow creates stub
 `docs/flows/{slug}.md` files for every harvested candidate. Diligence adds
 full deep-dive flow documents only for main-priority rows; deferred-priority
 stubs remain discoverable in the matrix until promoted.
+
+In compact layout the matrix and the deep dives share one file, `docs/flows.md`
+— the matrix is its `## Flow candidate matrix` section and each deep dive is a
+`##` section below it, up to `COMPACT_DYNAMIC_CAP`. Compact writes no stub
+files: a candidate is either a section or a matrix row.
 
 ### Portfolio
 

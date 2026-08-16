@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+- **Compact layout is now actually compact (catalog 2.19.0).** Previously only
+  documents carrying a `compact_group` folded, so every profile-driven,
+  audience-driven, and dynamically discovered document stayed a file of its
+  own: compact Diligence on an API-service repository with six flows and four
+  decisions emitted 44 files. Everything foldable now folds, and **the compact
+  file count is a function of layout and tier alone** — confirming a shape or
+  discovering ten more flows adds sections, not files. Compact Diligence is 15
+  files for a bare repository and 22 with three shapes and all seven audiences
+  (against 34 and 67 standard).
+  - Five new merged files: `docs/flows.md`, `docs/decisions.md`,
+    `docs/concepts.md`, `docs/business-analyst.md`, `docs/product-owner.md`.
+    Each audience pack folds to one file of its own rather than swelling a
+    neighbour, as `docs/agents.md` already did.
+  - Dynamic instances fold as `##` sections. In compact layout
+    `manage_manifest add --type <t>` records `{id, slug, title}` on the
+    group's merged entry instead of creating a document (manifest schema
+    updated); every discovered instance still appears in the merged file's
+    candidate matrix, and the first six per type
+    (`COMPACT_DYNAMIC_CAP`) are expanded into full sections. The command
+    refuses past the budget rather than silently dropping the instance.
+  - `COMPACT_MEMBER_CAP` splits into `COMPACT_CORE_CAP` (8, tier-driven
+    members a group may declare, checked by `query_catalog --validate`) and
+    `COMPACT_SECTION_CAP` (14, sections a project materializes, checked by
+    `manage_manifest` when it folds). A group past the section cap **spills**:
+    its overflow keeps its own standard paths, linked from the merged file.
+  - `manage_manifest preview` reports the densest merged files and names any
+    spilled group; intake states both before the confirmation gate.
+- **Fixed: compact Spine resurrected standard-layout indexes.** The
+  ancestor-index pass skipped only ids folded on that run, so a Diligence-only
+  index such as `security_index` — never selected at Spine, therefore never
+  folded — was re-added as a bare `docs/security/README.md` inside a compact
+  tree. It now skips every id that declares a `compact_group`.
+- **Fixed: a merged file's coverage audit used its own path.** `docs/decisions.md`
+  stands for `docs/architecture/decisions/`, and `docs/operations.md` for both
+  `docs/operations/` and `docs/operations/runbooks/`. `scaffold_docs --audit`
+  now takes the folders a merged file covers from the members it merged.
+
 - **Smarter scale classification (manifest 3.7).** `small` is now under 50
   source files (was 15), and classification weighs three signals: source-file
   count (base class), declared-dependency breadth (40+ deps promote
@@ -28,16 +65,16 @@
   `standard` otherwise — recorded in `project.scale` (manifest 3.5) as a
   proposed default the user can override (`decided_by: "user"`). `reconcile
   --layout` and `init --layout` force either layout explicitly.
-- **Compact layout now covers every tier**, not just Spine: Diligence gains
+- **Compact layout now covers Diligence too**, not just Spine: Diligence gains
   six merged files (`docs/architecture.md`, `docs/engineering.md`,
   `docs/reference.md`, `docs/operations.md`, `docs/security.md`,
-  `docs/contributing.md`) folding 18 statics, and Portfolio gains one
-  (`docs-portfolio.md`) folding all seven portfolio-layer statics — a
-  Diligence fixture goes from 34 written documents to 16, Portfolio from 43
-  to 19. Dynamic-child indexes (`concepts/`, `decisions/`, `runbooks/`,
-  `docs-portfolio/decisions/`, `docs-portfolio/epics/`) and conditional
-  members never fold. A merged file hosts at most 8 member sections
-  (`COMPACT_MEMBER_CAP`), enforced by `query_catalog --validate`.
+  `docs/contributing.md`) folding 18 statics — a Diligence fixture goes from
+  34 written documents to 16. Dynamic-child indexes (`concepts/`,
+  `decisions/`, `runbooks/`) and conditional members never fold. A merged file
+  hosts at most 8 member sections (`COMPACT_MEMBER_CAP`), enforced by
+  `query_catalog --validate`. *(Superseded during this release cycle: an
+  interim build also folded the Portfolio layer into `docs-portfolio.md`;
+  that was reverted before release, and Portfolio is always `standard`.)*
 - **Document retirement.** A tier downgrade, profile/audience removal, or
   layout switch that drops a written document out of selection is reported
   as a `retire` candidate by `reconcile`; `manage_manifest retire` then moves

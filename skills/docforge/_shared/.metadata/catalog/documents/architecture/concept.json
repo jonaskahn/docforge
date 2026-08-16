@@ -19,5 +19,7 @@
   "write_order": 16,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
-  "template_file": "content/shared/topic-readme.template.md"
+  "template_file": "content/shared/topic-readme.template.md",
+  "compact_group": "concepts_compact",
+  "compact_order": 52
 }

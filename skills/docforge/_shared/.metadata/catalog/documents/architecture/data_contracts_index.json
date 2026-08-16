@@ -24,5 +24,7 @@
   "audit_profile": "router",
   "template_file": "content/shared/section-readme.template.md",
   "title": "Data contracts",
-  "contract_revision": "2.17.0"
+  "contract_revision": "2.17.0",
+  "compact_group": "architecture_compact",
+  "compact_order": 51
 }

@@ -24,5 +24,7 @@
   "write_order": 57,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
-  "template_file": "content/engineering/templates/publishing.md"
+  "template_file": "content/engineering/templates/publishing.md",
+  "compact_group": "engineering_compact",
+  "compact_order": 12
 }

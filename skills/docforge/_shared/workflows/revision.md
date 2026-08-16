@@ -52,6 +52,17 @@ apply in scope:
     compact contracts and a standard project to standard ones — the
     steady state is already correct; only the transition above is extra
     work.
+
+    Dynamic instances move with the same two verbs. **standard → compact**:
+    each `docs/flows/<slug>.md`, ADR, concept, and runbook becomes a `##`
+    section on its group's merged entry, in `compact_order`, and its file is
+    retired; instances past `COMPACT_DYNAMIC_CAP` become rows in the merged
+    file's candidate matrix and their prose is retired with the file, not
+    discarded silently — report them in the preview. **compact → standard**:
+    each section descriptor on `compact_members` (`{id, slug, title}`) is
+    re-added with `manage_manifest add --type <id> --id <slug>` and its prose
+    migrated to the new file. A matrix row has no prose to migrate; it becomes
+    a stub, exactly as a deferred candidate does on a fresh standard run.
 2. **Add documents from detect / catalog** — re-run profile detection and
    condition evidence when needed; select newly evidenced static and dynamic
    types; add them to the manifest in `write_order`. The same detect run
@@ -253,8 +264,10 @@ with a per-document action comment, so the user sees exactly what will happen:
   file.
 
 Main-priority flows are listed under a `Flows:` section mapping each flow to its
-document path (`docs/flows/<slug>.md`) with the same action annotation. Run it
-directly with `scaffold_docs.{py,js} --dry-run --revise`.
+document path (`docs/flows/<slug>.md`) with the same action annotation. In
+compact layout the path is the merged file's anchor instead
+(`docs/flows.md#<slug>`), and a flow over `COMPACT_DYNAMIC_CAP` is listed as a
+matrix row. Run it directly with `scaffold_docs.{py,js} --dry-run --revise`.
 
 ## Retirement
 

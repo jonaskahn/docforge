@@ -302,7 +302,14 @@ def fold_compact_groups(
     revise can trace them back. Strictly gated on `layout == "compact"` by the
     caller — a standard run never folds. Member entries are synthesized from
     catalog data only; folded member ids are returned so ancestor-index
-    computation skips resurrecting them."""
+    computation skips resurrecting them.
+
+    A group whose selected membership exceeds `COMPACT_SECTION_CAP` **spills**:
+    the merged file keeps its core members plus profile-driven ones in
+    `compact_order` until the cap is reached, and the overflow stays at its own
+    standard path, linked from the merged file. That is the pre-fold behavior,
+    so a pathological many-shape repository degrades to the standard tree
+    instead of producing one unreadable file."""
     by_id = {doc["id"]: doc for doc in catalog["documents"]}
     groups: dict[str, list[tuple[int, dict]]] = {}
     kept: list[dict] = []
@@ -321,6 +328,9 @@ def fold_compact_groups(
             kept.extend(doc for _, doc in sorted(members, key=_compact_member_key))
             continue
         members.sort(key=_compact_member_key)
+        spilled = members[query_catalog.COMPACT_SECTION_CAP:]
+        members = members[:query_catalog.COMPACT_SECTION_CAP]
+        kept.extend(doc for _, doc in spilled)
         merged = make_document(
             definition,
             [
@@ -338,6 +348,18 @@ def fold_compact_groups(
         folded_ids.update(doc["id"] for _, doc in members)
         kept.append(merged)
     return kept, folded_ids
+
+
+def compact_group_ids(catalog: dict) -> set[str]:
+    """Every catalog id that declares a `compact_group`, selected this run or
+    not. `add_ancestor_indexes` needs the full set, not just what folded: a
+    Diligence-only index such as `security_index` is never selected at Spine,
+    so it never folds, and the ancestor pass would otherwise resurrect
+    `docs/security/README.md` inside a compact tree."""
+    return {
+        item["id"] for item in catalog["documents"]
+        if query_catalog.load_type(item["id"]).get("compact_group")
+    }
 
 
 def add_ancestor_indexes(
@@ -408,10 +430,11 @@ def selected_static_documents(
         if rule.get("condition"):
             origins.append({"kind": "condition", "id": rule["condition"]})
         selected.append(make_document(definition, origins, evidence, audiences=profiles["audiences"]))
-    folded_ids: set[str] = set()
+    skip_ids: set[str] = set()
     if layout == "compact":
-        selected, folded_ids = fold_compact_groups(catalog, selected, profiles["audiences"])
-    add_ancestor_indexes(catalog, selected, profiles["audiences"], skip_ids=folded_ids)
+        selected, _ = fold_compact_groups(catalog, selected, profiles["audiences"])
+        skip_ids = compact_group_ids(catalog)
+    add_ancestor_indexes(catalog, selected, profiles["audiences"], skip_ids=skip_ids)
     return sorted(selected, key=lambda item: (item["write_order"], item["path"], item["id"]))
 
 
@@ -576,6 +599,66 @@ def path_matches(pattern: str, actual: str) -> bool:
     return re.fullmatch(expression, actual) is not None
 
 
+def compact_host_for(manifest: dict, full_definition: dict) -> dict | None:
+    """The merged manifest entry that hosts this dynamic type as a `##`
+    section, or None when the instance gets its own file. None covers every
+    standard-layout project, a type with no `compact_group`, and a group that
+    spilled past `COMPACT_SECTION_CAP` — in all three the pre-fold path is
+    correct."""
+    if manifest["project"].get("scale", {}).get("layout") != "compact":
+        return None
+    group_id = full_definition.get("compact_group")
+    if not group_id:
+        return None
+    for doc in manifest["documents"]:
+        if doc.get("id") == group_id and isinstance(doc.get("compact_members"), list):
+            return doc
+    return None
+
+
+def section_slug(path: str) -> str:
+    return PurePosixPath(path).stem
+
+
+def add_compact_section(
+    args: argparse.Namespace,
+    manifest: dict,
+    definition: dict,
+    full_definition: dict,
+    merged: dict,
+    flow_index: dict | None,
+    flow_row: dict | None,
+) -> int:
+    """Record a discovered instance as a `##` section of its group's merged
+    file instead of a document of its own. The section descriptor keeps the
+    dynamic type id — so the section is still written from that type's contract
+    and template — plus the slug and title that name it, which is what
+    provenance and a later compact -> standard `split` need to rebuild the
+    component file."""
+    slug = section_slug(args.path)
+    existing = merged["compact_members"]
+    sections = [item for item in existing if isinstance(item, dict)]
+    if any(item.get("id") == definition["id"] and item.get("slug") == slug for item in sections):
+        return fail(f"section already exists in {merged['path']}: {slug}", 2)
+    same_type = [item for item in sections if item.get("id") == definition["id"]]
+    if len(same_type) >= query_catalog.COMPACT_DYNAMIC_CAP:
+        return fail(
+            f"{merged['path']} already carries {query_catalog.COMPACT_DYNAMIC_CAP} "
+            f"{definition['type']} sections, the compact section budget; "
+            f"'{slug}' stays a row in that file's candidate matrix",
+            2,
+        )
+    title = args.title or slug.replace("-", " ").replace("_", " ").capitalize()
+    existing.append({"id": definition["id"], "slug": slug, "title": title})
+    merged["requires"] = sorted(set(merged.get("requires", [])) | set(definition["requires"]))
+    save_manifest(args.repo, manifest)
+    if flow_index is not None and flow_row is not None:
+        flow_row["status"] = "documented"
+        (args.repo / FLOW_INDEX_REL).write_text(dump_json(flow_index), encoding="utf-8")
+    print(f"Added {slug} as a {definition['type']} section of {merged['path']} (compact layout).")
+    return 0
+
+
 def cmd_add(args: argparse.Namespace) -> int:
     flow_index = None
     flow_row = None
@@ -629,6 +712,9 @@ def cmd_add(args: argparse.Namespace) -> int:
         return fail(f"document id already exists: {args.id}", 2)
     if any(doc["path"] == args.path for doc in manifest["documents"]):
         return fail(f"document path already exists: {args.path}", 2)
+    merged = compact_host_for(manifest, full_definition)
+    if merged is not None:
+        return add_compact_section(args, manifest, definition, full_definition, merged, flow_index, flow_row)
     actual = dict(definition)
     actual["id"] = args.id
     actual["path"] = args.path
@@ -737,6 +823,84 @@ def sync_presentations(catalog: dict, docs: list[dict], audiences: list[str]) ->
     return updated
 
 
+def relayout_dynamic_documents(
+    catalog: dict,
+    documents: list[dict],
+    selected: list[dict],
+    old_layout: str,
+    new_layout: str,
+    audiences: list[str],
+) -> tuple[list[dict], set[str]]:
+    """Move discovered instances across a layout switch, so neither direction
+    loses one. Returns `(extra_documents, folded_ids)`.
+
+    **compact -> standard**: every `{id, slug, title}` section on a merged
+    entry becomes a dynamic document again, at the type's own path with the
+    section's slug. Without this the merged entry is dropped as unselected and
+    takes its sections with it.
+
+    **standard -> compact**: every dynamic document whose type declares a
+    `compact_group` present in the new selection becomes a section on that
+    group's merged entry, and its id is returned so the caller retires or
+    removes the standalone document. Instances past `COMPACT_DYNAMIC_CAP` keep
+    their own file rather than being dropped — a section budget must never
+    silently discard written work."""
+    if old_layout == new_layout:
+        return [], set()
+    by_catalog_id = {item["id"]: item for item in catalog["documents"]}
+    if new_layout == "standard":
+        extra: list[dict] = []
+        taken = {doc["id"] for doc in documents} | {doc["id"] for doc in selected}
+        for doc in documents:
+            for member in doc.get("compact_members") or []:
+                if not isinstance(member, dict):
+                    continue
+                definition = by_catalog_id.get(member["id"])
+                if definition is None:
+                    continue
+                slug = member["slug"]
+                doc_id = slug if slug not in taken else f"{member['id']}_{slug}"
+                taken.add(doc_id)
+                actual = dict(definition)
+                actual["id"] = doc_id
+                actual["path"] = definition["path"].replace("{slug}", slug)
+                actual["title"] = member.get("title") or slug
+                extra.append(make_document(
+                    actual,
+                    [{"kind": "dynamic", "id": definition["type"]}],
+                    catalog_id=definition["id"],
+                    audiences=audiences,
+                ))
+        return extra, set()
+
+    merged_by_group = {
+        doc["id"]: doc for doc in selected if isinstance(doc.get("compact_members"), list)
+    }
+    folded: set[str] = set()
+    for doc in documents:
+        origins = doc.get("selection", {}).get("origins", [])
+        if not any(origin.get("kind") == "dynamic" for origin in origins):
+            continue
+        catalog_id = catalog_id_for_document(catalog, doc)
+        if catalog_id is None:
+            continue
+        group_id = query_catalog.load_type(catalog_id).get("compact_group")
+        merged = merged_by_group.get(group_id) if group_id else None
+        if merged is None:
+            continue
+        sections = [item for item in merged["compact_members"] if isinstance(item, dict)]
+        if len([item for item in sections if item["id"] == catalog_id]) >= query_catalog.COMPACT_DYNAMIC_CAP:
+            continue
+        merged["compact_members"].append({
+            "id": catalog_id,
+            "slug": section_slug(doc["path"]),
+            "title": doc.get("title") or section_slug(doc["path"]),
+        })
+        merged["requires"] = sorted(set(merged.get("requires", [])) | set(doc.get("requires", [])))
+        folded.add(doc["id"])
+    return [], folded
+
+
 def cmd_reconcile(args: argparse.Namespace) -> int:
     """Apply the revise question pack answers to an existing manifest.
 
@@ -782,6 +946,14 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         return fail(str(exc), 2)
     selected = selected_static_documents(catalog, args.repo, new_tier, profiles, layout=new_layout)
     selected_ids = {doc["id"] for doc in selected}
+    relaid_out, folded_away = relayout_dynamic_documents(
+        catalog,
+        manifest["documents"],
+        selected,
+        current_scale.get("layout", "standard"),
+        new_layout,
+        profiles["audiences"],
+    )
     kept: list[dict] = []
     removed: list[str] = []
     retire: list[str] = []
@@ -789,6 +961,17 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     for doc in manifest["documents"]:
         origins = doc.get("selection", {}).get("origins", [])
         is_dynamic = any(origin.get("kind") == "dynamic" for origin in origins)
+        if doc["id"] in folded_away:
+            # Its subject now lives as a `##` in the merged file. A written
+            # file still has prose to migrate, so it retires rather than
+            # vanishing; a planned one just drops out of the plan.
+            if doc.get("status") in WRITTEN:
+                retire.append(doc["id"])
+                kept.append(doc)
+                kept_ids.add(doc["id"])
+            else:
+                removed.append(doc["id"])
+            continue
         if doc["id"] in selected_ids:
             if doc.get("status") == "retired":
                 doc["status"] = "planned"
@@ -805,6 +988,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         else:
             removed.append(doc["id"])
     added = [doc for doc in selected if doc["id"] not in kept_ids]
+    added += [doc for doc in relaid_out if doc["id"] not in kept_ids]
     contract_updated = sync_contract_revisions(catalog, kept)
     presentation_updated = sync_presentations(catalog, kept, profiles["audiences"])
     old_tier = manifest["project"]["tier"]
@@ -1285,6 +1469,24 @@ def cmd_preview(args: argparse.Namespace) -> int:
     attribution.sort(key=lambda item: (-item["documents"], item["dimension"], item["value"]))
     report["attribution"] = attribution
 
+    # Compact trades files for sections, so a file count alone hides how dense
+    # the result is. Report the densest merged files, and name any group that
+    # spilled past the section cap — a spilled group keeps standard-layout
+    # children, which is the one case where compact stops being bounded.
+    if layout == "compact":
+        merged = [
+            doc for doc in selected_static_documents(catalog, args.repo, args.tier, profiles, layout="compact")
+            if doc.get("compact_members")
+        ]
+        report["sections"] = sorted(
+            ({"path": doc["path"], "sections": len(doc["compact_members"])} for doc in merged),
+            key=lambda item: (-item["sections"], item["path"]),
+        )
+        report["spilled"] = sorted(
+            item["path"] for item in report["sections"]
+            if item["sections"] >= query_catalog.COMPACT_SECTION_CAP
+        )
+
     if args.json:
         print(dump_json(report), end="")
         return 0
@@ -1301,6 +1503,13 @@ def cmd_preview(args: argparse.Namespace) -> int:
         for item in attribution:
             share = f" — {round(100 * item['documents'] / baseline)}% of the tree" if baseline and item["documents"] else ""
             print(f"    {item['dimension'][:-1]}={item['value']}: {item['documents']}{share}")
+    for item in report.get("sections", [])[:3]:
+        print(f"  densest: {item['path']} — {item['sections']} sections")
+    for path in report.get("spilled", []):
+        print(
+            f"  spilled: {path} reached the {query_catalog.COMPACT_SECTION_CAP}-section "
+            "cap; the overflow keeps its own standard paths"
+        )
     print("  (read-only: nothing was written)")
     return 0
 

@@ -77,27 +77,46 @@ later.
 
 ## Compact demotion
 
-Compact layout demotes a *sparse group* in the mirror direction, governed by
-the same **One owner per fact** table and the same **Depth brake**: several
-documents sharing one catalog `compact_group` become `##` sections of one
-merged file at the group's `compact_target`, ordered by `compact_order`.
-Demote only when the group's indexes have no dynamic children to route to —
-the merged file *is* the section; there is no child map to rebuild. Every
-member keeps owning its facts; the merged file presents them as named
-sections with per-section provenance, never as a merged narrative. One fact
-still has one owner — a compact section is a member document hosted in a
-shared file, not a rewrite. Reversing the demotion (compact → standard) is
-atomic promotion run backwards: scaffold the component files, migrate each
-section's prose to its component, retire the merged file — no content lost
-in either direction (see `revision.md`).
+Compact layout demotes a group in the mirror direction, governed by the same
+**One owner per fact** table and the same **Depth brake**: several documents
+sharing one catalog `compact_group` become `##` sections of one merged file at
+the group's `compact_target`, ordered by `compact_order`. Every member keeps
+owning its facts; the merged file presents them as named sections with
+per-section provenance, never as a merged narrative. One fact still has one
+owner — a compact section is a member document hosted in a shared file, not a
+rewrite. Reversing the demotion (compact → standard) is atomic promotion run
+backwards: scaffold the component files, migrate each section's prose to its
+component, retire the merged file — no content lost in either direction (see
+`revision.md`).
+
+A group with dynamic children demotes too, and its index becomes the merged
+file's candidate matrix rather than a child map: `docs/flows.md` carries the
+complete flow matrix plus a section per folded flow. The matrix is the
+coverage statement, so every discovered instance keeps a row whether or not it
+earned a section.
 
 A group's membership grows with tier — the same `compact_group` can list a
 Spine-only core plus Diligence-only additions, and a project's manifest folds
-whichever subset its selected tier actually applies. A merged file hosts at
-most **8** member sections; catalog validation enforces this depth brake.
-Beyond it, the group is too broad for one file even in compact layout —
-authoring a second group with its own `compact_target` is the fix, not
-raising the cap.
+whichever subset its selected tier actually applies.
+
+### Depth brakes
+
+Three caps bound a merged file. They differ in what they measure and where
+they are enforced, because only the first is knowable from the catalog alone:
+
+| Cap | Value | Bounds | Enforced by |
+|---|---|---|---|
+| `COMPACT_CORE_CAP` | 8 | Tier-driven members a group may *declare* — no selector, no condition | `query_catalog --validate` |
+| `COMPACT_SECTION_CAP` | 14 | Sections a project actually *materializes*, profile-driven members included | `manage_manifest` when it folds |
+| `COMPACT_DYNAMIC_CAP` | 6 | Sections one dynamic type gets in one file | `manage_manifest add --type <t>` |
+
+Past `COMPACT_CORE_CAP` the group is too broad for one file even in compact
+layout — authoring a second group with its own `compact_target` is the fix,
+not raising the cap. Past `COMPACT_SECTION_CAP` the group spills: the overflow
+keeps its own standard paths, linked from the merged file. Past
+`COMPACT_DYNAMIC_CAP` the instance stays a row in the file's candidate matrix,
+named and evidenced but not expanded. See
+[`docs-tree.md`](docs-tree.md) "Compact layout".
 
 ## Durability
 

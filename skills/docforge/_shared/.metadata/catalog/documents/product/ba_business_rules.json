@@ -25,5 +25,7 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "contract_revision": "2.17.0",
-  "template_file": "content/product/templates/business-rules.md"
+  "template_file": "content/product/templates/business-rules.md",
+  "compact_group": "ba_compact",
+  "compact_order": 13
 }

@@ -23,6 +23,7 @@ from runtime.common.python.provenance_frontmatter import (
     scaffold_provenance as build_provenance,
 )
 from runtime.common.python import provenance_store as store
+from runtime.catalog.python import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 PLACEHOLDER = re.compile(r"\{\{[^}]+\}\}|TODO\([^)]*\)")
@@ -363,48 +364,65 @@ def provenance_defects(repo: Path, doc: dict, state: str, provenance: dict | Non
     return result
 
 
-def coverage_scope(doc: dict) -> tuple[PurePosixPath, PurePosixPath]:
-    """`(children_folder, link_base)` for a routing document.
+def coverage_scope(doc: dict) -> tuple[list[PurePosixPath], PurePosixPath]:
+    """`(children_folders, link_base)` for a routing document.
 
     For an index the two coincide: `docs/reference/README.md` owns
     `docs/reference` and its links also resolve from there. For a merged
     compact file they diverge — `docs/reference.md` stands in for the index of
     `docs/reference`, so it owns that folder's children, but its own links
     resolve from `docs`. Using `.parent` for both is what silently exempted
-    every merged file from this check."""
+    every merged file from this check.
+
+    A merged file can stand in for more than one folder, and for folders its
+    own path does not name: `docs/decisions.md` folds
+    `docs/architecture/decisions/`, and `docs/operations.md` folds both
+    `docs/operations/` and `docs/operations/runbooks/`. Take the folders from
+    the members the file actually merged, not from its own path."""
     path = PurePosixPath(doc["path"])
-    if doc["type"] == COMPACT_TYPE:
-        return path.with_suffix(""), path.parent
-    return path.parent, path.parent
+    if doc["type"] != COMPACT_TYPE:
+        return [path.parent], path.parent
+    folders = {
+        PurePosixPath(query_catalog.load_type(query_catalog.member_type_id(member))["path"]).parent
+        for member in doc.get("compact_members", [])
+    }
+    folders.add(path.with_suffix(""))
+    return sorted(folders), path.parent
 
 
 def readme_child_coverage(repo: Path, doc: dict, manifest: dict, text: str) -> list[str]:
     """Every materialized direct child of a section index must be linked.
 
-    Merged compact files carry the same duty. Profile- and audience-driven
-    documents never fold, so a folded folder routinely keeps static children —
-    `docs/reference.md` merges the reference index away while
-    `docs/reference/api.md` stays a separate file with no README above it. If
-    the merged file does not link it, nothing does."""
+    Merged compact files carry the same duty. A group that spilled past the
+    compact section cap keeps children at their own standard paths with no
+    README above them — if the merged file does not link them, nothing does."""
     if doc["type"] not in INDEX_TYPES and doc["type"] != COMPACT_TYPE:
         return []
-    children_folder, link_base = coverage_scope(doc)
+    children_folders, link_base = coverage_scope(doc)
     missing = []
     for candidate in active_documents(manifest):
         if candidate["id"] == doc["id"]:
             continue
-        try:
-            relative = PurePosixPath(candidate["path"]).relative_to(children_folder)
-        except ValueError:
-            continue
-        if not (len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md")):
+        candidate_path = PurePosixPath(candidate["path"])
+        if not any(is_direct_child(folder, candidate_path) for folder in children_folders):
             continue
         if not (repo / candidate["path"]).is_file():
             continue
-        rel = PurePosixPath(candidate["path"]).relative_to(link_base).as_posix()
+        try:
+            rel = candidate_path.relative_to(link_base).as_posix()
+        except ValueError:
+            rel = candidate_path.as_posix()
         if rel not in text and f"./{rel}" not in text:
             missing.append(candidate["path"])
-    return missing
+    return sorted(set(missing))
+
+
+def is_direct_child(folder: PurePosixPath, candidate: PurePosixPath) -> bool:
+    try:
+        relative = candidate.relative_to(folder)
+    except ValueError:
+        return False
+    return len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md")
 
 
 def audit(repo: Path, manifest: dict) -> int:

@@ -21,6 +21,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 - `architecture_constraints` — Hard bounds with source and design implication; deliberate non-goals → [index.json](index.json)
 - `dependencies` — Direct dependencies/integrations, purpose, criticality, failure behavior → [index.json](index.json)
 - `tech_debt` — Shortcut, consequence, evidence, remediation direction → [index.json](index.json)
+- `concepts_compact` — Compact concepts section: the concept register plus one section per discovered domain concept → [index.json](index.json)
 - `concepts_index` — Section overview for architecture concepts: what concepts are, scope, and the reader question each concept answers → [index.json](index.json)
 - `app_lifecycle` — Launch/activation/background/termination states, ownership, restoration, failure boundaries → [index.json](index.json)
 - `concept` — One durable concept, responsibility, relationships, invariants, failure boundaries → [index.json](index.json)

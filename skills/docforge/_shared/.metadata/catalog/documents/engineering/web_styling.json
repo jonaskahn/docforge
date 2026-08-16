@@ -25,5 +25,7 @@
   "write_order": 56,
   "provenance_mode": "sections",
   "audit_profile": "standard",
-  "template_file": "content/engineering/templates/styling.md"
+  "template_file": "content/engineering/templates/styling.md",
+  "compact_group": "engineering_compact",
+  "compact_order": 13
 }

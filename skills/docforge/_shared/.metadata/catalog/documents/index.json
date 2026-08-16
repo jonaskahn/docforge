@@ -1,5 +1,5 @@
 {
-  "version": "2.18.0",
+  "version": "2.19.0",
   "source": "../index.json",
   "groups": [
     {
@@ -28,18 +28,23 @@
       "id": "product",
       "kind": "folder",
       "index": "product/index.json",
-      "count": 19
+      "count": 21
     },
     {
       "id": "architecture",
       "kind": "folder",
       "index": "architecture/index.json",
-      "count": 32
+      "count": 33
     },
     {
       "id": "flows",
       "kind": "flat",
       "records": [
+        {
+          "id": "flows_compact",
+          "path": "flows_compact.json",
+          "summary": "Compact flows section: the complete candidate matrix plus one deep-dive section per main-priority flow"
+        },
         {
           "id": "flows_index",
           "path": "flows_index.json",
@@ -51,7 +56,7 @@
           "summary": "Trigger, actors, ordered steps, branches, rules, failures, outcome"
         }
       ],
-      "count": 2
+      "count": 3
     },
     {
       "id": "engineering",
@@ -109,6 +114,11 @@
       "kind": "flat",
       "records": [
         {
+          "id": "decisions_compact",
+          "path": "decisions_compact.json",
+          "summary": "Compact decisions section: the decision register plus one section per recorded architectural decision"
+        },
+        {
           "id": "decisions_index",
           "path": "decisions_index.json",
           "summary": "What decision records are, the status lifecycle, and the reader question each record answers"
@@ -119,7 +129,7 @@
           "summary": "Indexed decisions; for each ADR context, decision, alternatives, consequences, status"
         }
       ],
-      "count": 2
+      "count": 3
     },
     {
       "id": "portfolio",

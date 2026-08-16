@@ -23,5 +23,7 @@
   "write_order": 50,
   "provenance_mode": "sections",
   "audit_profile": "standard",
-  "template_file": "content/product/templates/release-notes.md"
+  "template_file": "content/product/templates/release-notes.md",
+  "compact_group": "po_compact",
+  "compact_order": 14
 }

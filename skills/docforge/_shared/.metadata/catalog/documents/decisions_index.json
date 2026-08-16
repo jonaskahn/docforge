@@ -22,5 +22,7 @@
   "audit_profile": "router",
   "template_file": "content/shared/decision-index.template.md",
   "contract_revision": "2.17.0",
-  "title": "Decision log"
+  "title": "Decision log",
+  "compact_group": "decisions_compact",
+  "compact_order": 51
 }

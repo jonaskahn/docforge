@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.18.0",
+  "version": "2.19.0",
   "category": "product",
   "purpose": "Product surface: overview, quickstart, and audience-specific product views.",
   "source": "../../index.json",
@@ -51,6 +51,11 @@
       "summary": "Supported behavior, resources/semantics, fallback, verification, known limits"
     },
     {
+      "id": "ba_compact",
+      "path": "ba_compact.json",
+      "summary": "Compact business-analyst section: process flows, business rules, and requirements traceability in one file"
+    },
+    {
       "id": "ba_index",
       "path": "ba_index.json",
       "summary": "Business Analyst documentation overview: what this view covers and the reader question each BA document answers"
@@ -74,6 +79,11 @@
       "id": "ba_requirements",
       "path": "ba_requirements.json",
       "summary": "Requirement evidence, owning rule/flow, implementation, test, status"
+    },
+    {
+      "id": "po_compact",
+      "path": "po_compact.json",
+      "summary": "Compact product-owner section: feature catalog, success metrics, release notes, and backlog traceability in one file"
     },
     {
       "id": "po_index",

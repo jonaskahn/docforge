@@ -24,5 +24,7 @@
   "write_order": 74,
   "provenance_mode": "sections",
   "audit_profile": "operations",
-  "template_file": "content/operations/templates/disaster-recovery.md"
+  "template_file": "content/operations/templates/disaster-recovery.md",
+  "compact_group": "operations_compact",
+  "compact_order": 14
 }

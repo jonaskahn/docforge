@@ -22,7 +22,7 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "template_file": "content/compact/templates/contributing.template.md",
-  "contract_revision": "2.18.0",
+  "contract_revision": "2.19.0",
   "compact_target": "docs/contributing.md",
   "compact_members": [
     "contributing_index",

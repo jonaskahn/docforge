@@ -1,0 +1,31 @@
+{
+  "id": "decisions_compact",
+  "type": "compact-doc",
+  "title": "Decisions",
+  "summary": "Compact decisions section: the decision register plus one section per recorded architectural decision",
+  "contract_file": "content/compact/contracts/decisions.md",
+  "path": "docs/decisions.md",
+  "group": "records",
+  "selection": {
+    "mode": "compact",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/compact/instructions/decisions.md",
+  "requires": [
+    "git_history"
+  ],
+  "target_depth": "orientation",
+  "write_order": 80,
+  "nav_order": 90,
+  "provenance_mode": "sections",
+  "audit_profile": "decision",
+  "template_file": "content/compact/templates/decisions.template.md",
+  "contract_revision": "2.19.0",
+  "compact_target": "docs/decisions.md",
+  "compact_members": [
+    "decisions_index",
+    "adr"
+  ]
+}

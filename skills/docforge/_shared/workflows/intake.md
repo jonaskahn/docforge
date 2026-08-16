@@ -203,10 +203,13 @@ wait for the user's explicit confirmation before reconciling the manifest.
 
    Present a native single-select with both layouts, each carrying the
    detected evidence from the discovery brief's scale line:
-   - **Compact** — fewer, denser files; the same subjects as Standard at the
-     same depth (`docs/product.md` instead of `docs/product/README.md` +
-     overview, and so on). Covers Spine and Diligence only.
-   - **Standard** — one file per subject. The only layout Portfolio supports.
+   - **Compact** — fewer, denser files; the same subjects as Standard
+     (`docs/product.md` instead of `docs/product/README.md` + overview, and so
+     on). Covers Spine and Diligence only. The file count depends on layout and
+     tier alone: roughly 8 files at Spine and 15 at Diligence, and confirming a
+     shape or discovering more flows adds sections rather than files.
+   - **Standard** — one file per subject; the tree grows with every confirmed
+     profile and every discovered flow. The only layout Portfolio supports.
 
    **Compact excludes Portfolio.** When nested repos were detected — that is,
    when the discovery brief's Portfolio-readiness bullet is present — say so in
@@ -420,6 +423,19 @@ exists because the dimensions are not equally expensive — a platform, a
 framework, or most concerns often add zero documents and only shift narrative
 emphasis, while one audience can carry a third of the tree — and the user
 cannot see that from the question pack alone.
+
+When the confirmed layout is `compact`, add `preview`'s density line for the
+three densest merged files, because a file count alone hides how much each
+file carries:
+
+`Densest: docs/reference.md — 8 sections; docs/agents.md — 7; docs/architecture.md — 6.`
+
+Report every group `preview` marks as **spilled**. A spilled group reached
+`COMPACT_SECTION_CAP` and keeps its overflow at standard paths, so it is the
+one case where compact stops being bounded — the user should hear it before
+confirming, not discover it in the tree:
+
+`docs/architecture.md reached the 14-section cap; the overflow keeps its own standard paths.`
 
 After resolving the answers, display one confirmation summary containing the
 action, the confirmed layout, tier, every selected profile dimension, and

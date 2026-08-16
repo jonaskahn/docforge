@@ -26,5 +26,7 @@
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "erDiagram",
-  "template_file": "content/architecture/templates/persistence.md"
+  "template_file": "content/architecture/templates/persistence.md",
+  "compact_group": "architecture_compact",
+  "compact_order": 25
 }

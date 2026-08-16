@@ -25,5 +25,7 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "erDiagram",
-  "template_file": "content/engineering/templates/data-quality.md"
+  "template_file": "content/engineering/templates/data-quality.md",
+  "compact_group": "engineering_compact",
+  "compact_order": 11
 }

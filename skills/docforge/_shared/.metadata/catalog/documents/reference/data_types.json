@@ -25,5 +25,7 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "erDiagram",
-  "template_file": "content/reference/templates/data-types.md"
+  "template_file": "content/reference/templates/data-types.md",
+  "compact_group": "reference_compact",
+  "compact_order": 18
 }

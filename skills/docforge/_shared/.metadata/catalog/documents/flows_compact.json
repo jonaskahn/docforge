@@ -1,0 +1,32 @@
+{
+  "id": "flows_compact",
+  "type": "compact-doc",
+  "title": "Flows",
+  "summary": "Compact flows section: the complete candidate matrix plus one deep-dive section per main-priority flow",
+  "contract_file": "content/compact/contracts/flows.md",
+  "path": "docs/flows.md",
+  "group": "flows",
+  "selection": {
+    "mode": "compact",
+    "min_tier": "spine",
+    "selectors": {},
+    "condition": null
+  },
+  "instruction_file": "content/compact/instructions/flows.md",
+  "requires": [
+    "code_graph",
+    "flow_graph"
+  ],
+  "target_depth": "orientation",
+  "write_order": 21,
+  "nav_order": 30,
+  "provenance_mode": "sections",
+  "audit_profile": "flow",
+  "template_file": "content/compact/templates/flows.template.md",
+  "contract_revision": "2.19.0",
+  "compact_target": "docs/flows.md",
+  "compact_members": [
+    "flows_index",
+    "flow"
+  ]
+}

@@ -13,9 +13,20 @@ from runtime.common.python._util import dump_json, fail
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 CATALOG_DIR = SKILL_ROOT / ".metadata" / "catalog"
-# Depth brake for a compact merge: beyond this, prefer authoring the group as
-# fewer, denser sections elsewhere rather than one file with too many.
-COMPACT_MEMBER_CAP = 8
+# Depth brakes for a compact merge. The *core* cap is an authoring rule the
+# catalog can check: a group may declare at most this many tier-driven members
+# (no selectors, no condition). Beyond it the group is too broad for one file
+# and the fix is a second group with its own `compact_target`, not a bigger cap.
+COMPACT_CORE_CAP = 8
+# The *section* cap bounds the file a project actually materializes. Profile-
+# and audience-driven members are evidence-gated, so how many a group carries
+# is not knowable from the catalog; `manage_manifest.fold_compact_groups`
+# enforces this one at plan time and spills the overflow to standard paths.
+COMPACT_SECTION_CAP = 14
+# Instances of a dynamic collection (flows, decisions, concepts, runbooks) that
+# get a full `##` section in the merged file. The rest stay rows in the file's
+# candidate matrix — the same main/deferred split the flow index already uses.
+COMPACT_DYNAMIC_CAP = 6
 INDEX_PATH = CATALOG_DIR / "index.json"
 TYPES_DIR = CATALOG_DIR / "types"
 PROFILES_DIR = CATALOG_DIR / "profiles"
@@ -56,7 +67,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.18.0"
+CATALOG_VERSION = "2.19.0"
 PRESENTATION_VALUES = {
     "code": {"contract-only", "task-focused"},
     "related_docs": {"none", "compact", "traceability"},
@@ -264,9 +275,28 @@ def resolve_presentation(detail: dict, audiences: list[str] | None = None) -> tu
     return primary, presentation, origins
 
 
-def manifest_compact_members(repo: Path | None, doc_id: str) -> list[str] | None:
+def is_core_member(detail: dict) -> bool:
+    """True when a catalog record is a *core* compact member: selected by tier
+    alone, with no profile selector and no evidence condition. Only core
+    members count against `COMPACT_CORE_CAP`, because only they are knowable
+    from the catalog — everything else depends on the project's confirmed
+    profiles and discovered evidence."""
+    rule = detail.get("selection", {})
+    return not any((rule.get("selectors") or {}).values()) and not rule.get("condition")
+
+
+def member_type_id(member) -> str:
+    """The catalog id behind a `compact_members` entry. A static member is the
+    id itself; a folded dynamic instance is `{id, slug, title}`, where `id` is
+    the dynamic *type* whose contract and template the section is written
+    from."""
+    return member["id"] if isinstance(member, dict) else member
+
+
+def manifest_compact_members(repo: Path | None, doc_id: str) -> list | None:
     """The manifest's own folded `compact_members` for `doc_id`, or None when
-    no manifest is available or the entry has none.
+    no manifest is available or the entry has none. Entries are catalog id
+    strings, or `{id, slug, title}` objects for folded dynamic instances.
 
     A compact group spanning tiers (e.g. `architecture_compact` at Spine and
     Diligence) declares its *full* member roster in the catalog, but only a
@@ -302,11 +332,13 @@ def composed_compact_contract(detail: dict, repo: Path | None = None) -> tuple[s
     header = detail.get("contract_file")
     if header and (SKILL_ROOT / header).is_file():
         parts.append((SKILL_ROOT / header).read_text(encoding="utf-8").rstrip())
-    member_ids = manifest_compact_members(repo, detail.get("id")) or detail.get("compact_members", [])
-    for order, member_id in enumerate(member_ids, start=1):
+    entries = manifest_compact_members(repo, detail.get("id")) or detail.get("compact_members", [])
+    seen_members: set[str] = set()
+    for order, entry in enumerate(entries, start=1):
+        member_id = member_type_id(entry)
         member = load_type(member_id)
         member_contract = member.get("contract_file")
-        members.append({
+        row = {
             "id": member_id,
             "order": order,
             "contract": member_contract,
@@ -315,8 +347,17 @@ def composed_compact_contract(detail: dict, repo: Path | None = None) -> tuple[s
             "target_depth": member.get("target_depth"),
             "model_depth": member.get("model_depth", {}),
             "dominant_form": member.get("dominant_form"),
-        })
-        if member_contract and (SKILL_ROOT / member_contract).is_file():
+        }
+        if isinstance(entry, dict):
+            row["slug"] = entry.get("slug")
+            row["title"] = entry.get("title")
+        members.append(row)
+        # Every folded instance of one dynamic type is the same member id, so
+        # emit that type's contract once rather than once per section. Distinct
+        # static members that happen to share an aliased contract file still
+        # each get their own `## <member id>` block.
+        if member_contract and member_id not in seen_members and (SKILL_ROOT / member_contract).is_file():
+            seen_members.add(member_id)
             text = (SKILL_ROOT / member_contract).read_text(encoding="utf-8").rstrip()
             parts.append(f"## {member_id}\n\n{text}")
     return "\n\n".join(parts), members
@@ -705,10 +746,14 @@ def validate() -> list[str]:
                 errors.append(f"{doc_id}: member {member_id} does not declare compact_group {doc_id}")
             if doc.get("selection", {}).get("mode") != "compact":
                 errors.append(f"{doc_id}: compact_members belongs on a compact document")
-        if len(doc.get("compact_members", [])) > COMPACT_MEMBER_CAP:
+        core = [
+            member_id for member_id in doc.get("compact_members", [])
+            if member_id in index_ids and is_core_member(load_type(member_id))
+        ]
+        if len(core) > COMPACT_CORE_CAP:
             errors.append(
-                f"{doc_id}: {len(doc['compact_members'])} compact_members exceeds the "
-                f"{COMPACT_MEMBER_CAP}-member depth brake (document-composition.md)"
+                f"{doc_id}: {len(core)} core compact_members exceeds the "
+                f"{COMPACT_CORE_CAP}-member depth brake (document-composition.md)"
             )
 
     # §0.10: infrastructure-platform must carry widened signals + aliases

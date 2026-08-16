@@ -1,0 +1,36 @@
+{
+  "id": "po_compact",
+  "type": "compact-doc",
+  "title": "Product-owner views",
+  "summary": "Compact product-owner section: feature catalog, success metrics, release notes, and backlog traceability in one file",
+  "contract_file": "content/compact/contracts/product-owner.md",
+  "path": "docs/product-owner.md",
+  "group": "product",
+  "selection": {
+    "mode": "compact",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "product-owners"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/compact/instructions/product-owner.md",
+  "requires": [],
+  "target_depth": "orientation",
+  "write_order": 47,
+  "nav_order": 16,
+  "provenance_mode": "sections",
+  "audit_profile": "standard",
+  "template_file": "content/compact/templates/product-owner.template.md",
+  "contract_revision": "2.19.0",
+  "compact_target": "docs/product-owner.md",
+  "compact_members": [
+    "po_index",
+    "po_features",
+    "po_metrics",
+    "po_release_notes",
+    "backlog_traceability"
+  ]
+}

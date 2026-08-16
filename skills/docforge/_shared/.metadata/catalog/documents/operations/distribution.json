@@ -28,5 +28,7 @@
   "write_order": 71,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
-  "template_file": "content/operations/templates/application-distribution.md"
+  "template_file": "content/operations/templates/application-distribution.md",
+  "compact_group": "operations_compact",
+  "compact_order": 11
 }

@@ -9,6 +9,7 @@ const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { planEntries } = require("../../common/js/plan.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
+const queryCatalog = require("../../catalog/js/query_catalog.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const PLACEHOLDER = /\{\{[^}]+\}\}|TODO\([^)]*\)/g;
 const TOKEN = /<[A-Z][A-Z0-9_]{2,}>/g;
@@ -301,7 +302,7 @@ function provenanceDefects(repo, doc, state, provenance, body, tier) {
 function headingAnchor(value) {
   return value.trim().toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, "").replace(/[\s-]+/g, "-").replace(/^-|-$/g, "");
 }
-// `[childrenFolder, linkBase]` for a routing document.
+// `[childrenFolders, linkBase]` for a routing document.
 //
 // For an index the two coincide: `docs/reference/README.md` owns
 // `docs/reference` and its links also resolve from there. For a merged compact
@@ -309,33 +310,41 @@ function headingAnchor(value) {
 // `docs/reference`, so it owns that folder's children, but its own links
 // resolve from `docs`. Using the parent for both is what silently exempted
 // every merged file from this check.
+//
+// A merged file can stand in for more than one folder, and for folders its own
+// path does not name: `docs/decisions.md` folds `docs/architecture/decisions/`,
+// and `docs/operations.md` folds both `docs/operations/` and
+// `docs/operations/runbooks/`. Take the folders from the members the file
+// actually merged, not from its own path.
 function coverageScope(doc) {
   const parent = posixDirname(doc.path);
-  if (doc.type === COMPACT_TYPE) return [doc.path.replace(/\.[^./]+$/, ""), parent];
-  return [parent, parent];
+  if (doc.type !== COMPACT_TYPE) return [[parent], parent];
+  const folders = new Set(
+    (doc.compact_members || []).map(
+      (member) => posixDirname(queryCatalog.loadType(queryCatalog.memberTypeId(member)).path),
+    ),
+  );
+  folders.add(doc.path.replace(/\.[^./]+$/, ""));
+  return [[...folders].sort(), parent];
 }
 // Every materialized direct child of a section index must be linked.
 //
-// Merged compact files carry the same duty. Profile- and audience-driven
-// documents never fold, so a folded folder routinely keeps static children —
-// `docs/reference.md` merges the reference index away while
-// `docs/reference/api.md` stays a separate file with no README above it. If the
-// merged file does not link it, nothing does.
+// Merged compact files carry the same duty. A group that spilled past the
+// compact section cap keeps children at their own standard paths with no README
+// above them — if the merged file does not link them, nothing does.
 function readmeChildCoverage(repo, doc, manifest, text) {
   if (!INDEX_TYPES.has(doc.type) && doc.type !== COMPACT_TYPE) return [];
-  const [childrenFolder, linkBase] = coverageScope(doc);
-  const missing = [];
+  const [childrenFolders, linkBase] = coverageScope(doc);
+  const missing = new Set();
   for (const candidate of activeDocuments(manifest)) {
     if (candidate.id === doc.id) continue;
-    const relative = path.posix.relative(childrenFolder, candidate.path);
-    const parts = relative.split("/");
-    if (relative.startsWith("..")) continue;
-    if (!(parts.length === 1 || (parts.length === 2 && parts[1] === "README.md"))) continue;
+    if (!childrenFolders.some((folder) => isDirectChild(folder, candidate))) continue;
     if (!fs.existsSync(path.join(repo, ...candidate.path.split("/")))) continue;
-    const link = path.posix.relative(linkBase, candidate.path);
-    if (!text.includes(link) && !text.includes(`./${link}`)) missing.push(candidate.path);
+    const relative = path.posix.relative(linkBase, candidate.path);
+    const link = relative.startsWith("..") ? candidate.path : relative;
+    if (!text.includes(link) && !text.includes(`./${link}`)) missing.add(candidate.path);
   }
-  return missing;
+  return [...missing].sort();
 }
 function audit(repo, manifest) {
   const findings = {

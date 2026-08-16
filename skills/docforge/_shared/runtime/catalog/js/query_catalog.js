@@ -8,9 +8,20 @@ const { dumpJson, fail } = require("../../common/js/_util.js");
 
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const CATALOG_DIR = path.join(SKILL_ROOT, ".metadata", "catalog");
-// Depth brake for a compact merge: beyond this, prefer authoring the group as
-// fewer, denser sections elsewhere rather than one file with too many.
-const COMPACT_MEMBER_CAP = 8;
+// Depth brakes for a compact merge. The *core* cap is an authoring rule the
+// catalog can check: a group may declare at most this many tier-driven members
+// (no selectors, no condition). Beyond it the group is too broad for one file
+// and the fix is a second group with its own `compact_target`, not a bigger cap.
+const COMPACT_CORE_CAP = 8;
+// The *section* cap bounds the file a project actually materializes. Profile-
+// and audience-driven members are evidence-gated, so how many a group carries
+// is not knowable from the catalog; foldCompactGroups enforces this one at
+// plan time and spills the overflow to standard paths.
+const COMPACT_SECTION_CAP = 14;
+// Instances of a dynamic collection (flows, decisions, concepts, runbooks) that
+// get a full `##` section in the merged file. The rest stay rows in the file's
+// candidate matrix — the same main/deferred split the flow index already uses.
+const COMPACT_DYNAMIC_CAP = 6;
 const INDEX_PATH = path.join(CATALOG_DIR, "index.json");
 const TYPES_DIR = path.join(CATALOG_DIR, "types");
 const PROFILES_DIR = path.join(CATALOG_DIR, "profiles");
@@ -52,7 +63,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.18.0";
+const CATALOG_VERSION = "2.19.0";
 const PRESENTATION_VALUES = {
   code: new Set(["contract-only", "task-focused"]),
   related_docs: new Set(["none", "compact", "traceability"]),
@@ -214,8 +225,28 @@ function resolvePresentation(detail, audiences = []) {
   return [primary, presentation, origins];
 }
 
+// True when a catalog record is a *core* compact member: selected by tier
+// alone, with no profile selector and no evidence condition. Only core members
+// count against COMPACT_CORE_CAP, because only they are knowable from the
+// catalog — everything else depends on the project's confirmed profiles and
+// discovered evidence.
+function isCoreMember(detail) {
+  const rule = detail.selection || {};
+  const selectors = rule.selectors || {};
+  const hasSelector = Object.values(selectors).some((values) => (values || []).length > 0);
+  return !hasSelector && !rule.condition;
+}
+
+// The catalog id behind a `compact_members` entry. A static member is the id
+// itself; a folded dynamic instance is `{id, slug, title}`, where `id` is the
+// dynamic *type* whose contract and template the section is written from.
+function memberTypeId(member) {
+  return member && typeof member === "object" ? member.id : member;
+}
+
 // The manifest's own folded `compact_members` for docId, or null when no
-// manifest is available or the entry has none.
+// manifest is available or the entry has none. Entries are catalog id strings,
+// or `{id, slug, title}` objects for folded dynamic instances.
 //
 // A compact group spanning tiers (e.g. `architecture_compact` at Spine and
 // Diligence) declares its *full* member roster in the catalog, but only a
@@ -255,12 +286,14 @@ function composedCompactContract(detail, repo = null) {
     parts.push(fs.readFileSync(path.join(SKILL_ROOT, header), "utf8").trimEnd());
   }
   let order = 0;
-  const memberIds = manifestCompactMembers(repo, detail.id) || detail.compact_members || [];
-  for (const memberId of memberIds) {
+  const entries = manifestCompactMembers(repo, detail.id) || detail.compact_members || [];
+  const seenMembers = new Set();
+  for (const entry of entries) {
     order += 1;
+    const memberId = memberTypeId(entry);
     const member = loadType(memberId);
     const memberContract = member.contract_file;
-    members.push({
+    const row = {
       id: memberId,
       order,
       contract: memberContract,
@@ -269,8 +302,18 @@ function composedCompactContract(detail, repo = null) {
       target_depth: member.target_depth === undefined ? null : member.target_depth,
       model_depth: member.model_depth || {},
       dominant_form: member.dominant_form === undefined ? null : member.dominant_form,
-    });
-    if (memberContract && fs.existsSync(path.join(SKILL_ROOT, memberContract))) {
+    };
+    if (entry && typeof entry === "object") {
+      row.slug = entry.slug === undefined ? null : entry.slug;
+      row.title = entry.title === undefined ? null : entry.title;
+    }
+    members.push(row);
+    // Every folded instance of one dynamic type is the same member id, so emit
+    // that type's contract once rather than once per section. Distinct static
+    // members that happen to share an aliased contract file still each get
+    // their own `## <member id>` block.
+    if (memberContract && !seenMembers.has(memberId) && fs.existsSync(path.join(SKILL_ROOT, memberContract))) {
+      seenMembers.add(memberId);
       const text = fs.readFileSync(path.join(SKILL_ROOT, memberContract), "utf8").trimEnd();
       parts.push(`## ${memberId}\n\n${text}`);
     }
@@ -706,10 +749,13 @@ function validate() {
         errors.push(`${docId}: compact_members belongs on a compact document`);
       }
     }
-    if ((doc.compact_members || []).length > COMPACT_MEMBER_CAP) {
+    const core = (doc.compact_members || []).filter(
+      (memberId) => indexIds.includes(memberId) && isCoreMember(loadType(memberId)),
+    );
+    if (core.length > COMPACT_CORE_CAP) {
       errors.push(
-        `${docId}: ${doc.compact_members.length} compact_members exceeds the `
-        + `${COMPACT_MEMBER_CAP}-member depth brake (document-composition.md)`,
+        `${docId}: ${core.length} core compact_members exceeds the `
+        + `${COMPACT_CORE_CAP}-member depth brake (document-composition.md)`,
       );
     }
   }
@@ -896,6 +942,11 @@ module.exports = {
   validate,
   main,
   CATALOG_VERSION,
+  COMPACT_CORE_CAP,
+  COMPACT_SECTION_CAP,
+  COMPACT_DYNAMIC_CAP,
+  isCoreMember,
+  memberTypeId,
   PRESENTATION_VALUES,
   GROUP_SUMMARIES,
   ALLOWED_DOMINANT_FORMS,

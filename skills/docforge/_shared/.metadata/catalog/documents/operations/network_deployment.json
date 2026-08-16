@@ -25,5 +25,7 @@
   "write_order": 72,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
-  "template_file": "content/operations/templates/network-deployment.md"
+  "template_file": "content/operations/templates/network-deployment.md",
+  "compact_group": "operations_compact",
+  "compact_order": 16
 }

@@ -45,9 +45,14 @@ missing child into a disabled link, a future-work note, or a prose substitute.
 materialized. From `docs/README.md` that means `product.md#overview`, not
 `product/overview.md`; the manifest entry's `compact_members` lists exactly
 which children were folded and into what. Linking the unmaterialized path is a
-broken link and fails `scaffold_docs --audit`. Children that did not fold —
-profile- and audience-driven documents never do — keep their own paths and are
-linked normally.
+broken link and fails `scaffold_docs --audit`.
+
+A folded child may be a dynamic instance rather than a catalog document — a
+flow, decision, concept, or runbook. Its `compact_members` entry carries the
+slug and title that name its section, so the anchor is
+`flows.md#<slug>`. Children that did not fold — a group's overflow past
+`COMPACT_SECTION_CAP`, and the fixed tooling paths — keep their own paths and
+are linked normally.
 
 Keep the section overview itself scannable in one pass. If a group's child list
 grows past what fits on one screen, that is a signal the group itself needs

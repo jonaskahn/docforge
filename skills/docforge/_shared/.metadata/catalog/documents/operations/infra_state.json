@@ -24,5 +24,7 @@
   "write_order": 74,
   "provenance_mode": "sections",
   "audit_profile": "operations",
-  "template_file": "content/operations/templates/infrastructure-state.md"
+  "template_file": "content/operations/templates/infrastructure-state.md",
+  "compact_group": "operations_compact",
+  "compact_order": 15
 }

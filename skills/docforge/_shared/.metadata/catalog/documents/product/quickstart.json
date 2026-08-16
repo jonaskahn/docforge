@@ -28,5 +28,7 @@
   "presentation": {
     "primary_audience": "beginners"
   },
-  "template_file": "content/product/templates/quickstart.md"
+  "template_file": "content/product/templates/quickstart.md",
+  "compact_group": "product_compact",
+  "compact_order": 11
 }

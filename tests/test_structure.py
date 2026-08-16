@@ -221,6 +221,45 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Changing the tier **to** `portfolio` on a compact manifest", revision)
         self.assertIn("decided_by: \"tier-constraint\"", revision)
 
+    def test_compact_tree_is_documented_as_bounded_by_layout_and_tier(self) -> None:
+        """The property the layout exists for, stated where an agent reading
+        the corpus will hit it. Before this, only compact Spine had a
+        documented tree and nothing said a confirmed profile costs no files --
+        so a run could quietly emit 44 "compact" documents."""
+        docs_tree = (SHARED_ROOT / "references" / "docs-tree.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "**In compact layout the file count is a function of layout and tier alone.**",
+            docs_tree,
+        )
+        self.assertIn("Compact Diligence (15 files, down from 34)", docs_tree)
+        self.assertIn("Compact Spine (8 files, down from 15)", docs_tree)
+        # The rule this replaced said the opposite; it must not survive.
+        self.assertNotIn("Profile-driven and\naudience-driven documents never do", docs_tree)
+        for cap in ("COMPACT_CORE_CAP", "COMPACT_SECTION_CAP", "COMPACT_DYNAMIC_CAP"):
+            self.assertIn(cap, docs_tree)
+        self.assertIn("**A group that exceeds `COMPACT_SECTION_CAP` spills.**", docs_tree)
+
+        composition = (SHARED_ROOT / "references" / "document-composition.md").read_text(encoding="utf-8")
+        self.assertIn("### Depth brakes", composition)
+        for cap in ("COMPACT_CORE_CAP", "COMPACT_SECTION_CAP", "COMPACT_DYNAMIC_CAP"):
+            self.assertIn(cap, composition)
+        # The old rule forbade folding a group with dynamic children, which is
+        # exactly what docs/flows.md and docs/decisions.md now do.
+        self.assertNotIn("Demote only when the group's indexes have no dynamic children", composition)
+
+    def test_compact_caps_agree_between_prose_and_both_runtimes(self) -> None:
+        composition = (SHARED_ROOT / "references" / "document-composition.md").read_text(encoding="utf-8")
+        for cap, value in (
+            ("COMPACT_CORE_CAP", 8),
+            ("COMPACT_SECTION_CAP", 14),
+            ("COMPACT_DYNAMIC_CAP", 6),
+        ):
+            self.assertIn(f"| `{cap}` | {value} |", composition)
+            python_source = (SHARED_ROOT / "runtime" / "catalog" / "python" / "query_catalog.py").read_text(encoding="utf-8")
+            js_source = (SHARED_ROOT / "runtime" / "catalog" / "js" / "query_catalog.js").read_text(encoding="utf-8")
+            self.assertIn(f"{cap} = {value}", python_source)
+            self.assertIn(f"const {cap} = {value};", js_source)
+
     def test_intake_confirmation_summary_previews_projected_document_count(self) -> None:
         """Most dimensions cost nothing in document count -- a platform, a
         framework, or most concerns only shift narrative emphasis -- while one

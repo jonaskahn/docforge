@@ -13,7 +13,7 @@
         "url": "https://github.com/jonaskahn/docforge.git"
       },
       "description": "Writes new repository documentation from source-code evidence — catalog-driven, provenance-tracked, and independently audited.",
-      "version": "2.18.0",
+      "version": "2.19.0",
       "author": {
         "name": "Jonas Kahn",
         "url": "https://github.com/jonaskahn"

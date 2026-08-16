@@ -2,7 +2,7 @@
   "id": "product_compact",
   "type": "compact-doc",
   "title": "Product",
-  "summary": "Compact product section: what the product is, who it serves, and the problem it solves — in one file",
+  "summary": "Compact product section: what the product is, who it serves, and the problem it solves \u2014 in one file",
   "contract_file": "content/compact/contracts/product.md",
   "path": "docs/product.md",
   "group": "product",
@@ -22,10 +22,17 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "template_file": "content/compact/templates/product.template.md",
-  "contract_revision": "2.17.0",
+  "contract_revision": "2.19.0",
   "compact_target": "docs/product.md",
   "compact_members": [
     "product_index",
-    "product_overview"
+    "product_overview",
+    "quickstart",
+    "api_versioning",
+    "content_model",
+    "accessibility",
+    "localization",
+    "library_migrations_index",
+    "migration"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "$schema": "catalog-index-schema.json",
-  "version": "2.18.0",
+  "version": "2.19.0",
   "profiles": {
     "shapes": "profiles/shapes.json",
     "platforms": "profiles/platforms.json",
@@ -111,16 +111,106 @@
   ],
   "document_types": [
     {
-      "id": "architecture_index",
-      "tier": "spine",
-      "path": "docs/architecture/README.md",
-      "record": "documents/architecture/architecture_index.json"
+      "id": "adr",
+      "tier": "diligence",
+      "path": "docs/architecture/decisions/{slug}.md",
+      "record": "documents/adr.json"
     },
     {
-      "id": "architecture_compact",
+      "id": "agents_architecture",
       "tier": "spine",
-      "path": "docs/architecture.md",
-      "record": "documents/architecture/architecture_compact.json"
+      "path": "docs/agents/architecture.md",
+      "record": "documents/agent-context/agents_architecture.json"
+    },
+    {
+      "id": "agents_compact",
+      "tier": "spine",
+      "path": "docs/agents.md",
+      "record": "documents/agent-context/agents_compact.json"
+    },
+    {
+      "id": "agents_conventions",
+      "tier": "spine",
+      "path": "docs/agents/conventions.md",
+      "record": "documents/agent-context/agents_conventions.json"
+    },
+    {
+      "id": "agents_flow",
+      "tier": "spine",
+      "path": "docs/agents/flow.md",
+      "record": "documents/agent-context/agents_flow.json"
+    },
+    {
+      "id": "agents_glossary",
+      "tier": "spine",
+      "path": "docs/agents/glossary.md",
+      "record": "documents/agent-context/agents_glossary.json"
+    },
+    {
+      "id": "agents_index",
+      "tier": "spine",
+      "path": "docs/agents/README.md",
+      "record": "documents/agent-context/agents_index.json"
+    },
+    {
+      "id": "agents_kernel",
+      "tier": "spine",
+      "path": "AGENTS.md",
+      "record": "documents/agent-context/agents_kernel.json"
+    },
+    {
+      "id": "agents_patterns",
+      "tier": "spine",
+      "path": "docs/agents/patterns.md",
+      "record": "documents/agent-context/agents_patterns.json"
+    },
+    {
+      "id": "agents_tech_debt",
+      "tier": "spine",
+      "path": "docs/agents/tech-debt.md",
+      "record": "documents/agent-context/agents_tech_debt.json"
+    },
+    {
+      "id": "agents_testing",
+      "tier": "spine",
+      "path": "docs/agents/testing.md",
+      "record": "documents/agent-context/agents_testing.json"
+    },
+    {
+      "id": "claude_local",
+      "tier": "spine",
+      "path": "CLAUDE.local.md",
+      "record": "documents/agent-context/claude_local.json"
+    },
+    {
+      "id": "claude_settings",
+      "tier": "spine",
+      "path": ".claude/settings.json",
+      "record": "documents/agent-context/claude_settings.json"
+    },
+    {
+      "id": "claude_shim",
+      "tier": "spine",
+      "path": "CLAUDE.md",
+      "record": "documents/agent-context/claude_shim.json"
+    },
+    {
+      "id": "ai_integration",
+      "tier": "spine",
+      "path": "docs/architecture/ai-integration.md",
+      "record": "documents/architecture/ai_integration.json"
+    },
+    {
+      "id": "app_lifecycle",
+      "tier": "spine",
+      "path": "docs/architecture/application-lifecycle.md",
+      "record": "documents/architecture/app_lifecycle.json"
+    },
+    {
+      "id": "app_ui_state",
+      "tier": "spine",
+      "path": "docs/architecture/ui-and-state.md",
+      "record": "documents/architecture/app_ui_state.json"
     },
     {
       "id": "arch_high_level",
@@ -135,34 +225,22 @@
       "record": "documents/architecture/arch_low_level.json"
     },
     {
+      "id": "architecture_compact",
+      "tier": "spine",
+      "path": "docs/architecture.md",
+      "record": "documents/architecture/architecture_compact.json"
+    },
+    {
       "id": "architecture_constraints",
       "tier": "diligence",
       "path": "docs/architecture/constraints.md",
       "record": "documents/architecture/architecture_constraints.json"
     },
     {
-      "id": "dependencies",
-      "tier": "diligence",
-      "path": "docs/architecture/dependencies.md",
-      "record": "documents/architecture/dependencies.json"
-    },
-    {
-      "id": "tech_debt",
-      "tier": "diligence",
-      "path": "docs/architecture/tech-debt.md",
-      "record": "documents/architecture/tech_debt.json"
-    },
-    {
-      "id": "concepts_index",
-      "tier": "diligence",
-      "path": "docs/architecture/concepts/README.md",
-      "record": "documents/architecture/concepts_index.json"
-    },
-    {
-      "id": "app_lifecycle",
+      "id": "architecture_index",
       "tier": "spine",
-      "path": "docs/architecture/application-lifecycle.md",
-      "record": "documents/architecture/app_lifecycle.json"
+      "path": "docs/architecture/README.md",
+      "record": "documents/architecture/architecture_index.json"
     },
     {
       "id": "concept",
@@ -171,40 +249,16 @@
       "record": "documents/architecture/concept.json"
     },
     {
-      "id": "data_flow",
-      "tier": "spine",
-      "path": "docs/architecture/data-flow.md",
-      "record": "documents/architecture/data_flow.json"
+      "id": "concepts_compact",
+      "tier": "diligence",
+      "path": "docs/concepts.md",
+      "record": "documents/architecture/concepts_compact.json"
     },
     {
-      "id": "ai_integration",
-      "tier": "spine",
-      "path": "docs/architecture/ai-integration.md",
-      "record": "documents/architecture/ai_integration.json"
-    },
-    {
-      "id": "data_contracts_index",
-      "tier": "spine",
-      "path": "docs/architecture/contracts/README.md",
-      "record": "documents/architecture/data_contracts_index.json"
-    },
-    {
-      "id": "persistence",
-      "tier": "spine",
-      "path": "docs/architecture/persistence.md",
-      "record": "documents/architecture/persistence.json"
-    },
-    {
-      "id": "system_overview",
-      "tier": "spine",
-      "path": "docs/architecture/system-overview.md",
-      "record": "documents/architecture/system_overview.json"
-    },
-    {
-      "id": "app_ui_state",
-      "tier": "spine",
-      "path": "docs/architecture/ui-and-state.md",
-      "record": "documents/architecture/app_ui_state.json"
+      "id": "concepts_index",
+      "tier": "diligence",
+      "path": "docs/architecture/concepts/README.md",
+      "record": "documents/architecture/concepts_index.json"
     },
     {
       "id": "contract_system",
@@ -213,16 +267,40 @@
       "record": "documents/architecture/contract_system.json"
     },
     {
+      "id": "data_contracts_index",
+      "tier": "spine",
+      "path": "docs/architecture/contracts/README.md",
+      "record": "documents/architecture/data_contracts_index.json"
+    },
+    {
+      "id": "data_flow",
+      "tier": "spine",
+      "path": "docs/architecture/data-flow.md",
+      "record": "documents/architecture/data_flow.json"
+    },
+    {
       "id": "dataset",
       "tier": "spine",
       "path": "docs/architecture/contracts/{slug}.md",
       "record": "documents/architecture/dataset.json"
     },
     {
-      "id": "infra_environments",
+      "id": "dependencies",
+      "tier": "diligence",
+      "path": "docs/architecture/dependencies.md",
+      "record": "documents/architecture/dependencies.json"
+    },
+    {
+      "id": "firmware_lifecycle",
       "tier": "spine",
-      "path": "docs/architecture/environments.md",
-      "record": "documents/architecture/infra_environments.json"
+      "path": "docs/architecture/firmware-lifecycle.md",
+      "record": "documents/architecture/firmware_lifecycle.json"
+    },
+    {
+      "id": "game_assets",
+      "tier": "spine",
+      "path": "docs/architecture/assets-and-scenes.md",
+      "record": "documents/architecture/game_assets.json"
     },
     {
       "id": "gameplay_systems",
@@ -243,40 +321,10 @@
       "record": "documents/architecture/host_integration.json"
     },
     {
-      "id": "model_lifecycle",
+      "id": "infra_environments",
       "tier": "spine",
-      "path": "docs/architecture/model-lifecycle.md",
-      "record": "documents/architecture/model_lifecycle.json"
-    },
-    {
-      "id": "platform_integration",
-      "tier": "spine",
-      "path": "docs/architecture/platform-integration.md",
-      "record": "documents/architecture/platform_integration.json"
-    },
-    {
-      "id": "web_rendering",
-      "tier": "spine",
-      "path": "docs/architecture/rendering.md",
-      "record": "documents/architecture/web_rendering.json"
-    },
-    {
-      "id": "worker_triggers",
-      "tier": "spine",
-      "path": "docs/architecture/triggers-and-jobs.md",
-      "record": "documents/architecture/worker_triggers.json"
-    },
-    {
-      "id": "game_assets",
-      "tier": "spine",
-      "path": "docs/architecture/assets-and-scenes.md",
-      "record": "documents/architecture/game_assets.json"
-    },
-    {
-      "id": "firmware_lifecycle",
-      "tier": "spine",
-      "path": "docs/architecture/firmware-lifecycle.md",
-      "record": "documents/architecture/firmware_lifecycle.json"
+      "path": "docs/architecture/environments.md",
+      "record": "documents/architecture/infra_environments.json"
     },
     {
       "id": "infra_network",
@@ -285,28 +333,40 @@
       "record": "documents/architecture/infra_network.json"
     },
     {
+      "id": "model_lifecycle",
+      "tier": "spine",
+      "path": "docs/architecture/model-lifecycle.md",
+      "record": "documents/architecture/model_lifecycle.json"
+    },
+    {
+      "id": "persistence",
+      "tier": "spine",
+      "path": "docs/architecture/persistence.md",
+      "record": "documents/architecture/persistence.json"
+    },
+    {
+      "id": "platform_integration",
+      "tier": "spine",
+      "path": "docs/architecture/platform-integration.md",
+      "record": "documents/architecture/platform_integration.json"
+    },
+    {
       "id": "pwa_installation",
       "tier": "spine",
       "path": "docs/architecture/offline-and-installation.md",
       "record": "documents/architecture/pwa_installation.json"
     },
     {
-      "id": "web_state",
+      "id": "system_overview",
       "tier": "spine",
-      "path": "docs/architecture/state.md",
-      "record": "documents/architecture/web_state.json"
+      "path": "docs/architecture/system-overview.md",
+      "record": "documents/architecture/system_overview.json"
     },
     {
-      "id": "product_index",
-      "tier": "spine",
-      "path": "docs/product/README.md",
-      "record": "documents/product/product_index.json"
-    },
-    {
-      "id": "product_compact",
-      "tier": "spine",
-      "path": "docs/product.md",
-      "record": "documents/product/product_compact.json"
+      "id": "tech_debt",
+      "tier": "diligence",
+      "path": "docs/architecture/tech-debt.md",
+      "record": "documents/architecture/tech_debt.json"
     },
     {
       "id": "web_components",
@@ -315,22 +375,58 @@
       "record": "documents/architecture/web_components.json"
     },
     {
-      "id": "product_overview",
+      "id": "web_rendering",
       "tier": "spine",
-      "path": "docs/product/overview.md",
-      "record": "documents/product/product_overview.json"
+      "path": "docs/architecture/rendering.md",
+      "record": "documents/architecture/web_rendering.json"
     },
     {
-      "id": "flows_index",
+      "id": "web_state",
       "tier": "spine",
-      "path": "docs/flows/README.md",
-      "record": "documents/flows_index.json"
+      "path": "docs/architecture/state.md",
+      "record": "documents/architecture/web_state.json"
     },
     {
-      "id": "flow",
+      "id": "worker_triggers",
+      "tier": "spine",
+      "path": "docs/architecture/triggers-and-jobs.md",
+      "record": "documents/architecture/worker_triggers.json"
+    },
+    {
+      "id": "changelog",
+      "tier": "spine",
+      "path": "CHANGELOG.md",
+      "record": "documents/changelog.json"
+    },
+    {
+      "id": "contributing_compact",
       "tier": "diligence",
-      "path": "docs/flows/{slug}.md",
-      "record": "documents/flow.json"
+      "path": "docs/contributing.md",
+      "record": "documents/contributing_compact.json"
+    },
+    {
+      "id": "contributing_index",
+      "tier": "diligence",
+      "path": "docs/contributing/README.md",
+      "record": "documents/contributing_index.json"
+    },
+    {
+      "id": "contributing_root",
+      "tier": "diligence",
+      "path": "CONTRIBUTING.md",
+      "record": "documents/contributing_root.json"
+    },
+    {
+      "id": "decisions_compact",
+      "tier": "diligence",
+      "path": "docs/decisions.md",
+      "record": "documents/decisions_compact.json"
+    },
+    {
+      "id": "decisions_index",
+      "tier": "diligence",
+      "path": "docs/architecture/decisions/README.md",
+      "record": "documents/decisions_index.json"
     },
     {
       "id": "docs_index",
@@ -339,142 +435,10 @@
       "record": "documents/docs_index.json"
     },
     {
-      "id": "root_readme",
-      "tier": "spine",
-      "path": "README.md",
-      "record": "documents/root_readme.json"
-    },
-    {
-      "id": "content_model",
-      "tier": "spine",
-      "path": "docs/product/content-model.md",
-      "record": "documents/product/content_model.json"
-    },
-    {
-      "id": "quickstart",
-      "tier": "spine",
-      "path": "docs/product/quickstart.md",
-      "record": "documents/product/quickstart.json"
-    },
-    {
-      "id": "accessibility",
-      "tier": "spine",
-      "path": "docs/product/accessibility.md",
-      "record": "documents/product/accessibility.json"
-    },
-    {
-      "id": "localization",
-      "tier": "spine",
-      "path": "docs/product/localization.md",
-      "record": "documents/product/localization.json"
-    },
-    {
-      "id": "library_migrations_index",
-      "tier": "spine",
-      "path": "docs/product/migrations/README.md",
-      "record": "documents/product/library_migrations_index.json"
-    },
-    {
-      "id": "api_versioning",
-      "tier": "spine",
-      "path": "docs/product/versioning.md",
-      "record": "documents/product/api_versioning.json"
-    },
-    {
-      "id": "ba_index",
-      "tier": "spine",
-      "path": "docs/product/business-analyst/README.md",
-      "record": "documents/product/ba_index.json"
-    },
-    {
-      "id": "migration",
-      "tier": "spine",
-      "path": "docs/product/migrations/{slug}.md",
-      "record": "documents/product/migration.json"
-    },
-    {
-      "id": "ba_process_flows",
-      "tier": "spine",
-      "path": "docs/product/business-analyst/process-flows.md",
-      "record": "documents/product/ba_process_flows.json"
-    },
-    {
-      "id": "ba_business_rules",
-      "tier": "spine",
-      "path": "docs/product/business-analyst/business-rules.md",
-      "record": "documents/product/ba_business_rules.json"
-    },
-    {
-      "id": "ba_requirements",
-      "tier": "spine",
-      "path": "docs/product/business-analyst/requirements-traceability.md",
-      "record": "documents/product/ba_requirements.json"
-    },
-    {
-      "id": "po_index",
-      "tier": "spine",
-      "path": "docs/product/product-owner/README.md",
-      "record": "documents/product/po_index.json"
-    },
-    {
-      "id": "po_features",
-      "tier": "spine",
-      "path": "docs/product/product-owner/feature-catalog.md",
-      "record": "documents/product/po_features.json"
-    },
-    {
-      "id": "po_metrics",
-      "tier": "spine",
-      "path": "docs/product/product-owner/success-metrics.md",
-      "record": "documents/product/po_metrics.json"
-    },
-    {
-      "id": "engineering_index",
-      "tier": "spine",
-      "path": "docs/engineering/README.md",
-      "record": "documents/engineering/engineering_index.json"
-    },
-    {
-      "id": "engineering_compact",
-      "tier": "spine",
-      "path": "docs/engineering.md",
-      "record": "documents/engineering/engineering_compact.json"
-    },
-    {
-      "id": "po_release_notes",
-      "tier": "spine",
-      "path": "docs/product/product-owner/release-notes.md",
-      "record": "documents/product/po_release_notes.json"
-    },
-    {
-      "id": "setup_guide",
-      "tier": "spine",
-      "path": "docs/engineering/setup.md",
-      "record": "documents/engineering/setup_guide.json"
-    },
-    {
-      "id": "backlog_traceability",
-      "tier": "spine",
-      "path": "docs/product/product-owner/backlog-traceability.md",
-      "record": "documents/product/backlog_traceability.json"
-    },
-    {
-      "id": "testing_guide",
-      "tier": "spine",
-      "path": "docs/engineering/testing.md",
-      "record": "documents/engineering/testing_guide.json"
-    },
-    {
       "id": "conventions",
       "tier": "diligence",
       "path": "docs/engineering/conventions.md",
       "record": "documents/engineering/conventions.json"
-    },
-    {
-      "id": "release_guide",
-      "tier": "diligence",
-      "path": "docs/engineering/release.md",
-      "record": "documents/engineering/release_guide.json"
     },
     {
       "id": "data_quality",
@@ -483,10 +447,16 @@
       "record": "documents/engineering/data_quality.json"
     },
     {
-      "id": "web_styling",
+      "id": "engineering_compact",
       "tier": "spine",
-      "path": "docs/engineering/styling.md",
-      "record": "documents/engineering/web_styling.json"
+      "path": "docs/engineering.md",
+      "record": "documents/engineering/engineering_compact.json"
+    },
+    {
+      "id": "engineering_index",
+      "tier": "spine",
+      "path": "docs/engineering/README.md",
+      "record": "documents/engineering/engineering_index.json"
     },
     {
       "id": "library_publishing",
@@ -495,136 +465,46 @@
       "record": "documents/engineering/library_publishing.json"
     },
     {
-      "id": "reference_index",
-      "tier": "spine",
-      "path": "docs/reference/README.md",
-      "record": "documents/reference/reference_index.json"
-    },
-    {
-      "id": "reference_compact",
-      "tier": "spine",
-      "path": "docs/reference.md",
-      "record": "documents/reference/reference_compact.json"
-    },
-    {
-      "id": "configuration",
-      "tier": "spine",
-      "path": "docs/reference/configuration.md",
-      "record": "documents/reference/configuration.json"
-    },
-    {
-      "id": "limitations",
-      "tier": "spine",
-      "path": "docs/reference/limitations.md",
-      "record": "documents/reference/limitations.json"
-    },
-    {
-      "id": "glossary",
+      "id": "release_guide",
       "tier": "diligence",
-      "path": "docs/reference/glossary.md",
-      "record": "documents/reference/glossary.json"
+      "path": "docs/engineering/release.md",
+      "record": "documents/engineering/release_guide.json"
     },
     {
-      "id": "tech_stack",
+      "id": "setup_guide",
       "tier": "spine",
-      "path": "docs/reference/tech-stack.md",
-      "record": "documents/reference/tech_stack.json"
+      "path": "docs/engineering/setup.md",
+      "record": "documents/engineering/setup_guide.json"
     },
     {
-      "id": "api_reference",
+      "id": "testing_guide",
       "tier": "spine",
-      "path": "docs/reference/api.md",
-      "record": "documents/reference/api_reference.json"
+      "path": "docs/engineering/testing.md",
+      "record": "documents/engineering/testing_guide.json"
     },
     {
-      "id": "cli_commands",
+      "id": "web_styling",
       "tier": "spine",
-      "path": "docs/reference/commands.md",
-      "record": "documents/reference/cli_commands.json"
+      "path": "docs/engineering/styling.md",
+      "record": "documents/engineering/web_styling.json"
     },
     {
-      "id": "api_errors",
-      "tier": "spine",
-      "path": "docs/reference/errors.md",
-      "record": "documents/reference/api_errors.json"
-    },
-    {
-      "id": "extension_points",
-      "tier": "spine",
-      "path": "docs/reference/extension-points.md",
-      "record": "documents/reference/extension_points.json"
-    },
-    {
-      "id": "cli_output",
-      "tier": "spine",
-      "path": "docs/reference/output-and-exit-codes.md",
-      "record": "documents/reference/cli_output.json"
-    },
-    {
-      "id": "library_compatibility",
-      "tier": "spine",
-      "path": "docs/reference/compatibility.md",
-      "record": "documents/reference/library_compatibility.json"
-    },
-    {
-      "id": "platform_compatibility",
-      "tier": "spine",
-      "path": "docs/reference/platform-compatibility.md",
-      "record": "documents/reference/platform_compatibility.json"
-    },
-    {
-      "id": "api_rate_limits",
-      "tier": "spine",
-      "path": "docs/reference/rate-limits.md",
-      "record": "documents/reference/api_rate_limits.json"
-    },
-    {
-      "id": "data_types",
-      "tier": "spine",
-      "path": "docs/reference/data-types.md",
-      "record": "documents/reference/data_types.json"
-    },
-    {
-      "id": "model_card",
-      "tier": "spine",
-      "path": "docs/reference/model-card.md",
-      "record": "documents/reference/model_card.json"
-    },
-    {
-      "id": "performance_budgets",
-      "tier": "spine",
-      "path": "docs/reference/performance-budgets.md",
-      "record": "documents/reference/performance_budgets.json"
-    },
-    {
-      "id": "infra_resources",
-      "tier": "spine",
-      "path": "docs/reference/resources.md",
-      "record": "documents/reference/infra_resources.json"
-    },
-    {
-      "id": "infra_access",
-      "tier": "spine",
-      "path": "docs/reference/access.md",
-      "record": "documents/reference/infra_access.json"
-    },
-    {
-      "id": "browser_support",
-      "tier": "spine",
-      "path": "docs/reference/browser-support.md",
-      "record": "documents/reference/browser_support.json"
-    },
-    {
-      "id": "operations_index",
+      "id": "flow",
       "tier": "diligence",
-      "path": "docs/operations/README.md",
-      "record": "documents/operations/operations_index.json"
+      "path": "docs/flows/{slug}.md",
+      "record": "documents/flow.json"
     },
     {
-      "id": "operations_compact",
-      "tier": "diligence",
-      "path": "docs/operations.md",
-      "record": "documents/operations/operations_compact.json"
+      "id": "flows_compact",
+      "tier": "spine",
+      "path": "docs/flows.md",
+      "record": "documents/flows_compact.json"
+    },
+    {
+      "id": "flows_index",
+      "tier": "spine",
+      "path": "docs/flows/README.md",
+      "record": "documents/flows_index.json"
     },
     {
       "id": "deployment",
@@ -645,10 +525,22 @@
       "record": "documents/operations/flashing_recovery.json"
     },
     {
-      "id": "worker_reliability",
+      "id": "infra_apply",
       "tier": "spine",
-      "path": "docs/operations/job-reliability.md",
-      "record": "documents/operations/worker_reliability.json"
+      "path": "docs/operations/apply.md",
+      "record": "documents/operations/infra_apply.json"
+    },
+    {
+      "id": "infra_disaster_recovery",
+      "tier": "spine",
+      "path": "docs/operations/disaster-recovery.md",
+      "record": "documents/operations/infra_disaster_recovery.json"
+    },
+    {
+      "id": "infra_state",
+      "tier": "spine",
+      "path": "docs/operations/state.md",
+      "record": "documents/operations/infra_state.json"
     },
     {
       "id": "network_deployment",
@@ -663,22 +555,16 @@
       "record": "documents/operations/observability.json"
     },
     {
-      "id": "infra_apply",
-      "tier": "spine",
-      "path": "docs/operations/apply.md",
-      "record": "documents/operations/infra_apply.json"
-    },
-    {
-      "id": "runbooks_index",
+      "id": "operations_compact",
       "tier": "diligence",
-      "path": "docs/operations/runbooks/README.md",
-      "record": "documents/operations/runbooks_index.json"
+      "path": "docs/operations.md",
+      "record": "documents/operations/operations_compact.json"
     },
     {
-      "id": "infra_disaster_recovery",
-      "tier": "spine",
-      "path": "docs/operations/disaster-recovery.md",
-      "record": "documents/operations/infra_disaster_recovery.json"
+      "id": "operations_index",
+      "tier": "diligence",
+      "path": "docs/operations/README.md",
+      "record": "documents/operations/operations_index.json"
     },
     {
       "id": "runbook",
@@ -687,136 +573,22 @@
       "record": "documents/operations/runbook.json"
     },
     {
-      "id": "infra_state",
+      "id": "runbooks_index",
+      "tier": "diligence",
+      "path": "docs/operations/runbooks/README.md",
+      "record": "documents/operations/runbooks_index.json"
+    },
+    {
+      "id": "worker_reliability",
       "tier": "spine",
-      "path": "docs/operations/state.md",
-      "record": "documents/operations/infra_state.json"
-    },
-    {
-      "id": "security_root",
-      "tier": "diligence",
-      "path": "SECURITY.md",
-      "record": "documents/security/security_root.json"
-    },
-    {
-      "id": "security_index",
-      "tier": "diligence",
-      "path": "docs/security/README.md",
-      "record": "documents/security/security_index.json"
-    },
-    {
-      "id": "security_compact",
-      "tier": "diligence",
-      "path": "docs/security.md",
-      "record": "documents/security/security_compact.json"
-    },
-    {
-      "id": "threat_model",
-      "tier": "diligence",
-      "path": "docs/security/threat-model.md",
-      "record": "documents/security/threat_model.json"
-    },
-    {
-      "id": "threat_register",
-      "tier": "diligence",
-      "path": "docs/security/threat-register.md",
-      "record": "documents/security/threat_register.json"
-    },
-    {
-      "id": "data_handling",
-      "tier": "diligence",
-      "path": "docs/security/data-handling.md",
-      "record": "documents/security/data_handling.json"
-    },
-    {
-      "id": "api_authentication",
-      "tier": "spine",
-      "path": "docs/security/authentication.md",
-      "record": "documents/security/api_authentication.json"
-    },
-    {
-      "id": "economic_invariants",
-      "tier": "spine",
-      "path": "docs/security/economic-invariants.md",
-      "record": "documents/security/economic_invariants.json"
-    },
-    {
-      "id": "platform_permissions",
-      "tier": "spine",
-      "path": "docs/security/permissions.md",
-      "record": "documents/security/platform_permissions.json"
-    },
-    {
-      "id": "decisions_index",
-      "tier": "diligence",
-      "path": "docs/architecture/decisions/README.md",
-      "record": "documents/decisions_index.json"
-    },
-    {
-      "id": "adr",
-      "tier": "diligence",
-      "path": "docs/architecture/decisions/{slug}.md",
-      "record": "documents/adr.json"
-    },
-    {
-      "id": "contributing_root",
-      "tier": "diligence",
-      "path": "CONTRIBUTING.md",
-      "record": "documents/contributing_root.json"
-    },
-    {
-      "id": "contributing_index",
-      "tier": "diligence",
-      "path": "docs/contributing/README.md",
-      "record": "documents/contributing_index.json"
-    },
-    {
-      "id": "contributing_compact",
-      "tier": "diligence",
-      "path": "docs/contributing.md",
-      "record": "documents/contributing_compact.json"
+      "path": "docs/operations/job-reliability.md",
+      "record": "documents/operations/worker_reliability.json"
     },
     {
       "id": "ownership",
       "tier": "diligence",
       "path": "docs/contributing/ownership.md",
       "record": "documents/ownership.json"
-    },
-    {
-      "id": "changelog",
-      "tier": "spine",
-      "path": "CHANGELOG.md",
-      "record": "documents/changelog.json"
-    },
-    {
-      "id": "portfolio_readme",
-      "tier": "portfolio",
-      "path": "docs-portfolio/README.md",
-      "record": "documents/portfolio/portfolio_readme.json"
-    },
-    {
-      "id": "portfolio_repo_inventory",
-      "tier": "portfolio",
-      "path": "docs-portfolio/repo-inventory.md",
-      "record": "documents/portfolio/portfolio_repo_inventory.json"
-    },
-    {
-      "id": "portfolio_system_context",
-      "tier": "portfolio",
-      "path": "docs-portfolio/system-context.md",
-      "record": "documents/portfolio/portfolio_system_context.json"
-    },
-    {
-      "id": "portfolio_decisions_index",
-      "tier": "portfolio",
-      "path": "docs-portfolio/decisions/README.md",
-      "record": "documents/portfolio/portfolio_decisions_index.json"
-    },
-    {
-      "id": "portfolio_decision",
-      "tier": "portfolio",
-      "path": "docs-portfolio/decisions/{slug}.md",
-      "record": "documents/portfolio/portfolio_decision.json"
     },
     {
       "id": "epic",
@@ -831,16 +603,16 @@
       "record": "documents/portfolio/epics_index.json"
     },
     {
-      "id": "portfolio_security",
+      "id": "portfolio_decision",
       "tier": "portfolio",
-      "path": "docs-portfolio/security-posture.md",
-      "record": "documents/portfolio/portfolio_security.json"
+      "path": "docs-portfolio/decisions/{slug}.md",
+      "record": "documents/portfolio/portfolio_decision.json"
     },
     {
-      "id": "portfolio_operations",
+      "id": "portfolio_decisions_index",
       "tier": "portfolio",
-      "path": "docs-portfolio/operations.md",
-      "record": "documents/portfolio/portfolio_operations.json"
+      "path": "docs-portfolio/decisions/README.md",
+      "record": "documents/portfolio/portfolio_decisions_index.json"
     },
     {
       "id": "portfolio_diligence_index",
@@ -855,82 +627,340 @@
       "record": "documents/portfolio/portfolio_glossary.json"
     },
     {
-      "id": "agents_kernel",
-      "tier": "spine",
-      "path": "AGENTS.md",
-      "record": "documents/agent-context/agents_kernel.json"
+      "id": "portfolio_operations",
+      "tier": "portfolio",
+      "path": "docs-portfolio/operations.md",
+      "record": "documents/portfolio/portfolio_operations.json"
     },
     {
-      "id": "claude_shim",
-      "tier": "spine",
-      "path": "CLAUDE.md",
-      "record": "documents/agent-context/claude_shim.json"
+      "id": "portfolio_readme",
+      "tier": "portfolio",
+      "path": "docs-portfolio/README.md",
+      "record": "documents/portfolio/portfolio_readme.json"
     },
     {
-      "id": "claude_local",
-      "tier": "spine",
-      "path": "CLAUDE.local.md",
-      "record": "documents/agent-context/claude_local.json"
+      "id": "portfolio_repo_inventory",
+      "tier": "portfolio",
+      "path": "docs-portfolio/repo-inventory.md",
+      "record": "documents/portfolio/portfolio_repo_inventory.json"
     },
     {
-      "id": "claude_settings",
-      "tier": "spine",
-      "path": ".claude/settings.json",
-      "record": "documents/agent-context/claude_settings.json"
+      "id": "portfolio_security",
+      "tier": "portfolio",
+      "path": "docs-portfolio/security-posture.md",
+      "record": "documents/portfolio/portfolio_security.json"
     },
     {
-      "id": "agents_compact",
-      "tier": "spine",
-      "path": "docs/agents.md",
-      "record": "documents/agent-context/agents_compact.json"
+      "id": "portfolio_system_context",
+      "tier": "portfolio",
+      "path": "docs-portfolio/system-context.md",
+      "record": "documents/portfolio/portfolio_system_context.json"
     },
     {
-      "id": "agents_index",
+      "id": "accessibility",
       "tier": "spine",
-      "path": "docs/agents/README.md",
-      "record": "documents/agent-context/agents_index.json"
+      "path": "docs/product/accessibility.md",
+      "record": "documents/product/accessibility.json"
     },
     {
-      "id": "agents_architecture",
+      "id": "api_versioning",
       "tier": "spine",
-      "path": "docs/agents/architecture.md",
-      "record": "documents/agent-context/agents_architecture.json"
+      "path": "docs/product/versioning.md",
+      "record": "documents/product/api_versioning.json"
     },
     {
-      "id": "agents_patterns",
+      "id": "ba_business_rules",
       "tier": "spine",
-      "path": "docs/agents/patterns.md",
-      "record": "documents/agent-context/agents_patterns.json"
+      "path": "docs/product/business-analyst/business-rules.md",
+      "record": "documents/product/ba_business_rules.json"
     },
     {
-      "id": "agents_testing",
+      "id": "ba_compact",
       "tier": "spine",
-      "path": "docs/agents/testing.md",
-      "record": "documents/agent-context/agents_testing.json"
+      "path": "docs/business-analyst.md",
+      "record": "documents/product/ba_compact.json"
     },
     {
-      "id": "agents_conventions",
+      "id": "ba_index",
       "tier": "spine",
-      "path": "docs/agents/conventions.md",
-      "record": "documents/agent-context/agents_conventions.json"
+      "path": "docs/product/business-analyst/README.md",
+      "record": "documents/product/ba_index.json"
     },
     {
-      "id": "agents_tech_debt",
+      "id": "ba_process_flows",
       "tier": "spine",
-      "path": "docs/agents/tech-debt.md",
-      "record": "documents/agent-context/agents_tech_debt.json"
+      "path": "docs/product/business-analyst/process-flows.md",
+      "record": "documents/product/ba_process_flows.json"
     },
     {
-      "id": "agents_flow",
+      "id": "ba_requirements",
       "tier": "spine",
-      "path": "docs/agents/flow.md",
-      "record": "documents/agent-context/agents_flow.json"
+      "path": "docs/product/business-analyst/requirements-traceability.md",
+      "record": "documents/product/ba_requirements.json"
     },
     {
-      "id": "agents_glossary",
+      "id": "backlog_traceability",
       "tier": "spine",
-      "path": "docs/agents/glossary.md",
-      "record": "documents/agent-context/agents_glossary.json"
+      "path": "docs/product/product-owner/backlog-traceability.md",
+      "record": "documents/product/backlog_traceability.json"
+    },
+    {
+      "id": "content_model",
+      "tier": "spine",
+      "path": "docs/product/content-model.md",
+      "record": "documents/product/content_model.json"
+    },
+    {
+      "id": "library_migrations_index",
+      "tier": "spine",
+      "path": "docs/product/migrations/README.md",
+      "record": "documents/product/library_migrations_index.json"
+    },
+    {
+      "id": "localization",
+      "tier": "spine",
+      "path": "docs/product/localization.md",
+      "record": "documents/product/localization.json"
+    },
+    {
+      "id": "migration",
+      "tier": "spine",
+      "path": "docs/product/migrations/{slug}.md",
+      "record": "documents/product/migration.json"
+    },
+    {
+      "id": "po_compact",
+      "tier": "spine",
+      "path": "docs/product-owner.md",
+      "record": "documents/product/po_compact.json"
+    },
+    {
+      "id": "po_features",
+      "tier": "spine",
+      "path": "docs/product/product-owner/feature-catalog.md",
+      "record": "documents/product/po_features.json"
+    },
+    {
+      "id": "po_index",
+      "tier": "spine",
+      "path": "docs/product/product-owner/README.md",
+      "record": "documents/product/po_index.json"
+    },
+    {
+      "id": "po_metrics",
+      "tier": "spine",
+      "path": "docs/product/product-owner/success-metrics.md",
+      "record": "documents/product/po_metrics.json"
+    },
+    {
+      "id": "po_release_notes",
+      "tier": "spine",
+      "path": "docs/product/product-owner/release-notes.md",
+      "record": "documents/product/po_release_notes.json"
+    },
+    {
+      "id": "product_compact",
+      "tier": "spine",
+      "path": "docs/product.md",
+      "record": "documents/product/product_compact.json"
+    },
+    {
+      "id": "product_index",
+      "tier": "spine",
+      "path": "docs/product/README.md",
+      "record": "documents/product/product_index.json"
+    },
+    {
+      "id": "product_overview",
+      "tier": "spine",
+      "path": "docs/product/overview.md",
+      "record": "documents/product/product_overview.json"
+    },
+    {
+      "id": "quickstart",
+      "tier": "spine",
+      "path": "docs/product/quickstart.md",
+      "record": "documents/product/quickstart.json"
+    },
+    {
+      "id": "api_errors",
+      "tier": "spine",
+      "path": "docs/reference/errors.md",
+      "record": "documents/reference/api_errors.json"
+    },
+    {
+      "id": "api_rate_limits",
+      "tier": "spine",
+      "path": "docs/reference/rate-limits.md",
+      "record": "documents/reference/api_rate_limits.json"
+    },
+    {
+      "id": "api_reference",
+      "tier": "spine",
+      "path": "docs/reference/api.md",
+      "record": "documents/reference/api_reference.json"
+    },
+    {
+      "id": "browser_support",
+      "tier": "spine",
+      "path": "docs/reference/browser-support.md",
+      "record": "documents/reference/browser_support.json"
+    },
+    {
+      "id": "cli_commands",
+      "tier": "spine",
+      "path": "docs/reference/commands.md",
+      "record": "documents/reference/cli_commands.json"
+    },
+    {
+      "id": "cli_output",
+      "tier": "spine",
+      "path": "docs/reference/output-and-exit-codes.md",
+      "record": "documents/reference/cli_output.json"
+    },
+    {
+      "id": "configuration",
+      "tier": "spine",
+      "path": "docs/reference/configuration.md",
+      "record": "documents/reference/configuration.json"
+    },
+    {
+      "id": "data_types",
+      "tier": "spine",
+      "path": "docs/reference/data-types.md",
+      "record": "documents/reference/data_types.json"
+    },
+    {
+      "id": "extension_points",
+      "tier": "spine",
+      "path": "docs/reference/extension-points.md",
+      "record": "documents/reference/extension_points.json"
+    },
+    {
+      "id": "glossary",
+      "tier": "diligence",
+      "path": "docs/reference/glossary.md",
+      "record": "documents/reference/glossary.json"
+    },
+    {
+      "id": "infra_access",
+      "tier": "spine",
+      "path": "docs/reference/access.md",
+      "record": "documents/reference/infra_access.json"
+    },
+    {
+      "id": "infra_resources",
+      "tier": "spine",
+      "path": "docs/reference/resources.md",
+      "record": "documents/reference/infra_resources.json"
+    },
+    {
+      "id": "library_compatibility",
+      "tier": "spine",
+      "path": "docs/reference/compatibility.md",
+      "record": "documents/reference/library_compatibility.json"
+    },
+    {
+      "id": "limitations",
+      "tier": "spine",
+      "path": "docs/reference/limitations.md",
+      "record": "documents/reference/limitations.json"
+    },
+    {
+      "id": "model_card",
+      "tier": "spine",
+      "path": "docs/reference/model-card.md",
+      "record": "documents/reference/model_card.json"
+    },
+    {
+      "id": "performance_budgets",
+      "tier": "spine",
+      "path": "docs/reference/performance-budgets.md",
+      "record": "documents/reference/performance_budgets.json"
+    },
+    {
+      "id": "platform_compatibility",
+      "tier": "spine",
+      "path": "docs/reference/platform-compatibility.md",
+      "record": "documents/reference/platform_compatibility.json"
+    },
+    {
+      "id": "reference_compact",
+      "tier": "spine",
+      "path": "docs/reference.md",
+      "record": "documents/reference/reference_compact.json"
+    },
+    {
+      "id": "reference_index",
+      "tier": "spine",
+      "path": "docs/reference/README.md",
+      "record": "documents/reference/reference_index.json"
+    },
+    {
+      "id": "tech_stack",
+      "tier": "spine",
+      "path": "docs/reference/tech-stack.md",
+      "record": "documents/reference/tech_stack.json"
+    },
+    {
+      "id": "root_readme",
+      "tier": "spine",
+      "path": "README.md",
+      "record": "documents/root_readme.json"
+    },
+    {
+      "id": "api_authentication",
+      "tier": "spine",
+      "path": "docs/security/authentication.md",
+      "record": "documents/security/api_authentication.json"
+    },
+    {
+      "id": "data_handling",
+      "tier": "diligence",
+      "path": "docs/security/data-handling.md",
+      "record": "documents/security/data_handling.json"
+    },
+    {
+      "id": "economic_invariants",
+      "tier": "spine",
+      "path": "docs/security/economic-invariants.md",
+      "record": "documents/security/economic_invariants.json"
+    },
+    {
+      "id": "platform_permissions",
+      "tier": "spine",
+      "path": "docs/security/permissions.md",
+      "record": "documents/security/platform_permissions.json"
+    },
+    {
+      "id": "security_compact",
+      "tier": "diligence",
+      "path": "docs/security.md",
+      "record": "documents/security/security_compact.json"
+    },
+    {
+      "id": "security_index",
+      "tier": "diligence",
+      "path": "docs/security/README.md",
+      "record": "documents/security/security_index.json"
+    },
+    {
+      "id": "security_root",
+      "tier": "diligence",
+      "path": "SECURITY.md",
+      "record": "documents/security/security_root.json"
+    },
+    {
+      "id": "threat_model",
+      "tier": "diligence",
+      "path": "docs/security/threat-model.md",
+      "record": "documents/security/threat_model.json"
+    },
+    {
+      "id": "threat_register",
+      "tier": "diligence",
+      "path": "docs/security/threat-register.md",
+      "record": "documents/security/threat_register.json"
     }
   ]
 }

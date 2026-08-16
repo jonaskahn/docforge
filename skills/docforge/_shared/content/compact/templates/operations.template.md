@@ -16,10 +16,9 @@ sections below own the detail.}}
 ## Scope and boundaries
 
 {{What belongs in the operations section, and what is owned by an adjacent
-section instead. Runbooks are discovered dynamically and indexed separately
-at [runbooks/](runbooks/README.md) — link there rather than folding runbook
-content in here. Name the neighbouring sections so a reader who landed here
-by mistake can route themselves away.}}
+section instead. Name the neighbouring sections so a reader who landed here
+by mistake can route themselves away. Link any document in this folder that
+this file does not merge.}}
 
 ## Deployment
 
@@ -43,3 +42,23 @@ restate.}}
 
 {{How a reader moves from an alert to the request or trace that caused it,
 and what this system cannot currently observe. Keep provider marketing out.}}
+
+## Runbook index
+
+| Runbook | Recovers | Trigger | Status |
+|---|---|---|---|
+| [{{runbook}}](#{{anchor}}) | {{what it restores}} | {{alert or symptom}} | documented below |
+| {{runbook}} | {{what it restores}} | {{alert or symptom}} | register only |
+
+{{One or two sentences on what a register-only row means: the runbook is
+named and evidenced, and its procedure is not written out here.}}
+
+## {{Runbook name}}
+
+_Repeat this section once per folded runbook._
+
+**Trigger.** {{The alert or symptom that sends a reader here.}}
+
+{{The ordered, verified steps, the decision points, and the outcome that ends
+the procedure — each grounded in cited repository evidence. Never write a step
+the repository does not evidence.}}
