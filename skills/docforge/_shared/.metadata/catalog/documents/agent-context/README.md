@@ -18,6 +18,7 @@ Use the entries below to locate a document definition, then resolve it with `que
 - `claude_shim` — Compact entry points, verified commands, precedence, safe links to owning agent views → [index.json](index.json)
 - `claude_local` — Compact entry points, verified commands, precedence, safe links to owning agent views → [index.json](index.json)
 - `claude_settings` — Compact entry points, verified commands, precedence, safe links to owning agent views → [index.json](index.json)
+- `agents_compact` — Compact coding-agent section: retrieval views for architecture, patterns, testing, conventions, tech debt, flows, and terms in one file → [index.json](index.json)
 - `agents_index` — Coding-agent views overview: what these views cover and the reader question each agent view answers → [index.json](index.json)
 - `agents_architecture` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [index.json](index.json)
 - `agents_patterns` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [index.json](index.json)

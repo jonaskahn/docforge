@@ -346,8 +346,18 @@ and untracked Markdown are excluded.
 | `docs/README.md` | `content/docs/index.mdx` | `/docs` |
 | `docs/<dir>/README.md` | `content/docs/<dir>/index.mdx` | `/docs/<dir>` |
 | `docs/<dir>/page.md` | `content/docs/<dir>/page.mdx` | `/docs/<dir>/page` |
+| `docs/<dir>.md` (`compact-doc`) | `content/docs/<dir>/index.mdx` | `/docs/<dir>` |
 | `README.md` (root) | `content/docs/root/readme.mdx` | `/docs/root/readme` |
 | `CHANGELOG.md` (root) | `content/docs/root/changelog.mdx` | `/docs/root/changelog` |
+
+A merged compact file routes as its folder's index, not as `<dir>.mdx`. Its
+unfolded children still live in `docs/<dir>/`, and a page stem that collides
+with a sibling directory is resolved to the **folder** by the site generator —
+which would drop the merged page, the section's main content, from the sidebar
+entirely. Routing it as the index keeps the URL byte-identical and nests the
+children under it. `meta.json` entries are de-duplicated for the same reason,
+and a duplicate that survives fails the build rather than rendering the same
+sidebar node twice.
 
 The plan fails (exit 1) when two documents map to the same URL — including
 the `docs/<dir>.md` vs `docs/<dir>/README.md` collision — or when

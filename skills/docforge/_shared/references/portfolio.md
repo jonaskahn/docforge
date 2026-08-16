@@ -36,6 +36,19 @@ Prioritize undeclared detected members, customer-facing surfaces, and high-risk
 dependencies. Never silently backfill a blind spot: the inventory should show
 that it was found and how it was resolved.
 
+## Layout
+
+**A Portfolio root is always `standard`.** Compact covers Spine and Diligence
+only (see [`docs-tree.md`](docs-tree.md) "Compact layout"): folding the
+collection layer into one file erases the per-member separation that is the
+whole point of this tier. `init` and `reconcile` reject an explicit
+`--layout compact` here, and force a *detected* compact layout to `standard`
+as `decided_by: "tier-constraint"`.
+
+Member repositories are documented at Spine or Diligence, each with its own
+manifest and its own layout. A member may be compact while the collection root
+is standard. Docforge never propagates a layout across a repository boundary.
+
 ## Readiness gate
 
 Once inclusion is settled, check every included member's tier before

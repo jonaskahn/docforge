@@ -12,4 +12,4 @@ project's manifest actually selected.
 
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| contributing_compact | section introduction, at-a-glance contribution path, scope and boundaries, owned areas with responsibility boundaries and escalation tokens | invented people or teams, verified-checks detail (owned by root `CONTRIBUTING.md`), direct source-file navigation | Reference | orientation |
+| contributing_compact | section introduction, at-a-glance contribution path, scope and boundaries, owned areas with responsibility boundaries and escalation tokens; links to every selected, materialized document in this section's folder that this file does not merge | invented people or teams, verified-checks detail (owned by root `CONTRIBUTING.md`), direct source-file navigation | Reference | orientation |

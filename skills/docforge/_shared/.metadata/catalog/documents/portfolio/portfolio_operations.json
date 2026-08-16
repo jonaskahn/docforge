@@ -19,7 +19,5 @@
   "write_order": 105,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
-  "template_file": "content/portfolio/templates/portfolio-operations.md",
-  "compact_group": "portfolio_compact",
-  "compact_order": 5
+  "template_file": "content/portfolio/templates/portfolio-operations.md"
 }

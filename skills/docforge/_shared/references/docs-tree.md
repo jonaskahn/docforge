@@ -52,17 +52,37 @@ docs/
 
 ### Compact layout
 
-Layout is a second axis orthogonal to tier: `compact` and `standard` are both
-available at **every** tier, and scale suggests a layout — it never changes the
-tier default. A compact tier covers the **same subjects** as its standard
-counterpart at the same analytical depth; it stops giving each subject its own
-file. Documents sharing a catalog `compact_group` collapse into one merged
-file at the group's `compact_target`, one `##` section per member in
-`compact_order`, with the members recorded on the manifest entry so provenance
-and revise can trace them back. This is a file-count change, never a coverage
-or rigor change.
+Layout is a second axis alongside tier, but not every combination exists:
 
-Compact Spine (8 files, down from 15):
+| Layout | Spine | Diligence | Portfolio |
+|---|---|---|---|
+| `standard` | ✓ | ✓ | ✓ |
+| `compact` | ✓ | ✓ | **✗** |
+
+**A Portfolio root is always `standard`.** Portfolio is cross-repository
+diligence, and its value is per-member separation — an inventory row and a
+system-context view per repository, with decisions and epics as dynamic
+indexes that never fold. Collapsing the collection layer into one file erases
+exactly the distinctions the tier exists to make. `init` and `reconcile`
+reject an explicit `--layout compact` at that tier and force a *detected*
+compact layout to `standard`, recording `decided_by: "tier-constraint"`.
+
+Member repositories inside a collection are documented at Spine or Diligence,
+each with its own manifest and its own layout. A member may be compact while
+the collection root is standard; Docforge never propagates a layout across a
+repository boundary.
+
+Scale suggests a layout — it never changes the tier default. A compact tier
+covers the **same subjects** as its standard counterpart at the same
+analytical depth; it stops giving each subject its own file. Documents sharing
+a catalog `compact_group` collapse into one merged file at the group's
+`compact_target`, one `##` section per member in `compact_order`, with the
+members recorded on the manifest entry so provenance and revise can trace them
+back. This is a file-count change, never a coverage or rigor change.
+
+Compact Spine for a repository with no confirmed profiles and the default
+audiences (8 files, down from 15). A profile or audience adds unfolded files
+on top — see the routing rule below:
 
 ```text
 README.md
@@ -76,10 +96,23 @@ docs/
   reference.md      (was reference/README.md + configuration.md + limitations.md + tech-stack.md)
 ```
 
-The merge is safe precisely where it fires: at Spine these folder indexes have
-no dynamic children to route to. `project.scale.layout` records which tree was
-generated; switching layouts is a selection change like any other and flows
-through the revise preview and retirement (see `revision.md`).
+**Only documents carrying a `compact_group` fold.** Profile-driven and
+audience-driven documents never do, so a folded folder routinely keeps static
+children: `docs/reference.md` merges the reference index away while
+`docs/reference/api.md` stays a separate file with no `docs/reference/README.md`
+above it. Two routing rules follow, and both are mechanically checked by
+`scaffold_docs --audit`:
+
+- A merged file links every selected, materialized document in the folder it
+  stands for that is not one of its own `compact_members`.
+- An index links a folded member at `<compact_target>#<member-anchor>`, never
+  at the standard path that compact never materialized. `docs/README.md`
+  linking `reference/configuration.md` in a compact tree is a broken link;
+  `reference.md#configuration` is the correct target.
+
+`project.scale.layout` records which tree was generated; switching layouts is a
+selection change like any other and flows through the revise preview and
+retirement (see `revision.md`).
 
 ### Diligence
 

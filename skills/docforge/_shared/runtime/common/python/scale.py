@@ -38,6 +38,36 @@ SOURCE_SUFFIXES = {
 
 LAYOUT_BY_CLASS = {"small": "compact", "medium": "standard", "large": "standard"}
 
+COMPACT_TIERS = {"spine", "diligence"}
+
+
+class LayoutTierError(ValueError):
+    """An explicitly requested layout the tier does not permit."""
+
+
+def layout_for(tier: str, layout: str, *, explicit: bool) -> tuple[str, str]:
+    """Resolve the layout a tier permits, as `(layout, decided_by)`.
+
+    Portfolio is the whole point of this function: its value is per-member
+    separation — an inventory row and a system-context view per repository —
+    so folding the collection layer into one file erases exactly the
+    distinctions the tier exists to make. Compact therefore covers Spine and
+    Diligence only.
+
+    An explicit compact pick at Portfolio raises instead of being coerced: a
+    user decision is never silently rewritten. A *detected* compact layout is
+    forced to standard and says so via `tier-constraint`, because a small
+    collection root would otherwise inherit compact from `LAYOUT_BY_CLASS`.
+    """
+    if layout != "compact" or tier in COMPACT_TIERS:
+        return layout, "user" if explicit else "detected"
+    if explicit:
+        raise LayoutTierError(
+            f"{tier} tier requires standard layout; "
+            "compact covers spine and diligence only"
+        )
+    return "standard", "tier-constraint"
+
 
 def _nudge_eligible(source_files: int, boundary: int) -> bool:
     """True when `source_files` sits within BOUNDARY_NUDGE_RATIO below a class

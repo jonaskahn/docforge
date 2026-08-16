@@ -14,7 +14,6 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
-- `portfolio_compact` — Compact portfolio section: inventory, system context, security, operations, diligence index, and glossary in one file → [index.json](index.json)
 - `portfolio_readme` — Portfolio overview: what the portfolio layer is, its boundary, and the reader question each portfolio document answers → [index.json](index.json)
 - `portfolio_repo_inventory` — Discovered repositories, role, owner token, documentation state, evidence → [index.json](index.json)
 - `epics_index` — Portfolio epics overview: what epics are and the reader question each epic answers → [index.json](index.json)

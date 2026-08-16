@@ -21,7 +21,5 @@
   "audit_profile": "portfolio",
   "template_file": "content/shared/section-readme.template.md",
   "title": "Portfolio",
-  "contract_revision": "2.17.0",
-  "compact_group": "portfolio_compact",
-  "compact_order": 1
+  "contract_revision": "2.17.0"
 }

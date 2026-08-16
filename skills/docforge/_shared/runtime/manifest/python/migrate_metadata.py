@@ -475,17 +475,44 @@ def seed_descriptions(
     return seeded
 
 
-def backfill_project_scale(repo: Path) -> dict:
+def backfill_project_scale(repo: Path, tier: str = "diligence") -> dict:
     """Detected-only scale record for backfill. A present `project.scale` is
-    never overwritten — this function is only called when the field is absent."""
+    never overwritten — this function is only called when the field is absent.
+
+    `tier` keeps the backfill from handing a portfolio manifest the compact
+    layout a small collection root would otherwise detect."""
     detected = scale.compute_scale(repo)
-    return {
+    layout, decided_by = scale.layout_for(
+        tier, detected["suggested_layout"], explicit=False
+    )
+    record = {
         "class": detected["class"],
-        "layout": detected["suggested_layout"],
-        "decided_by": "detected",
+        "layout": layout,
+        "decided_by": decided_by,
         "decided_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "signals": detected["signals"],
     }
+    if decided_by == "tier-constraint":
+        record["detected_class"] = detected["class"]
+    return record
+
+
+def constrain_scale_layout(project: dict) -> bool:
+    """Force a portfolio manifest off compact. Compact covers spine and
+    diligence only, so a manifest written before that rule (or hand-edited)
+    is corrected here rather than left generating a folded portfolio layer."""
+    record = project.get("scale")
+    if not isinstance(record, dict) or record.get("layout") != "compact":
+        return False
+    layout, decided_by = scale.layout_for(
+        project.get("tier", "diligence"), "compact", explicit=False
+    )
+    if layout == "compact":
+        return False
+    record.setdefault("detected_class", record.get("class"))
+    record["layout"] = layout
+    record["decided_by"] = decided_by
+    return True
 
 
 def migrate_manifest_object(
@@ -510,7 +537,9 @@ def migrate_manifest_object(
         project["unmanaged_docs"] = []
         changed = True
     if isinstance(project, dict) and not isinstance(project.get("scale"), dict):
-        project["scale"] = backfill_project_scale(repo)
+        project["scale"] = backfill_project_scale(repo, project.get("tier", "diligence"))
+        changed = True
+    if isinstance(project, dict) and constrain_scale_layout(project):
         changed = True
     # Schema 3.7 added two measurement signals. Refresh them on any upgrade —
     # signals are measurements; class/layout/decided_by (possible user
@@ -1031,7 +1060,7 @@ def migrate_legacy(
             "name": project["name"],
             "root": project["root"],
             "tier": project["tier"],
-            "scale": backfill_project_scale(repo),
+            "scale": backfill_project_scale(repo, project["tier"]),
             "profiles": project["profiles"],
             "provenance_storage": store.STORAGE_JSON,
             "unmanaged_docs": [],

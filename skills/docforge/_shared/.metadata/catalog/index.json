@@ -795,12 +795,6 @@
       "record": "documents/portfolio/portfolio_readme.json"
     },
     {
-      "id": "portfolio_compact",
-      "tier": "portfolio",
-      "path": "docs-portfolio.md",
-      "record": "documents/portfolio/portfolio_compact.json"
-    },
-    {
       "id": "portfolio_repo_inventory",
       "tier": "portfolio",
       "path": "docs-portfolio/repo-inventory.md",
@@ -883,6 +877,12 @@
       "tier": "spine",
       "path": ".claude/settings.json",
       "record": "documents/agent-context/claude_settings.json"
+    },
+    {
+      "id": "agents_compact",
+      "tier": "spine",
+      "path": "docs/agents.md",
+      "record": "documents/agent-context/agents_compact.json"
     },
     {
       "id": "agents_index",

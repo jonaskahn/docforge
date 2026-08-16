@@ -2244,5 +2244,117 @@ class UnmanagedDocsTests(unittest.TestCase):
                 self.assertNotIn("docs/notes.md", [p["detail"] for p in result["problems"] if p["kind"] == "untracked"])
 
 
+class PreviewTests(unittest.TestCase):
+    """`preview` sizes a scope for intake's confirmation summary. It runs
+    inside intake's no-side-effect boundary, so writing anything at all is a
+    defect, not just writing a manifest."""
+
+    SCOPE = [
+        "--shape", "library-sdk", "--platform", "container", "--framework", "kafka",
+        "--concern", "observability", "--concern", "authentication",
+        "--concern", "background-processing",
+        "--audience", "engineers", "--audience", "beginners", "--audience", "coding-agents",
+    ]
+
+    def test_preview_writes_nothing(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    (repo / "src").mkdir()
+                    (repo / "src" / "a.py").write_text("x = 1\n", encoding="utf-8")
+                    before = sorted(p.relative_to(repo).as_posix() for p in repo.rglob("*"))
+                    result = run(runtime, "manage_manifest", "preview", "--repo", str(repo),
+                                 "--tier", "diligence", *self.SCOPE)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    after = sorted(p.relative_to(repo).as_posix() for p in repo.rglob("*"))
+                    self.assertEqual(before, after)
+                    self.assertFalse((repo / ".docforge").exists())
+
+    def test_preview_reports_both_layouts_and_attributes_the_count(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    (repo / "src").mkdir()
+                    (repo / "src" / "a.py").write_text("x = 1\n", encoding="utf-8")
+                    result = run(runtime, "manage_manifest", "preview", "--repo", str(repo),
+                                 "--tier", "diligence", "--layout", "compact", "--json", *self.SCOPE)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    report = json.loads(result.stdout)
+                    self.assertLess(report["compact_count"], report["standard_count"])
+                    self.assertEqual(report["count"], report["compact_count"])
+                    cost = {(item["dimension"], item["value"]): item["documents"]
+                            for item in report["attribution"]}
+                    # These shift narrative emphasis only; they select no documents.
+                    for free in (("platforms", "container"), ("frameworks", "kafka"),
+                                 ("concerns", "authentication"), ("concerns", "background-processing"),
+                                 ("concerns", "observability")):
+                        self.assertEqual(cost[free], 0, free)
+                    # The audience is the expensive pick, and the whole point of
+                    # showing this before the user confirms.
+                    self.assertGreater(cost[("audiences", "coding-agents")], 0)
+
+    def test_preview_reports_the_constraint_instead_of_a_compact_count_at_portfolio(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    (repo / "src").mkdir()
+                    (repo / "src" / "a.py").write_text("x = 1\n", encoding="utf-8")
+                    result = run(runtime, "manage_manifest", "preview", "--repo", str(repo),
+                                 "--tier", "portfolio", "--json")
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    report = json.loads(result.stdout)
+                    self.assertIsNone(report["compact_count"])
+                    self.assertIn("portfolio tier requires standard layout",
+                                  report["compact_unavailable"])
+                    self.assertEqual(report["layout"], "standard")
+
+
+class PortfolioLayoutMigrationTests(unittest.TestCase):
+    def test_migrate_forces_a_portfolio_manifest_off_compact(self) -> None:
+        """A manifest written before compact was restricted (or hand-edited)
+        would otherwise keep generating a folded portfolio layer."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    (repo / "src").mkdir()
+                    (repo / "src" / "a.py").write_text("x = 1\n", encoding="utf-8")
+                    self.assertEqual(
+                        run(runtime, "manage_manifest", "init", "--repo", str(repo),
+                            "--tier", "portfolio").returncode, 0)
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    manifest["project"]["scale"]["layout"] = "compact"
+                    manifest["project"]["scale"]["decided_by"] = "user"
+                    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+                    # migrate exits 1 on the unmaterialized plan; the manifest
+                    # upgrade itself still lands, which is what is under test.
+                    run(runtime, "migrate_metadata", "--repo", str(repo),
+                        "--manifest", str(manifest_path))
+                    scale = json.loads(manifest_path.read_text(encoding="utf-8"))["project"]["scale"]
+                    self.assertEqual(scale["layout"], "standard")
+                    self.assertEqual(scale["decided_by"], "tier-constraint")
+
+    def test_migrate_leaves_a_diligence_compact_manifest_alone(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    (repo / "src").mkdir()
+                    (repo / "src" / "a.py").write_text("x = 1\n", encoding="utf-8")
+                    self.assertEqual(
+                        run(runtime, "manage_manifest", "init", "--repo", str(repo),
+                            "--tier", "diligence", "--layout", "compact").returncode, 0)
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    run(runtime, "migrate_metadata", "--repo", str(repo),
+                        "--manifest", str(manifest_path))
+                    scale = json.loads(manifest_path.read_text(encoding="utf-8"))["project"]["scale"]
+                    self.assertEqual(scale["layout"], "compact")
+                    self.assertEqual(scale["decided_by"], "user")
+
+
 if __name__ == "__main__":
     unittest.main()

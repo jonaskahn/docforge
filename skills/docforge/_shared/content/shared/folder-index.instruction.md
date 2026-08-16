@@ -39,6 +39,16 @@ relative link resolves from this index. A nested index links exactly one parent
 index; use a child link only when that child is part of this run. Do not turn a
 missing child into a disabled link, a future-work note, or a prose substitute.
 
+**In compact layout, a folded child has no file of its own.** Its subject is a
+`##` section inside the merged file at the group's `compact_target`, so link
+`<merged file>#<section anchor>` — never the standard path, which compact never
+materialized. From `docs/README.md` that means `product.md#overview`, not
+`product/overview.md`; the manifest entry's `compact_members` lists exactly
+which children were folded and into what. Linking the unmaterialized path is a
+broken link and fails `scaffold_docs --audit`. Children that did not fold —
+profile- and audience-driven documents never do — keep their own paths and are
+linked normally.
+
 Keep the section overview itself scannable in one pass. If a group's child list
 grows past what fits on one screen, that is a signal the group itself needs
 sub-grouping (a nested index), not a signal to compress purposes into

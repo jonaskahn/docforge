@@ -165,6 +165,12 @@ the user also changed the class), which records `decided_by: "user"` with the
 detected class preserved as `detected_class`. The compact fold is automatic
 whenever the confirmed layout is `compact`.
 
+`init` rejects `--tier portfolio --layout compact` with a nonzero exit:
+compact covers Spine and Diligence only (see
+[`../references/docs-tree.md`](../references/docs-tree.md) "Compact layout").
+At the portfolio tier a *detected* compact layout is forced to `standard` and
+recorded as `decided_by: "tier-constraint"` — never as a user pick.
+
 The dry run is the exact active manifest tree and prints, for every selected
 document, its group/type, target depth, required evidence, selection origin,
 and write order. When the confirmed layout is `compact`, `init` /

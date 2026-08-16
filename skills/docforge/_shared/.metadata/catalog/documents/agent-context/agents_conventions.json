@@ -21,5 +21,7 @@
   "write_order": 207,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
-  "template_file": "content/agent-context/templates/agents-conventions.md"
+  "template_file": "content/agent-context/templates/agents-conventions.md",
+  "compact_group": "agents_compact",
+  "compact_order": 5
 }

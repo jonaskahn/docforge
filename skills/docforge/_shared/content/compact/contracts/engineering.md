@@ -13,4 +13,4 @@ project's manifest actually selected.
 
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| engineering_compact | section introduction, at-a-glance engineering practices, scope and boundaries, setup instructions, testing instructions; at Diligence also: evidenced conventions when a conventions source exists, and the release procedure | commands or rules the member contracts keep out, generic style advice with no repository evidence, direct source-file navigation | Explanation | orientation |
+| engineering_compact | section introduction, at-a-glance engineering practices, scope and boundaries, setup instructions, testing instructions; at Diligence also: evidenced conventions when a conventions source exists, and the release procedure; links to every selected, materialized document in this section's folder that this file does not merge | commands or rules the member contracts keep out, generic style advice with no repository evidence, direct source-file navigation | Explanation | orientation |

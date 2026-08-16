@@ -19,7 +19,7 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
 
 | Script | js/py | Kind | Purpose |
 |---|---|---|---|
-| `manage_manifest` | both | CLI | `init` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `reconcile` / `retire` / `unmanaged` / `finish` |
+| `manage_manifest` | both | CLI | `init` / `preview` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `reconcile` / `retire` / `unmanaged` / `finish` |
 | `check_staleness` | both | CLI | Provenance blob drift report (raw / normalized / range-scoped); optional provenance sync |
 | `hash_evidence` | both | CLI | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one cited source |
 | `migrate_metadata` | both | CLI | Idempotent manifest 3.7 / provenance 2.1 upgrade + sidecar moves |
@@ -34,14 +34,15 @@ python3 runtime/cli/python/manage_manifest.py <subcommand> --repo <repo> ...
 
 | Subcommand | Writes | Notes |
 |---|---|---|
-| `init --tier <tier> [--scale-class <small\|medium\|large>] [--layout <compact\|standard>] [--shape|--platform|--framework|--concern|--audience ...] [--graph-provider <id>]` | `.docforge/manifest.json`, `.gitignore`, `tmp/`, `audits/`, scratch deps | `--force` replaces an existing manifest; auto-locks the graph provider (registry-priority order) unless `--graph-provider` names an explicit choice; scale is auto-detected (source files < 50 → `compact`, dependency / flow breadth promoting one class) unless `--scale-class` / `--layout` record a user override |
+| `init --tier <tier> [--scale-class <small\|medium\|large>] [--layout <compact\|standard>] [--shape|--platform|--framework|--concern|--audience ...] [--graph-provider <id>]` | `.docforge/manifest.json`, `.gitignore`, `tmp/`, `audits/`, scratch deps | `--force` replaces an existing manifest; auto-locks the graph provider (registry-priority order) unless `--graph-provider` names an explicit choice; scale is auto-detected (source files < 50 → `compact`, dependency / flow breadth promoting one class) unless `--scale-class` / `--layout` record a user override; `--tier portfolio --layout compact` is rejected (compact covers spine and diligence only) and a detected compact layout there is forced to `standard` as `decided_by: "tier-constraint"` |
+| `preview --tier <tier> [--layout <compact\|standard>] [--shape|--platform|--framework|--concern|--audience ...] [--json]` | **nothing** | read-only scope sizing for intake: static document count in both layouts, plus a per-selection ablation (how many documents disappear if that value is dropped). Reports the constraint instead of a compact count at `--tier portfolio` |
 | `add --type --id --path [--title] [--evidence ...]` | manifest (+ `.docforge/flow-index.json` for flows) | validates tier, profiles, path, uniqueness, evidence |
 | `set --id --status` | manifest | completion requires a recorded PASS audit |
 | `presentation --id ... [--reset]` | manifest | demotes written docs to `in_progress` when output policy changed |
 | `audit --id --mode cold-pass --verdict PASS\|FAIL --report <path>` | manifest | requires status `generated`; FAIL → `needs_review` |
 | `status` | none | read-only report; includes the locked graph provider when set |
 | `set-graph [--provider <id>] [--force]` | manifest | locks/self-heals `manifest["graph"]`; auto-picks the highest-priority ready source when `--provider` is omitted; switching an already-locked provider requires `--force` |
-| `reconcile [--tier ...] [--scale-class ...] [--layout ...]` | manifest | re-runs static selection, preserves dynamic/written docs, demotes drift; scale flags record `decided_by: "user"` with fresh measurement signals and the detected class preserved |
+| `reconcile [--tier ...] [--scale-class ...] [--layout ...]` | manifest | re-runs static selection, preserves dynamic/written docs, demotes drift; scale flags record `decided_by: "user"` with fresh measurement signals and the detected class preserved; changing the tier to `portfolio` forces `layout: standard` with `decided_by: "tier-constraint"` |
 | `unmanaged --action list\|add\|remove\|archive [--path <rel>] [--dry-run]` | manifest (archive: file move) | self-managed docs the user keeps untracked; `add` records one, `remove` forgets it (file untouched), `archive` moves it into `docs/_archive/<year>/` (or `docs-portfolio/_archive/`) and records the move |
 | `retire --doc <id> [--doc <id> ...] --mode obsolete\|delete [--dry-run]` | manifest, `.docforge/obsolete/<year>/` (obsolete mode: file move) | written documents that fell out of selection; entry kept with status `retired`, `retired_at`, and (obsolete mode) `retired_destination` |
 | `finish [--keep-tmp]` | `.docforge/.gitignore` | deletes `tmp/` and `scratch/` contents unless kept |

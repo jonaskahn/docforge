@@ -12,4 +12,4 @@ manifest actually selected.
 
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| reference_compact | section introduction, at-a-glance reference coverage, scope and boundaries, configuration reference, limitations register, technology stack; at Diligence also: the repository glossary | facts a member contract keeps out, lookup subjects this section does not own, direct source-file navigation, a glossary entry that restates a definition owned elsewhere instead of linking | Reference | reference |
+| reference_compact | section introduction, at-a-glance reference coverage, scope and boundaries, configuration reference, limitations register, technology stack; at Diligence also: the repository glossary; links to every selected, materialized document in this section's folder that this file does not merge | facts a member contract keeps out, lookup subjects this section does not own, direct source-file navigation, a glossary entry that restates a definition owned elsewhere instead of linking | Reference | reference |

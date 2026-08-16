@@ -19,7 +19,5 @@
   "write_order": 104,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
-  "template_file": "content/portfolio/templates/security-posture.md",
-  "compact_group": "portfolio_compact",
-  "compact_order": 4
+  "template_file": "content/portfolio/templates/security-posture.md"
 }

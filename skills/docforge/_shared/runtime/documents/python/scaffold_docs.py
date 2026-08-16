@@ -40,6 +40,9 @@ INDEX_TYPES = {
     "folder-index", "docs-index", "portfolio-index", "portfolio-decisions-index",
     "ba-index", "po-index", "decision-index", "flow-index",
 }
+# A merged compact file replaces its folder's index and inherits its routing
+# duty; it is not in INDEX_TYPES because it is not otherwise an index.
+COMPACT_TYPE = "compact-doc"
 CHILDREN_START = "<!-- docforge-children:start -->"
 CHILDREN_END = "<!-- docforge-children:end -->"
 
@@ -360,24 +363,45 @@ def provenance_defects(repo: Path, doc: dict, state: str, provenance: dict | Non
     return result
 
 
+def coverage_scope(doc: dict) -> tuple[PurePosixPath, PurePosixPath]:
+    """`(children_folder, link_base)` for a routing document.
+
+    For an index the two coincide: `docs/reference/README.md` owns
+    `docs/reference` and its links also resolve from there. For a merged
+    compact file they diverge — `docs/reference.md` stands in for the index of
+    `docs/reference`, so it owns that folder's children, but its own links
+    resolve from `docs`. Using `.parent` for both is what silently exempted
+    every merged file from this check."""
+    path = PurePosixPath(doc["path"])
+    if doc["type"] == COMPACT_TYPE:
+        return path.with_suffix(""), path.parent
+    return path.parent, path.parent
+
+
 def readme_child_coverage(repo: Path, doc: dict, manifest: dict, text: str) -> list[str]:
-    """Every materialized direct child of a section README must be linked."""
-    if doc["type"] not in INDEX_TYPES:
+    """Every materialized direct child of a section index must be linked.
+
+    Merged compact files carry the same duty. Profile- and audience-driven
+    documents never fold, so a folded folder routinely keeps static children —
+    `docs/reference.md` merges the reference index away while
+    `docs/reference/api.md` stays a separate file with no README above it. If
+    the merged file does not link it, nothing does."""
+    if doc["type"] not in INDEX_TYPES and doc["type"] != COMPACT_TYPE:
         return []
-    directory = PurePosixPath(doc["path"]).parent
+    children_folder, link_base = coverage_scope(doc)
     missing = []
     for candidate in active_documents(manifest):
         if candidate["id"] == doc["id"]:
             continue
         try:
-            relative = PurePosixPath(candidate["path"]).relative_to(directory)
+            relative = PurePosixPath(candidate["path"]).relative_to(children_folder)
         except ValueError:
             continue
         if not (len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md")):
             continue
         if not (repo / candidate["path"]).is_file():
             continue
-        rel = relative.as_posix()
+        rel = PurePosixPath(candidate["path"]).relative_to(link_base).as_posix()
         if rel not in text and f"./{rel}" not in text:
             missing.append(candidate["path"])
     return missing

@@ -922,5 +922,79 @@ class DashboardScanTests(unittest.TestCase):
                     stop_dashboard(runtime, repo)
 
 
+class CompactRoutePlanTests(unittest.TestCase):
+    """A merged compact file and its unfolded children share a name:
+    `docs/reference.md` next to `docs/reference/`. Routing the merged page as
+    `reference.mdx` collides with that directory, and Fumadocs resolves the
+    name to the folder — dropping the section's main content from the sidebar
+    and listing the folder twice."""
+
+    DOCS = [
+        {"id": "docs_index", "path": "docs/README.md", "type": "docs-index",
+         "title": "Documentation", "nav_order": 0},
+        {"id": "product_compact", "path": "docs/product.md", "type": "compact-doc",
+         "title": "Product", "nav_order": 10},
+        {"id": "reference_compact", "path": "docs/reference.md", "type": "compact-doc",
+         "title": "Reference", "nav_order": 40},
+        {"id": "api_reference", "path": "docs/reference/api.md", "type": "api-reference",
+         "title": "API", "nav_order": 41},
+        {"id": "library_compatibility", "path": "docs/reference/compatibility.md",
+         "type": "generic", "title": "Compatibility", "nav_order": 42},
+    ]
+
+    def _plan(self, runtime: str) -> tuple[dict[str, str], dict[str, list[str]]]:
+        """`({doc_id: output_path|url}, {folder: pages})` from the real generator."""
+        if runtime == "py":
+            script = (
+                "import json,sys;sys.path.insert(0,%r);"
+                "from runtime.dashboard.python import dashboard as d;"
+                "docs=json.loads(sys.stdin.read());"
+                "led=d.build_ledger(docs);"
+                "print(json.dumps({'pages':led['pages'],"
+                "'plans':{k:v['pages'] for k,v in d.meta_plans(led,{'documents':docs}).items()}}))"
+                % str(ROOT / "skills" / "docforge" / "_shared")
+            )
+            command = ["python3", "-c", script]
+        else:
+            script = (
+                "const d=require(%r);let s='';process.stdin.on('data',c=>s+=c)"
+                ".on('end',()=>{const docs=JSON.parse(s);const led=d.buildLedger(docs);"
+                "const plans={};for(const[k,v]of Object.entries(d.metaPlans(led,{documents:docs})))"
+                "plans[k]=v.pages;"
+                "console.log(JSON.stringify({pages:led.pages,plans}));});"
+                % str(ROOT / "skills" / "docforge" / "_shared" / "runtime"
+                      / "dashboard" / "js" / "dashboard.js")
+            )
+            command = ["node", "-e", script]
+        result = subprocess.run(
+            command, input=json.dumps(self.DOCS), text=True, capture_output=True, check=True
+        )
+        data = json.loads(result.stdout)
+        routes = {page["doc_id"]: (page["output_path"], page["url"]) for page in data["pages"]}
+        return routes, data["plans"]
+
+    def test_merged_page_routes_as_its_folder_index_at_the_same_url(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                routes, _ = self._plan(runtime)
+                # The URL is byte-identical to the pre-fix route, so no link churn.
+                self.assertEqual(routes["reference_compact"], ("reference/index.mdx", "/docs/reference"))
+                self.assertEqual(routes["product_compact"], ("product/index.mdx", "/docs/product"))
+                # Unfolded children keep their own routes and nest under it.
+                self.assertEqual(routes["api_reference"], ("reference/api.mdx", "/docs/reference/api"))
+
+    def test_sidebar_lists_each_node_once(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                _, plans = self._plan(runtime)
+                self.assertEqual(plans[""], ["index", "product", "reference"])
+                self.assertEqual(plans["reference"], ["index", "api", "compatibility"])
+                for folder, pages in plans.items():
+                    self.assertEqual(
+                        len(pages), len(set(pages)),
+                        f"duplicate sidebar entry in {folder or '(root)'}: {pages}",
+                    )
+
+
 if __name__ == "__main__":
     unittest.main()

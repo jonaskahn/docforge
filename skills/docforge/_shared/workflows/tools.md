@@ -78,11 +78,14 @@ from the absolute cartridge root with `query_catalog --validate`,
 - `generate_indexes.{py,js}`: regenerate catalog routers (`--write`,
   `--check`). `--check` exits `1` without writing when generated output is
   stale.
-- `manage_manifest.{py,js}`: `init`, `add`, `set`, `presentation`, `audit`,
-  `status`, `set-graph`, `reconcile`, `unmanaged`, `retire`, and `finish` —
-  full per-subcommand table:
+- `manage_manifest.{py,js}`: `init`, `preview`, `add`, `set`, `presentation`,
+  `audit`, `status`, `set-graph`, `reconcile`, `unmanaged`, `retire`, and
+  `finish` — full per-subcommand table:
   [`../runtime/manifest/README.md`](../runtime/manifest/README.md)
-  "`manage_manifest`". `presentation` persists a
+  "`manage_manifest`". `preview` is read-only and writes nothing: it sizes a
+  scope in both layouts and attributes the count per selection, for intake's
+  confirmation summary ([`intake.md`](intake.md) "Confirmation summary").
+  `presentation` persists a
   per-document reader policy override and invalidates audited output only
   when its effective presentation changes. `init`'s optional `--graph-provider`
   threads through an explicit provider choice from intake; `set-graph`

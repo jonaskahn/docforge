@@ -42,6 +42,7 @@ const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";
 const BASE_URL = "/docs";
 const DOC_PREFIX = "docs/";
+const COMPACT_TYPE = "compact-doc";
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const FRONTMATTER_HEAD_BYTES = 64 * 1024;
 const ASSET_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".ico", ".bmp"];
@@ -146,6 +147,15 @@ function routeForDoc(doc) {
       return [`${directory}/index.mdx`, `${BASE_URL}/${directory}`];
     }
     const stem = rel.endsWith(".md") ? rel.slice(0, -3) : rel.slice(0, -4);
+    if (doc.type === COMPACT_TYPE) {
+      // A merged compact file stands in for its folder's index, and its
+      // unfolded children still live in `docs/<stem>/`. Emitting `<stem>.mdx`
+      // collides with that directory, and Fumadocs resolves such a name to the
+      // folder — which drops the merged page from the sidebar entirely. Routing
+      // it as the folder's index keeps the URL byte-identical and nests the
+      // children under it.
+      return [`${stem}/index.mdx`, `${BASE_URL}/${stem}`];
+    }
     return [`${stem}.mdx`, `${BASE_URL}/${stem}`];
   }
   const stem = p.endsWith(".md") ? p.slice(0, -3) : p.slice(0, -4);
@@ -708,7 +718,16 @@ function metaPlans(ledger, manifest) {
     });
     const pages = [];
     if (info.index) pages.push("index");
-    pages.push(...entries.map((entry) => entry[1]));
+    // A folder name and a sibling page stem can collide (`reference/` next to
+    // `reference.mdx`). Fumadocs resolves the name to the folder and would then
+    // render that folder node once per entry, so keep the first occurrence and
+    // drop the rest.
+    const seen = new Set(pages);
+    for (const [, name] of entries) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      pages.push(name);
+    }
     plans[folder] = {
       path: folder ? `${folder}/meta.json` : "meta.json",
       title: metaTitle(folder, ledger, manifest),
@@ -912,9 +931,16 @@ function validateBuild(repo, manifest, contentDir, assetsDir) {
         expected.add(entry);
       }
     }
-    const actual = new Set(data.pages || []);
+    const listed = data.pages || [];
+    const actual = new Set(listed);
     for (const missing of [...expected].sort()) {
       if (!actual.has(missing)) errors.push(`meta coverage missing in ${path.relative(dashboard, metaFile)}: ${missing}`);
+    }
+    // Compare the list, not just the set: a duplicated entry renders the same
+    // sidebar node twice and would otherwise pass silently.
+    const duplicates = [...new Set(listed.filter((name) => listed.filter((other) => other === name).length > 1))].sort();
+    for (const duplicate of duplicates) {
+      errors.push(`meta duplicate entry in ${path.relative(dashboard, metaFile)}: ${duplicate}`);
     }
     for (const extra of [...actual].sort()) {
       if (!expected.has(extra)) errors.push(`meta coverage extra in ${path.relative(dashboard, metaFile)}: ${extra}`);

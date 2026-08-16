@@ -199,6 +199,14 @@ Rules:
   that dimension entirely.
 - A scale flag records `decided_by: "user"` with fresh `signals` and the
   detected class preserved as `detected_class`.
+- Changing the tier **to** `portfolio` on a compact manifest also changes the
+  layout to `standard` — compact covers Spine and Diligence only (see
+  [`../references/docs-tree.md`](../references/docs-tree.md) "Compact layout").
+  Reconcile records `decided_by: "tier-constraint"`, re-plans the folded
+  members, and reports the merged entries as removed or retire candidates.
+  Show both the tier change and the layout change in the selection-change
+  preview; never apply the layout change silently. An explicit
+  `--layout compact` with `--tier portfolio` is rejected outright.
 - Newly applicable documents are added as `planned` in write order.
 - Planned documents that are no longer applicable are removed from the plan
   (`removed-planned` in the report).

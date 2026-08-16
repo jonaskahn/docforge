@@ -66,6 +66,7 @@ STATE_SCHEMA = 1
 STATE_FILE = ".docforge-dashboard.json"
 BASE_URL = "/docs"
 DOC_PREFIX = "docs/"
+COMPACT_TYPE = "compact-doc"
 WRITTEN = {"generated", "needs_review", "complete"}
 FRONTMATTER_HEAD_BYTES = 64 * 1024
 ASSET_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".ico", ".bmp"}
@@ -175,6 +176,14 @@ def route_for_doc(doc: dict) -> tuple[str, str]:
             directory = rel[:-len("/README.md")]
             return f"{directory}/index.mdx", f"{BASE_URL}/{directory}"
         stem = rel[:-3] if rel.endswith(".md") else rel[:-4]
+        if doc.get("type") == COMPACT_TYPE:
+            # A merged compact file stands in for its folder's index, and its
+            # unfolded children still live in `docs/<stem>/`. Emitting
+            # `<stem>.mdx` collides with that directory, and Fumadocs resolves
+            # such a name to the folder — which drops the merged page from the
+            # sidebar entirely. Routing it as the folder's index keeps the URL
+            # byte-identical and nests the children under it.
+            return f"{stem}/index.mdx", f"{BASE_URL}/{stem}"
         return f"{stem}.mdx", f"{BASE_URL}/{stem}"
     stem = path[:-3] if path.endswith(".md") else path[:-4]
     slug = stem.lower()
@@ -739,7 +748,16 @@ def meta_plans(ledger: dict, manifest: dict) -> dict[str, dict]:
         pages = []
         if info["index"] is not None:
             pages.append("index")
-        pages.extend(name for _, name in entries)
+        # A folder name and a sibling page stem can collide (`reference/` next
+        # to `reference.mdx`). Fumadocs resolves the name to the folder and
+        # would then render that folder node once per entry, so keep the first
+        # occurrence and drop the rest.
+        seen = set(pages)
+        for _, name in entries:
+            if name in seen:
+                continue
+            seen.add(name)
+            pages.append(name)
         plans[folder] = {
             "path": f"{folder}/meta.json" if folder else "meta.json",
             "title": meta_title(folder, ledger, manifest),
@@ -908,11 +926,16 @@ def validate_build(repo: Path, manifest: dict, content_dir: Path, assets_dir: Pa
         for child in sorted((meta_file.parent).iterdir()):
             if child.is_dir() and (child / "meta.json").is_file():
                 expected_children.add(child.name)
-        actual = set(data.get("pages", []))
+        listed = list(data.get("pages", []))
+        actual = set(listed)
         for missing in sorted(expected_children - actual):
             errors.append(f"meta coverage missing in {meta_file.relative_to(dashboard)}: {missing}")
         for extra in sorted(actual - expected_children):
             errors.append(f"meta coverage extra in {meta_file.relative_to(dashboard)}: {extra}")
+        # Compare the list, not just the set: a duplicated entry renders the
+        # same sidebar node twice and would otherwise pass silently.
+        for duplicate in sorted({name for name in listed if listed.count(name) > 1}):
+            errors.append(f"meta duplicate entry in {meta_file.relative_to(dashboard)}: {duplicate}")
     return {
         "ok": not errors,
         "errors": errors,

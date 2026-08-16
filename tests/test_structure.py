@@ -181,6 +181,59 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("only candidate — confirm it or add your own", intake)
         self.assertIn('keeps the "these are weak candidates" framing', intake)
 
+    def test_compact_excludes_portfolio_across_instruction_files(self) -> None:
+        """Compact covers Spine and Diligence only; a Portfolio root is always
+        standard. This spans docs-tree.md (the rule), portfolio.md (why, plus
+        member independence), intake.md (both turns), planning.md, and
+        revision.md (the tier-change transition) -- one place each, no
+        restatement."""
+        docs_tree = (SHARED_ROOT / "references" / "docs-tree.md").read_text(encoding="utf-8")
+        self.assertIn("| `compact` | ✓ | ✓ | **✗** |", docs_tree)
+        self.assertIn("A Portfolio root is always `standard`.", docs_tree)
+        self.assertIn("decided_by: \"tier-constraint\"", docs_tree)
+        self.assertIn("A member may be compact while", docs_tree)
+        self.assertNotIn("both\navailable at **every** tier", docs_tree)
+
+        portfolio = (SHARED_ROOT / "references" / "portfolio.md").read_text(encoding="utf-8")
+        self.assertIn("## Layout", portfolio)
+        self.assertIn("A Portfolio root is always `standard`.", portfolio)
+        self.assertIn("A member may be compact while the collection root", portfolio)
+
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "| Goal is Portfolio, or the invocation names the `portfolio` tier | **Not asked.**",
+            intake,
+        )
+        self.assertIn("Compact excludes Portfolio.", intake)
+        self.assertIn(
+            "Portfolio (requires standard layout — selecting it changes\n   your layout from compact to standard)",
+            intake,
+        )
+        self.assertIn(
+            "Layout: standard (required by Portfolio tier —\nthe compact pick from Turn 1 does not apply)",
+            intake,
+        )
+
+        planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
+        self.assertIn("rejects `--tier portfolio --layout compact`", planning)
+
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        self.assertIn("Changing the tier **to** `portfolio` on a compact manifest", revision)
+        self.assertIn("decided_by: \"tier-constraint\"", revision)
+
+    def test_intake_confirmation_summary_previews_projected_document_count(self) -> None:
+        """Most dimensions cost nothing in document count -- a platform, a
+        framework, or most concerns only shift narrative emphasis -- while one
+        audience can carry a third of the tree. The user has no way to see
+        that from the question pack alone, so the confirmation summary reports
+        it via the read-only `preview` subcommand before the user commits."""
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn("manage_manifest.{py,js} preview", intake)
+        self.assertIn("Projected tree size", intake)
+        self.assertIn("25% or more", intake)
+        self.assertIn("This is a report, not a gate.", intake)
+        self.assertIn("never blocks confirmation", intake)
+
     def test_revision_workflow_covers_revise_flow(self) -> None:
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
         self.assertIn("`/docforge-revise flow`", revision)

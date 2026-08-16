@@ -25,7 +25,7 @@ const { dumpJson, fail, loadManifest } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
-const { computeScale } = require("../../common/js/scale.js");
+const { computeScale, layoutFor } = require("../../common/js/scale.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 
 const MANIFEST_CURRENT = "3.7";
@@ -436,15 +436,35 @@ function seedDescriptions(docs, maps) {
 
 // Detected-only scale record for backfill. A present `project.scale` is
 // never overwritten — this function is only called when the field is absent.
-function backfillProjectScale(repo) {
+//
+// `tier` keeps the backfill from handing a portfolio manifest the compact
+// layout a small collection root would otherwise detect.
+function backfillProjectScale(repo, tier = "diligence") {
   const detected = computeScale(repo);
-  return {
+  const resolved = layoutFor(tier, detected.suggested_layout, { explicit: false });
+  const record = {
     class: detected.class,
-    layout: detected.suggested_layout,
-    decided_by: "detected",
+    layout: resolved.layout,
+    decided_by: resolved.decided_by,
     decided_at: new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00"),
     signals: detected.signals,
   };
+  if (resolved.decided_by === "tier-constraint") record.detected_class = detected.class;
+  return record;
+}
+
+// Force a portfolio manifest off compact. Compact covers spine and diligence
+// only, so a manifest written before that rule (or hand-edited) is corrected
+// here rather than left generating a folded portfolio layer.
+function constrainScaleLayout(project) {
+  const record = project.scale;
+  if (!record || typeof record !== "object" || record.layout !== "compact") return false;
+  const resolved = layoutFor(project.tier || "diligence", "compact", { explicit: false });
+  if (resolved.layout === "compact") return false;
+  if (record.detected_class === undefined) record.detected_class = record.class;
+  record.layout = resolved.layout;
+  record.decided_by = resolved.decided_by;
+  return true;
 }
 
 function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
@@ -486,7 +506,10 @@ function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
     typeof manifest.project === "object" &&
     !isPlainObject(manifest.project.scale)
   ) {
-    manifest.project.scale = backfillProjectScale(repo);
+    manifest.project.scale = backfillProjectScale(repo, manifest.project.tier || "diligence");
+    changed = true;
+  }
+  if (isPlainObject(manifest.project) && constrainScaleLayout(manifest.project)) {
     changed = true;
   }
   // Schema 3.7 added two measurement signals. Refresh them on any upgrade —
@@ -875,7 +898,7 @@ function migrateLegacy(repo, manifestPath, manifest, dryRun) {
       name: project.name,
       root: project.root,
       tier: project.tier,
-      scale: backfillProjectScale(repo),
+      scale: backfillProjectScale(repo, project.tier),
       profiles: project.profiles,
       provenance_storage: store.STORAGE_JSON,
       unmanaged_docs: [],

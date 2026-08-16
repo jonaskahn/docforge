@@ -212,6 +212,24 @@ class RuntimeParityTests(unittest.TestCase):
             self.assertTrue(results["py"]["gitignore_exists"])
             self.assertTrue(results["py"]["manifest_exists"])
 
+    def test_preview_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "src").mkdir()
+            (repo / "src" / "a.py").write_text("x = 1\n", encoding="utf-8")
+            scope = [
+                "--tier", "diligence", "--layout", "compact",
+                "--shape", "library-sdk", "--audience", "engineers",
+                "--audience", "beginners", "--audience", "coding-agents", "--json",
+            ]
+            py_result = run("py", "manage_manifest", "preview", "--repo", str(repo), *scope)
+            js_result = run("js", "manage_manifest", "preview", "--repo", str(repo), *scope)
+            self.assertEqual(py_result.returncode, 0, py_result.stderr)
+            self.assertEqual(js_result.returncode, 0, js_result.stderr)
+            self.assertEqual(json.loads(py_result.stdout), json.loads(js_result.stdout))
+            # Read-only: no manifest, no directories, nothing written by either runtime.
+            self.assertFalse((repo / ".docforge").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

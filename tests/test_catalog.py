@@ -24,6 +24,8 @@ class CatalogRecordTests(unittest.TestCase):
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]
+        # 136 after portfolio_compact was removed (Portfolio is standard-only),
+        # +1 for agents_compact.
         self.assertEqual(len(document_types), 137)
         ids = [entry["id"] for entry in document_types]
         self.assertEqual(len(ids), len(set(ids)), "duplicate document ids in index.json")
@@ -163,6 +165,49 @@ class CatalogRecordTests(unittest.TestCase):
                     self.assertIn("depth brake", result.stdout + result.stderr)
         finally:
             record_path.write_text(original, encoding="utf-8")
+
+    def test_agents_compact_registered_and_within_member_cap(self) -> None:
+        row = next(r for r in self.index["document_types"] if r["id"] == "agents_compact")
+        self.assertEqual(row["path"], "docs/agents.md")
+        record = json.loads((CATALOG_DIR / row["record"]).read_text(encoding="utf-8"))
+        self.assertEqual(record["type"], "compact-doc")
+        self.assertEqual(record["compact_target"], "docs/agents.md")
+        self.assertLessEqual(len(record["compact_members"]), 8)
+        members = set(record["compact_members"])
+        for expected in (
+            "agents_index", "agents_architecture", "agents_patterns", "agents_testing",
+            "agents_conventions", "agents_tech_debt", "agents_flow", "agents_glossary",
+        ):
+            self.assertIn(expected, members)
+        # Fixed host-contract files are never part of the fold.
+        for excluded in ("agents_kernel", "claude_shim", "claude_local", "claude_settings"):
+            self.assertNotIn(excluded, members)
+        for member_id in members:
+            member_row = next(r for r in self.index["document_types"] if r["id"] == member_id)
+            member = json.loads((CATALOG_DIR / member_row["record"]).read_text(encoding="utf-8"))
+            self.assertEqual(member.get("compact_group"), "agents_compact")
+
+    def test_portfolio_is_standard_only_no_compact_group_remains(self) -> None:
+        """Portfolio's value is per-member separation; folding the collection
+        layer into one file would erase it. `portfolio_compact` was removed
+        and none of its former members carry a `compact_group` any more."""
+        self.assertFalse(
+            any(r["id"] == "portfolio_compact" for r in self.index["document_types"])
+        )
+        for member_id in (
+            "portfolio_readme", "portfolio_repo_inventory", "portfolio_system_context",
+            "portfolio_security", "portfolio_operations", "portfolio_diligence_index",
+            "portfolio_glossary",
+        ):
+            row = next(r for r in self.index["document_types"] if r["id"] == member_id)
+            record = json.loads((CATALOG_DIR / row["record"]).read_text(encoding="utf-8"))
+            self.assertNotIn("compact_group", record)
+            self.assertNotIn("compact_order", record)
+        for path in (
+            "compact/contracts/portfolio.md", "compact/instructions/portfolio.md",
+            "compact/templates/portfolio.template.md",
+        ):
+            self.assertFalse((SKILL_ROOT / "content" / path).exists())
 
 
 if __name__ == "__main__":

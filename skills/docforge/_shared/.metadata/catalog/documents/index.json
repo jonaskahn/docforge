@@ -125,13 +125,13 @@
       "id": "portfolio",
       "kind": "folder",
       "index": "portfolio/index.json",
-      "count": 12
+      "count": 11
     },
     {
       "id": "agent-context",
       "kind": "folder",
       "index": "agent-context/index.json",
-      "count": 12
+      "count": 13
     }
   ]
 }

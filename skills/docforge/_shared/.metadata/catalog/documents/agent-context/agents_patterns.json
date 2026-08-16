@@ -23,5 +23,7 @@
   "write_order": 205,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
-  "template_file": "content/agent-context/templates/agents-patterns.md"
+  "template_file": "content/agent-context/templates/agents-patterns.md",
+  "compact_group": "agents_compact",
+  "compact_order": 3
 }

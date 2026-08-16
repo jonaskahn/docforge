@@ -479,7 +479,10 @@ class ScaleSchemaTests(unittest.TestCase):
         )
         self.assertEqual(scale["properties"]["class"]["enum"], ["small", "medium", "large"])
         self.assertEqual(scale["properties"]["layout"]["enum"], ["compact", "standard"])
-        self.assertEqual(scale["properties"]["decided_by"]["enum"], ["detected", "user"])
+        self.assertEqual(
+            scale["properties"]["decided_by"]["enum"],
+            ["detected", "user", "tier-constraint"],
+        )
         self.assertEqual(set(scale["properties"]["signals"]["required"]), SIGNAL_KEYS)
 
 

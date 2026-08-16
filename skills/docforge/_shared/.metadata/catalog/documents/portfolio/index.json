@@ -6,11 +6,6 @@
   "source": "../../index.json",
   "records": [
     {
-      "id": "portfolio_compact",
-      "path": "portfolio_compact.json",
-      "summary": "Compact portfolio section: inventory, system context, security, operations, diligence index, and glossary in one file"
-    },
-    {
       "id": "portfolio_readme",
       "path": "portfolio_readme.json",
       "summary": "Portfolio overview: what the portfolio layer is, its boundary, and the reader question each portfolio document answers"

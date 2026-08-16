@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { dumpJson, ensureDocforgeGitignore, ensureGitignoredDir, fail, finishDocforge, loadManifest } = require("../../common/js/_util.js");
 const { planLines } = require("../../common/js/plan.js");
-const { computeScale, LAYOUT_BY_CLASS } = require("../../common/js/scale.js");
+const { computeScale, LAYOUT_BY_CLASS, LayoutTierError, layoutFor } = require("../../common/js/scale.js");
 const { detect: detectProfiles, inventory: inventoryFiles } = require("../../catalog/js/detect_profiles.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
@@ -315,12 +315,13 @@ function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standa
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "unmanaged", "retire"]);
+  const knownCommands = new Set(["init", "preview", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "unmanaged", "retire"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "overlay", "evidence", "doc"]);
-  const boolean = new Set(["force", "keep-tmp", "reset", "dry-run"]);
+  const boolean = new Set(["force", "keep-tmp", "reset", "dry-run", "json"]);
   const allowed = {
     init: new Set(["repo", "tier", "scale-class", "layout", "shape", "platform", "framework", "concern", "audience", "overlay", "name", "force", "graph-provider"]),
+    preview: new Set(["repo", "tier", "layout", "scale-class", "shape", "platform", "framework", "concern", "audience", "json"]),
     add: new Set(["repo", "type", "id", "path", "title", "evidence"]),
     set: new Set(["repo", "id", "status"]),
     presentation: new Set(["repo", "id", "primary-audience", "code", "related-docs", "repository-paths", "reset"]),
@@ -373,24 +374,33 @@ function resolveGraphLock(repo, provider) {
 // explicit flag records `decided_by: "user"` with `detected_class` preserved
 // so a later run never silently re-classifies an override. `files` and
 // `detections` let a caller that already walked the repo avoid a second walk.
-function resolveScale(repo, scaleClass, layout, files = null, detections = null) {
+//
+// `tier` gates the layout through `layoutFor`: an explicit compact pick at
+// Portfolio throws LayoutTierError, and a detected compact layout there is
+// forced to standard as `decided_by: "tier-constraint"`.
+function resolveScale(repo, scaleClass, layout, files = null, detections = null, tier = "diligence") {
   const detected = computeScale(repo, files, detections);
   if (!scaleClass && !layout) {
-    return {
+    const resolved = layoutFor(tier, detected.suggested_layout, { explicit: false });
+    const record = {
       class: detected.class,
-      layout: detected.suggested_layout,
-      decided_by: "detected",
+      layout: resolved.layout,
+      decided_by: resolved.decided_by,
       decided_at: nowIso(),
       signals: detected.signals,
     };
+    if (resolved.decided_by === "tier-constraint") record.detected_class = detected.class;
+    return record;
   }
   const chosenClass = scaleClass || detected.class;
-  const chosenLayout = layout || LAYOUT_BY_CLASS[chosenClass];
+  const resolved = layoutFor(tier, layout || LAYOUT_BY_CLASS[chosenClass], { explicit: Boolean(layout) });
+  // Either flag being present makes this a user decision; the tier can still
+  // override the layout it implied, and that override is what gets recorded.
   return {
     class: chosenClass,
-    layout: chosenLayout,
+    layout: resolved.layout,
     detected_class: detected.class,
-    decided_by: "user",
+    decided_by: resolved.decided_by === "tier-constraint" ? "tier-constraint" : "user",
     decided_at: nowIso(),
     signals: detected.signals,
   };
@@ -417,7 +427,13 @@ function cmdInit(args) {
   // One walk feeds both the discovery record and the scale record.
   const walked = inventoryFiles(fs.realpathSync(args.repo));
   const discovery = detectProfiles(fs.realpathSync(args.repo), true, walked);
-  const projectScale = resolveScale(args.repo, args.scale_class, args.layout, walked, discovery);
+  let projectScale;
+  try {
+    projectScale = resolveScale(args.repo, args.scale_class, args.layout, walked, discovery, args.tier);
+  } catch (error) {
+    if (error instanceof LayoutTierError) return fail(error.message, 2);
+    throw error;
+  }
   const docs = selectedStaticDocuments(catalog, args.repo, args.tier, profiles, projectScale.layout);
   const manifest = {
     version: MANIFEST_VERSION,
@@ -635,10 +651,22 @@ function cmdReconcile(args) {
   const catalog = loadCatalog();
   const newTier = args.tier || manifest.project.tier;
   const currentScale = manifest.project.scale || {};
-  const newLayout = args.layout
+  const requestedLayout = args.layout
     || (args.scale_class ? LAYOUT_BY_CLASS[args.scale_class] : null)
     || currentScale.layout
     || "standard";
+  // Moving to portfolio drops a compact manifest to standard; the folded
+  // members return as planned and the merged entry becomes a retire candidate
+  // through the ordinary compact->standard path below.
+  let newLayout;
+  let layoutConstraint;
+  try {
+    ({ layout: newLayout, decided_by: layoutConstraint } = layoutFor(newTier, requestedLayout, { explicit: Boolean(args.layout) }));
+  } catch (error) {
+    if (error instanceof LayoutTierError) return fail(error.message, 2);
+    throw error;
+  }
+  const tierForcedLayout = layoutConstraint === "tier-constraint";
   const raw = {};
   for (const dimension of PROFILE_DIMENSIONS) {
     const singular = dimension === "audiences" ? "audience" : dimension.slice(0, -1);
@@ -687,7 +715,7 @@ function cmdReconcile(args) {
   manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
   manifest.project.tier = newTier;
   manifest.project.profiles = profiles;
-  if (args.scale_class || args.layout) {
+  if (args.scale_class || args.layout || tierForcedLayout) {
     let scaleRecord;
     if (currentScale.class) {
       scaleRecord = { ...currentScale };
@@ -708,7 +736,12 @@ function cmdReconcile(args) {
     if (args.layout && args.layout !== oldLayout) {
       scaleRecord.layout = args.layout;
     }
-    scaleRecord.decided_by = "user";
+    if (tierForcedLayout) {
+      // The tier overrides whatever layout the flags or the manifest implied;
+      // record that as the reason rather than as a user pick.
+      scaleRecord.layout = newLayout;
+    }
+    scaleRecord.decided_by = tierForcedLayout ? "tier-constraint" : "user";
     scaleRecord.decided_at = nowIso();
     const detected = computeScale(args.repo);
     scaleRecord.detected_class = detected.class;
@@ -1040,8 +1073,92 @@ function cmdUnmanaged(args) {
     return fail(error.message, 2);
   }
 }
+// The `[dimension, value]` pairs this invocation actually selected.
+function selectionValues(args) {
+  const pairs = [];
+  for (const [dimension, singular] of [
+    ["shapes", "shape"], ["platforms", "platform"], ["frameworks", "framework"],
+    ["concerns", "concern"], ["audiences", "audience"],
+  ]) {
+    for (const value of args[singular] || []) pairs.push([dimension, value]);
+  }
+  return pairs;
+}
+// Report how large a tree a scope would produce, without writing anything.
+//
+// Intake needs this before the confirmation gate: a user picking profiles and
+// audiences has no way to know that most dimensions cost nothing while one
+// audience can carry a third of the tree. Read-only — no manifest, no
+// directories, no side effects of any kind.
+function cmdPreview(args) {
+  const catalog = loadCatalog();
+  let profiles;
+  try {
+    profiles = normalizeProfiles(catalog, {
+      shapes: args.shape, platforms: args.platform, frameworks: args.framework,
+      concerns: args.concern,
+      audiences: (args.audience && args.audience.length) ? args.audience : ["engineers", "beginners"],
+    });
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  const count = (layout, drop) => {
+    const trimmed = { ...profiles };
+    if (drop) trimmed[drop[0]] = profiles[drop[0]].filter((v) => v !== drop[1]);
+    return selectedStaticDocuments(catalog, args.repo, args.tier, trimmed, layout).length;
+  };
+  const standardCount = count("standard");
+  const report = { tier: args.tier, standard_count: standardCount };
+  try {
+    const resolved = layoutFor(args.tier, "compact", { explicit: true });
+    report.compact_count = count(resolved.layout);
+  } catch (error) {
+    if (!(error instanceof LayoutTierError)) throw error;
+    report.compact_count = null;
+    report.compact_unavailable = error.message;
+  }
+  // Ablation, not origin-counting: "how many documents disappear if this value
+  // is dropped" is the number a user weighing a choice actually wants, and it
+  // stays correct when several selections claim the same document.
+  let layout = args.layout || (report.compact_count !== null ? "compact" : "standard");
+  if (layout === "compact" && report.compact_count === null) layout = "standard";
+  const baseline = count(layout);
+  report.layout = layout;
+  report.count = baseline;
+  const attribution = [];
+  for (const [dimension, value] of selectionValues(args)) {
+    if (!profiles[dimension].includes(value)) continue;
+    attribution.push({ dimension, value, documents: baseline - count(layout, [dimension, value]) });
+  }
+  attribution.sort((a, b) => (b.documents - a.documents)
+    || a.dimension.localeCompare(b.dimension) || a.value.localeCompare(b.value));
+  report.attribution = attribution;
+
+  if (args.json) {
+    process.stdout.write(dumpJson(report));
+    return 0;
+  }
+  console.log(`Preview ${args.repo} — tier: ${args.tier}`);
+  console.log(`  standard: ${standardCount} documents`);
+  if (report.compact_count === null) {
+    console.log(`  compact:  unavailable — ${report.compact_unavailable}`);
+  } else {
+    console.log(`  compact:  ${report.compact_count} documents`);
+  }
+  console.log(`  projected (${layout}): ${baseline} documents`);
+  if (attribution.length) {
+    console.log("  attribution (documents lost if the value is dropped):");
+    for (const item of attribution) {
+      const share = (baseline && item.documents)
+        ? ` — ${Math.round(100 * item.documents / baseline)}% of the tree` : "";
+      console.log(`    ${item.dimension.slice(0, -1)}=${item.value}: ${item.documents}${share}`);
+    }
+  }
+  console.log("  (read-only: nothing was written)");
+  return 0;
+}
 function usage() {
-  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--scale-class <small|medium|large>] [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--graph-provider <id>] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | reconcile --repo <path> [--tier <spine|diligence|portfolio>] [--scale-class <small|medium|large>] [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | unmanaged --repo <path> --action <list|add|remove|archive> [--path <rel>] [--dry-run] | retire --repo <path> --doc <id> [--doc <id> ...] --mode <obsolete|delete> [--dry-run] | finish --repo <path> [--keep-tmp]");
+  console.log("usage: manage_manifest.js init --repo <path> --tier <spine|diligence|portfolio> [--scale-class <small|medium|large>] [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--graph-provider <id>] | preview --repo <path> --tier <spine|diligence|portfolio> [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] [--json] | add --repo <path> --type <type> --id <id> --path <path> [--evidence <path:...|graph:...|user-confirmed:...>] | set --repo <path> --id <id> --status <status> | presentation --repo <path> --id <id> [--primary-audience <id>] [--code <mode>] [--related-docs <mode>] [--repository-paths <mode>] [--reset] | audit --repo <path> --id <id> --mode <cold-pass> --verdict <PASS|FAIL> --report <path> | status --repo <path> | set-graph --repo <path> [--provider <id>] [--force] | reconcile --repo <path> [--tier <spine|diligence|portfolio>] [--scale-class <small|medium|large>] [--layout <compact|standard>] [--shape <id>] [--platform <id>] [--framework <id>] [--concern <id>] [--audience <id>] | unmanaged --repo <path> --action <list|add|remove|archive> [--path <rel>] [--dry-run] | retire --repo <path> --doc <id> [--doc <id> ...] --mode <obsolete|delete> [--dry-run] | finish --repo <path> [--keep-tmp]");
 }
 function main() {
   let args;
@@ -1054,7 +1171,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, unmanaged: cmdUnmanaged, retire: cmdRetire }[args.command](args);
+    return { init: cmdInit, preview: cmdPreview, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, unmanaged: cmdUnmanaged, retire: cmdRetire }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

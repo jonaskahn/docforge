@@ -14,4 +14,4 @@ actually selected.
 
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| operations_compact | section introduction, at-a-glance operational shape, scope and boundaries, deployment (environments, artifact path, rollout, rollback, verification), observability (signals, ownership, correlation, alert intent, blind spots) | incident procedures, provider marketing, runbook content (owned by the runbooks index), direct source-file navigation | Explanation | orientation |
+| operations_compact | section introduction, at-a-glance operational shape, scope and boundaries, deployment (environments, artifact path, rollout, rollback, verification), observability (signals, ownership, correlation, alert intent, blind spots); links to every selected, materialized document in this section's folder that this file does not merge | incident procedures, provider marketing, runbook content (owned by the runbooks index), direct source-file navigation | Explanation | orientation |

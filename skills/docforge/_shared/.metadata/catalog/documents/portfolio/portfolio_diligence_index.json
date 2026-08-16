@@ -20,7 +20,5 @@
   "write_order": 106,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
-  "template_file": "content/portfolio/templates/diligence-index.md",
-  "compact_group": "portfolio_compact",
-  "compact_order": 6
+  "template_file": "content/portfolio/templates/diligence-index.md"
 }

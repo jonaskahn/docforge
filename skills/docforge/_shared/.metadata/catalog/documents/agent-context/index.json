@@ -26,6 +26,11 @@
       "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
     },
     {
+      "id": "agents_compact",
+      "path": "agents_compact.json",
+      "summary": "Compact coding-agent section: retrieval views for architecture, patterns, testing, conventions, tech debt, flows, and terms in one file"
+    },
+    {
       "id": "agents_index",
       "path": "agents_index.json",
       "summary": "Coding-agent views overview: what these views cover and the reader question each agent view answers"

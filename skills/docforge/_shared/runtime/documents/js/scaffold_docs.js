@@ -20,6 +20,9 @@ const INDEX_TYPES = new Set([
   "folder-index", "docs-index", "portfolio-index", "portfolio-decisions-index",
   "ba-index", "po-index", "decision-index", "flow-index",
 ]);
+// A merged compact file replaces its folder's index and inherits its routing
+// duty; it is not in INDEX_TYPES because it is not otherwise an index.
+const COMPACT_TYPE = "compact-doc";
 const CHILDREN_START = "<!-- docforge-children:start -->";
 const CHILDREN_END = "<!-- docforge-children:end -->";
 const SCALAR_PROVENANCE_FIELDS = new Set(
@@ -298,18 +301,39 @@ function provenanceDefects(repo, doc, state, provenance, body, tier) {
 function headingAnchor(value) {
   return value.trim().toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, "").replace(/[\s-]+/g, "-").replace(/^-|-$/g, "");
 }
+// `[childrenFolder, linkBase]` for a routing document.
+//
+// For an index the two coincide: `docs/reference/README.md` owns
+// `docs/reference` and its links also resolve from there. For a merged compact
+// file they diverge — `docs/reference.md` stands in for the index of
+// `docs/reference`, so it owns that folder's children, but its own links
+// resolve from `docs`. Using the parent for both is what silently exempted
+// every merged file from this check.
+function coverageScope(doc) {
+  const parent = posixDirname(doc.path);
+  if (doc.type === COMPACT_TYPE) return [doc.path.replace(/\.[^./]+$/, ""), parent];
+  return [parent, parent];
+}
+// Every materialized direct child of a section index must be linked.
+//
+// Merged compact files carry the same duty. Profile- and audience-driven
+// documents never fold, so a folded folder routinely keeps static children —
+// `docs/reference.md` merges the reference index away while
+// `docs/reference/api.md` stays a separate file with no README above it. If the
+// merged file does not link it, nothing does.
 function readmeChildCoverage(repo, doc, manifest, text) {
-  if (!INDEX_TYPES.has(doc.type)) return [];
-  const directory = posixDirname(doc.path);
+  if (!INDEX_TYPES.has(doc.type) && doc.type !== COMPACT_TYPE) return [];
+  const [childrenFolder, linkBase] = coverageScope(doc);
   const missing = [];
   for (const candidate of activeDocuments(manifest)) {
     if (candidate.id === doc.id) continue;
-    const relative = path.posix.relative(directory, candidate.path);
+    const relative = path.posix.relative(childrenFolder, candidate.path);
     const parts = relative.split("/");
     if (relative.startsWith("..")) continue;
     if (!(parts.length === 1 || (parts.length === 2 && parts[1] === "README.md"))) continue;
     if (!fs.existsSync(path.join(repo, ...candidate.path.split("/")))) continue;
-    if (!text.includes(relative) && !text.includes(`./${relative}`)) missing.push(candidate.path);
+    const link = path.posix.relative(linkBase, candidate.path);
+    if (!text.includes(link) && !text.includes(`./${link}`)) missing.push(candidate.path);
   }
   return missing;
 }

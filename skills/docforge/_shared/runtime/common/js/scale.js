@@ -36,6 +36,35 @@ const SOURCE_SUFFIXES = new Set([
 
 const LAYOUT_BY_CLASS = { small: "compact", medium: "standard", large: "standard" };
 
+const COMPACT_TIERS = new Set(["spine", "diligence"]);
+
+// An explicitly requested layout the tier does not permit.
+class LayoutTierError extends Error {}
+
+// Resolve the layout a tier permits, as `{ layout, decided_by }`.
+//
+// Portfolio is the whole point of this function: its value is per-member
+// separation — an inventory row and a system-context view per repository — so
+// folding the collection layer into one file erases exactly the distinctions
+// the tier exists to make. Compact therefore covers Spine and Diligence only.
+//
+// An explicit compact pick at Portfolio throws instead of being coerced: a
+// user decision is never silently rewritten. A *detected* compact layout is
+// forced to standard and says so via `tier-constraint`, because a small
+// collection root would otherwise inherit compact from LAYOUT_BY_CLASS.
+function layoutFor(tier, layout, { explicit }) {
+  if (layout !== "compact" || COMPACT_TIERS.has(tier)) {
+    return { layout, decided_by: explicit ? "user" : "detected" };
+  }
+  if (explicit) {
+    throw new LayoutTierError(
+      `${tier} tier requires standard layout; `
+        + "compact covers spine and diligence only",
+    );
+  }
+  return { layout: "standard", decided_by: "tier-constraint" };
+}
+
 // True when `sourceFiles` sits within BOUNDARY_NUDGE_RATIO below a class
 // boundary (e.g. 40-49 source files under the small/medium boundary of 50).
 function nudgeEligible(sourceFiles, boundary) {
@@ -123,5 +152,8 @@ module.exports = {
   PROFILE_NUDGE_THRESHOLD,
   SOURCE_SUFFIXES,
   LAYOUT_BY_CLASS,
+  COMPACT_TIERS,
+  LayoutTierError,
+  layoutFor,
   computeScale,
 };

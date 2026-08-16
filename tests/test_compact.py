@@ -1,9 +1,9 @@
 """Compact layout: the fold mechanism, standard-layout invariance, merged-file
 scaffolding, composed contracts, and layout switching — Python/Node parity.
 
-Compact is a second axis orthogonal to tier: every tier keeps its standard
-tree byte-identical, and a compact tier covers the same subjects in fewer,
-denser files.
+Compact is a second axis alongside tier, available at Spine and Diligence but
+never Portfolio: every tier keeps its standard tree byte-identical, and a
+compact tier covers the same subjects in fewer, denser files.
 """
 
 from __future__ import annotations
@@ -272,51 +272,75 @@ class CompactFoldTests(unittest.TestCase):
                     self.assertIn("docs/security.md", audit.stdout)
                     self.assertIn("16 manifest documents checked", audit.stdout)
 
-    def test_compact_portfolio_covers_same_subjects_in_fewer_files_than_standard(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            standard_repo = Path(tmp) / "standard"
-            compact_repo = Path(tmp) / "compact"
-            standard_repo.mkdir()
-            compact_repo.mkdir()
-            seed_source_files(standard_repo, 7)
-            seed_source_files(compact_repo, 7)
-            self.assertEqual(initialize("py", standard_repo, "portfolio", layout="standard").returncode, 0)
-            self.assertEqual(initialize("py", compact_repo, "portfolio", layout="compact").returncode, 0)
-            standard_docs = load_manifest(standard_repo)["documents"]
-            compact_docs = load_manifest(compact_repo)["documents"]
-            self.assertLess(len(compact_docs), len(standard_docs))
-            portfolio_compact = next(doc for doc in compact_docs if doc["id"] == "portfolio_compact")
-            self.assertEqual(portfolio_compact["path"], "docs-portfolio.md")
-            self.assertEqual(
-                portfolio_compact["compact_members"],
-                [
-                    "portfolio_readme", "portfolio_repo_inventory", "portfolio_system_context",
-                    "portfolio_security", "portfolio_operations", "portfolio_diligence_index",
-                    "portfolio_glossary",
-                ],
-            )
-            # Decisions and epics stay standalone dynamic indexes even at Portfolio compact.
-            compact_paths = {doc["path"] for doc in compact_docs}
-            self.assertIn("docs-portfolio/decisions/README.md", compact_paths)
-            self.assertIn("docs-portfolio/epics/README.md", compact_paths)
-
-    def test_compact_portfolio_scaffolds_merged_file_with_all_sections(self) -> None:
+    def test_compact_is_rejected_at_portfolio_tier(self) -> None:
+        """Portfolio is standard-only. Its value is per-member separation --
+        an inventory row and a system-context view per repository -- so folding
+        the collection layer into one file erases what the tier exists for. An
+        explicit compact pick is refused rather than silently coerced."""
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime):
                 with tempfile.TemporaryDirectory() as tmp:
                     repo = Path(tmp)
                     seed_source_files(repo, 7)
-                    self.assertEqual(initialize(runtime, repo, "portfolio", layout="compact").returncode, 0)
-                    scaffold = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(repo / ".docforge" / "manifest.json"), "--document", "portfolio_compact")
-                    self.assertEqual(scaffold.returncode, 0, scaffold.stderr)
-                    target = repo / "docs-portfolio.md"
-                    self.assertTrue(target.is_file())
-                    text = target.read_text(encoding="utf-8")
-                    for heading in (
-                        "## At a glance", "## Repository inventory", "## System context",
-                        "## Security posture", "## Operations", "## Diligence index", "## Glossary",
+                    result = initialize(runtime, repo, "portfolio", layout="compact")
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(
+                        "portfolio tier requires standard layout",
+                        result.stdout + result.stderr,
+                    )
+                    self.assertFalse((repo / ".docforge" / "manifest.json").exists())
+
+    def test_portfolio_forces_standard_when_scale_detects_compact(self) -> None:
+        """A 7-file collection root detects `small` -> `compact`. The tier
+        overrides that without a flag, and says why via `tier-constraint` --
+        never silently, and never as a user pick."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_source_files(repo, 7)
+                    self.assertEqual(initialize(runtime, repo, "portfolio", layout=None).returncode, 0)
+                    manifest = load_manifest(repo)
+                    scale = manifest["project"]["scale"]
+                    self.assertEqual(scale["class"], "small")
+                    self.assertEqual(scale["layout"], "standard")
+                    self.assertEqual(scale["decided_by"], "tier-constraint")
+                    self.assertEqual(scale["detected_class"], "small")
+                    paths = {doc["path"] for doc in manifest["documents"]}
+                    self.assertNotIn("docs-portfolio.md", paths)
+                    # The portfolio layer stays one file per member subject.
+                    for path in (
+                        "docs-portfolio/README.md", "docs-portfolio/repo-inventory.md",
+                        "docs-portfolio/system-context.md", "docs-portfolio/security-posture.md",
+                        "docs-portfolio/operations.md", "docs-portfolio/diligence-index.md",
+                        "docs-portfolio/glossary.md", "docs-portfolio/decisions/README.md",
+                        "docs-portfolio/epics/README.md",
                     ):
-                        self.assertIn(heading, text)
+                        self.assertIn(path, paths)
+
+    def test_reconcile_to_portfolio_drops_a_compact_manifest_to_standard(self) -> None:
+        """Changing tier to portfolio is legal on a compact manifest and must
+        switch the layout, re-planning every folded member through the ordinary
+        compact->standard path."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_source_files(repo, 7)
+                    self.assertEqual(initialize(runtime, repo, "diligence", layout="compact").returncode, 0)
+                    self.assertTrue(
+                        any(doc["id"] == "product_compact" for doc in load_manifest(repo)["documents"])
+                    )
+                    result = run(runtime, "manage_manifest", "reconcile", "--repo", str(repo), "--tier", "portfolio")
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    manifest = load_manifest(repo)
+                    scale = manifest["project"]["scale"]
+                    self.assertEqual(scale["layout"], "standard")
+                    self.assertEqual(scale["decided_by"], "tier-constraint")
+                    ids = {doc["id"] for doc in manifest["documents"]}
+                    self.assertEqual({i for i in ids if i.endswith("_compact")}, set())
+                    self.assertIn("product_index", ids)
+                    self.assertIn("portfolio_readme", ids)
 
 
 class LayoutReconcileRecordTests(unittest.TestCase):
@@ -346,6 +370,89 @@ class LayoutReconcileRecordTests(unittest.TestCase):
                     self.assertEqual(scale["layout"], "compact")
                     self.assertEqual(scale["decided_by"], "user")
                     self.assertIn(scale["class"], ("small", "medium", "large"))
+
+
+class CompactWithProfilesTests(unittest.TestCase):
+    """Every other compact test uses the bare, no-profile repo, which is why
+    the unfolded-sibling defects went unnoticed: profile- and audience-driven
+    documents never fold, so a real compact tree keeps static children in
+    folders whose index was merged away."""
+
+    SCOPE = {"shapes": ("library-sdk",), "audiences": ("engineers", "beginners", "coding-agents")}
+
+    def test_agent_context_folds_but_host_contract_files_do_not(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_source_files(repo, 7)
+                    self.assertEqual(
+                        initialize(runtime, repo, "diligence", layout="compact", **self.SCOPE).returncode, 0
+                    )
+                    docs = load_manifest(repo)["documents"]
+                    by_id = {doc["id"]: doc for doc in docs}
+                    merged = by_id["agents_compact"]
+                    self.assertEqual(merged["path"], "docs/agents.md")
+                    # agents_conventions is condition-gated and absent here.
+                    self.assertEqual(
+                        merged["compact_members"],
+                        [
+                            "agents_index", "agents_architecture", "agents_patterns",
+                            "agents_testing", "agents_tech_debt", "agents_flow",
+                            "agents_glossary",
+                        ],
+                    )
+                    paths = {doc["path"] for doc in docs}
+                    self.assertFalse(
+                        {p for p in paths if p.startswith("docs/agents/")},
+                        "no agent view keeps its own file once the group folds",
+                    )
+                    # Fixed host-contract paths are never folded away.
+                    for path in ("AGENTS.md", "CLAUDE.md", "CLAUDE.local.md", ".claude/settings.json"):
+                        self.assertIn(path, paths)
+
+    def test_merged_file_must_link_its_unfolded_children(self) -> None:
+        """`docs/reference.md` merges the reference index away while
+        `docs/reference/api.md` stays a separate file with no README above it.
+        If the merged file does not link it, nothing does — so the audit must
+        fail rather than silently exempt every merged file."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    seed_source_files(repo, 7)
+                    self.assertEqual(
+                        initialize(runtime, repo, "diligence", layout="compact", **self.SCOPE).returncode, 0
+                    )
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    for doc in load_manifest(repo)["documents"]:
+                        run(runtime, "scaffold_docs", "--repo", str(repo),
+                            "--manifest", str(manifest_path), "--document", doc["id"])
+                    audit = run(runtime, "scaffold_docs", "--repo", str(repo),
+                                "--manifest", str(manifest_path), "--audit")
+                    self.assertEqual(audit.returncode, 1)
+                    self.assertIn(
+                        "docs/reference.md: missing link to docs/reference/api.md", audit.stdout
+                    )
+                    self.assertIn(
+                        "docs/engineering.md: missing link to docs/engineering/publishing.md",
+                        audit.stdout,
+                    )
+                    # Linking the child clears that finding and nothing else.
+                    reference = repo / "docs" / "reference.md"
+                    reference.write_text(
+                        reference.read_text(encoding="utf-8")
+                        + "\n- [API](reference/api.md)\n"
+                        + "- [Compatibility](reference/compatibility.md)\n",
+                        encoding="utf-8",
+                    )
+                    after = run(runtime, "scaffold_docs", "--repo", str(repo),
+                                "--manifest", str(manifest_path), "--audit")
+                    self.assertNotIn("docs/reference.md: missing link", after.stdout)
+                    self.assertIn(
+                        "docs/engineering.md: missing link to docs/engineering/publishing.md",
+                        after.stdout,
+                    )
 
 
 if __name__ == "__main__":

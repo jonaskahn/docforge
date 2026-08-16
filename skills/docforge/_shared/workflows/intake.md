@@ -198,14 +198,22 @@ wait for the user's explicit confirmation before reconciling the manifest.
    | Manifest exists and the goal may replace the plan | **Asked**, with the qualifier line below |
    | Manifest exists and detection drifted from `project.scale` | **Asked** as a `Change to <detected layout>` control (see Revise selection changes) |
    | Manifest exists, no drift, goal is Resume / Status / single-document update | **Not asked.** Stated as a baseline fact in the confirmation summary |
+   | Goal is Portfolio, or the invocation names the `portfolio` tier | **Not asked.** `standard` is stated as a fixed consequence of the tier |
    | `/docforge-revise all`, or any invocation that names a tier | **Asked** (mirrors the tier-naming exception below) |
 
    Present a native single-select with both layouts, each carrying the
    detected evidence from the discovery brief's scale line:
    - **Compact** — fewer, denser files; the same subjects as Standard at the
      same depth (`docs/product.md` instead of `docs/product/README.md` +
-     overview, and so on).
-   - **Standard** — one file per subject.
+     overview, and so on). Covers Spine and Diligence only.
+   - **Standard** — one file per subject. The only layout Portfolio supports.
+
+   **Compact excludes Portfolio.** When nested repos were detected — that is,
+   when the discovery brief's Portfolio-readiness bullet is present — say so in
+   this question: picking Compact forecloses Portfolio in Turn 2. See
+   [`../references/docs-tree.md`](../references/docs-tree.md) "Compact layout"
+   for the rule and
+   [`../references/portfolio.md`](../references/portfolio.md) "Layout" for why.
 
    Mark the detected layout `(suggested — <source_files> source files,
    <declared_dependencies> declared dependencies, <flow_candidates> flow
@@ -240,6 +248,13 @@ layout as baseline facts at the top of the pack, never as controls.
    needs its own separate Diligence run first, rather than listing Portfolio
    as a normal choice (see [`../references/portfolio.md`](../references/portfolio.md)
    "Readiness gate").
+
+   When Turn 1 confirmed **compact**, still list Portfolio whenever the
+   readiness gate passes — never hide a tier the repository qualifies for —
+   but label it `Portfolio (requires standard layout — selecting it changes
+   your layout from compact to standard)`. Portfolio is standard-only; compact
+   covers Spine and Diligence. If the user selects it anyway, the confirmation
+   summary carries the layout change and requires explicit confirmation.
 4. **Repository profiles.** Require one multi-select per applicable dimension.
    Each dimension is a separate control with its own user-facing label and its
    own question text; internal catalog ids and CLI flags are unchanged:
@@ -385,13 +400,42 @@ containing only those unresolved choices, in the turn that owns them.
 
 ## Confirmation summary
 
+Before showing the summary, run `manage_manifest.{py,js} preview` with the
+confirmed scope (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)).
+It is read-only — it writes no manifest, no directories, nothing — so it sits
+inside intake's no-side-effect boundary. Report its result as a **Projected
+tree size** line:
+
+`Projected tree size: 26 documents (compact) / 50 (standard)`
+
+Name any single selection responsible for **25% or more** of the projected
+documents, using `preview`'s ablation count — how many documents disappear if
+that value is dropped:
+
+`Coding agents adds 5 of the 26 documents (19%).`
+
+This is a report, not a gate. It never blocks confirmation, never drops a
+selection on the user's behalf, and never argues the user out of a choice. It
+exists because the dimensions are not equally expensive — a platform, a
+framework, or most concerns often add zero documents and only shift narrative
+emphasis, while one audience can carry a third of the tree — and the user
+cannot see that from the question pack alone.
+
 After resolving the answers, display one confirmation summary containing the
 action, the confirmed layout, tier, every selected profile dimension, and
 every selected audience, selected graph provider and its code/flow
 capabilities, and execution mode (include “permissionless” in the label when
 Auto-accept was selected). The summary restates the confirmed layout with its
 detected evidence: `Layout: compact (confirmed — 34 source files, 28 declared
-dependencies, 3 flow candidates, 2 confirmed profiles)`. A pick that differed
+dependencies, 3 flow candidates, 2 confirmed profiles)`.
+
+When Turn 1 confirmed compact and Turn 2 selected Portfolio, the summary
+states the override instead: `Layout: standard (required by Portfolio tier —
+the compact pick from Turn 1 does not apply)`. Never silently apply the
+discarded compact answer, and never silently drop it without saying so. The
+manifest records this as `decided_by: "tier-constraint"`.
+
+A pick that differed
 from detection records `decided_by: "user"` on the manifest via
 `init --scale-class` / `--layout` ([`planning.md`](planning.md)); a pick
 matching detection records `decided_by: "detected"` with no flags — never a

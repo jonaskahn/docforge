@@ -445,27 +445,44 @@ def resolve_scale(
     layout: str | None,
     files: list | None = None,
     detections: list[dict] | None = None,
+    tier: str = "diligence",
 ) -> dict:
     """Build the `project.scale` record. Omitted flags adopt detection; any
     explicit flag records `decided_by: "user"` with `detected_class` preserved
     so a later run never silently re-classifies an override. `files` and
-    `detections` let a caller that already walked the repo avoid a second walk."""
+    `detections` let a caller that already walked the repo avoid a second walk.
+
+    `tier` gates the layout through `scale.layout_for`: an explicit compact
+    pick at Portfolio raises `scale.LayoutTierError`, and a detected compact
+    layout there is forced to standard as `decided_by: "tier-constraint"`."""
     detected = scale.compute_scale(repo, files=files, detections=detections)
     if scale_class is None and layout is None:
-        return {
+        chosen_layout, decided_by = scale.layout_for(
+            tier, detected["suggested_layout"], explicit=False
+        )
+        record = {
             "class": detected["class"],
-            "layout": detected["suggested_layout"],
-            "decided_by": "detected",
+            "layout": chosen_layout,
+            "decided_by": decided_by,
             "decided_at": now_iso(),
             "signals": detected["signals"],
         }
+        if decided_by == "tier-constraint":
+            record["detected_class"] = detected["class"]
+        return record
     chosen_class = scale_class or detected["class"]
-    chosen_layout = layout or scale.LAYOUT_BY_CLASS[chosen_class]
+    chosen_layout, constraint = scale.layout_for(
+        tier,
+        layout or scale.LAYOUT_BY_CLASS[chosen_class],
+        explicit=layout is not None,
+    )
+    # Either flag being present makes this a user decision; the tier can still
+    # override the layout it implied, and that override is what gets recorded.
     return {
         "class": chosen_class,
         "layout": chosen_layout,
         "detected_class": detected["class"],
-        "decided_by": "user",
+        "decided_by": "tier-constraint" if constraint == "tier-constraint" else "user",
         "decided_at": now_iso(),
         "signals": detected["signals"],
     }
@@ -495,9 +512,13 @@ def cmd_init(args: argparse.Namespace) -> int:
     # One walk feeds both the discovery record and the scale record.
     walked = inventory_files(args.repo)
     discovery = detect_profiles(args.repo, files=walked)
-    project_scale = resolve_scale(
-        args.repo, args.scale_class, args.layout, files=walked, detections=discovery
-    )
+    try:
+        project_scale = resolve_scale(
+            args.repo, args.scale_class, args.layout,
+            files=walked, detections=discovery, tier=args.tier,
+        )
+    except scale.LayoutTierError as exc:
+        return fail(str(exc), 2)
     docs = selected_static_documents(
         catalog, args.repo, args.tier, profiles, layout=project_scale["layout"]
     )
@@ -736,11 +757,20 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     new_tier = args.tier or manifest["project"]["tier"]
     project = manifest["project"]
     current_scale = project.get("scale") or {}
-    new_layout = (
+    requested_layout = (
         args.layout
         or (scale.LAYOUT_BY_CLASS[args.scale_class] if args.scale_class else None)
         or current_scale.get("layout", "standard")
     )
+    # Moving to portfolio drops a compact manifest to standard; the folded
+    # members return as planned and the merged entry becomes a retire
+    # candidate through the ordinary compact->standard path below.
+    try:
+        new_layout, layout_constraint = scale.layout_for(
+            new_tier, requested_layout, explicit=args.layout is not None
+        )
+    except scale.LayoutTierError as exc:
+        return fail(str(exc), 2)
     raw: dict[str, list[str]] = {}
     for dimension in PROFILE_DIMENSIONS:
         singular = "audience" if dimension == "audiences" else dimension[:-1]
@@ -782,7 +812,8 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
     manifest["project"]["tier"] = new_tier
     manifest["project"]["profiles"] = profiles
-    if args.scale_class or args.layout:
+    tier_forced_layout = layout_constraint == "tier-constraint"
+    if args.scale_class or args.layout or tier_forced_layout:
         if current_scale.get("class"):
             scale_record = dict(current_scale)
         else:
@@ -800,7 +831,11 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
                 scale_record["layout"] = scale.LAYOUT_BY_CLASS[args.scale_class]
         if args.layout and args.layout != old_layout:
             scale_record["layout"] = args.layout
-        scale_record["decided_by"] = "user"
+        if tier_forced_layout:
+            # The tier overrides whatever layout the flags or the manifest
+            # implied; record that as the reason rather than as a user pick.
+            scale_record["layout"] = new_layout
+        scale_record["decided_by"] = "tier-constraint" if tier_forced_layout else "user"
         scale_record["decided_at"] = now_iso()
         detected = scale.compute_scale(args.repo)
         scale_record["detected_class"] = detected["class"]
@@ -1181,6 +1216,95 @@ def cmd_retire(args: argparse.Namespace) -> int:
     return 0
 
 
+def _selection_values(args: argparse.Namespace) -> list[tuple[str, str]]:
+    """The `(dimension, value)` pairs this invocation actually selected."""
+    pairs = []
+    for dimension, singular in (
+        ("shapes", "shape"), ("platforms", "platform"), ("frameworks", "framework"),
+        ("concerns", "concern"), ("audiences", "audience"),
+    ):
+        for value in getattr(args, singular, []) or []:
+            pairs.append((dimension, value))
+    return pairs
+
+
+def cmd_preview(args: argparse.Namespace) -> int:
+    """Report how large a tree a scope would produce, without writing anything.
+
+    Intake needs this before the confirmation gate: a user picking profiles and
+    audiences has no way to know that most dimensions cost nothing while one
+    audience can carry a third of the tree. Read-only — no manifest, no
+    directories, no side effects of any kind."""
+    catalog = load_catalog()
+    selected = {
+        "shapes": args.shape, "platforms": args.platform,
+        "frameworks": args.framework, "concerns": args.concern,
+        "audiences": args.audience or ["engineers", "beginners"],
+    }
+    try:
+        profiles = normalize_profiles(catalog, selected)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+
+    def count(layout: str, drop: tuple[str, str] | None = None) -> int:
+        trimmed = dict(profiles)
+        if drop is not None:
+            dimension, value = drop
+            trimmed[dimension] = [v for v in profiles[dimension] if v != value]
+        return len(selected_static_documents(catalog, args.repo, args.tier, trimmed, layout=layout))
+
+    standard_count = count("standard")
+    report: dict = {"tier": args.tier, "standard_count": standard_count}
+    try:
+        compact_layout, _ = scale.layout_for(args.tier, "compact", explicit=True)
+    except scale.LayoutTierError as exc:
+        report["compact_count"] = None
+        report["compact_unavailable"] = str(exc)
+    else:
+        report["compact_count"] = count(compact_layout)
+
+    # Ablation, not origin-counting: "how many documents disappear if this
+    # value is dropped" is the number a user weighing a choice actually wants,
+    # and it stays correct when several selections claim the same document.
+    layout = args.layout or ("compact" if report.get("compact_count") is not None else "standard")
+    if layout == "compact" and report.get("compact_count") is None:
+        layout = "standard"
+    baseline = count(layout)
+    report["layout"] = layout
+    report["count"] = baseline
+    attribution = []
+    for dimension, value in _selection_values(args):
+        canonical = [v for v in profiles[dimension]]
+        if value not in canonical:
+            continue
+        attribution.append({
+            "dimension": dimension,
+            "value": value,
+            "documents": baseline - count(layout, drop=(dimension, value)),
+        })
+    attribution.sort(key=lambda item: (-item["documents"], item["dimension"], item["value"]))
+    report["attribution"] = attribution
+
+    if args.json:
+        print(dump_json(report), end="")
+        return 0
+    print(f"Preview {args.repo} — tier: {args.tier}")
+    if report["compact_count"] is None:
+        print(f"  standard: {standard_count} documents")
+        print(f"  compact:  unavailable — {report['compact_unavailable']}")
+    else:
+        print(f"  standard: {standard_count} documents")
+        print(f"  compact:  {report['compact_count']} documents")
+    print(f"  projected ({layout}): {baseline} documents")
+    if attribution:
+        print("  attribution (documents lost if the value is dropped):")
+        for item in attribution:
+            share = f" — {round(100 * item['documents'] / baseline)}% of the tree" if baseline and item["documents"] else ""
+            print(f"    {item['dimension'][:-1]}={item['value']}: {item['documents']}{share}")
+    print("  (read-only: nothing was written)")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1203,6 +1327,19 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--force", action="store_true")
     init.add_argument("--graph-provider")
     init.set_defaults(func=cmd_init)
+
+    preview = sub.add_parser("preview")
+    add_repo(preview)
+    preview.add_argument("--tier", required=True, choices=["spine", "diligence", "portfolio"])
+    preview.add_argument("--layout", choices=["compact", "standard"])
+    preview.add_argument("--scale-class", choices=["small", "medium", "large"])
+    preview.add_argument("--shape", action="append", default=[])
+    preview.add_argument("--platform", action="append", default=[])
+    preview.add_argument("--framework", action="append", default=[])
+    preview.add_argument("--concern", action="append", default=[])
+    preview.add_argument("--audience", action="append", default=[])
+    preview.add_argument("--json", action="store_true")
+    preview.set_defaults(func=cmd_preview)
 
     add = sub.add_parser("add")
     add_repo(add)

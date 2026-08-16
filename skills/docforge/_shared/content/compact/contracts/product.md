@@ -10,4 +10,4 @@ contract for this document lists them in reading order.
 
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| product_compact | section introduction, at-a-glance product mental model, scope and boundaries, product overview (users, problems, capabilities, explicit non-goals) | child-owned facts beyond the overview, invented roadmap or implementation detail, direct source-file navigation | Orientation | orientation |
+| product_compact | section introduction, at-a-glance product mental model, scope and boundaries, product overview (users, problems, capabilities, explicit non-goals); links to every selected, materialized document in this section's folder that this file does not merge | child-owned facts beyond the overview, invented roadmap or implementation detail, direct source-file navigation | Orientation | orientation |

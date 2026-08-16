@@ -19,7 +19,5 @@
   "write_order": 107,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
-  "template_file": "content/portfolio/templates/portfolio-glossary.md",
-  "compact_group": "portfolio_compact",
-  "compact_order": 7
+  "template_file": "content/portfolio/templates/portfolio-glossary.md"
 }
