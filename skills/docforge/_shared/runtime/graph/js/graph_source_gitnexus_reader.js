@@ -16,13 +16,23 @@
  * prints how to get it (or to use the MCP instead) and exits non-zero — it
  * never crashes with a raw stack trace.
  *
+ * `--interchange` is the one non-inventory mode: it writes the deterministic
+ * `.docforge/tmp/gitnexus-flows.json` that `flow_index harvest` discovers, with
+ * each process carrying its ordered STEP_IN_PROCESS steps. Producing that file
+ * used to be an unautomated manual step, so it usually never happened and a
+ * ready GitNexus index went unread.
+ *
  * Usage:
  *   node graph_source_gitnexus_reader.js --repo <path> --summary
  *   node graph_source_gitnexus_reader.js --repo <path> --modules --flows
  *   node graph_source_gitnexus_reader.js --db <path/to/lbug> --layers
+ *   node graph_source_gitnexus_reader.js --repo <path> --interchange
  */
 
+const fs = require("fs");
+const path = require("path");
 const { findGraphFile } = require("./graph_storage.js");
+const { ensureGitignoredDir } = require("../../common/js/_util.js");
 
 const HINT = [
   "Could not read the ladybug DB offline. Either:",
@@ -44,6 +54,7 @@ function parseArgs(argv) {
     else if (a === "--db") args.db = argv[++i];
     else if (a === "--limit") args.limit = parseInt(argv[++i], 10);
     else if (a === "--summary") args.summary = true;
+    else if (a === "--interchange") args.interchange = true;
     else if (["--modules", "--layers", "--flows", "--deps"].includes(a)) args.sections.push(a.slice(2));
   }
   return args;
@@ -55,6 +66,64 @@ function loadLbug() {
   } catch {
     return null;
   }
+}
+
+/** Build the deterministic `{routes, processes, communities}` interchange
+ * flow_index harvests, with each process carrying its ordered steps. */
+function buildInterchange(query, rowsOr) {
+  const routes = rowsOr(query(
+    "MATCH (r:Route) RETURN r.id AS id, r.path AS path, r.filePath AS filePath, r.name AS symbol"
+  )).map((row) => ({ id: row.id, path: row.path, filePath: row.filePath, symbol: row.symbol }));
+
+  const communities = rowsOr(query(
+    "MATCH (c:Community) RETURN c.id AS id, c.heuristicLabel AS heuristicLabel"
+  )).map((row) => ({ id: row.id, heuristicLabel: row.heuristicLabel }));
+
+  const processes = new Map();
+  for (const row of rowsOr(query(
+    "MATCH (s)-[r:CodeRelation {type:'STEP_IN_PROCESS'}]->(p:Process) " +
+      "RETURN p.id AS processId, p.heuristicLabel AS name, p.entryPointId AS entry, " +
+      "p.terminalId AS terminal, p.processType AS type, s.id AS stepId, " +
+      "s.filePath AS file, s.name AS symbol, r.order AS ord ORDER BY p.id, r.order"
+  ))) {
+    const pid = String(row.processId);
+    if (!processes.has(pid)) {
+      processes.set(pid, {
+        id: pid,
+        heuristicLabel: row.name,
+        entryPointId: row.entry,
+        terminalId: row.terminal,
+        processType: row.type,
+        communities: [],
+        steps: [],
+      });
+    }
+    const record = processes.get(pid);
+    record.steps.push({
+      order: Number.isInteger(row.ord) ? row.ord : record.steps.length + 1,
+      nodeId: row.stepId,
+      filePath: row.file,
+      symbol: row.symbol,
+    });
+  }
+
+  for (const row of rowsOr(query(
+    "MATCH (p:Process)-[:CodeRelation {type:'MEMBER_OF'}]->(c:Community) " +
+      "RETURN p.id AS processId, c.id AS communityId"
+  ))) {
+    const record = processes.get(String(row.processId));
+    if (record && row.communityId !== null && row.communityId !== undefined) {
+      record.communities.push(String(row.communityId));
+    }
+  }
+
+  for (const record of processes.values()) record.stepCount = record.steps.length;
+
+  return {
+    routes,
+    processes: [...processes.values()].sort((a, b) => String(a.id).localeCompare(String(b.id))),
+    communities,
+  };
 }
 
 function main() {
@@ -91,6 +160,29 @@ function main() {
     }
   };
   const rowsOr = (result) => (Array.isArray(result) ? result : []);
+
+  // The one non-inventory mode: hand flow_index the deterministic interchange,
+  // with each process carrying its ordered STEP_IN_PROCESS steps. The
+  // interchange used to carry only entry, terminal, and a step count, so a
+  // twelve-step native process reached the flow index as `steps: 12`.
+  if (args.interchange) {
+    if (!args.repo) abortLines(["--interchange needs --repo <path> to know where to write"]);
+    const interchange = buildInterchange(query, rowsOr);
+    if (!interchange.processes.length && !interchange.routes.length) {
+      abortLines([
+        `No Route or Process nodes in ${dbPath} — nothing to hand the flow index.`,
+        "Re-index with `npx gitnexus analyze` (see references/graph/graph-source-gitnexus.md).",
+      ]);
+    }
+    const dir = path.join(path.resolve(args.repo), ".docforge", "tmp");
+    ensureGitignoredDir(dir);
+    const target = path.join(dir, "gitnexus-flows.json");
+    fs.writeFileSync(target, `${JSON.stringify(interchange, null, 2)}\n`, "utf8");
+    const steps = interchange.processes.reduce((sum, item) => sum + item.steps.length, 0);
+    console.log(`Wrote ${target} — ${interchange.routes.length} route(s), ${interchange.processes.length} process(es), ${steps} ordered step(s).`);
+    console.log("Next: flow_index.{py,js} harvest --repo <repo> discovers it automatically.");
+    return 0;
+  }
 
   const wantAll = args.summary || args.sections.length === 0;
   const want = (name) => wantAll || args.sections.includes(name);

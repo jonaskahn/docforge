@@ -67,8 +67,41 @@ evidence; follow a staleness warning by reading the named live file.
   flows.
 - Derive a provisional flow graph through `flow-derivation.md` only if a
   selected document requires `flow_graph` and no native provider supplies it.
+  The reader below gives that derivation an ordered, located skeleton rather
+  than a blank page.
 - Confirm business actors, rules, and outcomes from source or stakeholder
   evidence; a structural path alone is not a business process.
 
-Never open or query `codegraph.db` directly. The MCP/CLI interface owns
-schema and synchronization behavior.
+## Structural reads
+
+Never **write** to `codegraph.db`, and never treat it as a general query
+surface — CodeGraph's own CLI and watcher own schema and synchronization.
+
+Read-only structural queries go through
+`graph_source_codegraph_reader.{py,js}`, which opens the file read-only and
+refuses to read a `schema_versions` newer than it knows, falling back to the
+MCP path:
+
+```sh
+python3 runtime/cli/python/graph_source_codegraph_reader.py entries --repo <repo> --limit 15
+python3 runtime/cli/python/graph_source_codegraph_reader.py paths  --repo <repo> --seed <node-id>
+```
+
+`entries` ranks flow seeds — routes first (scored by what their handler
+reaches, since a route node has no outgoing calls of its own), then exported
+functions nothing calls, then call fan-out. `paths` walks ordered
+entry→terminal chains, each hop carrying `file` and `line`. Both feed
+`derive_flow_graph prepare` and `flow_index harvest`, which is what makes a
+CodeGraph-only repository harvestable at all.
+
+That split is the whole point: **the reader supplies structure, the MCP
+supplies meaning.** Having walked a chain, use `codegraph_explore` on its
+symbols to establish what the reader cannot — the branch conditions, the
+business rules, the failure handling. Do not ask the reader for those, and do
+not ask the MCP to re-derive the call order.
+
+Two limits to expect. Method dispatch through a service object
+(`contentService.getActivities()`) resolves to the object, so a chain may end
+at a `constant` — continue by reading the file. And a self-recursive handler
+yields a one-hop chain, not a deep one; that is the cycle guard being correct,
+not a truncation.

@@ -61,7 +61,8 @@ Always put the command/subcommand before flags (e.g.
 | `discover_child_repos` | Portfolio child-repository discovery |
 | `dashboard` | `scan` / `start` / `export` / `status` / `stop` for the local Fumadocs site |
 | `graph_source_codegraph` / `graph_source_gitnexus` | Per-provider `detect` readiness probes |
-| `graph_source_gitnexus_reader` | Offline LadybugDB inventory reader |
+| `graph_source_gitnexus_reader` | Offline LadybugDB inventory reader; `--interchange` writes the ordered-process handoff the flow index harvests |
+| `graph_source_codegraph_reader` | Offline CodeGraph reader: `entries` (ranked flow seeds) and `paths` (ordered call chains with file and line) |
 | `graph_source_registry` / `graph_source_understand_anything` / `graph_storage` | Library-only (no useful standalone CLI) |
 | `discovery_gate` | Library-only: validate/apply gate judgment JSON (no CLI parser) |
 | `provenance_frontmatter` | Provenance YAML codec (library; not a CLI) |

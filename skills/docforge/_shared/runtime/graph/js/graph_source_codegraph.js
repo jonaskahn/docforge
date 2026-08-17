@@ -140,6 +140,16 @@ function main() {
   return runDetect(args);
 }
 
+/** Ranked flow-derivation seeds, read structurally from the db.
+ *
+ * Kept as a thin delegate so the reader (and its node:sqlite dependency) is
+ * only required when a caller actually asks for seeds. Returns [] when the db
+ * is absent or its schema is newer than the reader knows, which is what makes
+ * the MCP-only fallback automatic. */
+function entryPoints(repo) {
+  return require("./graph_source_codegraph_reader.js").entryPoints(repo);
+}
+
 const SOURCE = {
   name: SOURCE_NAME,
   display: DISPLAY,
@@ -147,6 +157,10 @@ const SOURCE = {
   readMode: READ_MODE,
   detect,
   setupHint,
+  // Structure (ranked entries, ordered call chains) is read from the db;
+  // semantics still come from codegraph_explore. Without this hook
+  // derive_flow_graph had no data at all for CodeGraph repos.
+  entryPoints,
 };
 
 module.exports = {
@@ -158,6 +172,7 @@ module.exports = {
   DB_CANDIDATES,
   detect,
   setupHint,
+  entryPoints,
   SOURCE,
 };
 

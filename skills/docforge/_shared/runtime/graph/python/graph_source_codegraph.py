@@ -127,6 +127,18 @@ def main() -> int:
     return args.func(args)
 
 
+def entry_points(repo: Path) -> list[dict]:
+    """Ranked flow-derivation seeds, read structurally from the db.
+
+    Kept as a thin delegate so the reader (and its sqlite dependency) is only
+    imported when a caller actually asks for seeds. Returns [] when the db is
+    absent or its schema is newer than the reader knows, which is what makes
+    the MCP-only fallback automatic."""
+    from .graph_source_codegraph_reader import entry_points as read_entry_points
+
+    return read_entry_points(repo)
+
+
 SOURCE = {
     "name": SOURCE_NAME,
     "display": DISPLAY,
@@ -134,6 +146,10 @@ SOURCE = {
     "read_mode": READ_MODE,
     "detect": detect,
     "setup_hint": setup_hint,
+    # Structure (ranked entries, ordered call chains) is read from the db;
+    # semantics still come from codegraph_explore. Without this hook
+    # derive_flow_graph had no data at all for CodeGraph repos.
+    "entry_points": entry_points,
 }
 
 

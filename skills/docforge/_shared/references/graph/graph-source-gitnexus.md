@@ -78,6 +78,31 @@ read-only inventory, not a replacement for GitNexus's richer MCP responses.
   harvest` / `revise` discover it automatically, there is no CLI flag. Add
   manifest documents only for main rows; a Process node is not
   automatically a business flow.
+
+  The offline reader writes it in one step:
+
+  ```sh
+  python3 runtime/cli/python/graph_source_gitnexus_reader.py --repo <repo> --interchange
+  node runtime/cli/js/graph_source_gitnexus_reader.js --repo <repo> --interchange
+  ```
+
+  Through the MCP, the equivalent query is the one that preserves order — a
+  Process's value is its **sequence**, and an interchange without `steps`
+  reduces a twelve-step process to the number 12:
+
+  ```cypher
+  MATCH (s)-[r:CodeRelation {type:'STEP_IN_PROCESS'}]->(p:Process)
+  RETURN p.id AS processId, p.heuristicLabel AS name,
+         p.entryPointId AS entry, p.terminalId AS terminal,
+         p.processType AS type, s.id AS stepId,
+         s.filePath AS file, s.name AS symbol, r.order AS ord
+  ORDER BY p.id, r.order
+  ```
+
+  If a GitNexus index is ready and the interchange is missing, `flow_index
+  harvest` fails naming this command rather than falling through to derived
+  candidates — an indexed native flow source going unread is a setup gap,
+  not an absence of flows.
 - BA views: translate process steps into business language and confirm every
   decision rule in source.
 - PO views: connect shipped entry points and releases to features; never

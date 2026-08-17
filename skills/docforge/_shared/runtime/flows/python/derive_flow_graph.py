@@ -45,7 +45,10 @@ CONTEXT_NAME = "flow-context.json"
 
 # Main-flow budget and traversal radius for the entry-point-first strategy.
 DEFAULT_MAX_FLOWS = 15
-DEFAULT_HOPS = 3
+# A real request path is route -> controller -> service -> model -> client.
+# Three hops truncated most flows mid-way; six reaches the terminal on the
+# repos this was measured against.
+DEFAULT_HOPS = 6
 
 # Loose key probing — the code-graph schema varies by source, so search rather
 # than assume (mirrors read_graph.py's tolerance).
@@ -59,8 +62,12 @@ SUMMARY_KEYS = ["summary", "description", "explanation", "doc"]
 SRC_KEYS = ["source", "from", "src", "start"]
 DST_KEYS = ["target", "to", "dst", "end"]
 EDGEKIND_KEYS = ["type", "kind", "relation", "label"]
-# Edge kinds that carry flow/structure signal for the analyzer.
-FLOW_EDGE_HINTS = ("call", "import", "handle", "route", "step", "entry")
+# Edge kinds that carry flow/structure signal for the analyzer. `reference`
+# earns its place: in a route-based codebase the route reaches its handler
+# through a `references` edge, so omitting it broke every request chain at hop
+# zero. `instantiate` and `dispatch` cover the same gap in OO and event codebases.
+FLOW_EDGE_HINTS = ("call", "import", "handle", "route", "step", "entry",
+                   "reference", "instantiate", "dispatch")
 
 
 def first_present(node: dict, keys: list[str]):
@@ -265,9 +272,12 @@ def build_context(repo: Path, max_flows: int, hops: int) -> dict:
     # db / mcp: binary graph — never load_json it.
     seeds = entry_fn(repo) if entry_fn else []
     if seeds:
-        # An offline seed reader is available for this DB source (post the
-        # reader decision): fall through to a seed-only manifest.
-        return {
+        # An offline seed reader is available for this DB source. Where that
+        # reader can also walk ordered chains, ship the chains: handing the
+        # analyzer a bare seed list is what left it inventing step order.
+        main = seeds[:max_flows]
+        clusters = _reader_clusters(source, repo, main, hops)
+        context = {
             "strategy": "entry-point-first",
             "generatedFrom": str(path),
             "source": source["name"] if source else None,
@@ -275,13 +285,50 @@ def build_context(repo: Path, max_flows: int, hops: int) -> dict:
             "maxFlows": max_flows,
             "hops": hops,
             "entryPointCount": len(seeds),
-            "mainFlows": len(seeds[:max_flows]),
+            "mainFlows": len(main),
             "tail": max(len(seeds) - max_flows, 0),
-            "entryPoints": seeds[:max_flows],
-            "note": "Seeds read offline; spread each via the source's reader or "
-                    "MCP, main flows first (references/graph/flow-derivation.md).",
+            "entryPoints": main,
         }
+        if clusters:
+            context["clusters"] = clusters
+            context["note"] = (
+                "Each cluster's `paths` are ordered call chains read from the "
+                "source, every hop carrying file and line — use them as the step "
+                "skeleton. Confirm actors, branches, rules, and failures against "
+                "source (or codegraph_explore) before writing; the graph gives "
+                "structure, not business meaning."
+            )
+        else:
+            context["note"] = (
+                "Seeds read offline; spread each via the source's reader or MCP, "
+                "main flows first (references/graph/flow-derivation.md)."
+            )
+        return context
     return _native_interface_context(source, path, repo, read_mode)
+
+
+def _reader_clusters(source, repo: Path, seeds: list, hops: int) -> list:
+    """Ordered call chains per seed, when the source exposes a path reader.
+
+    Only CodeGraph supplies one today. A source without it still gets a seed
+    list, which is what it had before — this never fails the prepare step."""
+    if not source or source.get("name") != "codegraph":
+        return []
+    try:
+        from runtime.graph.python.graph_source_codegraph_reader import ordered_paths
+    except ImportError:
+        return []
+    clusters = []
+    for seed in seeds:
+        chains = ordered_paths(repo, seed["id"], hops)
+        clusters.append({
+            "entryPoint": {"id": seed["id"], "name": seed.get("name"),
+                           "kind": seed.get("kind"), "path": seed.get("path"),
+                           "line": seed.get("line")},
+            "rank": seed.get("rank"),
+            "paths": chains,
+        })
+    return clusters
 
 
 def _report_prepare(context: dict) -> None:

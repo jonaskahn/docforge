@@ -54,6 +54,16 @@ slug and `display_name` in `.docforge/flow-index.json` must match that outcome
 read as prose: a start event, an end event, and gateways only where the process
 actually branches.
 
+Work from the deep pack at `.docforge/flow-analysis.json` (and the row's
+`evidence` in `.docforge/flow-index.json`), which already carries the ordered
+steps with their locators, the branches, the rules, and the failures. Do not
+re-derive the step order by grep — that is what the pack exists to prevent.
+
+**A step is one hop with a `file:line`**, not a paraphrase of a subsystem.
+"Content is indexed into Elasticsearch" naming only a file is a summary; a
+named symbol at `path/to/file.js:88` is a step. Where the pack marks a step
+`evidence: "source"` rather than `"graph"`, cite the file you read it in.
+
 Open with trigger, actors, and result in one short paragraph. Number the happy path in
 plain language, one step per action, one idea per sentence. Put branches immediately
 after the step that creates them, not gathered at the end; a branch orphaned from its

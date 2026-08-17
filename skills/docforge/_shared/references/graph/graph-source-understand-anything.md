@@ -75,6 +75,31 @@ and architectural layers. The flow graph contains domains, flows,
 and steps. Do not assume a semantic summary or domain label is authoritative:
 confirm business rules, failures, and externally visible behavior in source.
 
+### Reading the domain graph correctly
+
+Three properties of the format decide whether a UA harvest is deep or empty:
+
+- **`flow_step` edges form a chain, not a star.** The shape is
+  `flow → step:1 → step:2 → step:3`, so grouping edges by their `source` finds
+  exactly one step per flow however long the chain is. Walk it transitively,
+  ordering by the step node's own `order`. (A star shape appears in some UA
+  versions; a breadth-first walk handles both.)
+- **UA's prose is evidence, not decoration.** A `flow` carries a `summary` and
+  `complexity`; every `flow_step` carries a `name` and `summary`; every
+  `cross_domain` edge carries a `description`. This is a ready-made ordered
+  narrative — carry it into the flow index's `evidence` rather than reducing it
+  to a step count.
+- **`flow_step` nodes have no `filePath`.** Locators come from joining step
+  names and summaries against `knowledge-graph.json` function/class nodes,
+  which do carry `filePath` and `lineRange`. Attach a locator only on an
+  unambiguous single match; a wrong `file:line` is worse than a missing one,
+  because the audit treats locators as evidence.
+
+Layer names are matched against a broad vocabulary
+(`entry_vocabulary.ENTRY_LAYER_WORDS`) that includes frontend surfaces. A
+service-only list misses `Screens & Routes`, which on a UI repository is the
+entire entry surface.
+
 ## Use in Docforge
 
 - Use layers, imports, symbols, and tours to plan the architecture and agent

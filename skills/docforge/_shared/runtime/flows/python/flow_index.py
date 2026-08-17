@@ -35,12 +35,23 @@ from runtime.common.python.flow_index_schema import (
     SUPPORTED_FLOW_INDEX_VERSIONS as SUPPORTED_INDEX_VERSIONS,
     upgrade_index,
 )
+from runtime.graph.python.graph_storage import validate_flow_graph_shape
+from runtime.common.python.entry_vocabulary import (
+    CORE_ENTRY_WORDS,
+    ENTRY_WORDS,
+    PATH_WORDS,
+    SURFACE_WORDS,
+    is_entry_layer,
+)
 
 INDEX_REL = Path(".docforge/flow-index.json")
 TMP_REL = Path(".docforge/tmp")
 ORG_PACK_REL = TMP_REL / "flow-organization-pack.json"
 GITNEXUS_FLOWS_REL = TMP_REL / "gitnexus-flows.json"
 DERIVED_FLOW_GRAPH_REL = TMP_REL / "flow-graph.json"
+# The deep analysis pack, kept outside tmp/ so it survives the run that
+# produced it — the flow writer reads its steps/branches/rules/failures.
+ANALYSIS_PACK_REL = Path(".docforge/flow-analysis.json")
 UA_DIRS = (".ua", ".understand-anything")
 BARE_VERBS = frozenset({
     "get", "save", "create", "update", "delete", "execute", "init", "count",
@@ -48,26 +59,15 @@ BARE_VERBS = frozenset({
     "post", "put", "patch", "run", "start", "handle", "process", "dispatch",
     "receive", "consume", "track", "aggregate",
 })
-ENTRY_WORDS = re.compile(
-    r"^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|"
-    r"[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle|"
-    r"[Cc]reate|[Uu]pdate|[Dd]elete|[Ss]ave|[Gg]et|[Pp]ost|[Pp]ut|"
-    r"[Pp]atch|[Ss]end)(?:[A-Z0-9_]|$)",
-)
-CORE_ENTRY_WORDS = re.compile(
-    r"^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|"
-    r"[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle)"
-    r"(?:[A-Z0-9_]|$)",
-)
-SURFACE_WORDS = re.compile(
-    r"(controller|handler|processor|consumer|listener|worker|job|command|aggregator)$",
-    re.IGNORECASE,
-)
-PATH_WORDS = re.compile(
-    r"(controllers?|handlers?|processors?|consumers?|workers?|jobs?|commands?|"
-    r"aggregators?|routes?|endpoints?)",
-    re.IGNORECASE,
-)
+# Identifier-shaped tokens mined from UA step prose to join against code nodes.
+IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{2,}")
+# Prose words that are identifier-shaped but never a symbol worth joining on.
+STEP_STOPWORDS = frozenset({
+    "the", "and", "for", "with", "from", "into", "this", "that", "then",
+    "when", "user", "users", "page", "data", "request", "response", "returns",
+    "selects", "sends", "gets", "sets", "uses", "calls", "via", "are", "was",
+    "not", "all", "any", "new", "get", "post", "put", "patch", "delete",
+})
 FAMILY_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FLOW_ID_RE = re.compile(r"^flow-[a-z0-9][a-z0-9-]*$")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -182,14 +182,109 @@ def candidate(
     }
 
 
-def harvest_ua_domain(path: Path) -> list[dict]:
+def build_ua_locator_index(knowledge_path: Path | None) -> dict[str, list[dict]]:
+    """Index the UA knowledge graph's code nodes by lowercased symbol name.
+
+    UA's domain graph names and describes every flow step but carries no file
+    for any of them; the knowledge graph carries `filePath` and `lineRange` per
+    function/class. This index is the join between the two. Returns {} when no
+    knowledge graph is available, in which case steps simply stay unlocated."""
+    if knowledge_path is None:
+        return {}
+    try:
+        doc = read_json(knowledge_path)
+    except ValueError:
+        return {}
+    index: dict[str, list[dict]] = {}
+    for node in doc.get("nodes") or []:
+        if not isinstance(node, dict) or node.get("type") not in ("function", "class"):
+            continue
+        name = str(node.get("name") or "").strip()
+        file_path = node.get("filePath")
+        if not name or not file_path:
+            continue
+        line_range = node.get("lineRange")
+        line = line_range[0] if isinstance(line_range, list) and line_range else None
+        index.setdefault(name.lower(), []).append({
+            "symbol": name,
+            "filePath": file_path,
+            "line": line if isinstance(line, int) else None,
+        })
+    return index
+
+
+def resolve_ua_step(step: dict, order: int, locators: dict[str, list[dict]]) -> dict:
+    """Turn a UA flow_step node into a step record, attaching a code locator
+    when — and only when — the join is unambiguous.
+
+    A step's name and summary are prose ("Resolve home route"), so identifier
+    candidates are mined from them and looked up. A token matching two or more
+    code nodes resolves to neither: a wrong `file:line` is worse than a missing
+    one, because the audit treats locators as evidence."""
+    record = {
+        "order": order,
+        "name": str(step.get("name") or "").strip() or f"step {order}",
+        "nodeId": step.get("id"),
+    }
+    if step.get("summary"):
+        record["summary"] = str(step["summary"])
+    if not locators:
+        return record
+    text = f"{step.get('name') or ''} {step.get('summary') or ''}"
+    matches: list[dict] = []
+    for token in dict.fromkeys(IDENTIFIER_RE.findall(text)):
+        if token.lower() in STEP_STOPWORDS:
+            continue
+        found = locators.get(token.lower())
+        if found and len(found) == 1 and found[0] not in matches:
+            matches.append(found[0])
+    if len(matches) == 1:
+        record["symbol"] = matches[0]["symbol"]
+        record["filePath"] = matches[0]["filePath"]
+        if matches[0].get("line") is not None:
+            record["line"] = matches[0]["line"]
+    return record
+
+
+def flow_step_chain(flow_id, steps_by_source: dict, by_id: dict) -> list[dict]:
+    """Every `flow_step` node reachable from a flow node, in execution order.
+
+    UA emits steps as a **chain** — flow -> step:1 -> step:2 -> step:3 — so
+    reading only the edges whose source is the flow node finds exactly one step
+    per flow no matter how long the chain is. Some UA versions emit a star
+    instead (flow -> step:1, step:2, step:3), so walk breadth-first and accept
+    either shape.
+
+    Ordering is the step node's own `order`, falling back to the edge's `order`
+    and then to discovery order — sorted explicitly so the Node twin agrees
+    (never iterate a set here)."""
+    seen = {flow_id}
+    queue = [flow_id]
+    found: list[tuple] = []
+    while queue:
+        current = queue.pop(0)
+        for edge_order, target in sorted(steps_by_source.get(current, [])):
+            if target in seen:
+                continue  # cycle guard: a back-edge must not loop forever
+            seen.add(target)
+            node = by_id.get(target)
+            if not isinstance(node, dict) or node.get("type") != "flow_step":
+                continue
+            node_order = node.get("order")
+            rank = node_order if isinstance(node_order, int) else edge_order
+            found.append((rank, len(found), node))
+            queue.append(target)
+    return [node for _, _, node in sorted(found, key=lambda item: (item[0], item[1]))]
+
+
+def harvest_ua_domain(path: Path, knowledge_path: Path | None = None) -> list[dict]:
     doc = read_json(path)
     nodes = doc.get("nodes") or []
     edges = doc.get("edges") or []
     by_id = {node.get("id"): node for node in nodes if isinstance(node, dict)}
     domain_for: dict[str, str] = {}
     domain_id_for: dict[str, str] = {}
-    step_for: dict[str, list[dict]] = {}
+    steps_by_source: dict[str, list[tuple]] = {}
     for edge in edges:
         if not isinstance(edge, dict):
             continue
@@ -198,24 +293,60 @@ def harvest_ua_domain(path: Path) -> list[dict]:
             domain_for[edge.get("target")] = domain.get("name") or "Unclassified"
             domain_id_for[edge.get("target")] = edge.get("source")
         elif edge.get("type") == "flow_step":
-            step = by_id.get(edge.get("target"))
-            if step:
-                step_for.setdefault(edge.get("source"), []).append(step)
+            order = edge.get("order")
+            steps_by_source.setdefault(edge.get("source"), []).append(
+                (order if isinstance(order, int) else 0, edge.get("target"))
+            )
+
+    # One load for the whole harvest — the knowledge graph runs to megabytes,
+    # so this must never move inside the per-flow loop.
+    locators = build_ua_locator_index(knowledge_path)
+
     rows = []
     for flow in nodes:
         if not isinstance(flow, dict) or flow.get("type") != "flow":
             continue
         meta = flow.get("domainMeta") or {}
-        steps = step_for.get(flow.get("id"), [])
-        first = steps[0] if steps else {}
+        chain = flow_step_chain(flow.get("id"), steps_by_source, by_id)
         signature = str(meta.get("entryPoint") or flow.get("name") or flow.get("id"))
-        file_path = first.get("filePath")
-        domain_id = domain_id_for.get(flow.get("id"))
-        crosses = any(
-            edge.get("type") == "cross_domain"
-            and domain_id in (edge.get("source"), edge.get("target"))
-            for edge in edges if isinstance(edge, dict)
+        step_records = [
+            resolve_ua_step(step, index, locators)
+            for index, step in enumerate(chain, start=1)
+        ]
+        # flow_step nodes carry no filePath of their own; the locator join is
+        # the only way a UA row gets a real file, so prefer the first step that
+        # resolved to one.
+        file_path = next(
+            (record["filePath"] for record in step_records if record.get("filePath")),
+            None,
         )
+        domain_id = domain_id_for.get(flow.get("id"))
+        crossings = [
+            {
+                "from": str(edge.get("source")),
+                "to": str(edge.get("target")),
+                "description": edge.get("description"),
+            }
+            for edge in edges
+            if isinstance(edge, dict)
+            and edge.get("type") == "cross_domain"
+            and domain_id in (edge.get("source"), edge.get("target"))
+        ]
+        evidence = {
+            "provider": "understand-anything",
+            "artifact": str(path),
+            "nodeId": flow.get("id"),
+        }
+        # UA already states the outcome in prose and names every step; keeping
+        # only a count is what made downstream flow docs read thin.
+        if flow.get("summary"):
+            evidence["summary"] = str(flow["summary"])
+        if flow.get("complexity"):
+            evidence["complexity"] = str(flow["complexity"])
+        if step_records:
+            evidence["steps"] = step_records
+        if crossings:
+            evidence["crossings"] = crossings
         rows.append(candidate(
             name=str(flow.get("name") or signature),
             kind=normalize_kind(meta.get("entryType"), signature, file_path),
@@ -223,10 +354,10 @@ def harvest_ua_domain(path: Path) -> list[dict]:
             file_path=file_path,
             symbol=None,
             area=domain_for.get(flow.get("id")),
-            evidence={"provider": "understand-anything", "artifact": str(path), "nodeId": flow.get("id")},
+            evidence=evidence,
             confidence="confirmed",
-            steps=len(steps),
-            boundaries=1 if crosses else 0,
+            steps=len(step_records),
+            boundaries=len(crossings),
         ))
     return rows
 
@@ -239,7 +370,7 @@ def harvest_ua_knowledge(path: Path) -> list[dict]:
         if not isinstance(layer, dict):
             continue
         layer_name = str(layer.get("name") or "")
-        if not any(word in layer_name.lower() for word in ("presentation", "api", "application", "service")):
+        if not is_entry_layer(layer_name):
             continue
         for node_id in layer.get("nodeIds") or []:
             area_by_id[node_id] = layer_name
@@ -333,6 +464,23 @@ def harvest_gitnexus(path: Path) -> list[dict]:
             for item in processes
         )
         name = str(symbol or processes[0].get("heuristicLabel") or entry_id)
+        evidence = {
+            "provider": "gitnexus",
+            "artifact": str(path),
+            "nodeId": entry_id,
+            "processIds": sorted(str(item.get("id")) for item in processes if item.get("id")),
+            "terminalIds": terminals,
+        }
+        # GitNexus models ordered STEP_IN_PROCESS relations. When the
+        # interchange carries them, keep the sequence — reducing a native
+        # ordered process to its length is what left flow documents with a
+        # step count and no steps.
+        ordered = gitnexus_process_steps(processes)
+        if ordered:
+            evidence["steps"] = ordered
+        step_count = len(ordered) or max(
+            int(item.get("stepCount") or item.get("steps") or 0) for item in processes
+        )
         rows.append(candidate(
             name=name,
             kind=infer_kind(name, file_path),
@@ -340,17 +488,45 @@ def harvest_gitnexus(path: Path) -> list[dict]:
             file_path=file_path,
             symbol=symbol,
             area=", ".join(labels) or processes[0].get("communityLabel"),
-            evidence={
-                "provider": "gitnexus",
-                "artifact": str(path),
-                "nodeId": entry_id,
-                "processIds": sorted(str(item.get("id")) for item in processes if item.get("id")),
-                "terminalIds": terminals,
-            },
-            steps=max(int(item.get("stepCount") or item.get("steps") or 0) for item in processes),
+            evidence=evidence,
+            steps=step_count,
             boundaries=max(len(community_ids) - 1, 1 if cross else 0),
         ))
     return rows
+
+
+def gitnexus_process_steps(processes: list[dict]) -> list[dict]:
+    """Flatten the ordered steps of every process sharing one entry point.
+
+    The interchange's `steps` field is optional, so an older interchange (or
+    one produced before the reader emitted steps) simply yields [] and the
+    caller falls back to `stepCount`. Steps are renumbered across the merged
+    processes so a reader sees one continuous sequence, and de-duplicated by
+    node id because processes sharing an entry share their early hops."""
+    ordered: list[dict] = []
+    seen: set = set()
+    for process in processes:
+        raw = process.get("steps")
+        if not isinstance(raw, list):
+            continue
+        for step in sorted(
+            (item for item in raw if isinstance(item, dict)),
+            key=lambda item: (item.get("order") if isinstance(item.get("order"), int) else 0),
+        ):
+            node_id = step.get("nodeId") or step.get("node_id")
+            key = str(node_id or f"{step.get('filePath')}:{step.get('symbol')}")
+            if key in seen:
+                continue
+            seen.add(key)
+            record = {"order": len(ordered) + 1, "nodeId": node_id}
+            for source_key, target_key in (
+                ("filePath", "filePath"), ("file_path", "filePath"),
+                ("symbol", "symbol"), ("name", "name"), ("line", "line"),
+            ):
+                if step.get(source_key) is not None and target_key not in record:
+                    record[target_key] = step[source_key]
+            ordered.append(record)
+    return ordered
 
 
 def unique_area(*areas: str | None) -> str:
@@ -929,11 +1105,54 @@ def markdown(index: dict, tier: str, repo: Path) -> str:
 
 
 def find_gitnexus_interchange(repo: Path) -> Path | None:
-    """The deterministic GitNexus interchange, materialized by the agent from
-    the GitNexus MCP or the offline lbug reader — discovered automatically,
-    never passed as a flag."""
+    """The deterministic GitNexus interchange, materialized from the GitNexus
+    MCP or the offline lbug reader — discovered automatically, never passed as
+    a flag."""
     path = repo / GITNEXUS_FLOWS_REL
     return path if path.is_file() else None
+
+
+def unread_flow_sources(repo: Path, harvested: list[str]) -> list[str]:
+    """Remediation lines for a source that advertises `flow_graph`, has its
+    index built, and still contributed nothing to this harvest.
+
+    Harvest globs for artifacts on disk and never asks the registry what is
+    ready, so a fully indexed GitNexus whose interchange was never produced
+    used to be skipped in silence — the run then fell through to derived
+    candidates without ever saying a native flow source went unread."""
+    try:
+        from runtime.graph.python.graph_source_registry import resolve_all_ready
+    except ImportError:  # registry is optional for the flows runtime
+        return []
+    lines: list[str] = []
+    for source, path in resolve_all_ready(repo, "flow_graph"):
+        name = source.get("name")
+        if any(name in entry or entry in str(path) for entry in harvested):
+            continue
+        if name == "gitnexus":
+            lines += [
+                f"{source.get('display', name)} is indexed at "
+                f"{relative_or_str(path, repo)} and advertises native flows, but "
+                f"{GITNEXUS_FLOWS_REL} does not exist — its processes were not read.",
+                "  Produce the interchange, then re-run harvest:",
+                "    python3 runtime/cli/python/graph_source_gitnexus_reader.py --repo <repo> --interchange",
+                "    node runtime/cli/js/graph_source_gitnexus_reader.js --repo <repo> --interchange",
+                "  Or emit the same shape from the gitnexus MCP "
+                "(see references/graph/graph-source-gitnexus.md).",
+            ]
+        else:
+            lines.append(
+                f"{source.get('display', name)} advertises native flows at "
+                f"{relative_or_str(path, repo)} but contributed no candidates."
+            )
+    return lines
+
+
+def relative_or_str(path: Path, repo: Path) -> str:
+    try:
+        return str(Path(path).relative_to(repo.resolve()))
+    except ValueError:
+        return str(path)
 
 
 def collect_candidates(args: argparse.Namespace) -> tuple[list[dict], list[str], Path | None]:
@@ -943,7 +1162,9 @@ def collect_candidates(args: argparse.Namespace) -> tuple[list[dict], list[str],
     domain = find_ua(args.repo, "domain-graph.json")
     knowledge = find_ua(args.repo, "knowledge-graph.json")
     if domain:
-        rows.extend(harvest_ua_domain(domain))
+        # The knowledge graph is passed in so domain steps can resolve to a
+        # real file:line — the domain graph alone carries no locators.
+        rows.extend(harvest_ua_domain(domain, knowledge))
         sources.append(str(domain.relative_to(args.repo)))
     if knowledge:
         rows.extend(harvest_ua_knowledge(knowledge))
@@ -952,7 +1173,69 @@ def collect_candidates(args: argparse.Namespace) -> tuple[list[dict], list[str],
     if gitnexus_interchange is not None:
         rows.extend(harvest_gitnexus(gitnexus_interchange))
         sources.append(str(gitnexus_interchange.relative_to(args.repo)))
+    if not rows:
+        # Last resort: a code graph with no native flow evidence. These rows
+        # are structural (entry + ordered call chain), not business flows —
+        # `import --analysis` still layers the semantics on top. Before this,
+        # harvest simply failed on a CodeGraph-only repo and the whole flow
+        # set came from an unguided LLM pass.
+        codegraph_rows = harvest_codegraph(args.repo, args.main_limit)
+        if codegraph_rows:
+            rows.extend(codegraph_rows)
+            sources.append(".codegraph/codegraph.db")
     return rows, sources, gitnexus_interchange
+
+
+def harvest_codegraph(repo: Path, main_limit: int) -> list[dict]:
+    """Structural candidates from a CodeGraph index: one row per ranked entry
+    point, carrying its longest ordered call chain as evidence.
+
+    Bounded to twice the main budget — this seeds the selection gate, it does
+    not enumerate 1300 entry points into the index."""
+    try:
+        from runtime.graph.python.graph_source_codegraph_reader import entry_points, ordered_paths
+    except ImportError:
+        return []
+    seeds = entry_points(repo, max(main_limit, 1) * 2)
+    rows: list[dict] = []
+    for seed in seeds:
+        chains = ordered_paths(repo, seed["id"])
+        longest = chains[0] if chains else []
+        steps = [
+            {
+                "order": hop["order"],
+                "nodeId": hop["nodeId"],
+                "symbol": hop["symbol"],
+                "filePath": hop["file"],
+                "line": hop["line"],
+            }
+            for hop in longest
+        ]
+        evidence = {
+            "provider": "codegraph",
+            "artifact": ".codegraph/codegraph.db",
+            "nodeId": seed["id"],
+        }
+        if steps:
+            evidence["steps"] = steps
+        if len(chains) > 1:
+            evidence["branchCount"] = len(chains)
+        rows.append(candidate(
+            name=str(seed.get("name") or seed["id"]),
+            kind=normalize_kind(
+                "http" if seed.get("kind") == "route" else None,
+                str(seed.get("name") or ""),
+                seed.get("path"),
+            ),
+            signature=str(seed.get("name") or seed["id"]),
+            file_path=seed.get("path"),
+            symbol=seed.get("name"),
+            area=module_from_path(seed.get("path")),
+            evidence=evidence,
+            steps=len(steps),
+            boundaries=step_boundaries([{"path": step["filePath"]} for step in steps]),
+        ))
+    return rows
 
 
 def maybe_write_communities(repo: Path, export: Path | None) -> Path | None:
@@ -969,6 +1252,11 @@ def cmd_harvest(args: argparse.Namespace) -> int:
     except ValueError as error:
         return fail(str(error), 2)
     if not rows:
+        unread = unread_flow_sources(args.repo, sources)
+        if unread:
+            # A ready native flow source going unread is a setup gap, not an
+            # absence of flows — say so instead of falling through to derived.
+            return fail("\n  ".join(["no flow candidates harvested:", *unread]), 2)
         return fail(
             "no flow candidates found; provide UA graphs, a GitNexus "
             ".docforge/tmp/gitnexus-flows.json interchange, or use "
@@ -983,6 +1271,11 @@ def cmd_harvest(args: argparse.Namespace) -> int:
         f"Wrote {target} — {summary['total']} flow candidates "
         f"({summary['main']} main, {summary['deferred']} deferred)."
     )
+    for line in unread_flow_sources(args.repo, sources):
+        # Harvesting something is not the same as harvesting everything: a
+        # second ready flow source silently contributing nothing is worth a
+        # NOTICE even on the success path.
+        print(f"NOTICE: {line}" if not line.startswith("  ") else line)
     return 0
 
 
@@ -992,6 +1285,11 @@ def cmd_revise(args: argparse.Namespace) -> int:
     except ValueError as error:
         return fail(str(error), 2)
     if not rows:
+        unread = unread_flow_sources(args.repo, sources)
+        if unread:
+            # A ready native flow source going unread is a setup gap, not an
+            # absence of flows — say so instead of falling through to derived.
+            return fail("\n  ".join(["no flow candidates harvested:", *unread]), 2)
         return fail(
             "no flow candidates found; provide UA graphs, a GitNexus "
             ".docforge/tmp/gitnexus-flows.json interchange, or use "
@@ -1369,9 +1667,50 @@ def cmd_update(args: argparse.Namespace) -> int:
     return 0
 
 
+def analysis_entry_point(item: dict) -> dict:
+    """Normalize a flow's entry point across the v1 and v2 analysis shapes.
+
+    v1 carried `entryPoint` as a bare string and nothing else, so the old code
+    took the signature from it but the file from `steps[0].path` — two fields
+    that describe different things, which is how rows ended up with
+    `signature: src/jobs/enrichDomain.job.js` beside
+    `filePath: src/models/queue`. Both now come from the same place."""
+    entry = item.get("entryPoint")
+    if isinstance(entry, dict):
+        return {
+            "signature": str(entry.get("symbol") or entry.get("file") or item.get("name") or ""),
+            "filePath": entry.get("file"),
+            "symbol": entry.get("symbol"),
+            "line": entry.get("line"),
+            "nodeId": entry.get("nodeId"),
+        }
+    steps = [step for step in (item.get("steps") or []) if isinstance(step, dict)]
+    first = steps[0] if steps else {}
+    signature = str(entry or item.get("name") or "")
+    # v1: the entry string is usually the file the flow starts in, so trust it
+    # for filePath too rather than reaching into a different step.
+    file_path = first.get("file") or first.get("path")
+    if entry and ("/" in str(entry) or "." in str(entry)):
+        file_path = str(entry)
+    return {
+        "signature": signature,
+        "filePath": file_path,
+        "symbol": item.get("name"),
+        "line": None,
+        "nodeId": None,
+    }
+
+
 def analysis_rows(analysis: dict, source: str) -> list[dict]:
-    """Map derived flow-analysis entries onto flow-index candidate rows."""
+    """Map derived flow-analysis entries onto flow-index candidate rows.
+
+    Everything the analysis states is preserved into `evidence` — ordered
+    steps with their locators, branches, rules, failures, actors, outcome.
+    The previous version kept only the name, the domain, and `len(steps)`,
+    so the deep analysis was discarded the moment it was imported and the
+    flow writer had to re-derive it by grep."""
     rows: list[dict] = []
+    provider = str(analysis.get("source") or "codegraph")
     for item in analysis.get("flows") or []:
         if not isinstance(item, dict):
             continue
@@ -1379,20 +1718,71 @@ def analysis_rows(analysis: dict, source: str) -> list[dict]:
         if not name:
             continue
         steps = [step for step in (item.get("steps") or []) if isinstance(step, dict)]
-        first = steps[0] if steps else {}
-        file_path = first.get("path")
-        signature = str(item.get("entryPoint") or name)
+        entry = analysis_entry_point(item)
+        trigger = item.get("trigger") if isinstance(item.get("trigger"), dict) else {}
+        kind = normalize_kind(trigger.get("kind"), entry["signature"] or name, entry["filePath"])
+        evidence = {
+            "provider": provider,
+            "artifact": source,
+            "nodeId": entry["nodeId"] or name,
+        }
+        for key, value in (
+            ("outcome", item.get("outcome")),
+            ("actors", item.get("actors")),
+            ("trigger", item.get("trigger")),
+            ("steps", steps),
+            ("branches", item.get("branches")),
+            ("rules", item.get("rules")),
+            ("failures", item.get("failures")),
+        ):
+            if value:
+                evidence[key] = value
+        # A step carrying a graph nodeId was walked out of the code graph; one
+        # without it was asserted by the analyzer. Only the former earns
+        # `confirmed`, so an invented flow can never outrank a derived one.
+        graph_backed = bool(steps) and all(step.get("nodeId") for step in steps)
         rows.append(candidate(
             name=name,
-            kind=infer_kind(name, file_path),
-            signature=signature,
-            file_path=file_path,
-            symbol=name,
+            kind=kind,
+            signature=entry["signature"] or name,
+            file_path=entry["filePath"],
+            symbol=entry["symbol"] or name,
             area=item.get("domain"),
-            evidence={"provider": "codegraph", "artifact": source, "nodeId": name},
+            evidence=evidence,
+            confidence="confirmed" if graph_backed else "candidate",
             steps=len(steps),
+            boundaries=step_boundaries(steps),
         ))
     return rows
+
+
+def step_boundaries(steps: list[dict]) -> int:
+    """How many module boundaries a flow crosses, counted as the distinct
+    top-level source directories its steps touch (minus the one it starts in).
+    Reach was previously always 0 for derived rows, which flattened ranking."""
+    roots = []
+    for step in steps:
+        value = step.get("file") or step.get("path")
+        if not value:
+            continue
+        parts = str(value).replace("\\", "/").split("/")
+        root = "/".join(parts[:2]) if len(parts) > 1 else parts[0]
+        if root not in roots:
+            roots.append(root)
+    return max(len(roots) - 1, 0)
+
+
+def persist_analysis_pack(repo: Path, analysis: dict) -> Path:
+    """Copy the validated flow analysis to `.docforge/flow-analysis.json`.
+
+    The analysis normally arrives under `.docforge/tmp/`, which carries a
+    `*` .gitignore and is emptied between runs — so the deep pack vanished
+    before any flow document was written. This committed copy is the writer's
+    input for steps, branches, rules, and failures."""
+    path = repo / ANALYSIS_PACK_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(analysis, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return path
 
 
 def cmd_import(args: argparse.Namespace) -> int:
@@ -1404,7 +1794,15 @@ def cmd_import(args: argparse.Namespace) -> int:
         return fail(str(error), 2)
     if not isinstance(analysis, dict) or not analysis.get("flows"):
         return fail("analysis must be a JSON object with a non-empty 'flows' list", 2)
-    rows = analysis_rows(analysis, str(args.analysis))
+    shape_error = validate_flow_graph_shape(analysis)
+    if shape_error:
+        return fail(f"{shape_error} (see references/graph/flow-derivation.md)", 2)
+    # Keep the deep pack where the writer can read it. The analysis usually
+    # arrives under .docforge/tmp/, which is git-ignored and wiped between
+    # runs; a flow document written days later needs the steps, branches, and
+    # failures to still be there.
+    pack = persist_analysis_pack(args.repo, analysis)
+    rows = analysis_rows(analysis, str(ANALYSIS_PACK_REL))
     if not rows:
         return fail("no usable flow rows in the analysis", 2)
     existing = load_existing_index(args.repo)
@@ -1432,6 +1830,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         f"{summary['total']} total rows "
         f"({summary['main']} main, {summary['deferred']} deferred)."
     )
+    print(f"Deep pack kept at {pack} — the flow writer reads it instead of re-deriving.")
     return 0
 
 

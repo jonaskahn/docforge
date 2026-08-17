@@ -18,19 +18,28 @@ exception to docforge's "no install" rule. If it is not importable this script
 prints how to proceed (use the MCP, or the Node reader) and exits non-zero — it
 never crashes with a raw traceback.
 
+`--interchange` is the one non-inventory mode: it writes the deterministic
+`.docforge/tmp/gitnexus-flows.json` that `flow_index harvest` discovers, with
+each process carrying its ordered STEP_IN_PROCESS steps. Producing that file
+used to be an unautomated manual step, so it usually never happened and a
+ready GitNexus index went unread.
+
 Usage:
     python graph_source_gitnexus_reader.py --repo <path> --summary
     python graph_source_gitnexus_reader.py --repo <path> --modules --flows
     python graph_source_gitnexus_reader.py --db <path/to/lbug> --layers
+    python graph_source_gitnexus_reader.py --repo <path> --interchange
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from .graph_storage import find_graph_file
+from ...common.python._util import ensure_gitignored_dir
 
 HINT = [
     "Could not read the ladybug DB offline. Either:",
@@ -162,6 +171,75 @@ def print_flows(query, limit: int) -> None:
     print("  entries whose behavior is confirmed (references/graph/flow-derivation.md).\n")
 
 
+def build_interchange(query) -> dict:
+    """Build the deterministic `{routes, processes, communities}` interchange
+    flow_index harvests, with each process carrying its **ordered** steps.
+
+    GitNexus already models execution order as STEP_IN_PROCESS relations. The
+    interchange used to carry only entry, terminal, and a step count, so a
+    twelve-step native process reached the flow index as `steps: 12` and the
+    sequence was lost. This emits the sequence."""
+    routes = [
+        {
+            "id": row.get("id"),
+            "path": row.get("path"),
+            "filePath": row.get("filePath"),
+            "symbol": row.get("symbol"),
+        }
+        for row in rows_or(query(
+            "MATCH (r:Route) RETURN r.id AS id, r.path AS path, "
+            "r.filePath AS filePath, r.name AS symbol"))
+    ]
+    communities = [
+        {"id": row.get("id"), "heuristicLabel": row.get("heuristicLabel")}
+        for row in rows_or(query(
+            "MATCH (c:Community) RETURN c.id AS id, c.heuristicLabel AS heuristicLabel"))
+    ]
+
+    processes: dict[str, dict] = {}
+    for row in rows_or(query(
+        "MATCH (s)-[r:CodeRelation {type:'STEP_IN_PROCESS'}]->(p:Process) "
+        "RETURN p.id AS processId, p.heuristicLabel AS name, "
+        "p.entryPointId AS entry, p.terminalId AS terminal, "
+        "p.processType AS type, s.id AS stepId, s.filePath AS file, "
+        "s.name AS symbol, r.order AS ord ORDER BY p.id, r.order"
+    )):
+        pid = str(row.get("processId"))
+        record = processes.setdefault(pid, {
+            "id": pid,
+            "heuristicLabel": row.get("name"),
+            "entryPointId": row.get("entry"),
+            "terminalId": row.get("terminal"),
+            "processType": row.get("type"),
+            "communities": [],
+            "steps": [],
+        })
+        order = row.get("ord")
+        record["steps"].append({
+            "order": order if isinstance(order, int) else len(record["steps"]) + 1,
+            "nodeId": row.get("stepId"),
+            "filePath": row.get("file"),
+            "symbol": row.get("symbol"),
+        })
+
+    for row in rows_or(query(
+        "MATCH (p:Process)-[:CodeRelation {type:'MEMBER_OF'}]->(c:Community) "
+        "RETURN p.id AS processId, c.id AS communityId"
+    )):
+        record = processes.get(str(row.get("processId")))
+        if record is not None and row.get("communityId") is not None:
+            record["communities"].append(str(row["communityId"]))
+
+    for record in processes.values():
+        record["stepCount"] = len(record["steps"])
+
+    return {
+        "routes": routes,
+        "processes": sorted(processes.values(), key=lambda item: str(item["id"])),
+        "communities": communities,
+    }
+
+
 def print_deps(query, limit: int) -> None:
     imports = rows_or(query(
         "MATCH ()-[r:CodeRelation {type:'IMPORTS'}]->(b) "
@@ -187,6 +265,10 @@ def main() -> int:
     ap.add_argument("--layers", action="store_true")
     ap.add_argument("--flows", action="store_true")
     ap.add_argument("--deps", action="store_true")
+    ap.add_argument("--interchange", action="store_true",
+                    help="write .docforge/tmp/gitnexus-flows.json (routes, "
+                         "processes with ordered steps, communities) for "
+                         "flow_index harvest, instead of printing an inventory")
     args = ap.parse_args()
 
     db_path = args.db
@@ -211,6 +293,24 @@ def main() -> int:
         return abort_lines([f"Failed to open {db_path}: {error}", "", *HINT])
 
     query = make_query(connection)
+
+    if args.interchange:
+        if not args.repo:
+            return abort_lines(["--interchange needs --repo <path> to know where to write"])
+        interchange = build_interchange(query)
+        if not interchange["processes"] and not interchange["routes"]:
+            return abort_lines([
+                f"No Route or Process nodes in {db_path} — nothing to hand the flow index.",
+                "Re-index with `npx gitnexus analyze` "
+                "(see references/graph/graph-source-gitnexus.md).",
+            ])
+        target = ensure_gitignored_dir(args.repo.resolve() / ".docforge" / "tmp").parent / "gitnexus-flows.json"
+        target.write_text(json.dumps(interchange, indent=2) + "\n", encoding="utf-8")
+        steps = sum(len(item["steps"]) for item in interchange["processes"])
+        print(f"Wrote {target} — {len(interchange['routes'])} route(s), "
+              f"{len(interchange['processes'])} process(es), {steps} ordered step(s).")
+        print("Next: flow_index.{py,js} harvest --repo <repo> discovers it automatically.")
+        return 0
 
     want_all = args.summary or not any((args.modules, args.layers, args.flows, args.deps))
 

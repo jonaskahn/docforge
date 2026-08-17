@@ -18,6 +18,13 @@ import re
 from pathlib import Path
 
 from .graph_storage import find_graph_file
+from ...common.python.entry_vocabulary import (
+    CORE_ENTRY_WORDS,
+    ENTRY_WORDS,
+    PATH_WORDS,
+    SURFACE_WORDS,
+    is_entry_layer,
+)
 
 SOURCE_NAME = "understand-anything"
 DISPLAY = "Understand-Anything"
@@ -38,26 +45,12 @@ FLOW_GRAPH_CANDIDATES = [
 # Tags that mark a re-export shim (index.js barrels), not real flow logic —
 # excluded from entry-point seeds so they never crowd out true entry surfaces.
 NOISE_TAGS = frozenset({"barrel", "re-export"})
-ENTRY_NAME = re.compile(
-    r"^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|"
-    r"[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle|"
-    r"[Cc]reate|[Uu]pdate|[Dd]elete|[Ss]ave|[Gg]et|[Pp]ost|[Pp]ut|"
-    r"[Pp]atch|[Ss]end)(?:[A-Z0-9_]|$)",
-)
-CORE_ENTRY_NAME = re.compile(
-    r"^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|"
-    r"[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle)"
-    r"(?:[A-Z0-9_]|$)",
-)
-SURFACE_NAME = re.compile(
-    r"(controller|handler|processor|consumer|listener|worker|job|command|aggregator)$",
-    re.IGNORECASE,
-)
-ENTRY_PATH = re.compile(
-    r"(controllers?|handlers?|processors?|consumers?|workers?|jobs?|commands?|"
-    r"aggregators?|routes?|endpoints?)",
-    re.IGNORECASE,
-)
+# The entry-surface vocabulary is shared with flow_index (both used to carry
+# byte-identical private copies, which drifted); see entry_vocabulary.py.
+ENTRY_NAME = ENTRY_WORDS
+CORE_ENTRY_NAME = CORE_ENTRY_WORDS
+SURFACE_NAME = SURFACE_WORDS
+ENTRY_PATH = PATH_WORDS
 
 
 def detect(repo: Path) -> dict:
@@ -69,14 +62,17 @@ def detect(repo: Path) -> dict:
 
 
 def _service_layer_ids(doc: dict) -> set:
-    """Node ids belonging to a layer whose name reads as a service/business
-    layer — a strong 'this is where flows live' signal in the UA graph."""
+    """Node ids belonging to a layer whose name reads as an entry/business
+    layer — a strong 'this is where flows live' signal in the UA graph.
+
+    The vocabulary is shared (entry_vocabulary.ENTRY_LAYER_WORDS) and covers
+    frontend surfaces too: a "Screens & Routes" layer is where a UI flow begins
+    just as much as an "API" layer is for a service."""
     ids: set = set()
     for layer in doc.get("layers", []) if isinstance(doc, dict) else []:
         if not isinstance(layer, dict):
             continue
-        name = str(layer.get("name", "")).lower()
-        if any(word in name for word in ("service", "business", "domain", "application", "presentation", "api")):
+        if is_entry_layer(layer.get("name")):
             for nid in layer.get("nodeIds", []) or []:
                 ids.add(nid)
     return ids

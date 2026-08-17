@@ -5,6 +5,26 @@ candidate, including deferred work. A **flow document** is a deep analysis of
 one main standalone candidate (or a composed parent). Never turn every graph
 node or GitNexus Process into a document.
 
+## What counts as a step
+
+A step is **one hop in the graph, carrying a `file` and (where the source has
+it) a `line`**. "Content is indexed into Elasticsearch → `src/lib/utils/searchUtils.lib.js`"
+is a paraphrase of a subsystem, not a step; `indexContent` at
+`src/lib/utils/searchUtils.lib.js:88` is a step.
+
+The division of labour follows from that:
+
+| Layer | Owns | Never |
+|---|---|---|
+| The scripts | Entry-point ranking, ordered call chains, `file:line` per hop | Business naming |
+| The agent/LLM | Outcome, actors, branch conditions, rules, failures | Inventing step order |
+
+If the graph cannot evidence an ordered chain, say so in the index and leave
+the flow a `candidate` — do not narrate one. Every step in a v2 analysis
+records `evidence: "graph"` (walked out of the code graph) or
+`"source"` (read in a file); a step with neither a locator nor a source
+citation is not a documented step.
+
 ## Build the complete index
 
 Run:
@@ -51,15 +71,27 @@ its write turn, run `flow_index.{py,js} render --repo <repo>` to project that
 machine record into `docs/flows/README.md`. Rendering is document writing and
 never precedes the plan gate.
 
-For GitNexus, the agent materializes the deterministic interchange at
-`.docforge/tmp/gitnexus-flows.json` — produced through the GitNexus
-MCP/cypher interface, or the offline lbug reader
-([`graph-source-gitnexus.md`](graph-source-gitnexus.md)). Harvest discovers
-it automatically; there is no CLI flag. The interchange carries `Route`,
-`Process`, and `Community` properties. Processes are heuristic
-Entry-to-Terminal paths,
-not business flows. Group them by `entryPointId`, retain the terminal set and
-community crossing as reach evidence, and emit one candidate per entry.
+For GitNexus, the deterministic interchange at
+`.docforge/tmp/gitnexus-flows.json` is produced by a **command**, not by hand:
+
+```sh
+python3 runtime/cli/python/graph_source_gitnexus_reader.py --repo <repo> --interchange
+node runtime/cli/js/graph_source_gitnexus_reader.js --repo <repo> --interchange
+```
+
+or by emitting the same shape from the GitNexus MCP/cypher interface
+([`graph-source-gitnexus.md`](graph-source-gitnexus.md)). Harvest discovers it
+automatically; there is no CLI flag. When a GitNexus index is ready and the
+interchange is absent, `flow_index harvest` now **fails naming this command**
+rather than silently skipping a native flow source.
+
+The interchange carries `Route`, `Process`, and `Community` properties.
+Processes are heuristic Entry-to-Terminal paths, not business flows. Group them
+by `entryPointId`, retain the terminal set and community crossing as reach
+evidence, and emit one candidate per entry. Each process carries its ordered
+`STEP_IN_PROCESS` steps; harvest merges them across processes sharing an entry,
+de-duplicating the shared early hops, and stores the sequence in `evidence`.
+`stepCount` remains the fallback for an interchange produced without `steps`.
 Community **IDs** stay distinct for boundary/reach math; area strings and the
 compact `.docforge/tmp/communities.md` table collapse duplicate
 `heuristicLabel` values so agent/LLM analysis is not flooded. Harvest and
@@ -71,10 +103,14 @@ The deterministic interchange object is:
 ```json
 {
   "routes": [{"id": "route-id", "path": "GET /items", "filePath": "src/api.ts", "symbol": "listItems"}],
-  "processes": [{"id": "proc-id", "entryPointId": "Function:src/api.ts:listItems", "terminalId": "Function:src/db.ts:query", "processType": "cross_community", "stepCount": 4, "communities": ["comm-api", "comm-db"]}],
+  "processes": [{"id": "proc-id", "entryPointId": "Function:src/api.ts:listItems", "terminalId": "Function:src/db.ts:query", "processType": "cross_community", "stepCount": 4, "communities": ["comm-api", "comm-db"],
+                 "steps": [{"order": 1, "nodeId": "Function:src/api.ts:listItems", "filePath": "src/api.ts", "symbol": "listItems"}]}],
   "communities": [{"id": "comm-api", "heuristicLabel": "API"}]
 }
 ```
+
+`steps` is optional for back-compatibility, but an interchange without it
+reduces a native ordered process to a number.
 
 For Understand Anything, native `domain-graph.json` flow nodes are confirmed
 candidates. They are authoritative but may be incomplete. Scan
@@ -88,7 +124,24 @@ supplies structure, not an ordered call flow.
 When the selected code graph has no native flow evidence (CodeGraph-only,
 or any provider without native flows), flows still come from the available
 code graph — the candidates are derived, then imported into the index so
-the write-start selection gate works for every provider:
+the write-start selection gate works for every provider.
+
+**CodeGraph is not data-free here.** `graph_source_codegraph_reader` reads
+`.codegraph/codegraph.db` read-only and supplies ranked entry points plus
+ordered call chains, so `harvest` works on a CodeGraph-only repository and
+`prepare` emits real clusters instead of an instruction to go look. Each
+cluster's `paths` are ordered hops with `file` and `line` — the step skeleton.
+The analyzer's job is to name the outcome and confirm branches, rules, and
+failures against source or `codegraph_explore`, **not** to invent the order.
+
+Two limits worth knowing before writing:
+
+- Chains stop where CodeGraph stops. Method dispatch through a service object
+  (`contentService.getActivities()`) resolves to the object, not the method, so
+  a chain can end at a `constant`. Continue from there by reading the file.
+- A self-recursive handler is a one-hop chain, not a deep one; the walk's cycle
+  guard is why. Without it a single self-edge fabricates a chain to the depth
+  limit.
 
 ```sh
 python3 runtime/cli/python/derive_flow_graph.py prepare --repo <repo> \
@@ -101,10 +154,48 @@ node runtime/cli/js/flow_index.js import --repo <repo> \
   --analysis .docforge/tmp/flow-analysis.json [--main-limit 15]
 ```
 
-`import` maps each analysis flow (`name`, `entryPoint`?, `domain`?,
-`steps[{order, name, path?}]`) onto a `candidate`-confidence row with
-`kind: internal`, evidence pointing at `.docforge/tmp/flow-graph.json`, and
-reach steps from the step count. Rows are finalized (rank / slug / main
+### The analysis pack (schema 2)
+
+Write `.docforge/tmp/flow-analysis.json` in this shape. The older v1 shape
+(`{name, entryPoint?, domain?, steps[{order, name, path?}]}`) still imports,
+but it has nowhere to put six of the seven facts
+[`../../content/flows/flow.contract.md`](../../content/flows/flow.contract.md)
+requires, so everything but the name and a step count was discarded on import.
+
+```json
+{ "schemaVersion": 2, "source": "codegraph",
+  "flows": [{
+    "name": "Crop an uploaded image",
+    "domain": "ai",
+    "outcome": "Caller receives a smart-cropped image derived from the upload",
+    "trigger": {"kind": "http", "signature": "POST /smartCrop"},
+    "actors": ["API client", "AI service"],
+    "entryPoint": {"symbol": "smartCrop", "file": "src/modules/ai/ai.routes.js",
+                   "line": 12, "nodeId": "route:1"},
+    "steps": [{"order": 1, "name": "Route accepts the upload",
+               "file": "src/modules/ai/ai.routes.js", "line": 12,
+               "symbol": "smartCrop", "nodeId": "route:1", "evidence": "graph"}],
+    "branches": [{"afterStep": 2, "condition": "payload missing image",
+                  "goesTo": "400 response", "file": "…", "line": 44}],
+    "rules":    [{"statement": "Images above 10MB are rejected", "file": "…", "line": 47}],
+    "failures": [{"trigger": "vision API timeout", "handling": "retry once then 502",
+                  "file": "…", "line": 96}]
+  }]}
+```
+
+v2 requires `trigger.kind`, `outcome`, and a `file` on every step; import
+refuses the pack otherwise and writes nothing.
+
+`import` builds `entry_ref` from `entryPoint` — signature and file from the
+same place, so the two can no longer disagree — sets `confidence: confirmed`
+only when **every** step carries a graph `nodeId` (so an LLM-only flow never
+outranks a graph-derived one), derives `reach.boundaries` from the distinct
+top-level directories the steps span, and copies steps, branches, rules,
+failures, actors, and outcome into `evidence`.
+
+The validated pack is then persisted to **`.docforge/flow-analysis.json`**,
+outside `tmp/` so it survives the run that produced it; the flow writer reads
+it instead of re-deriving by grep. Rows are finalized (rank / slug / main
 budget), then merged with the existing index through the same
 state-preserving merge `revise` uses — documented and skipped rows keep
 their status, summaries, and organization; new rows land as `placeholder`
@@ -306,10 +397,11 @@ and validate JSON.
    [`../../runtime/flows/README.md`](../../runtime/flows/README.md)) in
    `.docforge/tmp/flow-context.json`.
 3. Agent/LLM analyzes **main standalone only**. For each flow record actors,
-   trigger, ordered steps, branches, rules, failures, and outcome. Write
-   `.docforge/tmp/flow-analysis.json` in the shape expected by
-   `derive_flow_graph.{py,js} write` (see the `derive_flow_graph.py|js`
-   docstring).
+   trigger, ordered steps, branches, rules, failures, and outcome — the full
+   schema-2 pack above, which is the only shape with a slot for all seven.
+   Take the step order and each step's `file:line` from the cluster `paths`;
+   supply naming and the branch/rule/failure semantics yourself. Write
+   `.docforge/tmp/flow-analysis.json`.
 4. When a provisional graph is required, run
    `derive_flow_graph.{py,js} write --repo <repo> --analysis
    .docforge/tmp/flow-analysis.json`.

@@ -24,18 +24,28 @@ const { spawnSync } = require("child_process");
 const { fail, readJson } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
-const { ensureTmpDirGitignored } = require("../../graph/js/graph_storage.js");
+const { ensureTmpDirGitignored, validateFlowGraphShape } = require("../../graph/js/graph_storage.js");
 const {
   FLOW_INDEX_VERSION: INDEX_VERSION,
   SUPPORTED_FLOW_INDEX_VERSIONS: SUPPORTED_INDEX_VERSIONS,
   upgradeIndex,
 } = require("../../common/js/flow_index_schema.js");
+const {
+  ENTRY_WORDS,
+  CORE_ENTRY_WORDS,
+  SURFACE_WORDS,
+  PATH_WORDS,
+  isEntryLayer,
+} = require("../../common/js/entry_vocabulary.js");
 
 const INDEX_REL = path.join(".docforge", "flow-index.json");
 const TMP_REL = path.join(".docforge", "tmp");
 const ORG_PACK_REL = path.join(TMP_REL, "flow-organization-pack.json");
 const GITNEXUS_FLOWS_REL = path.join(TMP_REL, "gitnexus-flows.json");
 const DERIVED_FLOW_GRAPH_REL = path.join(TMP_REL, "flow-graph.json");
+// The deep analysis pack, kept outside tmp/ so it survives the run that
+// produced it — the flow writer reads its steps/branches/rules/failures.
+const ANALYSIS_PACK_REL = path.join(".docforge", "flow-analysis.json");
 const UA_DIRS = [".ua", ".understand-anything"];
 const BARE_VERBS = new Set([
   "get", "save", "create", "update", "delete", "execute", "init", "count",
@@ -43,10 +53,15 @@ const BARE_VERBS = new Set([
   "post", "put", "patch", "run", "start", "handle", "process", "dispatch",
   "receive", "consume", "track", "aggregate",
 ]);
-const ENTRY_WORDS = /^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle|[Cc]reate|[Uu]pdate|[Dd]elete|[Ss]ave|[Gg]et|[Pp]ost|[Pp]ut|[Pp]atch|[Ss]end)(?:[A-Z0-9_]|$)/;
-const CORE_ENTRY_WORDS = /^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle)(?:[A-Z0-9_]|$)/;
-const SURFACE_WORDS = /(controller|handler|processor|consumer|listener|worker|job|command|aggregator)$/i;
-const PATH_WORDS = /(controllers?|handlers?|processors?|consumers?|workers?|jobs?|commands?|aggregators?|routes?|endpoints?)/i;
+// Identifier-shaped tokens mined from UA step prose to join against code nodes.
+const IDENTIFIER_RE = /[A-Za-z_][A-Za-z0-9_]{2,}/g;
+// Prose words that are identifier-shaped but never a symbol worth joining on.
+const STEP_STOPWORDS = new Set([
+  "the", "and", "for", "with", "from", "into", "this", "that", "then",
+  "when", "user", "users", "page", "data", "request", "response", "returns",
+  "selects", "sends", "gets", "sets", "uses", "calls", "via", "are", "was",
+  "not", "all", "any", "new", "get", "post", "put", "patch", "delete",
+]);
 const FAMILY_RE = /^[a-z0-9][a-z0-9-]*$/;
 const FLOW_ID_RE = /^flow-[a-z0-9][a-z0-9-]*$/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -122,14 +137,101 @@ function candidate({ name, kind, signature, filePath, symbol, area, evidence, co
     reach: { steps: Number(steps || 0), boundaries: Number(boundaries || 0), churn: 0 },
   };
 }
-function harvestUaDomain(target) {
+/** Index the UA knowledge graph's code nodes by lowercased symbol name.
+ *
+ * UA's domain graph names and describes every flow step but carries no file
+ * for any of them; the knowledge graph carries `filePath` and `lineRange` per
+ * function/class. This index is the join between the two. Returns an empty map
+ * when no knowledge graph is available, leaving steps unlocated. */
+function buildUaLocatorIndex(knowledgePath) {
+  const index = new Map();
+  if (!knowledgePath) return index;
+  let doc;
+  try {
+    doc = readJson(knowledgePath);
+  } catch {
+    return index;
+  }
+  for (const node of doc.nodes || []) {
+    if (!node || (node.type !== "function" && node.type !== "class")) continue;
+    const name = String(node.name || "").trim();
+    const filePath = node.filePath;
+    if (!name || !filePath) continue;
+    const lineRange = node.lineRange;
+    const line = Array.isArray(lineRange) && lineRange.length ? lineRange[0] : null;
+    const key = name.toLowerCase();
+    if (!index.has(key)) index.set(key, []);
+    index.get(key).push({ symbol: name, filePath, line: typeof line === "number" ? line : null });
+  }
+  return index;
+}
+
+/** Turn a UA flow_step node into a step record, attaching a code locator when
+ * — and only when — the join is unambiguous. A token matching two or more code
+ * nodes resolves to neither: a wrong file:line is worse than a missing one,
+ * because the audit treats locators as evidence. */
+function resolveUaStep(step, order, locators) {
+  const record = {
+    order,
+    name: String(step.name || "").trim() || `step ${order}`,
+    nodeId: step.id,
+  };
+  if (step.summary) record.summary = String(step.summary);
+  if (!locators.size) return record;
+  const text = `${step.name || ""} ${step.summary || ""}`;
+  const matches = [];
+  const tokens = [...new Set(text.match(IDENTIFIER_RE) || [])];
+  for (const token of tokens) {
+    if (STEP_STOPWORDS.has(token.toLowerCase())) continue;
+    const found = locators.get(token.toLowerCase());
+    if (found && found.length === 1 && !matches.includes(found[0])) matches.push(found[0]);
+  }
+  if (matches.length === 1) {
+    record.symbol = matches[0].symbol;
+    record.filePath = matches[0].filePath;
+    if (matches[0].line !== null) record.line = matches[0].line;
+  }
+  return record;
+}
+
+/** Every `flow_step` node reachable from a flow node, in execution order.
+ *
+ * UA emits steps as a chain — flow -> step:1 -> step:2 -> step:3 — so reading
+ * only the edges whose source is the flow node finds exactly one step per flow
+ * no matter how long the chain is. Some UA versions emit a star instead, so
+ * walk breadth-first and accept either shape. Ordering is the step node's own
+ * `order`, falling back to the edge's and then to discovery order — sorted
+ * explicitly so the Python twin agrees. */
+function flowStepChain(flowId, stepsBySource, byId) {
+  const seen = new Set([flowId]);
+  const queue = [flowId];
+  const found = [];
+  while (queue.length) {
+    const current = queue.shift();
+    const outgoing = (stepsBySource.get(current) || [])
+      .slice()
+      .sort((a, b) => (a[0] - b[0]) || String(a[1]).localeCompare(String(b[1])));
+    for (const [edgeOrder, targetId] of outgoing) {
+      if (seen.has(targetId)) continue; // cycle guard
+      seen.add(targetId);
+      const node = byId.get(targetId);
+      if (!node || node.type !== "flow_step") continue;
+      const rank = Number.isInteger(node.order) ? node.order : edgeOrder;
+      found.push([rank, found.length, node]);
+      queue.push(targetId);
+    }
+  }
+  return found.sort((a, b) => (a[0] - b[0]) || (a[1] - b[1])).map((item) => item[2]);
+}
+
+function harvestUaDomain(target, knowledgePath) {
   const doc = readJson(target);
   const nodes = doc.nodes || [];
   const edges = doc.edges || [];
   const byId = new Map(nodes.filter((node) => node && typeof node === "object").map((node) => [node.id, node]));
   const domainFor = new Map();
   const domainIdFor = new Map();
-  const stepFor = new Map();
+  const stepsBySource = new Map();
   for (const edge of edges) {
     if (!edge || typeof edge !== "object") continue;
     if (edge.type === "contains_flow") {
@@ -137,33 +239,48 @@ function harvestUaDomain(target) {
       domainFor.set(edge.target, domain.name || "Unclassified");
       domainIdFor.set(edge.target, edge.source);
     } else if (edge.type === "flow_step") {
-      const step = byId.get(edge.target);
-      if (step) {
-        if (!stepFor.has(edge.source)) stepFor.set(edge.source, []);
-        stepFor.get(edge.source).push(step);
-      }
+      if (!stepsBySource.has(edge.source)) stepsBySource.set(edge.source, []);
+      stepsBySource.get(edge.source).push([Number.isInteger(edge.order) ? edge.order : 0, edge.target]);
     }
   }
+
+  // One load for the whole harvest — the knowledge graph runs to megabytes, so
+  // this must never move inside the per-flow loop.
+  const locators = buildUaLocatorIndex(knowledgePath);
+
   const rows = [];
   for (const flow of nodes) {
     if (!flow || flow.type !== "flow") continue;
     const meta = flow.domainMeta || {};
-    const steps = stepFor.get(flow.id) || [];
-    const first = steps[0] || {};
+    const chain = flowStepChain(flow.id, stepsBySource, byId);
     const signature = String(meta.entryPoint || flow.name || flow.id);
+    const stepRecords = chain.map((step, index) => resolveUaStep(step, index + 1, locators));
+    // flow_step nodes carry no filePath of their own; the locator join is the
+    // only way a UA row gets a real file.
+    const located = stepRecords.find((record) => record.filePath);
+    const filePath = located ? located.filePath : null;
     const domainId = domainIdFor.get(flow.id);
-    const crosses = edges.some((edge) => edge && edge.type === "cross_domain" && (edge.source === domainId || edge.target === domainId));
+    const crossings = edges
+      .filter((edge) => edge && edge.type === "cross_domain" && (edge.source === domainId || edge.target === domainId))
+      .map((edge) => ({ from: String(edge.source), to: String(edge.target), description: edge.description }));
+    const evidence = { provider: "understand-anything", artifact: target, nodeId: flow.id };
+    // UA already states the outcome in prose and names every step; keeping only
+    // a count is what made downstream flow docs read thin.
+    if (flow.summary) evidence.summary = String(flow.summary);
+    if (flow.complexity) evidence.complexity = String(flow.complexity);
+    if (stepRecords.length) evidence.steps = stepRecords;
+    if (crossings.length) evidence.crossings = crossings;
     rows.push(candidate({
       name: String(flow.name || signature),
-      kind: normalizeKind(meta.entryType, signature, first.filePath),
+      kind: normalizeKind(meta.entryType, signature, filePath),
       signature,
-      filePath: first.filePath,
+      filePath,
       symbol: null,
       area: domainFor.get(flow.id),
-      evidence: { provider: "understand-anything", artifact: target, nodeId: flow.id },
+      evidence,
       confidence: "confirmed",
-      steps: steps.length,
-      boundaries: crosses ? 1 : 0,
+      steps: stepRecords.length,
+      boundaries: crossings.length,
     }));
   }
   return rows;
@@ -175,7 +292,7 @@ function harvestUaKnowledge(target) {
   for (const layer of doc.layers || []) {
     if (!layer || typeof layer !== "object") continue;
     const layerName = String(layer.name || "");
-    if (!["presentation", "api", "application", "service"].some((word) => layerName.toLowerCase().includes(word))) continue;
+    if (!isEntryLayer(layerName)) continue;
     for (const nodeId of layer.nodeIds || []) areaById.set(nodeId, layerName);
   }
   const rows = [];
@@ -239,6 +356,20 @@ function harvestGitnexus(target) {
     const labels = [...new Set([...communityIds].filter((value) => communities.get(value)).map((value) => String(communities.get(value))))].sort((a, b) => a.localeCompare(b));
     const cross = processes.some((item) => (item.processType || item.process_type) === "cross_community");
     const name = String(symbol || processes[0].heuristicLabel || entryId);
+    const evidence = {
+      provider: "gitnexus",
+      artifact: target,
+      nodeId: entryId,
+      processIds: processes.map((item) => item.id).filter(Boolean).map(String).sort(),
+      terminalIds: terminals,
+    };
+    // GitNexus models ordered STEP_IN_PROCESS relations. When the interchange
+    // carries them, keep the sequence — reducing a native ordered process to
+    // its length is what left flow documents with a step count and no steps.
+    const ordered = gitnexusProcessSteps(processes);
+    if (ordered.length) evidence.steps = ordered;
+    const stepCount = ordered.length
+      || Math.max(...processes.map((item) => Number(item.stepCount || item.steps || 0)));
     rows.push(candidate({
       name,
       kind: inferKind(name, filePath),
@@ -246,18 +377,48 @@ function harvestGitnexus(target) {
       filePath,
       symbol,
       area: labels.join(", ") || processes[0].communityLabel,
-      evidence: {
-        provider: "gitnexus",
-        artifact: target,
-        nodeId: entryId,
-        processIds: processes.map((item) => item.id).filter(Boolean).map(String).sort(),
-        terminalIds: terminals,
-      },
-      steps: Math.max(...processes.map((item) => Number(item.stepCount || item.steps || 0))),
+      evidence,
+      steps: stepCount,
       boundaries: Math.max(communityIds.size - 1, cross ? 1 : 0),
     }));
   }
   return rows;
+}
+
+/** Flatten the ordered steps of every process sharing one entry point.
+ *
+ * The interchange's `steps` field is optional, so an older interchange (or one
+ * produced before the reader emitted steps) simply yields [] and the caller
+ * falls back to `stepCount`. Steps are renumbered across the merged processes
+ * so a reader sees one continuous sequence, and de-duplicated by node id
+ * because processes sharing an entry share their early hops. */
+function gitnexusProcessSteps(processes) {
+  const ordered = [];
+  const seen = new Set();
+  for (const process of processes) {
+    if (!Array.isArray(process.steps)) continue;
+    const sorted = process.steps
+      .filter((item) => item && typeof item === "object")
+      .slice()
+      .sort((a, b) => (Number.isInteger(a.order) ? a.order : 0) - (Number.isInteger(b.order) ? b.order : 0));
+    for (const step of sorted) {
+      const nodeId = step.nodeId || step.node_id;
+      const key = String(nodeId || `${step.filePath}:${step.symbol}`);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const record = { order: ordered.length + 1, nodeId };
+      for (const [sourceKey, targetKey] of [
+        ["filePath", "filePath"], ["file_path", "filePath"],
+        ["symbol", "symbol"], ["name", "name"], ["line", "line"],
+      ]) {
+        if (step[sourceKey] !== undefined && step[sourceKey] !== null && !(targetKey in record)) {
+          record[targetKey] = step[sourceKey];
+        }
+      }
+      ordered.push(record);
+    }
+  }
+  return ordered;
 }
 function uniqueArea(...areas) {
   const labels = [];
@@ -758,13 +919,96 @@ function markdown(index, tier = "spine", repo = null) {
   return renderDoc(repo, "docs/flows/README.md", provenance, "Flows", body);
 }
 function findGitnexusInterchange(repo) {
-  // The deterministic GitNexus interchange, materialized by the agent from the
-  // GitNexus MCP or the offline lbug reader — discovered automatically, never
-  // passed as a flag.
+  // The deterministic GitNexus interchange, materialized from the GitNexus MCP
+  // or the offline lbug reader — discovered automatically, never passed as a
+  // flag.
   const target = path.join(repo, GITNEXUS_FLOWS_REL);
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return null;
   return target;
 }
+
+function relativeOrString(target, repo) {
+  const relative = path.relative(path.resolve(repo), String(target));
+  return relative.startsWith("..") ? String(target) : relative;
+}
+
+/** Remediation lines for a source that advertises `flow_graph`, has its index
+ * built, and still contributed nothing to this harvest.
+ *
+ * Harvest globs for artifacts on disk and never asks the registry what is
+ * ready, so a fully indexed GitNexus whose interchange was never produced used
+ * to be skipped in silence — the run then fell through to derived candidates
+ * without ever saying a native flow source went unread. */
+function unreadFlowSources(repo, harvested) {
+  let resolveAllReady;
+  try {
+    ({ resolveAllReady } = require("../../graph/js/graph_source_registry.js"));
+  } catch {
+    return []; // registry is optional for the flows runtime
+  }
+  const lines = [];
+  const interchangeRel = GITNEXUS_FLOWS_REL.split(path.sep).join("/");
+  for (const [source, target] of resolveAllReady(repo, "flow_graph")) {
+    const name = source.name;
+    if (harvested.some((entry) => entry.includes(name) || String(target).includes(entry))) continue;
+    const display = source.display || name;
+    if (name === "gitnexus") {
+      lines.push(
+        `${display} is indexed at ${relativeOrString(target, repo)} and advertises native flows, but ${interchangeRel} does not exist — its processes were not read.`,
+        "  Produce the interchange, then re-run harvest:",
+        "    python3 runtime/cli/python/graph_source_gitnexus_reader.py --repo <repo> --interchange",
+        "    node runtime/cli/js/graph_source_gitnexus_reader.js --repo <repo> --interchange",
+        "  Or emit the same shape from the gitnexus MCP (see references/graph/graph-source-gitnexus.md).",
+      );
+    } else {
+      lines.push(`${display} advertises native flows at ${relativeOrString(target, repo)} but contributed no candidates.`);
+    }
+  }
+  return lines;
+}
+/** Structural candidates from a CodeGraph index: one row per ranked entry
+ * point, carrying its longest ordered call chain as evidence.
+ *
+ * Bounded to twice the main budget — this seeds the selection gate, it does
+ * not enumerate 1300 entry points into the index. */
+function harvestCodegraph(repo, mainLimit) {
+  let entryPoints;
+  let orderedPaths;
+  try {
+    ({ entryPoints, orderedPaths } = require("../../graph/js/graph_source_codegraph_reader.js"));
+  } catch {
+    return [];
+  }
+  const seeds = entryPoints(repo, Math.max(mainLimit || 0, 1) * 2);
+  const rows = [];
+  for (const seed of seeds) {
+    const chains = orderedPaths(repo, seed.id);
+    const longest = chains.length ? chains[0] : [];
+    const steps = longest.map((hop) => ({
+      order: hop.order,
+      nodeId: hop.nodeId,
+      symbol: hop.symbol,
+      filePath: hop.file,
+      line: hop.line,
+    }));
+    const evidence = { provider: "codegraph", artifact: ".codegraph/codegraph.db", nodeId: seed.id };
+    if (steps.length) evidence.steps = steps;
+    if (chains.length > 1) evidence.branchCount = chains.length;
+    rows.push(candidate({
+      name: String(seed.name || seed.id),
+      kind: normalizeKind(seed.kind === "route" ? "http" : null, String(seed.name || ""), seed.path),
+      signature: String(seed.name || seed.id),
+      filePath: seed.path,
+      symbol: seed.name,
+      area: moduleFromPath(seed.path),
+      evidence,
+      steps: steps.length,
+      boundaries: stepBoundaries(steps.map((step) => ({ path: step.filePath }))),
+    }));
+  }
+  return rows;
+}
+
 function collectCandidates(args) {
   const rows = [];
   const sources = [];
@@ -772,7 +1016,9 @@ function collectCandidates(args) {
   const domain = findUa(args.repo, "domain-graph.json");
   const knowledge = findUa(args.repo, "knowledge-graph.json");
   if (domain) {
-    rows.push(...harvestUaDomain(domain));
+    // The knowledge graph is passed in so domain steps can resolve to a real
+    // file:line — the domain graph alone carries no locators.
+    rows.push(...harvestUaDomain(domain, knowledge));
     sources.push(path.relative(args.repo, domain).split(path.sep).join("/"));
   }
   if (knowledge) {
@@ -783,6 +1029,18 @@ function collectCandidates(args) {
   if (gitnexusInterchange) {
     rows.push(...harvestGitnexus(gitnexusInterchange));
     sources.push(path.relative(args.repo, gitnexusInterchange).split(path.sep).join("/"));
+  }
+  if (!rows.length) {
+    // Last resort: a code graph with no native flow evidence. These rows are
+    // structural (entry + ordered call chain), not business flows — `import
+    // --analysis` still layers the semantics on top. Before this, harvest
+    // simply failed on a CodeGraph-only repo and the whole flow set came from
+    // an unguided LLM pass.
+    const codegraphRows = harvestCodegraph(args.repo, args.main_limit);
+    if (codegraphRows.length) {
+      rows.push(...codegraphRows);
+      sources.push(".codegraph/codegraph.db");
+    }
   }
   return [rows, sources, gitnexusInterchange];
 }
@@ -858,17 +1116,35 @@ function usage() {
 }
 function cmdHarvest(args) {
   const [rows, sources, gitnexusInterchange] = collectCandidates(args);
-  if (!rows.length) return fail("no flow candidates found; provide UA graphs, a GitNexus .docforge/tmp/gitnexus-flows.json interchange, or use flow_index import --analysis for derived candidates", 2);
+  if (!rows.length) {
+    const unread = unreadFlowSources(args.repo, sources);
+    // A ready native flow source going unread is a setup gap, not an absence
+    // of flows — say so instead of falling through to derived.
+    if (unread.length) return fail(["no flow candidates harvested:", ...unread].join("\n  "), 2);
+    return fail("no flow candidates found; provide UA graphs, a GitNexus .docforge/tmp/gitnexus-flows.json interchange, or use flow_index import --analysis for derived candidates", 2);
+  }
   maybeWriteCommunities(args.repo, gitnexusInterchange);
   const finalRows = finalize(rows, args.main_limit, args.repo);
   const target = writeIndex(args.repo, finalRows, sources);
   const summary = summaryFor(finalRows);
   console.log(`Wrote ${target} — ${summary.total} flow candidates (${summary.main} main, ${summary.deferred} deferred).`);
+  // Harvesting something is not the same as harvesting everything: a second
+  // ready flow source silently contributing nothing is worth a NOTICE even on
+  // the success path.
+  for (const line of unreadFlowSources(args.repo, sources)) {
+    console.log(line.startsWith("  ") ? line : `NOTICE: ${line}`);
+  }
   return 0;
 }
 function cmdRevise(args) {
   const [rows, sources, gitnexusInterchange] = collectCandidates(args);
-  if (!rows.length) return fail("no flow candidates found; provide UA graphs, a GitNexus .docforge/tmp/gitnexus-flows.json interchange, or use flow_index import --analysis for derived candidates", 2);
+  if (!rows.length) {
+    const unread = unreadFlowSources(args.repo, sources);
+    // A ready native flow source going unread is a setup gap, not an absence
+    // of flows — say so instead of falling through to derived.
+    if (unread.length) return fail(["no flow candidates harvested:", ...unread].join("\n  "), 2);
+    return fail("no flow candidates found; provide UA graphs, a GitNexus .docforge/tmp/gitnexus-flows.json interchange, or use flow_index import --analysis for derived candidates", 2);
+  }
   const communitiesPath = maybeWriteCommunities(args.repo, gitnexusInterchange);
   let existing = loadExistingIndex(args.repo);
   if (existing) existing = upgradeIndex(existing);
@@ -1197,30 +1473,118 @@ function cmdUpdate(args) {
   console.log(`Updated ${target} — ${row.id} [priority=${row.priority}, status=${row.status}, summary=${row.summary ? "yes" : "no"}]`);
   return 0;
 }
+/** Normalize a flow's entry point across the v1 and v2 analysis shapes.
+ *
+ * v1 carried `entryPoint` as a bare string and nothing else, so the old code
+ * took the signature from it but the file from `steps[0].path` — two fields
+ * that describe different things, which is how rows ended up with
+ * `signature: src/jobs/enrichDomain.job.js` beside
+ * `filePath: src/models/queue`. Both now come from the same place. */
+function analysisEntryPoint(item) {
+  const entry = item.entryPoint;
+  if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+    return {
+      signature: String(entry.symbol || entry.file || item.name || ""),
+      filePath: entry.file,
+      symbol: entry.symbol,
+      line: entry.line,
+      nodeId: entry.nodeId,
+    };
+  }
+  const steps = (item.steps || []).filter((step) => step && typeof step === "object");
+  const first = steps[0] || {};
+  let filePath = first.file || first.path;
+  // v1: the entry string is usually the file the flow starts in, so trust it
+  // for filePath too rather than reaching into a different step.
+  if (entry && (String(entry).includes("/") || String(entry).includes("."))) {
+    filePath = String(entry);
+  }
+  return {
+    signature: String(entry || item.name || ""),
+    filePath,
+    symbol: item.name,
+    line: null,
+    nodeId: null,
+  };
+}
+
+/** How many module boundaries a flow crosses, counted as the distinct
+ * top-level source directories its steps touch (minus the one it starts in).
+ * Reach was previously always 0 for derived rows, which flattened ranking. */
+function stepBoundaries(steps) {
+  const roots = [];
+  for (const step of steps) {
+    const value = step.file || step.path;
+    if (!value) continue;
+    const parts = String(value).replace(/\\/g, "/").split("/");
+    const root = parts.length > 1 ? parts.slice(0, 2).join("/") : parts[0];
+    if (!roots.includes(root)) roots.push(root);
+  }
+  return Math.max(roots.length - 1, 0);
+}
+
+/** Map derived flow-analysis entries onto flow-index candidate rows.
+ *
+ * Everything the analysis states is preserved into `evidence` — ordered steps
+ * with their locators, branches, rules, failures, actors, outcome. The
+ * previous version kept only the name, the domain, and `steps.length`, so the
+ * deep analysis was discarded the moment it was imported and the flow writer
+ * had to re-derive it by grep. */
 function analysisRows(analysis, source) {
-  // Map derived flow-analysis entries onto flow-index candidate rows.
   const rows = [];
+  const provider = String(analysis.source || "codegraph");
   for (const item of analysis.flows || []) {
     if (!item || typeof item !== "object") continue;
     const name = String(item.name || "").trim();
     if (!name) continue;
     const steps = (item.steps || []).filter((step) => step && typeof step === "object");
-    const first = steps[0] || {};
-    const filePath = first.path;
-    const signature = String(item.entryPoint || name);
+    const entry = analysisEntryPoint(item);
+    const trigger = item.trigger && typeof item.trigger === "object" ? item.trigger : {};
+    const kind = normalizeKind(trigger.kind, entry.signature || name, entry.filePath);
+    const evidence = { provider, artifact: source, nodeId: entry.nodeId || name };
+    for (const [key, value] of [
+      ["outcome", item.outcome],
+      ["actors", item.actors],
+      ["trigger", item.trigger],
+      ["steps", steps],
+      ["branches", item.branches],
+      ["rules", item.rules],
+      ["failures", item.failures],
+    ]) {
+      if (value && (!Array.isArray(value) || value.length)) evidence[key] = value;
+    }
+    // A step carrying a graph nodeId was walked out of the code graph; one
+    // without it was asserted by the analyzer. Only the former earns
+    // `confirmed`, so an invented flow can never outrank a derived one.
+    const graphBacked = steps.length > 0 && steps.every((step) => step.nodeId);
     rows.push(candidate({
       name,
-      kind: inferKind(name, filePath),
-      signature,
-      filePath,
-      symbol: name,
+      kind,
+      signature: entry.signature || name,
+      filePath: entry.filePath,
+      symbol: entry.symbol || name,
       area: item.domain,
-      evidence: { provider: "codegraph", artifact: source, nodeId: name },
+      evidence,
+      confidence: graphBacked ? "confirmed" : "candidate",
       steps: steps.length,
+      boundaries: stepBoundaries(steps),
     }));
   }
   return rows;
 }
+/** Copy the validated flow analysis to `.docforge/flow-analysis.json`.
+ *
+ * The analysis normally arrives under `.docforge/tmp/`, which carries a `*`
+ * .gitignore and is emptied between runs — so the deep pack vanished before
+ * any flow document was written. This committed copy is the writer's input for
+ * steps, branches, rules, and failures. */
+function persistAnalysisPack(repo, analysis) {
+  const target = path.join(repo, ANALYSIS_PACK_REL);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, `${JSON.stringify(analysis, null, 2)}\n`, "utf8");
+  return target;
+}
+
 function cmdImport(args) {
   // Seed derived candidates into the index (CodeGraph-only / no native flow
   // source), merging with existing rows and preserving their state.
@@ -1233,7 +1597,14 @@ function cmdImport(args) {
   if (!analysis || typeof analysis !== "object" || !Array.isArray(analysis.flows) || !analysis.flows.length) {
     return fail("analysis must be a JSON object with a non-empty 'flows' list", 2);
   }
-  const rows = analysisRows(analysis, String(args.analysis));
+  const shapeError = validateFlowGraphShape(analysis);
+  if (shapeError) return fail(`${shapeError} (see references/graph/flow-derivation.md)`, 2);
+  // Keep the deep pack where the writer can read it. The analysis usually
+  // arrives under .docforge/tmp/, which is git-ignored and wiped between runs;
+  // a flow document written days later needs the steps, branches, and failures
+  // to still be there.
+  const pack = persistAnalysisPack(args.repo, analysis);
+  const rows = analysisRows(analysis, ANALYSIS_PACK_REL.split(path.sep).join("/"));
   if (!rows.length) return fail("no usable flow rows in the analysis", 2);
   let existing = loadExistingIndex(args.repo);
   if (existing) existing = upgradeIndex(existing);
@@ -1256,6 +1627,7 @@ function cmdImport(args) {
   const target = writeIndex(args.repo, merged, sources);
   const summary = summaryFor(merged);
   console.log(`Imported ${rows.length} derived candidate(s) into ${target} — ${summary.total} total rows (${summary.main} main, ${summary.deferred} deferred).`);
+  console.log(`Deep pack kept at ${pack} — the flow writer reads it instead of re-deriving.`);
   return 0;
 }
 function cmdRender(args) {

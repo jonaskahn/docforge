@@ -82,20 +82,46 @@ def list_known_graph_dirs(repo: Path) -> None:
 
 def validate_flow_graph_shape(flow_graph: dict) -> str | None:
     """Sanity check for a flow graph before it is written — today
-    only docforge's own derivation writes one. It uses the docforge flow
-    shape: a non-empty 'flows' list of objects, each with a 'name' and a
-    'steps' list. Refusing an empty graph is what stops a derivation gone
-    wrong from masquerading as a real flow graph."""
+    only docforge's own derivation writes one.
+
+    Two shapes are accepted. **v1** (no `schemaVersion`) is the original: a
+    non-empty 'flows' list of objects, each with a 'name' and a 'steps' list.
+    **v2** additionally carries the facts the flow contract actually requires —
+    trigger, outcome, and a `file` on every step — because the v1 shape had
+    nowhere to put them, so the analysis silently lost six of the seven facts
+    on its way to the writer.
+
+    Refusing an empty graph is what stops a derivation gone wrong from
+    masquerading as a real flow graph."""
     if not isinstance(flow_graph, dict):
         return "flow graph must be a JSON object"
     flows = flow_graph.get("flows")
     if not isinstance(flows, list) or not flows:
         return "flow graph must have a non-empty 'flows' list"
+    version = flow_graph.get("schemaVersion", 1)
+    if version not in (1, 2):
+        return f"unsupported flow analysis schemaVersion: {version!r} (expected 1 or 2)"
     for index, flow in enumerate(flows):
         if not isinstance(flow, dict) or not flow.get("name"):
             return f"flow[{index}] must be an object with a non-empty 'name'"
-        if not isinstance(flow.get("steps"), list):
+        steps = flow.get("steps")
+        if not isinstance(steps, list):
             return f"flow[{index}] ('{flow.get('name')}') must have a 'steps' list"
+        if version == 1:
+            continue
+        label = f"flow[{index}] ('{flow.get('name')}')"
+        trigger = flow.get("trigger")
+        if not isinstance(trigger, dict) or not trigger.get("kind"):
+            return f"{label} must have a 'trigger' object with a non-empty 'kind' (v2)"
+        if not flow.get("outcome"):
+            return f"{label} must have a non-empty 'outcome' (v2)"
+        for position, step in enumerate(steps):
+            if not isinstance(step, dict):
+                return f"{label} step[{position}] must be an object (v2)"
+            if not step.get("file"):
+                # A step without a locator is a claim, not evidence — the flow
+                # contract and the audit both treat file:line as the anchor.
+                return f"{label} step[{position}] must carry a 'file' locator (v2)"
     return None
 
 

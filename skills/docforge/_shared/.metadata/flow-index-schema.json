@@ -8,7 +8,7 @@
     "generated_at": {"type": "string", "format": "date-time"},
     "project": {"type": "string"},
     "sources": {"type": "array", "items": {"type": "string"}},
-    "providers": {"type": "array", "items": {"enum": ["gitnexus", "understand-anything"]}, "uniqueItems": true},
+    "providers": {"type": "array", "items": {"enum": ["gitnexus", "understand-anything", "codegraph"]}, "uniqueItems": true},
     "summary": {
       "type": "object",
       "required": ["total", "main", "deferred", "confirmed"],

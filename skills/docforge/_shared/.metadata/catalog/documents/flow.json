@@ -15,12 +15,16 @@
   "requires": [
     "flow_graph"
   ],
+  "evidence_inputs": [
+    ".docforge/flow-analysis.json",
+    ".docforge/flow-index.json"
+  ],
   "target_depth": "deep-dive",
   "write_order": 22,
   "provenance_mode": "sections",
   "audit_profile": "flow",
   "dominant_form": "sequenceDiagram",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.20.0",
   "template_file": "content/flows/flow.template.md",
   "compact_group": "flows_compact",
   "compact_order": 52

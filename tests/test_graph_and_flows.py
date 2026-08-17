@@ -818,5 +818,472 @@ class FlowIndexTests(unittest.TestCase):
             self.assertEqual(index["flows"][0]["status"], "documented")
 
 
+def _ua_domain(steps_shape: str = "chain", *, cycle: bool = False) -> dict:
+    """A minimal UA domain graph with one flow and three ordered steps.
+
+    `steps_shape` picks how the flow reaches its steps: "chain" is what UA
+    actually emits (flow -> s1 -> s2 -> s3), "star" is what the old harvester
+    assumed (flow -> s1, s2, s3). Both must yield three ordered steps.
+    """
+    nodes = [
+        {"id": "domain:shop", "type": "domain", "name": "Shop"},
+        {"id": "flow:checkout", "type": "flow", "name": "Checkout",
+         "summary": "Shopper pays and receives confirmation.",
+         "complexity": "moderate",
+         "domainMeta": {"entryPoint": "POST /checkout", "entryType": "http"}},
+    ]
+    for order, label in enumerate(("Validate cart", "Charge card", "Send receipt"), start=1):
+        nodes.append({
+            "id": f"flow:checkout:step:{order}", "type": "flow_step",
+            "name": label, "summary": f"{label} happens here.",
+            "flowId": "flow:checkout", "order": order,
+        })
+    edges = [{"source": "domain:shop", "target": "flow:checkout", "type": "contains_flow"}]
+    if steps_shape == "chain":
+        chain = ["flow:checkout", "flow:checkout:step:1", "flow:checkout:step:2", "flow:checkout:step:3"]
+        for order, (src, dst) in enumerate(zip(chain, chain[1:]), start=1):
+            edges.append({"source": src, "target": dst, "type": "flow_step", "order": order})
+        if cycle:
+            edges.append({"source": "flow:checkout:step:3", "target": "flow:checkout:step:1",
+                          "type": "flow_step", "order": 4})
+    else:
+        for order in (1, 2, 3):
+            edges.append({"source": "flow:checkout", "target": f"flow:checkout:step:{order}",
+                          "type": "flow_step", "order": order})
+    return {"version": "1", "project": "fixture", "nodes": nodes, "edges": edges, "layers": [], "tour": []}
+
+
+def _write_ua(repo: Path, domain: dict, knowledge: dict | None = None) -> None:
+    (repo / ".ua").mkdir(parents=True, exist_ok=True)
+    (repo / ".ua" / "domain-graph.json").write_text(json.dumps(domain), encoding="utf-8")
+    if knowledge is not None:
+        (repo / ".ua" / "knowledge-graph.json").write_text(json.dumps(knowledge), encoding="utf-8")
+
+
+def _harvest_index(runtime: str, repo: Path) -> dict:
+    result = run(runtime, "flow_index", "harvest", "--repo", str(repo))
+    assert result.returncode == 0, result.stderr
+    return json.loads((repo / ".docforge" / "flow-index.json").read_text(encoding="utf-8"))
+
+
+def _flow_row(index: dict, name: str) -> dict:
+    return next(row for row in index["flows"] if row["name"] == name)
+
+
+class UaFlowChainTests(unittest.TestCase):
+    """UA emits flow steps as a chain, not a star. Grouping edges by `source`
+    finds exactly one step per flow however long the chain — which is why every
+    UA flow used to report `reach.steps: 1`."""
+
+    def test_chain_shape_counts_every_step_on_both_runtimes(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _write_ua(repo, _ua_domain("chain"))
+                row = _flow_row(_harvest_index(runtime, repo), "Checkout")
+                self.assertEqual(row["reach"]["steps"], 3, f"{runtime}: chain walked as a star")
+                names = [step["name"] for step in row["evidence"][0]["steps"]]
+                self.assertEqual(names, ["Validate cart", "Charge card", "Send receipt"])
+
+    def test_star_shape_still_counts_every_step(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _write_ua(repo, _ua_domain("star"))
+                row = _flow_row(_harvest_index(runtime, repo), "Checkout")
+                self.assertEqual(row["reach"]["steps"], 3, f"{runtime}: star shape regressed")
+
+    def test_cyclic_chain_terminates_without_duplicating_steps(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _write_ua(repo, _ua_domain("chain", cycle=True))
+                row = _flow_row(_harvest_index(runtime, repo), "Checkout")
+                self.assertEqual(row["reach"]["steps"], 3)
+                ids = [step["nodeId"] for step in row["evidence"][0]["steps"]]
+                self.assertEqual(len(ids), len(set(ids)))
+
+    def test_flow_and_step_prose_survives_into_evidence(self) -> None:
+        """UA states the outcome and describes every step; keeping only a count
+        is what left downstream flow documents thin."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_ua(repo, _ua_domain("chain"))
+            evidence = _flow_row(_harvest_index("py", repo), "Checkout")["evidence"][0]
+            self.assertEqual(evidence["summary"], "Shopper pays and receives confirmation.")
+            self.assertEqual(evidence["complexity"], "moderate")
+            self.assertEqual(evidence["steps"][1]["summary"], "Charge card happens here.")
+
+    def test_unambiguous_knowledge_match_locates_a_step_and_ambiguity_does_not(self) -> None:
+        """A wrong file:line is worse than a missing one — the audit treats
+        locators as evidence — so only a single match resolves."""
+        knowledge = {"nodes": [
+            {"id": "fn:1", "type": "function", "name": "ChargeCard",
+             "filePath": "src/billing/charge.js", "lineRange": [12, 44]},
+            {"id": "fn:2", "type": "function", "name": "SendReceipt",
+             "filePath": "src/mail/a.js", "lineRange": [5, 9]},
+            {"id": "fn:3", "type": "function", "name": "SendReceipt",
+             "filePath": "src/mail/b.js", "lineRange": [7, 11]},
+        ], "edges": [], "layers": []}
+        domain = _ua_domain("chain")
+        domain["nodes"][3]["name"] = "ChargeCard"
+        domain["nodes"][4]["name"] = "SendReceipt"
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _write_ua(repo, domain, knowledge)
+                steps = _flow_row(_harvest_index(runtime, repo), "Checkout")["evidence"][0]["steps"]
+                charge = next(step for step in steps if step["name"] == "ChargeCard")
+                receipt = next(step for step in steps if step["name"] == "SendReceipt")
+                self.assertEqual(charge["filePath"], "src/billing/charge.js")
+                self.assertEqual(charge["line"], 12)
+                self.assertNotIn("filePath", receipt, f"{runtime}: guessed an ambiguous locator")
+
+    def test_frontend_entry_layers_are_harvested(self) -> None:
+        """`Screens & Routes` is a UI repo's whole entry surface; a layer list
+        matching only service/api vocabulary misses it."""
+        knowledge = {
+            "nodes": [{"id": "fn:home", "type": "function", "name": "handleHomeRequest",
+                       "filePath": "src/screens/Home/index.js", "lineRange": [1, 20]}],
+            "edges": [],
+            "layers": [{"name": "Screens & Routes", "nodeIds": ["fn:home"]}],
+        }
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _write_ua(repo, _ua_domain("chain"), knowledge)
+                index = _harvest_index(runtime, repo)
+                names = [row["name"] for row in index["flows"]]
+                self.assertIn("handleHomeRequest", names, f"{runtime}: frontend layer filtered out")
+
+
+class GitnexusOrderedStepTests(unittest.TestCase):
+    def test_ordered_steps_are_kept_and_merged_across_shared_entries(self) -> None:
+        payload = {
+            "routes": [],
+            "communities": [{"id": "c-api", "heuristicLabel": "API"}],
+            "processes": [
+                {"id": "p1", "entryPointId": "Function:src/api.ts:listItems",
+                 "terminalId": "Function:src/db.ts:query", "processType": "cross_community",
+                 "stepCount": 3, "communities": ["c-api"],
+                 "steps": [
+                     {"order": 1, "nodeId": "n1", "filePath": "src/api.ts", "symbol": "listItems"},
+                     {"order": 2, "nodeId": "n2", "filePath": "src/svc.ts", "symbol": "fetch"},
+                     {"order": 3, "nodeId": "n3", "filePath": "src/db.ts", "symbol": "query"}]},
+                {"id": "p2", "entryPointId": "Function:src/api.ts:listItems",
+                 "terminalId": "Function:src/cache.ts:read", "stepCount": 2, "communities": ["c-api"],
+                 "steps": [
+                     {"order": 1, "nodeId": "n1", "filePath": "src/api.ts", "symbol": "listItems"},
+                     {"order": 2, "nodeId": "n4", "filePath": "src/cache.ts", "symbol": "read"}]},
+            ],
+        }
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                write_gitnexus_interchange(repo, payload)
+                row = _flow_row(_harvest_index(runtime, repo), "listItems")
+                steps = row["evidence"][0]["steps"]
+                # n1 is shared by both processes and must appear once.
+                self.assertEqual([step["symbol"] for step in steps],
+                                 ["listItems", "fetch", "query", "read"])
+                self.assertEqual(row["reach"]["steps"], 4)
+
+    def test_interchange_without_steps_falls_back_to_step_count(self) -> None:
+        payload = {
+            "routes": [], "communities": [],
+            "processes": [{"id": "p1", "entryPointId": "Function:src/legacy.ts:run",
+                           "terminalId": "Function:src/db.ts:query", "stepCount": 7,
+                           "communities": []}],
+        }
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                write_gitnexus_interchange(repo, payload)
+                row = _flow_row(_harvest_index(runtime, repo), "run")
+                self.assertEqual(row["reach"]["steps"], 7)
+                self.assertNotIn("steps", row["evidence"][0])
+
+    def test_ready_flow_source_without_its_interchange_fails_loudly(self) -> None:
+        """An indexed native flow source going unread is a setup gap, not an
+        absence of flows — harvest used to skip it in silence."""
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                (repo / ".gitnexus").mkdir()
+                (repo / ".gitnexus" / "lbug").write_bytes(b"fixture")
+                (repo / ".gitnexus" / "gitnexus.json").write_text(
+                    json.dumps({"stats": {"nodes": 10, "processes": 5}}), encoding="utf-8")
+                result = run(runtime, "flow_index", "harvest", "--repo", str(repo))
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("--interchange", result.stderr, f"{runtime}: no remediation named")
+
+
+class FlowAnalysisSchemaTests(unittest.TestCase):
+    V2 = {
+        "schemaVersion": 2, "source": "codegraph",
+        "flows": [{
+            "name": "Crop an uploaded image", "domain": "ai",
+            "outcome": "Caller receives a cropped image",
+            "trigger": {"kind": "http", "signature": "POST /smartCrop"},
+            "actors": ["API client"],
+            "entryPoint": {"symbol": "smartCrop", "file": "src/modules/ai/ai.routes.js",
+                           "line": 12, "nodeId": "route:1"},
+            "steps": [
+                {"order": 1, "name": "Route accepts upload", "file": "src/modules/ai/ai.routes.js",
+                 "line": 12, "symbol": "smartCrop", "nodeId": "route:1", "evidence": "graph"},
+                {"order": 2, "name": "Vision client crops", "file": "src/lib/vision/client.js",
+                 "line": 88, "symbol": "crop", "nodeId": "fn:3", "evidence": "graph"}],
+            "branches": [{"afterStep": 1, "condition": "no image", "goesTo": "400",
+                          "file": "src/modules/ai/ai.controller.js", "line": 44}],
+            "rules": [{"statement": "10MB cap", "file": "src/modules/ai/ai.controller.js", "line": 47}],
+            "failures": [{"trigger": "timeout", "handling": "502",
+                          "file": "src/lib/vision/client.js", "line": 96}],
+        }],
+    }
+
+    def _import(self, runtime: str, repo: Path, analysis: dict):
+        target = repo / "analysis.json"
+        target.write_text(json.dumps(analysis), encoding="utf-8")
+        return run(runtime, "flow_index", "import", "--repo", str(repo), "--analysis", str(target))
+
+    def test_v2_preserves_every_contract_fact_and_persists_the_pack(self) -> None:
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = self._import(runtime, repo, self.V2)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                evidence = index["flows"][0]["evidence"][0]
+                for key in ("outcome", "actors", "trigger", "steps", "branches", "rules", "failures"):
+                    self.assertIn(key, evidence, f"{runtime}: {key} discarded on import")
+                # The pack must outlive tmp/, which is wiped between runs.
+                self.assertTrue((repo / ".docforge" / "flow-analysis.json").is_file())
+
+    def test_entry_ref_signature_and_path_come_from_the_same_place(self) -> None:
+        """Taking the signature from `entryPoint` and the file from
+        `steps[0]` produced rows describing two different things."""
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(self._import(runtime, repo, self.V2).returncode, 0)
+                index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                entry_ref = index["flows"][0]["entry_ref"]
+                self.assertEqual(entry_ref["signature"], "smartCrop")
+                self.assertEqual(entry_ref["filePath"], "src/modules/ai/ai.routes.js")
+                self.assertEqual(entry_ref["kind"], "http")
+
+    def test_graph_backed_flow_outranks_an_asserted_one(self) -> None:
+        asserted = json.loads(json.dumps(self.V2))
+        for step in asserted["flows"][0]["steps"]:
+            step.pop("nodeId")
+            step["evidence"] = "source"
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(self._import(runtime, repo, self.V2).returncode, 0)
+                confirmed = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(confirmed["flows"][0]["confidence"], "confirmed")
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self.assertEqual(self._import(runtime, repo, asserted).returncode, 0)
+                candidate_index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(candidate_index["flows"][0]["confidence"], "candidate")
+                self.assertLess(candidate_index["flows"][0]["rank"], confirmed["flows"][0]["rank"])
+
+    def test_v2_without_a_step_locator_is_refused_and_writes_nothing(self) -> None:
+        broken = json.loads(json.dumps(self.V2))
+        broken["flows"][0]["steps"][1].pop("file")
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = self._import(runtime, repo, broken)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("file", result.stderr)
+                self.assertFalse((repo / ".docforge" / "flow-index.json").exists())
+
+    def test_v1_analysis_still_imports(self) -> None:
+        v1 = {"flows": [{"name": "Legacy flow", "entryPoint": "src/jobs/run.js",
+                         "domain": "jobs",
+                         "steps": [{"order": 1, "name": "Kick off", "path": "src/jobs/run.js"}]}]}
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = self._import(runtime, repo, v1)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(index["flows"][0]["reach"]["steps"], 1)
+
+
+class FlowIndexSchemaTests(unittest.TestCase):
+    def test_codegraph_is_a_valid_provider_in_the_index_schema(self) -> None:
+        """write_index derives `providers` from evidence, so a CodeGraph run
+        writes `providers: ["codegraph"]` — which the schema used to reject."""
+        schema = json.loads(
+            (Path(__file__).resolve().parent.parent
+             / "skills/docforge/_shared/.metadata/flow-index-schema.json").read_text(encoding="utf-8"))
+        self.assertIn("codegraph", schema["properties"]["providers"]["items"]["enum"])
+
+
+def _build_codegraph_db(path: Path, *, self_edge: bool = False, hub: int = 0) -> None:
+    """A miniature CodeGraph index: one route reaching its handler through a
+    `references` edge, then a `calls` chain. `references` at hop 1 is the whole
+    point — the generic edge filter excluded it, which broke route chains
+    before they started."""
+    import sqlite3
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(path)
+    connection.executescript(
+        """
+        CREATE TABLE schema_versions (version INTEGER PRIMARY KEY, applied_at INTEGER, description TEXT);
+        CREATE TABLE nodes (id TEXT PRIMARY KEY, kind TEXT, name TEXT, qualified_name TEXT,
+                            file_path TEXT, language TEXT, start_line INTEGER, end_line INTEGER,
+                            start_column INTEGER, end_column INTEGER, docstring TEXT, signature TEXT,
+                            visibility TEXT, is_exported INTEGER DEFAULT 0, is_async INTEGER DEFAULT 0,
+                            is_static INTEGER DEFAULT 0, is_abstract INTEGER DEFAULT 0,
+                            decorators TEXT, type_parameters TEXT, return_type TEXT, updated_at INTEGER);
+        CREATE TABLE edges (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT, target TEXT,
+                            kind TEXT, metadata TEXT, line INTEGER, col INTEGER, provenance TEXT);
+        """
+    )
+    connection.execute("INSERT INTO schema_versions VALUES (8, 0, 'fixture')")
+
+    def node(nid, kind, name, file_path, line, exported=0):
+        connection.execute(
+            "INSERT INTO nodes (id, kind, name, qualified_name, file_path, language, start_line, "
+            "end_line, start_column, end_column, is_exported, updated_at) "
+            "VALUES (?,?,?,?,?,'javascript',?,?,0,0,?,0)",
+            (nid, kind, name, f"{file_path}::{name}", file_path, line, line + 5, exported),
+        )
+
+    def edge(source, target, kind):
+        connection.execute("INSERT INTO edges (source, target, kind) VALUES (?,?,?)", (source, target, kind))
+
+    node("route:1", "route", "POST /checkout", "src/routes/checkout.js", 10)
+    node("fn:handler", "function", "checkout", "src/controllers/checkout.js", 20, exported=1)
+    node("fn:service", "function", "chargeCard", "src/services/billing.js", 30)
+    node("fn:model", "function", "saveOrder", "src/models/order.js", 40)
+    node("const:db", "constant", "OrderModel", "src/models/order.js", 2)
+    edge("route:1", "fn:handler", "references")   # routes reach handlers this way
+    edge("fn:handler", "fn:service", "calls")
+    edge("fn:service", "fn:model", "calls")
+    edge("fn:model", "const:db", "references")
+    if self_edge:
+        edge("fn:handler", "fn:handler", "calls")
+    for index in range(hub):
+        node(f"fn:leaf{index}", "function", f"leaf{index}", f"src/lib/leaf{index}.js", 5)
+        edge("fn:service", f"fn:leaf{index}", "calls")
+    connection.commit()
+    connection.close()
+
+
+class CodegraphReaderTests(unittest.TestCase):
+    def _entries(self, runtime: str, repo: Path) -> list:
+        result = run(runtime, "graph_source_codegraph_reader", "entries", "--repo", str(repo), "--limit", "10")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def _paths(self, runtime: str, repo: Path, seed: str) -> list:
+        result = run(runtime, "graph_source_codegraph_reader", "paths", "--repo", str(repo), "--seed", seed)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def test_routes_rank_first_and_paths_are_ordered_with_locators(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _build_codegraph_db(repo / ".codegraph" / "codegraph.db")
+            for runtime in ("py", "js"):
+                seeds = self._entries(runtime, repo)
+                self.assertEqual(seeds[0]["id"], "route:1", f"{runtime}: route did not rank first")
+                chains = self._paths(runtime, repo, "route:1")
+                longest = chains[0]
+                self.assertEqual(
+                    [(hop["order"], hop["symbol"], hop["file"], hop["line"]) for hop in longest],
+                    [(1, "checkout", "src/controllers/checkout.js", 20),
+                     (2, "chargeCard", "src/services/billing.js", 30),
+                     (3, "saveOrder", "src/models/order.js", 40),
+                     (4, "OrderModel", "src/models/order.js", 2)],
+                    f"{runtime}: chain lost order or locators",
+                )
+
+    def test_py_and_js_readers_agree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _build_codegraph_db(repo / ".codegraph" / "codegraph.db", hub=9)
+            self.assertEqual(self._entries("py", repo), self._entries("js", repo))
+            self.assertEqual(self._paths("py", repo, "route:1"), self._paths("js", repo, "route:1"))
+
+    def test_self_recursive_handler_does_not_fabricate_depth(self) -> None:
+        """Without a cycle guard a single self-edge walks to the depth limit
+        and reports a chain that does not exist."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _build_codegraph_db(repo / ".codegraph" / "codegraph.db", self_edge=True)
+            for runtime in ("py", "js"):
+                chains = self._paths(runtime, repo, "route:1")
+                for chain in chains:
+                    ids = [hop["nodeId"] for hop in chain]
+                    self.assertEqual(len(ids), len(set(ids)), f"{runtime}: cycle walked")
+
+    def test_fanout_is_capped_but_the_deep_branch_survives(self) -> None:
+        """Truncating a fan-out alphabetically amputates whichever branch sorts
+        late; on a real repo that cut six-hop flows down to three."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _build_codegraph_db(repo / ".codegraph" / "codegraph.db", hub=30)
+            for runtime in ("py", "js"):
+                chains = self._paths(runtime, repo, "route:1")
+                self.assertLessEqual(len(chains), 12, f"{runtime}: chain cap not applied")
+                self.assertEqual(max(len(chain) for chain in chains), 4,
+                                 f"{runtime}: deep branch pruned by the fan-out cap")
+
+    def test_unsupported_schema_degrades_instead_of_guessing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            db = repo / ".codegraph" / "codegraph.db"
+            _build_codegraph_db(db)
+            import sqlite3
+
+            connection = sqlite3.connect(db)
+            connection.execute("INSERT INTO schema_versions VALUES (9999, 0, 'from the future')")
+            connection.commit()
+            connection.close()
+            for runtime in ("py", "js"):
+                result = run(runtime, "graph_source_codegraph_reader", "entries", "--repo", str(repo))
+                self.assertEqual(result.returncode, 1, f"{runtime}: read an unknown schema")
+
+    def test_harvest_seeds_candidates_from_a_codegraph_only_repo(self) -> None:
+        """Harvest used to fail outright here, leaving the whole flow set to an
+        unguided LLM pass."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _build_codegraph_db(repo / ".codegraph" / "codegraph.db")
+            for runtime in ("py", "js"):
+                index = _harvest_index(runtime, repo)
+                self.assertEqual(index["providers"], ["codegraph"])
+                row = _flow_row(index, "POST /checkout")
+                self.assertEqual(row["entry_ref"]["kind"], "http")
+                self.assertEqual(row["reach"]["steps"], 4)
+                self.assertEqual(row["evidence"][0]["steps"][0]["filePath"],
+                                 "src/controllers/checkout.js")
+
+    def test_prepare_emits_ordered_clusters_not_a_prose_instruction(self) -> None:
+        """`prepare` used to write ~600 bytes of instruction text and no data
+        for CodeGraph, which is why the analyzer invented flow skeletons."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _build_codegraph_db(repo / ".codegraph" / "codegraph.db")
+            for runtime in ("py", "js"):
+                result = run(runtime, "derive_flow_graph", "prepare", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                context = json.loads(
+                    (repo / ".docforge/tmp/flow-context.json").read_text(encoding="utf-8"))
+                self.assertEqual(context["strategy"], "entry-point-first")
+                self.assertNotIn("instruction", context, f"{runtime}: still the prose stub")
+                cluster = context["clusters"][0]
+                self.assertEqual(cluster["entryPoint"]["id"], "route:1")
+                self.assertTrue(cluster["paths"][0][0]["file"])
+
+
 if __name__ == "__main__":
     unittest.main()

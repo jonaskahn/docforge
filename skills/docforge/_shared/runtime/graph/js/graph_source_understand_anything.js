@@ -17,6 +17,13 @@
 
 const fs = require("fs");
 const { findGraphFile } = require("./graph_storage.js");
+const {
+  ENTRY_WORDS,
+  CORE_ENTRY_WORDS,
+  SURFACE_WORDS,
+  PATH_WORDS,
+  isEntryLayer,
+} = require("../../common/js/entry_vocabulary.js");
 
 const SOURCE_NAME = "understand-anything";
 const DISPLAY = "Understand-Anything";
@@ -37,10 +44,12 @@ const FLOW_GRAPH_CANDIDATES = [
 // Tags that mark a re-export shim (index.js barrels), not real flow logic —
 // excluded from entry-point seeds so they never crowd out true entry surfaces.
 const NOISE_TAGS = new Set(["barrel", "re-export"]);
-const ENTRY_NAME = /^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle|[Cc]reate|[Uu]pdate|[Dd]elete|[Ss]ave|[Gg]et|[Pp]ost|[Pp]ut|[Pp]atch|[Ss]end)(?:[A-Z0-9_]|$)/;
-const CORE_ENTRY_NAME = /^(?:[Aa]ggregate|[Tt]rack|[Pp]ublish|[Dd]ispatch|[Ee]xecute|[Rr]un|[Ss]tart|[Rr]eceive|[Pp]rocess|[Cc]onsume|[Hh]andle)(?:[A-Z0-9_]|$)/;
-const SURFACE_NAME = /(controller|handler|processor|consumer|listener|worker|job|command|aggregator)$/i;
-const ENTRY_PATH = /(controllers?|handlers?|processors?|consumers?|workers?|jobs?|commands?|aggregators?|routes?|endpoints?)/i;
+// The entry-surface vocabulary is shared with flow_index (both used to carry
+// byte-identical private copies, which drifted); see entry_vocabulary.js.
+const ENTRY_NAME = ENTRY_WORDS;
+const CORE_ENTRY_NAME = CORE_ENTRY_WORDS;
+const SURFACE_NAME = SURFACE_WORDS;
+const ENTRY_PATH = PATH_WORDS;
 
 function detect(repo) {
   return {
@@ -56,8 +65,10 @@ function serviceLayerIds(doc) {
   const layers = doc && Array.isArray(doc.layers) ? doc.layers : [];
   for (const layer of layers) {
     if (!layer || typeof layer !== "object") continue;
-    const name = String(layer.name || "").toLowerCase();
-    if (["service", "business", "domain", "application", "presentation", "api"].some((word) => name.includes(word))) {
+    // Shared vocabulary (entry_vocabulary.ENTRY_LAYER_WORDS) covers frontend
+    // surfaces too: a "Screens & Routes" layer is where a UI flow begins just
+    // as much as an "API" layer is for a service.
+    if (isEntryLayer(layer.name)) {
       for (const nid of layer.nodeIds || []) ids.add(nid);
     }
   }

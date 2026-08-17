@@ -103,9 +103,16 @@ function listKnownGraphDirs(repo) {
   }
 }
 
-// Sanity check for a flow graph before it is written — today only
-// docforge's own derivation writes one. It uses the docforge flow shape: a
+// Sanity check for a flow graph before it is written — today only docforge's
+// own derivation writes one.
+//
+// Two shapes are accepted. v1 (no `schemaVersion`) is the original: a
 // non-empty 'flows' list of objects, each with a 'name' and a 'steps' list.
+// v2 additionally carries the facts the flow contract actually requires —
+// trigger, outcome, and a `file` on every step — because the v1 shape had
+// nowhere to put them, so the analysis silently lost six of the seven facts
+// on its way to the writer.
+//
 // Refusing an empty graph is what stops a derivation gone wrong from
 // masquerading as a real flow graph.
 function validateFlowGraphShape(flowGraph) {
@@ -115,6 +122,10 @@ function validateFlowGraphShape(flowGraph) {
   if (!Array.isArray(flowGraph.flows) || flowGraph.flows.length === 0) {
     return "flow graph must have a non-empty 'flows' list";
   }
+  const version = flowGraph.schemaVersion === undefined ? 1 : flowGraph.schemaVersion;
+  if (version !== 1 && version !== 2) {
+    return `unsupported flow analysis schemaVersion: ${JSON.stringify(version)} (expected 1 or 2)`;
+  }
   for (let index = 0; index < flowGraph.flows.length; index++) {
     const flow = flowGraph.flows[index];
     if (typeof flow !== "object" || flow === null || Array.isArray(flow) || !flow.name) {
@@ -122,6 +133,26 @@ function validateFlowGraphShape(flowGraph) {
     }
     if (!Array.isArray(flow.steps)) {
       return `flow[${index}] ('${flow.name}') must have a 'steps' list`;
+    }
+    if (version === 1) continue;
+    const label = `flow[${index}] ('${flow.name}')`;
+    const trigger = flow.trigger;
+    if (typeof trigger !== "object" || trigger === null || Array.isArray(trigger) || !trigger.kind) {
+      return `${label} must have a 'trigger' object with a non-empty 'kind' (v2)`;
+    }
+    if (!flow.outcome) {
+      return `${label} must have a non-empty 'outcome' (v2)`;
+    }
+    for (let position = 0; position < flow.steps.length; position++) {
+      const step = flow.steps[position];
+      if (typeof step !== "object" || step === null || Array.isArray(step)) {
+        return `${label} step[${position}] must be an object (v2)`;
+      }
+      if (!step.file) {
+        // A step without a locator is a claim, not evidence — the flow
+        // contract and the audit both treat file:line as the anchor.
+        return `${label} step[${position}] must carry a 'file' locator (v2)`;
+      }
     }
   }
   return null;

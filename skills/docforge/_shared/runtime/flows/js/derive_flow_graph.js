@@ -47,7 +47,10 @@ const CONTEXT_NAME = "flow-context.json";
 
 // Main-flow budget and traversal radius for the entry-point-first strategy.
 const DEFAULT_MAX_FLOWS = 15;
-const DEFAULT_HOPS = 3;
+// A real request path is route -> controller -> service -> model -> client.
+// Three hops truncated most flows mid-way; six reaches the terminal on the
+// repos this was measured against.
+const DEFAULT_HOPS = 6;
 
 // Loose key probing — the code-graph schema varies by source, so search rather
 // than assume (mirrors read_graph.js's tolerance).
@@ -61,7 +64,12 @@ const SUMMARY_KEYS = ["summary", "description", "explanation", "doc"];
 const SRC_KEYS = ["source", "from", "src", "start"];
 const DST_KEYS = ["target", "to", "dst", "end"];
 const EDGEKIND_KEYS = ["type", "kind", "relation", "label"];
-const FLOW_EDGE_HINTS = ["call", "import", "handle", "route", "step", "entry"];
+// `reference` earns its place: in a route-based codebase the route reaches its
+// handler through a `references` edge, so omitting it broke every request chain
+// at hop zero. `instantiate` and `dispatch` cover the same gap in OO and event
+// codebases.
+const FLOW_EDGE_HINTS = ["call", "import", "handle", "route", "step", "entry",
+  "reference", "instantiate", "dispatch"];
 
 function firstPresent(d, keys) {
   for (const k of keys) {
@@ -279,8 +287,12 @@ function buildContext(repo, maxFlows, hops) {
   // db / mcp: binary graph — never loadJson it.
   const seeds = entryFn ? entryFn(repo) : [];
   if (seeds.length) {
+    // An offline seed reader is available for this DB source. Where that reader
+    // can also walk ordered chains, ship the chains: handing the analyzer a
+    // bare seed list is what left it inventing step order.
     const main = seeds.slice(0, maxFlows);
-    return {
+    const clusters = readerClusters(src, repo, main, hops);
+    const context = {
       strategy: "entry-point-first",
       generatedFrom: graphPath,
       source: src ? src.name : null,
@@ -291,12 +303,42 @@ function buildContext(repo, maxFlows, hops) {
       mainFlows: main.length,
       tail: Math.max(seeds.length - main.length, 0),
       entryPoints: main,
-      note:
-        "Seeds read offline; spread each via the source's reader or MCP, main " +
-        "flows first (references/graph/flow-derivation.md).",
     };
+    if (clusters.length) {
+      context.clusters = clusters;
+      context.note =
+        "Each cluster's `paths` are ordered call chains read from the source, " +
+        "every hop carrying file and line — use them as the step skeleton. " +
+        "Confirm actors, branches, rules, and failures against source (or " +
+        "codegraph_explore) before writing; the graph gives structure, not " +
+        "business meaning.";
+    } else {
+      context.note =
+        "Seeds read offline; spread each via the source's reader or MCP, main " +
+        "flows first (references/graph/flow-derivation.md).";
+    }
+    return context;
   }
   return nativeInterfaceContext(src, graphPath, repo, readMode);
+}
+
+/** Ordered call chains per seed, when the source exposes a path reader.
+ *
+ * Only CodeGraph supplies one today. A source without it still gets a seed
+ * list, which is what it had before — this never fails the prepare step. */
+function readerClusters(src, repo, seeds, hops) {
+  if (!src || src.name !== "codegraph") return [];
+  let orderedPaths;
+  try {
+    ({ orderedPaths } = require("../../graph/js/graph_source_codegraph_reader.js"));
+  } catch {
+    return [];
+  }
+  return seeds.map((seed) => ({
+    entryPoint: { id: seed.id, name: seed.name, kind: seed.kind, path: seed.path, line: seed.line },
+    rank: seed.rank,
+    paths: orderedPaths(repo, seed.id, hops),
+  }));
 }
 
 function reportPrepare(context) {

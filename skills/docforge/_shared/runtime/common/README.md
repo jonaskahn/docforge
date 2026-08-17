@@ -24,6 +24,8 @@ they exist to be imported, not executed.
   layout → `scale`.
 - Upgrading a 1.1 flow index to 1.2 (shared by `flow_index` and
   `migrate_metadata`) → `flow_index_schema`.
+- Deciding whether a symbol name, file path, or graph layer reads as an entry
+  surface (shared by `flow_index` and the graph sources) → `entry_vocabulary`.
 
 ## Scripts
 
@@ -43,6 +45,7 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | `provenance_store` | Folder-mirrored JSON sidecar store: sidecar-first reads, entry writes, inline-to-sidecar moves | mixes — writes `.docforge/provenance/` and strips migrated frontmatter |
 | `special_files` | Constants: special output names and their template sources | yes |
 | `flow_index_schema` | Flow-index schema versioning and the additive 1.1→1.2 upgrade, shared by the flows runtime and metadata migration | yes |
+| `entry_vocabulary` | Entry-surface vocabulary: entry/surface name regexes, entry path segments, and the graph-layer word list | yes |
 | `scale` | Three-way project scale classification from the existing inventory walk + confirmed profile count; suggests `compact`/`standard` layout | yes |
 
 ## Details
@@ -92,6 +95,14 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 - `flow_index_schema` — `FLOW_INDEX_VERSION` / `SUPPORTED_FLOW_INDEX_VERSIONS`,
   `upgrade_index(index)`: version bump plus the `summary.written` count,
   additive only; raises on unsupported versions.
+- `entry_vocabulary` — `ENTRY_WORDS` / `CORE_ENTRY_WORDS` (entry-verb name
+  prefixes, permissive and strict), `SURFACE_WORDS` (controller/handler/…
+  suffixes), `PATH_WORDS` (entry directory segments), `ENTRY_LAYER_WORDS` +
+  `is_entry_layer(name)` / `isEntryLayer(name)`. `flow_index` and
+  `graph_source_understand_anything` previously kept byte-identical private
+  copies of the four regexes and two divergent layer lists; the layer list is
+  now one broad set covering frontend surfaces (`screen`, `route`, `page`,
+  `view`, `state`, `context`, `store`) as well as backend ones.
 - `scale` — `compute_scale(repo, files=None, detections=None, dependencies=None)` /
   `computeScale(repo, files, detections, dependencies)` returning
   `{class, suggested_layout, signals}`; thresholds are tunable constants
@@ -128,8 +139,10 @@ consumers:
 - `dashboard/` — `_util`, `provenance_frontmatter`, `provenance_store`,
   `evidence_hash`.
 - `flows/` — `_util`, `provenance_frontmatter`, `provenance_store`,
-  `flow_index_schema` (index writes and upgrades).
-- `graph/` — `_util` (via `graph_storage`).
+  `flow_index_schema` (index writes and upgrades), `entry_vocabulary`
+  (candidate ranking and layer classification).
+- `graph/` — `_util` (via `graph_storage`), `entry_vocabulary` (via
+  `graph_source_understand_anything`'s entry-point seeds).
 
 ## Boundaries
 
