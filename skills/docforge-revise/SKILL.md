@@ -60,7 +60,7 @@ first; see [`../docforge/_shared/workflows/tools.md`](../docforge/_shared/workfl
 |---|---|
 | `/docforge-revise` | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (`--dry-run` preview, then apply — unconditional and idempotent, a clean no-op when already current). No scope question, no detection, no writing, no dashboard |
 | `/docforge-revise flow` | Full flow pipeline |
-| `/docforge-revise <area>` | Scoped revise (architecture, flows, operations, …) |
+| `/docforge-revise <area>` | Scoped revise of one catalog group (`architecture`, `reference`, `agents`, …; see `--help`) |
 | `/docforge-revise all` | Full-tree revise |
 
 A bare `/docforge-revise` asks nothing and writes nothing — it only brings

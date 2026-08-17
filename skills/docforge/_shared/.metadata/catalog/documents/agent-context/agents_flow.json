@@ -25,5 +25,14 @@
   "audit_profile": "agent-view",
   "template_file": "content/agent-context/templates/agents-flow.md",
   "compact_group": "agents_compact",
-  "compact_order": 7
+  "compact_order": 7,
+  "variants": {
+    "agent_context_mode": {
+      "standalone": {
+        "contract_file": "content/agent-context/contracts/standalone/agents-lookup.md",
+        "instruction_file": "content/agent-context/agents-standalone.instruction.md",
+        "template_file": "content/agent-context/templates/standalone/agents-flow.md"
+      }
+    }
+  }
 }

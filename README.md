@@ -5,7 +5,7 @@
 
   <p><strong>INSERT REPOSITORY. GENERATE DOCUMENTATION. NO INVENTED LORE.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-2.19.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
+  [![Version](https://img.shields.io/badge/version-2.20.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 
@@ -86,7 +86,7 @@ Re-ground what drifted; a bare run only syncs manifest metadata.
 |---|---|
 | `/docforge-revise` | Migrate/upgrade manifest metadata only — no questions, no writing |
 | `/docforge-revise all` | Full-tree structural refresh |
-| `/docforge-revise <area>` | Scoped revise (architecture, flows, operations, …) |
+| `/docforge-revise <area>` | Scoped revise of one catalog group (`architecture`, `reference`, `agents`, …) |
 | `/docforge-revise flow` | Flow harvest → organize → derive → write |
 | `/docforge-revise flow --plan-only` | Flow analysis only (no body writes) |
 

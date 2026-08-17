@@ -24,5 +24,12 @@
   "write_order": 200,
   "provenance_mode": "manifest",
   "audit_profile": "agents-kernel",
-  "template_file": "content/agent-context/templates/agents-kernel.md"
+  "template_file": "content/agent-context/templates/agents-kernel.md",
+  "variants": {
+    "layout": {
+      "compact": {
+        "template_file": "content/agent-context/templates/agents-kernel.compact.md"
+      }
+    }
+  }
 }

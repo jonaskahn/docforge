@@ -13,9 +13,36 @@ from runtime.common.python.illustration_metrics import illustration_defects
 
 
 class DepthLadderTests(unittest.TestCase):
-    def test_illustration_budget_rejects_router_visual(self) -> None:
-        document = "```mermaid\nflowchart TD\nA --> B\n```\n"
-        self.assertTrue(illustration_defects(document, "router"))
+    def test_illustration_count_is_never_capped(self) -> None:
+        """No depth caps the number of illustrations in a document.
+
+        Every documentation authority surveyed prescribes splitting a dense
+        diagram into several simpler ones, so a per-document count cap would
+        forbid the recommended remedy for an over-budget illustration."""
+        document = "".join(
+            f"```mermaid\nflowchart TD\n  A{i} --> B{i}\n```\n\nProse about diagram {i}.\n\n"
+            for i in range(6)
+        )
+        for depth in ("orientation", "deep-dive", "reference", "router"):
+            with self.subTest(depth=depth):
+                self.assertEqual(illustration_defects(document, depth), [])
+
+    def test_split_illustration_never_becomes_a_defect(self) -> None:
+        """Splitting is the prescribed remedy for an over-budget illustration.
+
+        One 14-element flowchart is a defect at deep-dive; the two 7-element
+        halves it splits into must both pass, or the remedy is unreachable."""
+        oversized = "```mermaid\nflowchart TD\n" + "".join(
+            f"  A{i} --> B{i}\n" for i in range(14)
+        ) + "```\n"
+        self.assertTrue(illustration_defects(oversized, "deep-dive"))
+        split = "".join(
+            "```mermaid\nflowchart TD\n"
+            + "".join(f"  A{i} --> B{i}\n" for i in range(half * 7, half * 7 + 7))
+            + "```\n\nProse.\n\n"
+            for half in range(2)
+        )
+        self.assertEqual(illustration_defects(split, "deep-dive"), [])
 
     def test_illustration_journey_exceeds_section_budget(self) -> None:
         document = (

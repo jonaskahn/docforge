@@ -232,11 +232,73 @@ Rules:
   documents whose `contract_revision` drifted are demoted to `in_progress` with
   cleared audits and reported under `contract-updated` — re-ground them as in
   step 1a even when source blobs are `FRESH`.
+- `--group` behaves like every other dimension flag: omitted keeps the
+  manifest's stored scope, `--group none` clears it back to every group.
+  **`/docforge-revise <area>` never passes `--group`** — see "Area scope is
+  not group scope" below.
 - The command prints the delta — a counts summary first (`3 add, 2 retire`)
   so the shape of the change is legible, then the detail lines (tier,
-  profiles, added, removed-planned, retire, contract-updated, kept)
-  and the annotated plan tree; then continue with `scaffold_docs.{py,js}
+  profiles, added, removed-planned, retire, contract-updated, agent-mode,
+  kept) and the annotated plan tree; then continue with `scaffold_docs.{py,js}
   --dry-run --revise` and the writing workflow.
+
+### Area scope is not group scope
+
+`project.groups` is a **persistent scope**: narrowing it means those areas are
+no longer part of this repository's documentation, so every written document in
+a dropped area correctly becomes a `retire` candidate. `<area>` is a
+**transient work filter**: it narrows which in-scope documents this run writes
+and nothing else.
+
+`/docforge-revise architecture` passing `--group architecture` to reconcile
+would nominate the entire rest of the written tree for retirement. So it does
+not: reconcile runs with no `--group` (the omitted-flag rule above keeps the
+stored scope), and only the write step is narrowed. Only intake, or an explicit
+widen/narrow request, changes `project.groups`.
+
+Valid `<area>` values are the catalog group ids and their aliases, from
+`query_catalog.{py,js} --groups`. An unknown area is an error that lists the
+allowlist; it never falls back to a full-tree revise. `flow` and `flows` are
+**reserved** for the flow pipeline (harvest → organize → derive → write), which
+is strictly more than revising the `flows` group — neither is an area.
+
+`/docforge-revise agents` on a manifest with no agent documents offers the
+repair rather than failing: when the `coding-agents` audience is missing, offer
+to add it (`reconcile --audience coding-agents`); when the audience is present
+but `project.groups` excludes `agent-context`, offer to widen the scope
+(widening adds no retire candidates). Declined, stop with `nothing in scope for
+'agents'`. Never add either silently.
+
+### Agent-context mode change
+
+When reconcile reports an `agent-mode` delta, the agent documentation was
+written **self-contained** (each file owns its facts, because no human-facing
+document existed to link) and this run changes that. Ask before applying —
+never under `--auto-accept`:
+
+> Your agent documentation is self-contained. This run adds *N* human-facing
+> documents that now own those facts.
+>
+> - **Convert to linked views** (recommended) — the *M* agent documents are
+>   re-grounded as short pointers into the new human documents.
+> - **Keep self-contained** — they stay as they are. Docforge records the
+>   choice and will not ask again.
+
+Apply the answer mechanically:
+
+```sh
+python3 runtime/cli/python/manage_manifest.py agent-mode --repo <repo> \
+  --decision <convert|keep>
+```
+
+`convert` demotes every agent-context document to `in_progress` with cleared
+audits, so the annotated plan tree shows them as `rewrite` and the writing
+workflow re-grounds them. `keep` records `decided_by: "user"`, which is what
+stops the question recurring on every later run.
+
+A linked → standalone → linked round trip is **not** content-preserving:
+standalone prose is deleted and rewritten, not re-linked. This is a real
+asymmetry with the compact ↔ standard round trip, which is preserving.
 
 ## Annotated plan tree
 
@@ -331,13 +393,13 @@ dashboard.
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
 2. Migration is unconditional (see [`validation.md`](validation.md) "Manifest
    and provenance"): upgrade manifest 3.6 / 3.5 / 3.4 / 3.3 (or
-   3.2 / 3.1 / 3.0 / provenance 1.0) to 3.7 / 2.1 — seeding each document's
+   3.2 / 3.1 / 3.0 / provenance 1.0) to 3.8 / 2.1 — seeding each document's
    catalog-owned `description` from the catalog `summary`, normalizing
    `provenance_storage` to `json`, the project's `unmanaged_docs`
    list (default empty), the project's `scale` record
    (`decided_by: "detected"` when absent, and its measurement `signals`
    refreshed with the 3.7 dependency and flow fields) — and re-register
-   any pre-3.0 shape as 3.7
+   any pre-3.0 shape as 3.8
    (adopting legacy written documents as `generated` with provenance 2.1,
    demoting incomplete or unconvertible documents to `in_progress`), and
    print the migration report. The same run moves

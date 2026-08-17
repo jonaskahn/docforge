@@ -114,7 +114,7 @@ Intake asks its scope questions in exactly two turns.
 
 | Turn | Asks | Why it is separate |
 |---|---|---|
-| 1 — Direction | Goal or action (Scope, on revise) and Documentation layout | Layout fixes the shape of the tree that every later answer describes |
+| 1 — Direction | Goal or action (Scope, on revise), Documentation layout, and Documentation areas | Layout fixes the shape of the tree that every later answer describes; areas fix which branches exist at all |
 | 2 — Scope | Tier, repository profiles, output audience, graph source, execution mode | These describe the content *inside* the tree Turn 1 fixed |
 
 The orchestrator applies these rules when it builds a pack:
@@ -229,6 +229,54 @@ wait for the user's explicit confirmation before reconciling the manifest.
    layout already recorded in the manifest."* If the chosen goal turns out not
    to use layout, discard the layout answer and report the manifest value as a
    baseline fact — never silently apply the discarded answer.
+
+3. **Documentation areas.** Which parts of the documentation tree this run
+   produces. Ask it in Turn 1, not Turn 2: areas decide which branches exist at
+   all, and they change what Tier and Audience mean. Revise asks the same
+   control in the same turn as `<area>` scope.
+
+   - **Everything** (recommended) — the full tree for the chosen tier and
+     audiences.
+   - **Agent context only** — `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`,
+     `.claude/settings.json`, and the `docs/agents/` views (or `docs/agents.md`
+     in compact). No human-facing documentation is written, and the agent
+     documents are written **self-contained** — they carry the facts themselves
+     instead of linking documents that do not exist. Human documentation can be
+     added later; that run asks whether to convert them into linked views.
+   - **Pick areas…** — a multi-select of the twelve catalog groups.
+
+   Render the twelve options from `query_catalog.{py,js} --groups`, using each
+   group's own `summary` as its consequence line; never re-author the labels.
+   Apply these rules:
+
+   - **Root files are opt-in under a partial scope.** `README.md`,
+     `CHANGELOG.md`, and `docs/README.md` are an explicit choice, off by
+     default, and the confirmation summary says so: `Root files: not written by
+     this run.` Overwriting a repository's own `README.md` is the most
+     surprising thing a scoped run can do.
+   - **Selecting an area pre-checks the audiences that unlock it**, from the
+     `audiences` field of `--groups`, and the pack states the consequence:
+     *"Coding agents added — the Agent context area is unavailable without
+     it."* Never add an audience silently.
+   - **Tier is reported as a fact when it is not a control.** Run
+     `manage_manifest.{py,js} preview` with the confirmed areas at `spine` and
+     at `diligence`; when the counts are equal, report the tier instead of
+     asking (`Tier: spine — every agent-context document is Spine-tier; a
+     higher tier adds nothing inside this scope`). It is still recorded,
+     because a later run may widen the areas.
+   - **Never reach the confirmation summary with an empty projection.** When
+     areas and audiences together select nothing, `preview` reports `0`; ask
+     the user to add the unlocking audience or widen the areas. `init` fails
+     independently rather than writing an empty manifest.
+   - **Disclose the standalone consequence** whenever the confirmed scope's
+     `agent_context_mode` is `standalone` — from the same `preview` payload, so
+     intake never re-derives it. The confirmation summary carries: `Agent
+     context: standalone — the agent documents will own their facts instead of
+     linking human documents. Adding human documentation later will ask whether
+     to convert them.`
+
+   The confirmation summary gains one line: `Areas: agent-context only (1 of
+   12)`, or `Areas: all`.
 
    The confirmed pick is carried into `init` ([`planning.md`](planning.md)):
    no flag when it matches detection (`decided_by: "detected"`);

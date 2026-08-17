@@ -15,6 +15,8 @@ they exist to be imported, not executed.
 - Planning manifest document actions → `plan`.
 - Linting documents → `evidence_locators`, `illustration_metrics`,
   `markdown_fences`.
+- Checking that a human-facing document does not reference the agent-context
+  group → `agent_context`.
 - Classifying a source's drift (fresh / cosmetic / stale) → `evidence_hash`.
 - Extracting declared dependencies from package manifests → `manifest_deps`.
 - Naming special outputs that bypass normal provenance → `special_files`.
@@ -28,9 +30,10 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | Script | Purpose | Read-only? |
 |---|---|---|
 | `_util` | JSON/error/manifest helpers, `.docforge/.gitignore` and `tmp/`/`scratch/` cleanup | mixes — mutates `.docforge` state |
+| `agent_context` | Manifest-derived agent-context paths and the one-way reference boundary check | yes |
 | `evidence_hash` | Raw/normalized/range-scoped blob hashing and fresh/cosmetic/stale classification | yes |
 | `evidence_locators` | Validate `path#Lx-Ly @ <git-blob>` locators against files and provenance | yes |
-| `illustration_metrics` | Enforce Mermaid/ASCII illustration budgets per target depth | yes |
+| `illustration_metrics` | Enforce per-illustration Mermaid/ASCII complexity bounds per target depth | yes |
 | `manifest_deps` | Extract dependency names + own-package identities from manifests (9 ecosystems) | yes |
 | `markdown_fences` | CommonMark fence scanning and visible-presentation policy checks | yes |
 | `plan` | Deterministic add/update/rewrite/unchanged/skip plans for documents | yes |
@@ -75,8 +78,9 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 - `evidence_locators` — `validate_locators(document, text=None)`; defects for
   path escape, missing source, stale blob, invalid range, unknown heading,
   provenance mismatch.
-- `illustration_metrics` — `illustration_defects(text, target_depth)`; budgets
-  per depth (e.g. orientation 1 illustration / 5 elements, router 0/0).
+- `illustration_metrics` — `illustration_defects(text, target_depth)`; bounds
+  the elements within a single illustration per depth (orientation 5, all
+  others 12). The number of illustrations in a document is never capped.
 - `markdown_fences` — `inferred_role`, `scan_fences`,
   `visible_presentation_defects`.
 - `special_files` — `SPECIAL_DOC_OUTPUTS` (AGENTS.md, CLAUDE.md,
@@ -108,7 +112,7 @@ consumers:
 
 - `documents/` — `_util`, `plan`, `special_files`, `provenance_frontmatter`,
   `provenance_store`, `evidence_locators`, `illustration_metrics`,
-  `markdown_fences`.
+  `markdown_fences`, `agent_context`.
 - `manifest/` — `_util`, `plan`, `provenance_frontmatter`, `provenance_store`,
   `evidence_hash`.
 - `validation/` — `_util`, `provenance_frontmatter`, `special_files`.

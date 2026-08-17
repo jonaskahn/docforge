@@ -57,9 +57,15 @@ function documentAction(repo, doc, revise) {
   return ["unchanged", "already complete"];
 }
 
-function planEntries(repo, manifest, flowIndexPath, revise) {
+// `groups` narrows which documents this run works on -- the transient `<area>`
+// filter. It never touches `project.groups`, the persistent scope, because
+// narrowing that would make every out-of-area written document a retire
+// candidate.
+function planEntries(repo, manifest, flowIndexPath, revise, groups = null) {
+  const scoped = new Set(groups || []);
   const entries = [];
   for (const doc of manifest.documents || []) {
+    if (scoped.size && !scoped.has(doc.group)) continue;
     const [action, reason] = documentAction(repo, doc, revise);
     entries.push({
       id: doc.id,
@@ -108,8 +114,11 @@ function planEntries(repo, manifest, flowIndexPath, revise) {
   return entries;
 }
 
-function planLines(repo, manifest, flowIndexPath, revise) {
-  const docs = (manifest.documents || []).filter((doc) => !["skipped", "retired"].includes(doc.status));
+function planLines(repo, manifest, flowIndexPath, revise, groups = null) {
+  const scoped = new Set(groups || []);
+  const docs = (manifest.documents || []).filter(
+    (doc) => !["skipped", "retired"].includes(doc.status) && (!scoped.size || scoped.has(doc.group)),
+  );
   const project = manifest.project || {};
   const lines = [`Generation plan — tier: ${project.tier || "unknown"}`];
   const profiles = project.profiles || {};

@@ -16,6 +16,7 @@ import unittest
 from pathlib import Path
 
 from _support import (
+    MANIFEST_VERSION,
     ROOT,
     blob_hash,
     initialize,
@@ -300,7 +301,7 @@ class JsonModePipelineTests(unittest.TestCase):
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 saved = load_manifest(repo)
-                self.assertEqual(saved["version"], "3.7")
+                self.assertEqual(saved["version"], MANIFEST_VERSION)
                 self.assertEqual(saved["project"]["provenance_storage"], "json")
                 self.assertEqual(saved["documents"][0]["provenance"]["schema"], "2.0")
                 target = repo / "docs" / "only.md"
@@ -321,7 +322,7 @@ class JsonModePipelineTests(unittest.TestCase):
                 repo.mkdir()
                 self.assertEqual(initialize(runtime, repo, "spine").returncode, 0)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.7")
+                self.assertEqual(manifest["version"], MANIFEST_VERSION)
                 self.assertEqual(manifest["project"]["provenance_storage"], "json")
                 manifest_path = repo / ".docforge" / "manifest.json"
                 result = run(runtime, "scaffold_docs", "--repo", str(repo), "--manifest", str(manifest_path), "--document", "arch_high_level")

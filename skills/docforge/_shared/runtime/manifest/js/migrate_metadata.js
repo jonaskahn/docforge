@@ -28,8 +28,8 @@ const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const { computeScale, layoutFor } = require("../../common/js/scale.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 
-const MANIFEST_CURRENT = "3.7";
-const MANIFEST_IN_PLACE = ["3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
+const MANIFEST_CURRENT = "3.8";
+const MANIFEST_IN_PLACE = ["3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
 const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];

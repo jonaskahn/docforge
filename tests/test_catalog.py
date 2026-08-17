@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from _support import ROOT, run
+from _support import CATALOG_VERSION, ROOT, run
 
 SKILL_ROOT = ROOT / "skills" / "docforge" / "_shared"
 CATALOG_DIR = SKILL_ROOT / ".metadata" / "catalog"
@@ -20,7 +20,7 @@ class CatalogRecordTests(unittest.TestCase):
         cls.groups = set(cls.index["groups"])
 
     def test_catalog_version_is_current(self) -> None:
-        self.assertEqual(self.index["version"], "2.19.0")
+        self.assertEqual(self.index["version"], CATALOG_VERSION)
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]

@@ -67,9 +67,17 @@ def plan_entries(
     manifest: dict,
     flow_index_path: Path | None = None,
     revise: bool = False,
+    groups: list[str] | None = None,
 ) -> list[dict]:
+    """`groups` narrows which documents this run works on -- the transient
+    `<area>` filter. It never touches `project.groups`, the persistent scope,
+    because narrowing that would make every out-of-area written document a
+    retire candidate."""
+    scoped = set(groups or [])
     entries: list[dict] = []
     for doc in manifest.get("documents", []):
+        if scoped and doc.get("group") not in scoped:
+            continue
         action, reason = document_action(repo, doc, revise)
         entries.append({
             "id": doc.get("id"),
@@ -119,8 +127,14 @@ def plan_lines(
     manifest: dict,
     flow_index_path: Path | None = None,
     revise: bool = False,
+    groups: list[str] | None = None,
 ) -> list[str]:
-    docs = [doc for doc in manifest.get("documents", []) if doc.get("status") not in {"skipped", "retired"}]
+    scoped = set(groups or [])
+    docs = [
+        doc for doc in manifest.get("documents", [])
+        if doc.get("status") not in {"skipped", "retired"}
+        and (not scoped or doc.get("group") in scoped)
+    ]
     project = manifest.get("project", {})
     lines = [f"Generation plan — tier: {project.get('tier', 'unknown')}"]
     profiles = project.get("profiles", {})

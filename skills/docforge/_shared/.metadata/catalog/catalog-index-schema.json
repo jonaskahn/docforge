@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["version", "tiers", "groups", "capabilities", "profiles", "presentation_defaults", "document_types"],
   "properties": {
-    "version": {"const": "2.19.0"},
+    "version": {"const": "2.20.0"},
     "profiles": {
       "type": "object",
       "required": ["shapes", "platforms", "frameworks", "concerns", "audiences"],

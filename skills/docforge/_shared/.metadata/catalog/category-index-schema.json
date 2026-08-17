@@ -5,7 +5,7 @@
   "required": ["$schema", "version", "category", "purpose", "source", "records"],
   "properties": {
     "$schema": {"type": "string"},
-    "version": {"const": "2.19.0"},
+    "version": {"const": "2.20.0"},
     "category": {"type": "string"},
     "purpose": {"type": "string", "maxLength": 160},
     "source": {"type": "string"},

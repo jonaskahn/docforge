@@ -13,17 +13,17 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.19.0";
+const CATALOG_VERSION = "2.20.0";
 const PUBLIC_CONTRACTS = {
-  manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
+  manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "agent-mode", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--group", "--decision", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
-  scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise"],
+  scaffold_docs: ["--repo", "--manifest", "--dry-run", "--document", "--audit", "--revise", "--group"],
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
   hash_evidence: ["--repo", "--path", "--range", "--json"],
   flow_index: ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
-  query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo"],
+  query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo", "--group", "--groups"],
   generate_indexes: ["--write", "--check"],
   dashboard: ["start", "export", "status", "stop", "--force", "--plan-only", "--no-open", "--port"],
 };
@@ -71,8 +71,8 @@ function validate() {
   if (fs.existsSync(path.join(metadata, "catalog.json"))) {
     errors.push("obsolete monolith catalog.json remains; use .metadata/catalog/");
   }
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.7") {
-    errors.push("manifest schema must require version 3.7");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.8") {
+    errors.push("manifest schema must require version 3.8");
   }
   const projectRequired = new Set(((((manifestSchema.properties || {}).project || {}).required) || []));
   if (!projectRequired.has("provenance_storage")) {
@@ -86,8 +86,8 @@ function validate() {
     errors.push("shipped .metadata/manifest.json example is missing");
   } else {
     const exampleManifest = readJson(exampleManifestPath);
-    if (exampleManifest.version !== "3.7") {
-      errors.push("shipped .metadata/manifest.json example must use version 3.7");
+    if (exampleManifest.version !== "3.8") {
+      errors.push("shipped .metadata/manifest.json example must use version 3.8");
     }
     const exampleProject = exampleManifest.project || {};
     const missingProjectFields = [...projectRequired].filter((field) => !(field in exampleProject)).sort();

@@ -35,7 +35,7 @@ metadata only (no scope question, no writing).
 |---|---|
 | *(none)* | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (dry-run preview first, apply only when needed); no scope question, no detection, no writing, no dashboard |
 | `flow` | Full flow pipeline (harvest, rank, organization, provisional derivation) |
-| `<area>` | Scoped revise of one docs area (architecture, flows, operations, …) |
+| `<area>` | Scoped revise of one catalog group — `root`, `product`, `architecture`, `engineering`, `operations`, `reference`, `security`, `contributing`, `records`, `portfolio`, `agent-context`, plus aliases (`arch`, `ops`, `ref`, `sec`, `adr`, `agents`, …), listed by `query_catalog --groups`. An unknown area is an error, never a full-tree fallback. `flow`/`flows` is reserved for the flow pipeline and is not an area. |
 | `all` | Full-tree revise |
 | `--plan-only` | Revise analysis only (migrate, staleness, detect/catalog, dry-run tree); no body writes |
 | `--auto-accept` | Same as `/docforge` — display, then continue without routine pauses; side-effect gates stay |
@@ -75,7 +75,7 @@ state), `stop` (shut down the detached dev server).
 
 A legacy manifest (any pre-3.0 version — 1.1 `project_context` /
 `document_groups`, 2.0 flat `documents` with overlays, or another shape) is
-auto-migrated to 3.7 by `start`/`export` (never a stop-and-ask gate:
+auto-migrated to 3.8 by `start`/`export` (never a stop-and-ask gate:
 `migrate_metadata` is safe, idempotent, re-registers any legacy version, and
 never touches document bodies — the migration is always printed).
 `--plan-only` runs the `migrate_metadata --dry-run` preview instead of

@@ -20,7 +20,10 @@ import urllib.request
 from pathlib import Path
 
 from _support import (
+    MANIFEST_VERSION,
     ROOT,
+    initialize,
+    run,
     blob_hash,
     load_manifest,
     normalized_blob_hash,
@@ -226,7 +229,7 @@ def seed_repo(repo: Path) -> None:
         written_doc("product_overview", "docs/product/overview.md", bodies["product_overview"], write_order=19),
     ]
     manifest = {
-        "version": "3.7",
+        "version": MANIFEST_VERSION,
         "generated_at": "2026-08-01T00:00:00Z",
         "project": {
             "name": "fixture", "root": str(repo), "tier": "spine",
@@ -994,6 +997,40 @@ class CompactRoutePlanTests(unittest.TestCase):
                         len(pages), len(set(pages)),
                         f"duplicate sidebar entry in {folder or '(root)'}: {pages}",
                     )
+
+
+class DashboardAgentOnlyTreeTests(unittest.TestCase):
+    """An agents-only repository has no human-facing documentation, so a
+    browsable site has nothing to show. That is a scope fact, not a defect --
+    and forcing a `docs/README.md` would make the human tree index the agent
+    overlay, which the one-way boundary forbids."""
+
+    def test_scan_names_the_scope_instead_of_demanding_a_docs_index(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(
+                    runtime, repo, "spine",
+                    audiences=("coding-agents",), layout="standard", groups=("agents",),
+                )
+                result = run(runtime, "dashboard", "scan", "--repo", str(repo))
+                combined = result.stdout + result.stderr
+                self.assertIn("agent-context only", combined)
+                self.assertNotIn("no docs index", combined)
+                # Pointing the user at revise would be wrong: nothing is broken.
+                self.assertIn("nothing to render", combined)
+                self.assertNotIn("you should revise again", combined)
+
+    def test_a_human_tree_still_demands_its_docs_index(self) -> None:
+        """The original message must survive for the case it was written for."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", layout="standard")
+                result = run(runtime, "dashboard", "scan", "--repo", str(repo))
+                combined = result.stdout + result.stderr
+                self.assertIn("no docs index", combined)
+                self.assertNotIn("agent-context only", combined)
 
 
 if __name__ == "__main__":

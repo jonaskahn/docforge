@@ -190,6 +190,18 @@ class ReadmeScaffoldTests(unittest.TestCase):
                 self.assertIn("missing link to docs/architecture/high-level.md", result.stdout)
 
 
+CATALOG_DOCUMENTS = ROOT / "skills" / "docforge" / "_shared" / ".metadata" / "catalog" / "documents"
+
+
+def catalog_contract_revision(doc_id: str, group: str = "") -> str:
+    """The catalog's own value, so a contract bump never breaks these tests.
+
+    `contract_revision` moves independently of the catalog version -- only its
+    MAJOR.MINOR.PATCH shape is validated (query_catalog `--validate`)."""
+    record = CATALOG_DOCUMENTS / group / f"{doc_id}.json" if group else CATALOG_DOCUMENTS / f"{doc_id}.json"
+    return json.loads(record.read_text(encoding="utf-8"))["contract_revision"]
+
+
 class ReadmeContractRevisionTests(unittest.TestCase):
     def test_reconcile_demotes_drifted_readme_even_when_fresh(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -213,7 +225,7 @@ class ReadmeContractRevisionTests(unittest.TestCase):
                 doc = next(item for item in after["documents"] if item["id"] == "docs_index")
                 self.assertEqual(doc["status"], "in_progress")
                 self.assertIsNone(doc["audit"])
-                self.assertEqual(doc["contract_revision"], "2.19.0")
+                self.assertEqual(doc["contract_revision"], catalog_contract_revision("docs_index"))
                 self.assertTrue(doc["scaffold_template"].startswith("content/"))
 
     def test_reconcile_is_idempotent_once_revision_current(self) -> None:
@@ -239,7 +251,7 @@ class ReadmeContractRevisionTests(unittest.TestCase):
             if revision is not None:
                 self.assertRegex(revision, r"^\d+\.\d+\.\d+$")
             if doc_id == "docs_index":
-                self.assertEqual(revision, "2.19.0")
+                self.assertEqual(revision, catalog_contract_revision("docs_index"))
 
     def test_legacy_modes_do_not_leak_contract_revision(self) -> None:
         for runtime in ("py", "js"):
@@ -269,6 +281,175 @@ class ReadmeFlowIndexTests(unittest.TestCase):
                 self.assertTrue(sources[0]["git_blob"])
                 payload = json.loads(run(runtime, "query_catalog", "--route", "flows_index").stdout)
                 self.assertEqual(payload["contract_revision"], "2.19.0")
+
+
+class AgentContextRoutingTests(unittest.TestCase):
+    """The reference boundary is one-way: agent-context documents may link
+    human-facing documents, and no human-facing index enumerates an
+    agent-context child. See references/document-composition.md."""
+
+    def _scaffold(self, runtime: str, repo: Path, doc_id: str) -> str:
+        result = run(
+            runtime, "scaffold_docs",
+            "--repo", str(repo),
+            "--manifest", str(repo / ".docforge" / "manifest.json"),
+            "--document", doc_id,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        doc = next(item for item in load_manifest(repo)["documents"] if item["id"] == doc_id)
+        return (repo / doc["path"]).read_text(encoding="utf-8")
+
+    def test_docs_index_never_enumerates_agent_children_in_either_layout(self) -> None:
+        for runtime in ("py", "js"):
+            for layout, forbidden in (("standard", "agents/README.md"), ("compact", "agents.md")):
+                with self.subTest(runtime=runtime, layout=layout), tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    result = initialize(
+                        runtime, repo, "spine",
+                        audiences=("coding-agents",), layout=layout,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
+                    self.assertIn("AGENTS.md", paths, "fixture must actually select agent docs")
+                    body = self._scaffold(runtime, repo, "docs_index")
+                    self.assertNotIn(forbidden, body)
+                    self.assertNotIn("docs/agents", body)
+
+    def test_agent_index_still_enumerates_its_own_children(self) -> None:
+        """The filter is relative to the referencing document, not global --
+        docs/agents/README.md must keep routing the views beneath it."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = initialize(
+                    runtime, repo, "spine",
+                    audiences=("coding-agents",), layout="standard",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                body = self._scaffold(runtime, repo, "agents_index")
+                self.assertIn("](architecture.md)", body)
+                self.assertIn("](patterns.md)", body)
+
+    def _materialize(self, runtime: str, repo: Path) -> None:
+        for doc in load_manifest(repo)["documents"]:
+            run(
+                runtime, "scaffold_docs",
+                "--repo", str(repo),
+                "--manifest", str(repo / ".docforge" / "manifest.json"),
+                "--document", doc["id"],
+            )
+
+    def _leaks(self, runtime: str, repo: Path) -> list[str]:
+        audit = run(
+            runtime, "scaffold_docs",
+            "--repo", str(repo),
+            "--manifest", str(repo / ".docforge" / "manifest.json"),
+            "--audit",
+        )
+        combined = audit.stdout + audit.stderr
+        found, collecting = [], False
+        for line in combined.splitlines():
+            if line.startswith("AGENT-CONTEXT LEAK"):
+                collecting = True
+                continue
+            if collecting:
+                if not line.startswith("  "):
+                    break
+                found.append(line.strip())
+        return found
+
+    def test_scaffolded_tree_is_free_of_agent_context_leaks(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="standard")
+                self._materialize(runtime, repo)
+                self.assertEqual(self._leaks(runtime, repo), [])
+
+    def test_human_document_referencing_agent_context_is_a_finding(self) -> None:
+        """Links, `@`-refs, and bare mentions all count; the same strings inside
+        a fence do not, because a quoted filename is not a reference."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="standard")
+                self._materialize(runtime, repo)
+                index = repo / "docs" / "README.md"
+                index.write_text(
+                    index.read_text(encoding="utf-8")
+                    + "\nSee [views](agents/README.md), then @AGENTS.md.\n"
+                    + "\n```sh\ncat AGENTS.md\n```\n",
+                    encoding="utf-8",
+                )
+                leaks = self._leaks(runtime, repo)
+                self.assertTrue(any("AGENTS.md" in item for item in leaks), leaks)
+                self.assertTrue(any("docs/agents/README.md" in item for item in leaks), leaks)
+                # The fenced `cat AGENTS.md` sits on its own line; every finding
+                # must point at the prose line instead.
+                fenced_line = next(
+                    number
+                    for number, line in enumerate(index.read_text(encoding="utf-8").splitlines(), 1)
+                    if line.strip() == "cat AGENTS.md"
+                )
+                self.assertFalse([item for item in leaks if f":{fenced_line} " in item], leaks)
+
+    def test_agent_documents_may_reference_human_documents_freely(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="standard")
+                self._materialize(runtime, repo)
+                view = repo / "docs" / "agents" / "architecture.md"
+                view.write_text(
+                    view.read_text(encoding="utf-8")
+                    + "\nSee [high level](../architecture/high-level.md) and @AGENTS.md.\n",
+                    encoding="utf-8",
+                )
+                self.assertEqual(self._leaks(runtime, repo), [])
+
+    def test_repository_without_the_agent_audience_can_never_leak(self) -> None:
+        """Targets come from the manifest, so a repo that owns `agents/` or
+        `.claude/settings.json` itself is untouchable by this rule."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", layout="standard")
+                self._materialize(runtime, repo)
+                index = repo / "docs" / "README.md"
+                index.write_text(
+                    index.read_text(encoding="utf-8")
+                    + "\nOur `src/agents/` package and `.claude/settings.json` are hand-written.\n",
+                    encoding="utf-8",
+                )
+                self.assertEqual(self._leaks(runtime, repo), [])
+
+    def test_whole_tree_gate_never_demands_an_agent_row_in_a_human_index(self) -> None:
+        """readme_child_coverage and child_rows read the same filtered list, so
+        the auto-generated table can never disagree with the audit that checks
+        it."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = initialize(
+                    runtime, repo, "spine",
+                    audiences=("coding-agents",), layout="standard",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                run(
+                    runtime, "scaffold_docs",
+                    "--repo", str(repo),
+                    "--manifest", str(repo / ".docforge" / "manifest.json"),
+                )
+                audit = run(
+                    runtime, "scaffold_docs",
+                    "--repo", str(repo),
+                    "--manifest", str(repo / ".docforge" / "manifest.json"),
+                    "--audit",
+                )
+                combined = audit.stdout + audit.stderr
+                for line in combined.splitlines():
+                    if "readme child coverage" in line or "docs/README.md" in line:
+                        self.assertNotIn("agents", line, combined)
 
 
 if __name__ == "__main__":

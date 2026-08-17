@@ -39,26 +39,36 @@ Deep dive, Reference, and Router. Catalog machine values include `orientation`,
 Apply the Working depth budget to content whose purpose is ordered behavior,
 important rules, inputs/outputs, and common failures.
 
-| Depth | Budget per document | Bound per illustration |
-|---|---|---|
-| Orientation (`orientation`) | One illustration | At most 5 meaningful elements |
-| Working depth | At most 2 illustrations | At most 8 meaningful elements |
-| Deep dive (`deep-dive`) | At most 3 illustrations | At most 12 meaningful elements |
-| Reference (`reference`) | Normally tables; at most 1 relationship illustration | At most 12 meaningful elements |
-| Router (`router`) | No illustrations | Not applicable |
+The budget bounds a single illustration. **There is no cap on how many
+illustrations a document may carry.** Every illustration must earn its place
+under "Choose the smallest useful form" above, and that relevance test is the
+only thing that limits the count. A document needing six diagrams to answer six
+distinct reader questions should carry six.
 
-Reference documents normally use tables. Add one relationship illustration
-only when lookup fields cannot express the relationship clearly. Router
-documents use prose and links. Split any illustration that exceeds
-its bound into linked views with one stated question each. Before splitting
-or dropping an over-budget illustration, check whether its content is
-actually enumerable, independent, stable-field data — a roster of named
-items with repeated attributes and no real sequence or branching between
-them — rather than a flow or relationship; that shape belongs in a table
-under "Choose the smallest useful form" instead, which carries no
-illustration-budget cost at all. A sequence diagram also has at most 5
-participants; a state diagram at most 8 named states; an ER diagram at most
-8 entities; a journey diagram at most 4 sections.
+| Depth | Bound per illustration |
+|---|---|
+| Orientation (`orientation`) | At most 5 meaningful elements |
+| Working depth | At most 8 meaningful elements |
+| Deep dive (`deep-dive`) | At most 12 meaningful elements |
+| Reference (`reference`) | At most 12 meaningful elements |
+| Router (`router`) | At most 12 meaningful elements |
+
+Reference documents normally use tables; reach for a relationship illustration
+when lookup fields cannot express the relationship clearly. Router documents
+normally use prose and links, because their reader wants a destination rather
+than a picture. Both are form preferences, not quotas.
+
+Split any illustration that exceeds its bound into linked views with one stated
+question each. **Splitting is always available** — the resulting views are
+additional illustrations, and that is the intended outcome, not a violation.
+Before splitting, check whether the content is actually enumerable,
+independent, stable-field data — a roster of named items with repeated
+attributes and no real sequence or branching between them — rather than a flow
+or relationship; that shape belongs in a table instead.
+
+A sequence diagram also has at most 5 participants; a state diagram at most 8
+named states; an ER diagram at most 8 entities; a journey diagram at most 4
+sections.
 
 ## Mermaid constraints
 

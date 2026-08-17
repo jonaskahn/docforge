@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from _support import (
+    MANIFEST_VERSION,
     PORTFOLIO_PATHS,
     ROOT,
     CLI_JS,
@@ -74,7 +75,7 @@ class ManifestSelectionTests(unittest.TestCase):
                 result = initialize("py", repo, tier)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["version"], "3.7")
+                self.assertEqual(manifest["version"], MANIFEST_VERSION)
                 self.assertEqual(manifest["project"]["tier"], tier)
                 self.assertEqual(
                     manifest["project"]["profiles"]["audiences"],
@@ -1324,7 +1325,7 @@ process.stdout.write(pf.emitYaml(value));
                 self.assertEqual(broken_provenance["doc_id"], "broken")
 
                 saved = load_manifest(repo)
-                self.assertEqual(saved["version"], "3.7")
+                self.assertEqual(saved["version"], MANIFEST_VERSION)
                 self.assertEqual(saved["documents"][0]["provenance"]["schema"], SCHEMA_VERSION)
                 self.assertIn("generator", saved["documents"][0]["provenance"])
                 self.assertEqual(saved["documents"][1]["provenance"]["schema"], SCHEMA_VERSION)
@@ -1383,7 +1384,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.7")
+                self.assertEqual(migrated["version"], MANIFEST_VERSION)
                 self.assertIn("description", migrated["documents"][0])
                 self.assertEqual(migrated["documents"][0]["description"], "Self-introduction to the documentation: what the repo is, who it serves, and the reader question each selected section answers")
                 self.assertEqual(migrated["documents"][0]["provenance"]["schema"], "2.0")
@@ -1434,7 +1435,7 @@ process.stdout.write(pf.emitYaml(value));
                 result = run(runtime, "migrate_metadata", "--repo", str(repo), "--manifest", str(manifest_path))
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 migrated = load_manifest(repo)
-                self.assertEqual(migrated["version"], "3.7")
+                self.assertEqual(migrated["version"], MANIFEST_VERSION)
                 self.assertEqual(migrated["documents"][0]["description"], "Writer-refined one-liner.")
 
     def test_obsolete_schema_defect_names_migrate_command(self) -> None:
@@ -1609,7 +1610,7 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.7")
+                    self.assertEqual(manifest["version"], MANIFEST_VERSION)
                     self.assertEqual(manifest["project"]["tier"], "spine")
                     self.assertEqual(manifest["project"]["profiles"]["audiences"], ["coding-agents"])
                     docs = {doc["id"]: doc for doc in manifest["documents"]}
@@ -1792,9 +1793,9 @@ class ManifestV11MigrationTests(unittest.TestCase):
                     try:
                         result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
                         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-                        self.assertIn("manifest: legacy manifest auto-migrated to 3.7", result.stdout)
+                        self.assertIn(f"manifest: legacy manifest auto-migrated to {MANIFEST_VERSION}", result.stdout)
                         manifest = load_manifest(repo)
-                        self.assertEqual(manifest["version"], "3.7")
+                        self.assertEqual(manifest["version"], MANIFEST_VERSION)
                         # scan/status must not perform the same auto-migration
                         # on a manifest that's already migrated -- this just
                         # confirms the migrated manifest is now readable by
@@ -1894,7 +1895,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     result = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.7")
+                    self.assertEqual(manifest["version"], MANIFEST_VERSION)
                     self.assertEqual(manifest["project"]["tier"], "diligence")
                     self.assertEqual(manifest["project"]["name"], "legacy2")
                     self.assertEqual(manifest["project"]["profiles"]["shapes"], ["api-service"])
@@ -1945,7 +1946,7 @@ class ManifestV20MigrationTests(unittest.TestCase):
                     report = json.loads(result.stdout)
                     self.assertIn("re-registered from 0.9", report["results"][0]["detail"])
                     out = load_manifest(repo)
-                    self.assertEqual(out["version"], "3.7")
+                    self.assertEqual(out["version"], MANIFEST_VERSION)
                     overview = next(doc for doc in out["documents"] if doc["id"] == "product_overview")
                     self.assertEqual(
                         overview["selection"]["origins"],
@@ -2218,7 +2219,7 @@ class UnmanagedDocsTests(unittest.TestCase):
                 self.assertIn(migrated.returncode, (0, 1), migrated.stderr)
                 self.assertNotIn("FAILED", migrated.stdout)
                 reloaded = load_manifest(repo)
-                self.assertEqual(reloaded["version"], "3.7")
+                self.assertEqual(reloaded["version"], MANIFEST_VERSION)
                 self.assertEqual(reloaded["project"]["unmanaged_docs"], [])
                 # Second run is a clean no-op apart from the same MISSING files.
                 again = run(runtime, "migrate_metadata", "--repo", str(repo))
@@ -2354,6 +2355,227 @@ class PortfolioLayoutMigrationTests(unittest.TestCase):
                     scale = json.loads(manifest_path.read_text(encoding="utf-8"))["project"]["scale"]
                     self.assertEqual(scale["layout"], "compact")
                     self.assertEqual(scale["decided_by"], "user")
+
+
+class GroupScopeTests(unittest.TestCase):
+    """`--group` restricts a run to catalog groups. It is subtractive and runs
+    after the tier/selector pass, so it can never add a document, and omitting
+    it reproduces the unscoped selection exactly."""
+
+    def test_agents_only_scope_writes_no_human_tree(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = initialize(
+                    runtime, repo, "spine",
+                    audiences=("coding-agents",), layout="standard", groups=("agents",),
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                manifest = load_manifest(repo)
+                self.assertEqual(manifest["project"]["groups"], ["agent-context"])
+                self.assertEqual(
+                    {doc["group"] for doc in manifest["documents"]}, {"agent-context"}
+                )
+                paths = {doc["path"] for doc in manifest["documents"]}
+                self.assertIn("AGENTS.md", paths)
+                # The ancestor pass must not pull docs/README.md back in: an
+                # index listing only docs/agents/ is the human->agent reference
+                # the one-way boundary forbids.
+                self.assertNotIn("docs/README.md", paths)
+                self.assertNotIn("README.md", paths)
+
+    def test_group_scope_is_subtractive_and_omitting_it_changes_nothing(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                unscoped = Path(tmp) / "unscoped"
+                unscoped.mkdir()
+                initialize(runtime, unscoped, "spine", audiences=("coding-agents",), layout="standard")
+                every = Path(tmp) / "every"
+                every.mkdir()
+                initialize(
+                    runtime, every, "spine", audiences=("coding-agents",), layout="standard",
+                    groups=tuple(row["id"] for row in json.loads(
+                        run(runtime, "query_catalog", "--groups").stdout
+                    )),
+                )
+                self.assertEqual(
+                    sorted(doc["id"] for doc in load_manifest(unscoped)["documents"]),
+                    sorted(doc["id"] for doc in load_manifest(every)["documents"]),
+                )
+                self.assertNotIn("groups", load_manifest(unscoped)["project"])
+
+    def test_group_without_its_unlocking_audience_fails_by_name(self) -> None:
+        """Every agent-context type is audience-gated, so this scope selects
+        zero. Writing an empty manifest would be worse than failing."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = initialize(runtime, repo, "spine", groups=("agent-context",))
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("coding-agents", result.stderr + result.stdout)
+                self.assertFalse((repo / ".docforge" / "manifest.json").exists())
+
+    def test_unknown_group_names_the_allowlist(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                result = initialize(runtime, Path(tmp), "spine", groups=("bogus",))
+                self.assertNotEqual(result.returncode, 0)
+                combined = result.stderr + result.stdout
+                self.assertIn("unknown group: bogus", combined)
+                self.assertIn("agent-context", combined)
+
+
+class AgentContextModeTests(unittest.TestCase):
+    """Reconcile reports the standalone->linked flip; a separate approved
+    `agent-mode` command applies it. The precedent is `retire`, not
+    `sync_presentations`: this trigger needs a human answer."""
+
+    def _agents_only(self, runtime: str, repo: Path) -> None:
+        result = initialize(
+            runtime, repo, "spine",
+            audiences=("coding-agents",), layout="standard", groups=("agents",),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def _complete_agent_docs(self, repo: Path) -> None:
+        path = repo / ".docforge" / "manifest.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        for doc in manifest["documents"]:
+            if doc["group"] == "agent-context":
+                doc["status"] = "complete"
+                doc["audit"] = {
+                    "mode": "cold-pass", "verdict": "PASS",
+                    "timestamp": "x", "report_path": ".docforge/audits/x.md",
+                }
+        path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+    def test_agents_only_run_is_standalone(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._agents_only(runtime, repo)
+                record = load_manifest(repo)["project"]["agent_context"]
+                self.assertEqual(record["mode"], "standalone")
+                self.assertEqual(record["decided_by"], "derived")
+
+    def test_repo_without_agent_documents_stores_no_record(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", layout="standard")
+                self.assertNotIn("agent_context", load_manifest(repo)["project"])
+
+    def test_adding_human_docs_reports_the_flip_and_demotes_nothing(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._agents_only(runtime, repo)
+                self._complete_agent_docs(repo)
+                result = run(runtime, "manage_manifest", "reconcile", "--repo", str(repo), "--group", "none")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("1 agent-mode", result.stdout)
+                self.assertIn("standalone -> linked", result.stdout)
+                statuses = {
+                    doc["status"] for doc in load_manifest(repo)["documents"]
+                    if doc["group"] == "agent-context"
+                }
+                self.assertEqual(statuses, {"complete"}, "reconcile must report, never demote")
+
+    def test_convert_demotes_every_agent_document_for_re_grounding(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._agents_only(runtime, repo)
+                self._complete_agent_docs(repo)
+                run(runtime, "manage_manifest", "reconcile", "--repo", str(repo), "--group", "none")
+                result = run(
+                    runtime, "manage_manifest", "agent-mode",
+                    "--repo", str(repo), "--decision", "convert",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                manifest = load_manifest(repo)
+                self.assertEqual(manifest["project"]["agent_context"]["mode"], "linked")
+                agents = [d for d in manifest["documents"] if d["group"] == "agent-context"]
+                self.assertEqual({d["status"] for d in agents}, {"in_progress"})
+                self.assertEqual({d["audit"] for d in agents}, {None})
+
+    def test_keep_pins_the_answer_so_reconcile_stops_asking(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._agents_only(runtime, repo)
+                self._complete_agent_docs(repo)
+                run(runtime, "manage_manifest", "reconcile", "--repo", str(repo), "--group", "none")
+                result = run(
+                    runtime, "manage_manifest", "agent-mode",
+                    "--repo", str(repo), "--decision", "keep",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                record = load_manifest(repo)["project"]["agent_context"]
+                self.assertEqual(record["mode"], "standalone")
+                self.assertEqual(record["decided_by"], "user")
+                statuses = {
+                    doc["status"] for doc in load_manifest(repo)["documents"]
+                    if doc["group"] == "agent-context"
+                }
+                self.assertEqual(statuses, {"complete"}, "keep must demote nothing")
+                again = run(runtime, "manage_manifest", "reconcile", "--repo", str(repo))
+                self.assertNotIn("agent-mode", again.stdout)
+
+
+class AreaScopeVersusGroupScopeTests(unittest.TestCase):
+    """`<area>` is a transient work filter; `project.groups` is a persistent
+    scope. Conflating them would make `/docforge-revise architecture` nominate
+    the entire rest of the written tree for retirement."""
+
+    def _written_tree(self, runtime: str, repo: Path) -> None:
+        initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="standard")
+        path = repo / ".docforge" / "manifest.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        for doc in manifest["documents"]:
+            doc["status"] = "complete"
+            doc["audit"] = {
+                "mode": "cold-pass", "verdict": "PASS",
+                "timestamp": "x", "report_path": ".docforge/audits/x.md",
+            }
+        path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+    def test_work_filter_narrows_the_plan_without_retiring_anything(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._written_tree(runtime, repo)
+                args = (
+                    "--repo", str(repo),
+                    "--manifest", str(repo / ".docforge" / "manifest.json"),
+                    "--dry-run",
+                )
+                full = run(runtime, "scaffold_docs", *args)
+                scoped = run(runtime, "scaffold_docs", *args, "--group", "agents")
+                self.assertEqual(scoped.returncode, 0, scoped.stderr)
+                self.assertLess(
+                    scoped.stdout.count("\n"), full.stdout.count("\n"),
+                    "the work filter must actually narrow the plan",
+                )
+                # The decisive property: narrowing the work never narrows scope.
+                reconcile = run(runtime, "manage_manifest", "reconcile", "--repo", str(repo))
+                self.assertNotIn("retire", reconcile.stdout)
+                self.assertNotIn("groups", load_manifest(repo)["project"])
+
+    def test_narrowing_the_persistent_scope_does_produce_retire_candidates(self) -> None:
+        """The contrast that makes the rule necessary, not merely cautious."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._written_tree(runtime, repo)
+                result = run(
+                    runtime, "manage_manifest", "reconcile",
+                    "--repo", str(repo), "--group", "agents",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("retire", result.stdout)
+                self.assertIn("docs_index", result.stdout)
+                self.assertEqual(load_manifest(repo)["project"]["groups"], ["agent-context"])
 
 
 if __name__ == "__main__":

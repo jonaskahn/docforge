@@ -10,6 +10,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 from runtime.common.python._util import ensure_docforge_gitignore, fail, load_manifest, unmanaged_paths
+from runtime.common.python.agent_context import AGENT_CONTEXT_GROUP, agent_context_leaks
 from runtime.common.python.plan import plan_entries
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.provenance_frontmatter import (
@@ -60,8 +61,28 @@ def active_documents(manifest: dict) -> list[dict]:
     return [doc for doc in manifest["documents"] if doc.get("status") not in {"skipped", "retired"}]
 
 
-def preview(manifest: dict, repo: Path, revise: bool = False) -> int:
-    docs = active_documents(manifest)
+def routable_children(doc: dict, manifest: dict) -> list[dict]:
+    """Children a routing document may enumerate.
+
+    Agent-context documents see everything; nothing else sees agent-context.
+    The reference boundary is one-way by construction, so `docs/README.md`
+    never lists `docs/agents/README.md` while `docs/agents/README.md` still
+    lists its own children. Entries without a group predate the field and are
+    treated as human-facing, which is the safe direction."""
+    children = active_documents(manifest)
+    if doc.get("group") == AGENT_CONTEXT_GROUP:
+        return children
+    return [child for child in children if child.get("group") != AGENT_CONTEXT_GROUP]
+
+
+def preview(manifest: dict, repo: Path, revise: bool = False, groups: list[str] | None = None) -> int:
+    """`groups` is the transient `<area>` work filter: it narrows which
+    documents this run reports on and never touches `project.groups`."""
+    scoped = set(groups or [])
+    docs = [
+        doc for doc in active_documents(manifest)
+        if not scoped or doc.get("group") in scoped
+    ]
     project = manifest.get("project", {})
     print(f"Generation plan — tier: {project.get('tier', 'unknown')}")
     profiles = project.get("profiles", {})
@@ -70,7 +91,7 @@ def preview(manifest: dict, repo: Path, revise: bool = False) -> int:
         print(f"  {dimension}: {values}")
     print()
     flow_index_path = repo / ".docforge" / "flow-index.json"
-    entries = plan_entries(repo, manifest, flow_index_path, revise)
+    entries = plan_entries(repo, manifest, flow_index_path, revise, groups=groups)
     manifest_entries = {entry["id"]: entry for entry in entries if not entry["is_flow"]}
     flow_entries = [entry for entry in entries if entry["is_flow"]]
     for doc in docs:
@@ -122,7 +143,7 @@ def scaffold_entry(doc: dict, manifest: dict) -> dict:
 def child_rows(doc: dict, manifest: dict) -> list[str]:
     directory = PurePosixPath(doc["path"]).parent
     children = []
-    for candidate in active_documents(manifest):
+    for candidate in routable_children(doc, manifest):
         if candidate["id"] == doc["id"]:
             continue
         candidate_path = PurePosixPath(candidate["path"])
@@ -400,7 +421,7 @@ def readme_child_coverage(repo: Path, doc: dict, manifest: dict, text: str) -> l
         return []
     children_folders, link_base = coverage_scope(doc)
     missing = []
-    for candidate in active_documents(manifest):
+    for candidate in routable_children(doc, manifest):
         if candidate["id"] == doc["id"]:
             continue
         candidate_path = PurePosixPath(candidate["path"])
@@ -439,6 +460,7 @@ def audit(repo: Path, manifest: dict) -> int:
         "unknown section": [],
         "broken links": [],
         "readme child coverage": [],
+        "agent-context leak": [],
         "invalid json": [],
         "folder-only promotion": [],
         "forge leakage": [],
@@ -495,8 +517,12 @@ def audit(repo: Path, manifest: dict) -> int:
             if not (target.parent / clean).resolve().exists():
                 findings["broken links"].append(f"{doc['path']} -> {link}")
         findings["readme child coverage"].extend(
-            f"{doc['path']}: missing link to {item}" 
+            f"{doc['path']}: missing link to {item}"
             for item in readme_child_coverage(repo, doc, manifest, text)
+        )
+        findings["agent-context leak"].extend(
+            f"{doc['path']}:{leak['line']} -> {leak['target']}"
+            for leak in agent_context_leaks(doc, manifest, text)
         )
     for prefix in ("docs/flows/", "docs/architecture/concepts/"):
         folders = {
@@ -540,6 +566,11 @@ def main() -> int:
     modes.add_argument("--document")
     modes.add_argument("--audit", action="store_true")
     parser.add_argument("--revise", action="store_true")
+    parser.add_argument(
+        "--group", action="append", default=[],
+        help="Narrow --dry-run to these catalog groups (the transient <area> "
+             "work filter; never changes project.groups)",
+    )
     args = parser.parse_args()
     if not args.repo.is_dir():
         return fail(f"not a directory: {args.repo}", 2)
@@ -551,7 +582,11 @@ def main() -> int:
     except (ValueError, json.JSONDecodeError) as exc:
         return fail(str(exc), 2)
     if args.dry_run:
-        return preview(manifest, args.repo, args.revise)
+        try:
+            scoped_groups = query_catalog.normalize_groups(args.group)
+        except ValueError as exc:
+            return fail(str(exc), 2)
+        return preview(manifest, args.repo, args.revise, groups=scoped_groups)
     if args.document:
         return materialize(args.repo, manifest, args.document)
     return audit(args.repo, manifest)

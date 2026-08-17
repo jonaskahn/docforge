@@ -20,8 +20,10 @@ inline. The checks owned by
 [`../references/quality-bar.md`](../references/quality-bar.md) cover
 reachability, onboarding, location, reviewer, stranger, duplication, and host
 neutrality, plus README-specific checks: every section README links each
-selected and materialized direct child (the `readme child coverage` finding),
-and no section README routes readers into source files. A whole-tree discovery
+selected and materialized direct child outside the agent-context group (the
+`readme child coverage` finding), no human-facing document references an
+agent-context path (the `agent-context leak` finding), and no section README
+routes readers into source files. A whole-tree discovery
 that changes one artifact sends that artifact through its independent audit
 again ([`writing.md`](writing.md)).
 
@@ -33,7 +35,7 @@ gate's exit code reflects real defects only.
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `3.7`; there is no secondary runtime state file.
+Its schema version is `3.8`; there is no secondary runtime state file.
 
 **Migration is unconditional.** Every invocation that touches an existing
 manifest — every `/docforge-revise` path regardless of scope argument,
@@ -43,7 +45,7 @@ covering both manifest schema and provenance storage. Migration is idempotent,
 so an already-current manifest reports a clean no-op; that cheapness is why
 the run is unconditional, never "when needed".
 
-Manifest 3.6 (and 3.5 / 3.4 / 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
+Manifest 3.7 (and 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
 `migrate_metadata.{py,js}`
 (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
 resume, revision, or provenance synchronization — every run, version-agnostic
@@ -127,26 +129,32 @@ reported in the final response:
 2. **Skip when the invocation included `--no-dashboard`** — the run still
    completes; the user renders later with `/docforge-dashboard` or the
    internal `dashboard.{py,js} start`.
-3. **Compact layout offers instead of serves** — when
+3. **An agent-context-only run has nothing to render** — when every selected
+   document is in the `agent-context` group, skip items 5-8 and say so once:
+   the agent documents are read as files, not browsed, and no human-facing
+   documentation exists for a site to show. `dashboard scan` reports this as
+   `agent-context only`, which is a scope fact, not a defect to revise. The run
+   still completes.
+4. **Compact layout offers instead of serves** — when
    `project.scale.layout == "compact"` and neither `--plan-only` nor
-   `--no-dashboard` was given, do not run items 4-7 automatically; append
+   `--no-dashboard` was given, do not run items 5-8 automatically; append
    one offer line to the final response ("Compact layout — start the local
    dashboard? Reply yes, or run `/docforge-dashboard` later."). An explicit
-   yes in the same turn runs items 4-7 unchanged.
-4. Run the dashboard lifecycle — preflight, metadata reconcile, signature,
+   yes in the same turn runs items 5-8 unchanged.
+5. Run the dashboard lifecycle — preflight, metadata reconcile, signature,
    build (when changed), serve, open — via
    [`./dashboard.md`](dashboard.md) (internal to this cartridge; the optional
    `/docforge-dashboard` skill is only a thin entrypoint into it):
    `python3 runtime/cli/python/dashboard.py start --repo <repo>` (or the
    locked JS peer).
-5. The first run takes longer: it scaffolds `.docforge/dashboard/`, runs
+6. The first run takes longer: it scaffolds `.docforge/dashboard/`, runs
    `npm install`, and starts the detached dev server; later runs reuse the
    healthy recorded server when the signature is unchanged.
-6. When Node.js 22+ / npm is unavailable or preflight fails, state the
+7. When Node.js 22+ / npm is unavailable or preflight fails, state the
    dashboard requirement and continue — a missing dashboard never blocks
    completion, but a successful run must print the `dashboard: <url>` line
    and name the URL in the final summary.
-7. The dev server runs detached; `dashboard.{py,js} stop` shuts it down
+8. The dev server runs detached; `dashboard.{py,js} stop` shuts it down
    without affecting the written documentation or manifest state (see
    [`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)).
 

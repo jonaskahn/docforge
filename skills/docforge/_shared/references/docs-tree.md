@@ -115,7 +115,10 @@ one file of its own rather than swelling a neighbour: `docs/agents.md`
 (coding agents), `docs/business-analyst.md`, `docs/product-owner.md`. Coding
 agents additionally bring the fixed host-contract paths `AGENTS.md`,
 `CLAUDE.md`, `CLAUDE.local.md`, and `.claude/settings.json`, which are
-tooling-owned locations and never fold. With three shapes, a platform, three
+tooling-owned locations and never fold. The agent-context outputs are reachable
+from `AGENTS.md`, never from `docs/README.md`, and appear in no human-facing
+index in either layout — see the one-way reference boundary in
+[`document-composition.md`](document-composition.md). With three shapes, a platform, three
 concerns, and all seven audiences confirmed, Compact Diligence is 22 files
 against Standard's 71 — the standard tree grew by 37, the compact one by 7.
 
@@ -150,7 +153,7 @@ repository that is simultaneously five shapes degrades to the standard tree
 for the excess instead of producing one unreadable file. `manage_manifest
 preview` names any group that spilled.
 
-Two routing rules follow, and both are mechanically checked by
+Three routing rules follow, and all are mechanically checked by
 `scaffold_docs --audit`:
 
 - A merged file links every selected, materialized document in the folders it
@@ -162,6 +165,12 @@ Two routing rules follow, and both are mechanically checked by
   at the standard path that compact never materialized. `docs/README.md`
   linking `reference/configuration.md` in a compact tree is a broken link;
   `reference.md#configuration` is the correct target.
+- A human-facing index never lists an agent-context child, in either layout.
+  The compact anchor rule above does not apply across this boundary, because
+  the boundary forbids the link itself: `docs/README.md` links neither
+  `agents/README.md` nor `agents.md#architecture`. Agent-context documents are
+  routed from `AGENTS.md`, and `docs/agents.md` still covers its own merged
+  and spilled members normally.
 
 `project.scale.layout` records which tree was generated; switching layouts is a
 selection change like any other and flows through the revise preview and

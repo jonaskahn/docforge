@@ -34,6 +34,7 @@ const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson, unmanag
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { classifySource, rawBlobHash } = require("../../common/js/evidence_hash.js");
+const { AGENT_CONTEXT_GROUP } = require("../../common/js/agent_context.js");
 const { MANIFEST_CURRENT, migrate: migrateManifestMetadata } = require("../../manifest/js/migrate_metadata.js");
 
 const TOOL_VERSION = "2.19.0";
@@ -631,7 +632,22 @@ function plan(repo, manifest) {
     byDir[dir].push(page);
   }
   if (!ledger.pages.some((page) => page.url === BASE_URL)) {
-    problems.push("no docs index: docs/README.md is not a written document");
+    // An agents-only run writes no human-facing tree, so a browsable site has
+    // nothing to show. That is a scope fact, not a defect to revise -- and
+    // forcing a docs/README.md here would make the human tree index the agent
+    // overlay, which the one-way boundary forbids. Read the manifest's scope
+    // rather than what is written yet, so the message is right from run one.
+    const selected = (manifest.documents || []).filter(
+      (doc) => doc.status !== "skipped" && doc.status !== "retired",
+    );
+    if (selected.length && selected.every((doc) => doc.group === AGENT_CONTEXT_GROUP)) {
+      problems.push(
+        "agent-context only: this repository has no human-facing documentation "
+        + "to render; agent documents are read as files, not browsed",
+      );
+    } else {
+      problems.push("no docs index: docs/README.md is not a written document");
+    }
   }
   return {
     base_url: BASE_URL,
@@ -1268,6 +1284,21 @@ function planOnly(args, manifest, renderSig, shellSig) {
   return ok ? 0 : 1;
 }
 
+// What to tell the user after a scan that found problems. An agents-only
+// repository has nothing for a browsable site to show. That is a scope fact, so
+// pointing the user at `/docforge-revise` would be wrong -- there is nothing to
+// fix.
+function reviseAdvice(scanResult) {
+  const agentOnly = scanResult.problems.some(
+    (problem) => problem.kind === "route_plan" && problem.detail.startsWith("agent-context only:"),
+  );
+  if (agentOnly) {
+    return "nothing to render: this run wrote agent context only. Add human-facing "
+      + "areas to build a dashboard, or read the agent documents directly.";
+  }
+  return "you should revise again: run /docforge-revise to fix the documentation";
+}
+
 function prepareDashboard(args, dashboard, manifest, templateDir, renderSig, shellSig, force) {
   const metadataReport = reconcileMetadata(args.repo, manifest);
   console.log(`metadata: ${metadataReport.counts.reconciled} reconciled, ${metadataReport.counts.unchanged} unchanged`);
@@ -1279,7 +1310,8 @@ function prepareDashboard(args, dashboard, manifest, templateDir, renderSig, she
       const tag = problem.blocking ? " (blocking)" : "";
       console.log(`  [${problem.kind}]${tag} ${who}${problem.detail}`);
     }
-    console.log("you should revise again: run /docforge-revise to fix the documentation before relying on this dashboard");
+    const advice = reviseAdvice(scanResult);
+    console.log(advice.startsWith("nothing to render") ? advice : `${advice} before relying on this dashboard`);
   } else {
     console.log("scan: 0 problems");
   }
@@ -1373,7 +1405,8 @@ async function cmdScan(args, manifest) {
       const tag = problem.blocking ? " (blocking)" : "";
       console.log(`  [${problem.kind}]${tag} ${who}${problem.detail}`);
     }
-    console.log("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again");
+    const advice = reviseAdvice(result);
+    console.log(advice.startsWith("nothing to render") ? advice : `${advice}, then \`dashboard start\` again`);
   }
   if (result.unmanaged.length) {
     console.log(`unmanaged: ${result.unmanaged.length} self-managed docs (never tracked, never re-asked)`);

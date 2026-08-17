@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import run
+from _support import initialize, load_manifest, run
 
 GOLDEN = """\
 # Demo Repo
@@ -204,6 +204,80 @@ class AgentsKernelLintTests(unittest.TestCase):
                 kinds = {item["kind"] for item in json.loads(stdout)["warnings"]}
                 self.assertIn("bullet-length", kinds)
             self.assertEqual(results[0], results[1])
+
+
+class AgentsKernelCompactVariantTests(unittest.TestCase):
+    """`agents_kernel` declares no `compact_group`, so `AGENTS.md` is written in
+    every layout — but compact materializes only `docs/agents.md`. The standard
+    template's `@docs/agents/*.md` fan-out therefore produced `dangling-at-ref`
+    defects on a kernel written faithfully from its own template. The fix is a
+    layout variant, not a linter exception: the disk check is correct."""
+
+    TEMPLATES = (
+        Path(__file__).resolve().parents[1]
+        / "skills" / "docforge" / "_shared" / "content" / "agent-context" / "templates"
+    )
+
+    def _section_seven(self, text: str) -> str:
+        start = text.index("## 7. Deeper Context")
+        return text[start:text.index("---", start)]
+
+    def test_compact_kernel_references_only_the_merged_file(self) -> None:
+        compact = (self.TEMPLATES / "agents-kernel.compact.md").read_text(encoding="utf-8")
+        section = self._section_seven(compact)
+        self.assertIn("@docs/agents.md", section)
+        self.assertNotIn("@docs/agents/", section)
+        # `@` imports resolve a path; an anchored path is not a file, so the
+        # compact-anchor rule that applies to indexes cannot apply here.
+        self.assertNotIn("@docs/agents.md#", section)
+
+    def test_kernel_templates_differ_only_in_section_seven(self) -> None:
+        """The variant duplicates a ~90-line template for one section. This is
+        the guard that keeps the other 80 lines from drifting apart."""
+        standard = (self.TEMPLATES / "agents-kernel.md").read_text(encoding="utf-8")
+        compact = (self.TEMPLATES / "agents-kernel.compact.md").read_text(encoding="utf-8")
+        self.assertNotEqual(self._section_seven(standard), self._section_seven(compact))
+        self.assertEqual(
+            standard.replace(self._section_seven(standard), ""),
+            compact.replace(self._section_seven(compact), ""),
+        )
+
+    def test_compact_layout_selects_the_variant_template(self) -> None:
+        for runtime in ("py", "js"):
+            for layout, expected in (
+                ("standard", "content/agent-context/templates/agents-kernel.md"),
+                ("compact", "content/agent-context/templates/agents-kernel.compact.md"),
+            ):
+                with self.subTest(runtime=runtime, layout=layout), tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    result = initialize(
+                        runtime, repo, "spine", audiences=("coding-agents",), layout=layout,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    kernel = next(
+                        doc for doc in load_manifest(repo)["documents"]
+                        if doc["id"] == "agents_kernel"
+                    )
+                    self.assertEqual(kernel["scaffold_template"], expected)
+
+    def test_compact_kernel_scaffold_lints_without_dangling_refs(self) -> None:
+        """The regression proof: the standard template fails this."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="compact")
+                for doc_id in ("agents_kernel", "agents_compact"):
+                    run(
+                        runtime, "scaffold_docs",
+                        "--repo", str(repo),
+                        "--manifest", str(repo / ".docforge" / "manifest.json"),
+                        "--document", doc_id,
+                    )
+                lint = run(
+                    runtime, "lint_agents_kernel",
+                    "--file", str(repo / "AGENTS.md"), "--repo", str(repo),
+                )
+                self.assertNotIn("dangling-at-ref", lint.stdout + lint.stderr)
 
 
 if __name__ == "__main__":

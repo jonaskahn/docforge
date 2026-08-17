@@ -35,6 +35,15 @@ defects, and disposition, shaped by
 Atomic external values may remain as typed `<UPPER_SNAKE_CASE>` tokens. A
 derivable gap may not be waived to a human.
 
+The contract in force is the one `query_catalog.{py,js} --route` returned for
+this run's agent-context mode. In `standalone` mode an agent-context document
+legitimately owns facts the `linked` contract lists under Keep out; owning them
+is not a `FAIL`. A standalone document that instead links a human-facing
+document this run never generated **is** a `FAIL` — both a dead link and a fact
+with no owner. Symmetrically, a human-facing document that references any
+agent-context path is a `FAIL` in either mode (the `agent-context leak` finding
+in `scaffold_docs --audit`).
+
 Record the result with `manage_manifest.{py,js} audit` (see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md)). A failure
 puts the document in

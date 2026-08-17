@@ -181,6 +181,76 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("only candidate — confirm it or add your own", intake)
         self.assertIn('keeps the "these are weak candidates" framing', intake)
 
+    def test_one_way_agent_context_boundary_is_stated_everywhere_it_binds(self) -> None:
+        """Agent-context documents link human documents; human documents never
+        link back. The rule binds in five places -- the safety boundary, the
+        ownership reference, the acceptance bar, the tree layout, and the index
+        instruction -- and each states it once for its own audience."""
+        rules = (SHARED_ROOT / "rules.md").read_text(encoding="utf-8")
+        self.assertIn("Links run\n   one way across the agent-context boundary", rules)
+
+        composition = (SHARED_ROOT / "references" / "document-composition.md").read_text(encoding="utf-8")
+        self.assertIn("**References across this boundary run one way.**", composition)
+        for path in ("docs/agents/", "AGENTS.md", "CLAUDE.local.md", ".claude/settings.json"):
+            self.assertIn(path, composition)
+
+        quality = (SHARED_ROOT / "references" / "quality-bar.md").read_text(encoding="utf-8")
+        self.assertIn("`agent-context leak`", quality)
+        self.assertIn("every human-facing reader document is reachable", quality)
+        self.assertIn("outside the agent-context\n  group", quality)
+
+        docs_tree = (SHARED_ROOT / "references" / "docs-tree.md").read_text(encoding="utf-8")
+        self.assertIn("Three routing rules follow", docs_tree)
+        self.assertIn("A human-facing index never lists an agent-context child", docs_tree)
+
+        index_instruction = (SHARED_ROOT / "content" / "shared" / "folder-index.instruction.md").read_text(encoding="utf-8")
+        self.assertIn("and are not agent-context", index_instruction)
+
+        validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
+        self.assertIn("`agent-context leak` finding", validation)
+
+    def test_coding_agent_profile_documents_compact_layout_and_requires_semantics(self) -> None:
+        """Compact folds the eight views into docs/agents.md while the four
+        host-contract paths keep their own locations; and `requires` gates
+        evidence, not selection, so a capability-less view is selected and then
+        skipped rather than never appearing."""
+        profile = (SHARED_ROOT / "references" / "profiles" / "audience-coding-agents.md").read_text(encoding="utf-8")
+        self.assertIn("Compact layout", profile)
+        self.assertIn("docs/agents.md", profile)
+        self.assertIn("never fold", profile)
+        self.assertIn("gates **evidence, not selection**", profile)
+        self.assertIn("## One-way references", profile)
+
+    def test_intake_asks_documentation_areas_in_turn_one(self) -> None:
+        """Areas decide which branches exist at all and change what Tier and
+        Audience mean, so they belong beside Layout in Turn 1 -- and revise's
+        `<area>` is the same control, asked in the same turn."""
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn("**Documentation areas.**", intake)
+        turn_two = intake.index("### Turn 2 — Scope")
+        self.assertLess(intake.index("**Documentation areas.**"), turn_two)
+        # Every consequence must be stated, never applied silently.
+        self.assertIn("Root files are opt-in under a partial scope", intake)
+        self.assertIn("pre-checks the audiences that unlock it", intake)
+        self.assertIn("Never add an audience silently", intake)
+        self.assertIn("Tier is reported as a fact when it is not a control", intake)
+        self.assertIn("Never reach the confirmation summary with an empty projection", intake)
+        self.assertIn("Disclose the standalone consequence", intake)
+        self.assertIn("query_catalog.{py,js} --groups", intake)
+
+    def test_revise_area_is_a_work_filter_not_a_scope_change(self) -> None:
+        """Passing `--group` to reconcile for an `<area>` revise would nominate
+        the entire rest of the written tree for retirement."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        self.assertIn("### Area scope is not group scope", revision)
+        self.assertIn("**`/docforge-revise <area>` never passes `--group`**", revision)
+        self.assertIn("persistent scope", revision)
+        self.assertIn("transient work filter", revision)
+        # `flow` is the pipeline keyword, never a group name.
+        self.assertIn("`flow` and `flows` are\n**reserved**", revision)
+        self.assertIn("### Agent-context mode change", revision)
+        self.assertIn("not** content-preserving", revision)
+
     def test_compact_excludes_portfolio_across_instruction_files(self) -> None:
         """Compact covers Spine and Diligence only; a Portfolio root is always
         standard. This spans docs-tree.md (the rule), portfolio.md (why, plus
@@ -561,7 +631,7 @@ class SkillContentTests(unittest.TestCase):
         # wording lives in workflows/dashboard.md (asserted above).
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**Legacy manifest**", thin)
-        self.assertIn("auto-migrated to 3.7 automatically, never a stop-and-ask", thin)
+        self.assertIn("auto-migrated to 3.8 automatically, never a stop-and-ask", thin)
         self.assertIn("never migrate", thin)
         self.assertNotIn("three-option gate", thin)
         self.assertNotIn("Legacy manifest gate (v1.1)", thin)

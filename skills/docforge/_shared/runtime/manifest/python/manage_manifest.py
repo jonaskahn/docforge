@@ -18,6 +18,7 @@ from runtime.common.python._util import (
     finish_docforge,
     load_manifest,
 )
+from runtime.common.python.agent_context import AGENT_CONTEXT_GROUP
 from runtime.common.python.plan import plan_lines
 from runtime.common.python import scale
 from runtime.catalog.python.detect_profiles import detect as detect_profiles
@@ -43,7 +44,7 @@ TRANSITIONS = {
     "retired": {"planned"},
 }
 TOOL_VERSION = GENERATOR_VERSION
-MANIFEST_VERSION = "3.7"
+MANIFEST_VERSION = "3.8"
 USER_CONFIRMED_TRIGGERS = {
     "new-trust-boundary", "per-interaction-review", "regulated-workload",
     "high-criticality", "new-external-integration", "new-data-classification",
@@ -196,6 +197,8 @@ def make_document(
     *,
     catalog_id: str | None = None,
     audiences: list[str] | None = None,
+    agent_mode: str | None = None,
+    layout: str | None = None,
 ) -> dict:
     # `definition` comes from the legacy-view catalog (bare filenames, kept
     # stable for --legacy CLI output); the manifest's scaffold_template must
@@ -205,6 +208,13 @@ def make_document(
     # id by the time this runs, so callers pass the original catalog id
     # explicitly via `catalog_id`.
     detail = query_catalog.load_type(catalog_id or definition["id"])
+    # Variants are resolved here, not in scaffold_docs: scaffold_body reads
+    # `scaffold_template` straight from the manifest, so choosing the file at
+    # manifest-build time means the writer path needs no mode awareness.
+    if agent_mode or layout:
+        detail = query_catalog.resolve_variants(
+            detail, agent_context_mode=agent_mode, layout=layout
+        )
     primary_audience, presentation, _ = query_catalog.resolve_presentation(detail, audiences)
     document = {
         "id": definition["id"],
@@ -402,18 +412,74 @@ def add_ancestor_indexes(
                 parent = parent.parent
 
 
+def empty_selection_message(groups: list[str], profiles: dict[str, list[str]]) -> str:
+    """Explain an empty selection by naming the audience that would unlock it.
+
+    Every agent-context type is gated on `coding-agents`, so `--group
+    agent-context` alone selects nothing; saying so beats writing an empty
+    manifest or a bare count of zero."""
+    if not groups:
+        return "no documents selected for this tier and profile set"
+    missing: list[str] = []
+    for group in groups:
+        unlocking = query_catalog.group_audiences(group)
+        if unlocking and not any(a in profiles["audiences"] for a in unlocking):
+            missing.append(f"{group} requires audience {' or '.join(unlocking)}")
+    detail = f"; {'; '.join(missing)}" if missing else ""
+    return (
+        f"no documents selected: group scope {', '.join(groups)}{detail}"
+        f" — add the audience or widen --group"
+    )
+
+
+def derive_agent_mode(documents: list[dict]) -> str:
+    """`standalone` when the agent-context group is all this run writes.
+
+    Standalone agent documents own their facts, because there is no human-facing
+    document to link. Retired and skipped documents do not count: a tree whose
+    human documents were all retired is standalone again."""
+    for doc in documents:
+        if doc.get("group") == AGENT_CONTEXT_GROUP:
+            continue
+        if doc.get("status") in {"retired", "skipped"}:
+            continue
+        return "linked"
+    return "standalone"
+
+
+def agent_context_record(documents: list[dict], decided_by: str = "derived") -> dict | None:
+    """The project's agent-context mode, or None when no agent document exists."""
+    if not any(doc.get("group") == AGENT_CONTEXT_GROUP for doc in documents):
+        return None
+    return {
+        "mode": derive_agent_mode(documents),
+        "decided_by": decided_by,
+        "decided_at": now_iso(),
+    }
+
+
 def selected_static_documents(
     catalog: dict,
     repo: Path,
     tier: str,
     profiles: dict[str, list[str]],
     layout: str = "standard",
+    groups: list[str] | None = None,
+    agent_mode: str | None = None,
 ) -> list[dict]:
+    """`groups` restricts the run to those catalog groups; empty means all.
+
+    The filter is strictly subtractive and runs before every other test, so it
+    can never add a document and skips `condition_evidence` filesystem work for
+    out-of-scope types."""
     ranks = {item["id"]: item["order"] for item in catalog["tiers"]}
+    scoped = set(groups or [])
     selected: list[dict] = []
     for definition in catalog["documents"]:
         rule = definition["selection"]
         if rule["mode"] != "static":
+            continue
+        if scoped and definition.get("group") not in scoped:
             continue
         tier_selected = ranks[rule["min_tier"]] <= ranks[tier]
         if not tier_selected:
@@ -434,8 +500,46 @@ def selected_static_documents(
     if layout == "compact":
         selected, _ = fold_compact_groups(catalog, selected, profiles["audiences"])
         skip_ids = compact_group_ids(catalog)
+    if scoped:
+        # An out-of-scope index must not be pulled back in as an ancestor: an
+        # agents-only run writes no docs/README.md, and a docs/README.md that
+        # indexed only docs/agents/ would be the human->agent reference the
+        # one-way boundary forbids.
+        skip_ids = skip_ids | {
+            definition["id"] for definition in catalog["documents"]
+            if definition.get("group") not in scoped
+        }
     add_ancestor_indexes(catalog, selected, profiles["audiences"], skip_ids=skip_ids)
+    apply_document_variants(selected, layout=layout, agent_mode=agent_mode)
     return sorted(selected, key=lambda item: (item["write_order"], item["path"], item["id"]))
+
+
+def apply_document_variants(
+    documents: list[dict],
+    *,
+    layout: str = "standard",
+    agent_mode: str | None = None,
+) -> None:
+    """Re-point each document at its variant contract/instruction/template.
+
+    A second pass, because the agent-context mode is a property of the whole
+    selection: whether the agent documents stand alone is only knowable once
+    every document is chosen. Mutates in place; a record declaring no variants
+    is left untouched, so an ordinary run is byte-identical."""
+    mode = agent_mode or derive_agent_mode(documents)
+    for doc in documents:
+        catalog_id = doc.get("catalog_id") or doc["id"]
+        try:
+            detail = query_catalog.load_type(catalog_id)
+        except ValueError:
+            continue  # dynamic instance ids are resolved by their own type
+        if not detail.get("variants"):
+            continue
+        resolved = query_catalog.resolve_variants(
+            detail, agent_context_mode=mode, layout=layout
+        )
+        doc["scaffold_template"] = resolved["template_file"]
+        doc["instruction_file"] = resolved.get("instruction_file")
 
 
 def resolve_graph_lock(repo: Path, provider: str | None) -> dict | None:
@@ -542,9 +646,16 @@ def cmd_init(args: argparse.Namespace) -> int:
         )
     except scale.LayoutTierError as exc:
         return fail(str(exc), 2)
+    try:
+        scoped_groups = query_catalog.normalize_groups(list(getattr(args, "group", []) or []))
+    except ValueError as exc:
+        return fail(str(exc), 2)
     docs = selected_static_documents(
-        catalog, args.repo, args.tier, profiles, layout=project_scale["layout"]
+        catalog, args.repo, args.tier, profiles, layout=project_scale["layout"],
+        groups=scoped_groups,
     )
+    if not docs:
+        return fail(empty_selection_message(scoped_groups, profiles), 2)
     manifest = {
         "version": MANIFEST_VERSION,
         "generated_at": now_iso(),
@@ -562,6 +673,14 @@ def cmd_init(args: argparse.Namespace) -> int:
         "documents": docs,
         "metadata": {},
     }
+    # Both fields stay absent unless they carry information: an unscoped run
+    # genuinely has no group scope, and a repository without agent documents
+    # has no agent-context mode. Absent reads exactly like a pre-3.8 manifest.
+    if scoped_groups:
+        manifest["project"]["groups"] = scoped_groups
+    agent_record = agent_context_record(docs)
+    if agent_record is not None:
+        manifest["project"]["agent_context"] = agent_record
     try:
         graph_lock = resolve_graph_lock(args.repo, args.graph_provider)
     except ValueError as exc:
@@ -765,7 +884,12 @@ def effective_presentation(catalog_id: str, audiences: list[str], override: dict
     return {"primary_audience": primary, **presentation}
 
 
-def demote_for_presentation_change(doc: dict) -> None:
+def demote_written(doc: dict) -> None:
+    """Send a written document back for re-grounding, clearing its audit.
+
+    Shared by every mechanical trigger that invalidates existing prose:
+    contract drift, presentation drift, and an approved agent-context mode
+    conversion."""
     if doc["status"] in {"generated", "needs_review", "complete"}:
         doc["status"] = "in_progress"
         doc["audit"] = None
@@ -818,7 +942,7 @@ def sync_presentations(catalog: dict, docs: list[dict], audiences: list[str]) ->
             continue
         if doc["presentation"] != resolved:
             doc["presentation"] = resolved
-            demote_for_presentation_change(doc)
+            demote_written(doc)
             updated.append(doc["id"])
     return updated
 
@@ -944,7 +1068,28 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         profiles = normalize_profiles(catalog, raw)
     except ValueError as exc:
         return fail(str(exc), 2)
-    selected = selected_static_documents(catalog, args.repo, new_tier, profiles, layout=new_layout)
+    # Omitted --group keeps the stored scope, exactly like every other
+    # dimension flag; `--group none` clears it back to every group.
+    requested_groups = list(getattr(args, "group", []) or [])
+    try:
+        if requested_groups == ["none"]:
+            new_groups: list[str] = []
+        elif requested_groups:
+            new_groups = query_catalog.normalize_groups(requested_groups)
+        else:
+            new_groups = list(manifest["project"].get("groups", []))
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    # A pinned "keep self-contained" answer survives reconcile: the stored mode
+    # wins over what the new selection would derive.
+    pinned = manifest["project"].get("agent_context") or {}
+    pinned_mode = pinned.get("mode") if pinned.get("decided_by") == "user" else None
+    selected = selected_static_documents(
+        catalog, args.repo, new_tier, profiles, layout=new_layout, groups=new_groups,
+        agent_mode=pinned_mode,
+    )
+    if not selected:
+        return fail(empty_selection_message(new_groups, profiles), 2)
     selected_ids = {doc["id"] for doc in selected}
     relaid_out, folded_away = relayout_dynamic_documents(
         catalog,
@@ -992,10 +1137,30 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     contract_updated = sync_contract_revisions(catalog, kept)
     presentation_updated = sync_presentations(catalog, kept, profiles["audiences"])
     old_tier = manifest["project"]["tier"]
+    old_agent_mode = derive_agent_mode(manifest["documents"])
     manifest["documents"] = kept + added
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
     manifest["project"]["tier"] = new_tier
     manifest["project"]["profiles"] = profiles
+    if new_groups:
+        manifest["project"]["groups"] = new_groups
+    else:
+        manifest["project"].pop("groups", None)
+    # Report the agent-context mode flip; never demote here. The precedent is
+    # `retire` (report, then a separate approved command applies), not
+    # `sync_presentations` -- this trigger needs a human answer, and a "keep
+    # self-contained" reply would have to undo an eager demotion.
+    agent_record = manifest["project"].get("agent_context") or {}
+    new_agent_mode = derive_agent_mode(manifest["documents"])
+    agent_mode_flip = (
+        any(doc.get("group") == AGENT_CONTEXT_GROUP for doc in manifest["documents"])
+        and agent_record.get("decided_by") != "user"
+        and (agent_record.get("mode") or old_agent_mode) != new_agent_mode
+    )
+    if not agent_record and any(
+        doc.get("group") == AGENT_CONTEXT_GROUP for doc in manifest["documents"]
+    ):
+        manifest["project"]["agent_context"] = agent_context_record(manifest["documents"])
     tier_forced_layout = layout_constraint == "tier-constraint"
     if args.scale_class or args.layout or tier_forced_layout:
         if current_scale.get("class"):
@@ -1045,6 +1210,8 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         count_parts.append(f"{len(contract_updated)} contract-updated")
     if presentation_updated:
         count_parts.append(f"{len(presentation_updated)} presentation-updated")
+    if agent_mode_flip:
+        count_parts.append("1 agent-mode")
     print(f"  counts: {', '.join(count_parts) or 'no change'}")
     if added:
         print(f"  added: {', '.join(doc['id'] for doc in sorted(added, key=lambda d: d['id']))}")
@@ -1056,6 +1223,14 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         print(f"  contract-updated: {', '.join(sorted(contract_updated))}")
     if presentation_updated:
         print(f"  presentation-updated: {', '.join(sorted(presentation_updated))}")
+    if agent_mode_flip:
+        affected = sum(
+            1 for doc in manifest["documents"] if doc.get("group") == AGENT_CONTEXT_GROUP
+        )
+        print(
+            f"  agent-mode: {old_agent_mode} -> {new_agent_mode}; {affected} agent-context "
+            f"documents affected (run `agent-mode --decision convert|keep` to answer)"
+        )
     print(f"  kept: {len(kept)} documents")
     print()
     for line in plan_lines(args.repo, manifest, args.repo / ".docforge" / "flow-index.json", revise=True):
@@ -1141,7 +1316,7 @@ def cmd_presentation(args: argparse.Namespace) -> int:
     changed = doc.get("presentation") != resolved
     doc["presentation"] = resolved
     if changed:
-        demote_for_presentation_change(doc)
+        demote_written(doc)
     save_manifest(args.repo, manifest)
     print(f"Presentation {args.id}: {'updated' if changed else 'unchanged'}.")
     return 0
@@ -1342,6 +1517,54 @@ def cmd_unmanaged(args: argparse.Namespace) -> int:
     return fail(f"unknown unmanaged action: {action}", 2)
 
 
+def cmd_agent_mode(args: argparse.Namespace) -> int:
+    """Answer the agent-context mode change `reconcile` reported.
+
+    `convert` re-grounds the agent documents against the human tree that now
+    exists: they are demoted to `in_progress` and rewritten as linked views.
+    `keep` pins the current mode with `decided_by: "user"`, which is what stops
+    reconcile asking again on every later run. Rewrites published content, so
+    never under `--auto-accept`."""
+    try:
+        manifest = load_manifest(manifest_path(args.repo), unsupported_hint=MANIFEST_HINT)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    agent_docs = [
+        doc for doc in manifest["documents"] if doc.get("group") == AGENT_CONTEXT_GROUP
+    ]
+    if not agent_docs:
+        return fail("no agent-context documents in this manifest", 2)
+    current = manifest["project"].get("agent_context") or {}
+    derived = derive_agent_mode(manifest["documents"])
+    if args.decision == "keep":
+        mode, decided_by = current.get("mode") or derived, "user"
+        demoted: list[str] = []
+    else:
+        mode, decided_by = derived, "derived"
+        demoted = []
+        for doc in agent_docs:
+            if doc["status"] in WRITTEN:
+                demote_written(doc)
+                demoted.append(doc["id"])
+    if args.dry_run:
+        print(f"agent-mode (dry run): {current.get('mode') or derived} -> {mode} ({decided_by})")
+        if demoted:
+            print(f"  would demote: {', '.join(sorted(demoted))}")
+        return 0
+    manifest["project"]["agent_context"] = {
+        "mode": mode,
+        "decided_by": decided_by,
+        "decided_at": now_iso(),
+    }
+    save_manifest(args.repo, manifest)
+    print(f"agent-mode: {mode} ({decided_by})")
+    if demoted:
+        print(f"  demoted for re-grounding: {', '.join(sorted(demoted))}")
+    elif args.decision == "keep":
+        print("  kept self-contained; reconcile will not ask again")
+    return 0
+
+
 def cmd_retire(args: argparse.Namespace) -> int:
     """Move out-of-scope written documents to a git-ignored obsolete location
     (default) or delete them, marking the manifest entry `retired` — the entry
@@ -1429,16 +1652,26 @@ def cmd_preview(args: argparse.Namespace) -> int:
         profiles = normalize_profiles(catalog, selected)
     except ValueError as exc:
         return fail(str(exc), 2)
+    try:
+        scoped_groups = query_catalog.normalize_groups(list(getattr(args, "group", []) or []))
+    except ValueError as exc:
+        return fail(str(exc), 2)
 
-    def count(layout: str, drop: tuple[str, str] | None = None) -> int:
+    def documents(layout: str, drop: tuple[str, str] | None = None) -> list[dict]:
         trimmed = dict(profiles)
         if drop is not None:
             dimension, value = drop
             trimmed[dimension] = [v for v in profiles[dimension] if v != value]
-        return len(selected_static_documents(catalog, args.repo, args.tier, trimmed, layout=layout))
+        return selected_static_documents(
+            catalog, args.repo, args.tier, trimmed, layout=layout, groups=scoped_groups
+        )
+
+    def count(layout: str, drop: tuple[str, str] | None = None) -> int:
+        return len(documents(layout, drop))
 
     standard_count = count("standard")
     report: dict = {"tier": args.tier, "standard_count": standard_count}
+    report["groups"] = scoped_groups
     try:
         compact_layout, _ = scale.layout_for(args.tier, "compact", explicit=True)
     except scale.LayoutTierError as exc:
@@ -1453,9 +1686,14 @@ def cmd_preview(args: argparse.Namespace) -> int:
     layout = args.layout or ("compact" if report.get("compact_count") is not None else "standard")
     if layout == "compact" and report.get("compact_count") is None:
         layout = "standard"
-    baseline = count(layout)
+    projected = documents(layout)
+    baseline = len(projected)
     report["layout"] = layout
     report["count"] = baseline
+    # Intake states the standalone consequence at the confirmation gate, so it
+    # needs the mode before any document exists.
+    agent_record = agent_context_record(projected)
+    report["agent_context_mode"] = agent_record["mode"] if agent_record else None
     attribution = []
     for dimension, value in _selection_values(args):
         canonical = [v for v in profiles[dimension]]
@@ -1531,6 +1769,10 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--framework", action="append", default=[])
     init.add_argument("--concern", action="append", default=[])
     init.add_argument("--audience", action="append", default=[])
+    init.add_argument(
+        "--group", action="append", default=[],
+        help="Restrict this run to these catalog groups (repeatable, aliases accepted). Omit for every group.",
+    )
     init.add_argument("--overlay", dest="obsolete_overlay", action="append", default=[], help=argparse.SUPPRESS)
     init.add_argument("--name")
     init.add_argument("--force", action="store_true")
@@ -1547,6 +1789,10 @@ def build_parser() -> argparse.ArgumentParser:
     preview.add_argument("--framework", action="append", default=[])
     preview.add_argument("--concern", action="append", default=[])
     preview.add_argument("--audience", action="append", default=[])
+    preview.add_argument(
+        "--group", action="append", default=[],
+        help="Project the tree for these catalog groups only (repeatable, aliases accepted).",
+    )
     preview.add_argument("--json", action="store_true")
     preview.set_defaults(func=cmd_preview)
 
@@ -1603,6 +1849,10 @@ def build_parser() -> argparse.ArgumentParser:
     reconcile.add_argument("--framework", action="append", default=[])
     reconcile.add_argument("--concern", action="append", default=[])
     reconcile.add_argument("--audience", action="append", default=[])
+    reconcile.add_argument(
+        "--group", action="append", default=[],
+        help="Replace the stored group scope (repeatable). Omit to keep the manifest's current scope.",
+    )
     reconcile.set_defaults(func=cmd_reconcile)
 
     unmanaged = sub.add_parser("unmanaged")
@@ -1614,6 +1864,16 @@ def build_parser() -> argparse.ArgumentParser:
     unmanaged.add_argument("--path", help="repository-relative path of the unmanaged doc")
     unmanaged.add_argument("--dry-run", action="store_true")
     unmanaged.set_defaults(func=cmd_unmanaged)
+
+    agent_mode = sub.add_parser("agent-mode")
+    add_repo(agent_mode)
+    agent_mode.add_argument(
+        "--decision", required=True, choices=["convert", "keep"],
+        help="convert: re-ground agent documents as linked views (demotes them); "
+             "keep: pin the current mode so reconcile stops asking",
+    )
+    agent_mode.add_argument("--dry-run", action="store_true")
+    agent_mode.set_defaults(func=cmd_agent_mode)
 
     retire = sub.add_parser("retire")
     add_repo(retire)

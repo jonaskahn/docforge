@@ -32,10 +32,13 @@ python3 runtime/cli/python/query_catalog.py <mode>   # node runtime/cli/js/query
 
 Exactly one mode: `--tier`, `--id`, `--ids`, `--profile`, `--applicable`,
 `--legacy`, `--validate`, `--category`, `--route` (with repeatable
-`--audience`). Read-only. Exit `0` success, `1` catalog validation defects,
+`--audience`), `--groups`. `--applicable` also takes repeatable `--group`,
+which restricts selection to those catalog groups (aliases accepted, e.g.
+`agents` for `agent-context`); omit it for every group. `--groups` lists every
+group with its aliases and the audiences that unlock it. Read-only. Exit `0` success, `1` catalog validation defects,
 `2` invocation error. The Python module also exposes `load_index`,
-`load_profile(s)`, `applicable`, `category`, `route`, `resolve_presentation`,
-`validate`; JS exports camelCase peers.
+`load_profile(s)`, `applicable`, `category`, `groups`, `group_audiences`,
+`normalize_groups`, `route`, `resolve_presentation`, `validate`; JS exports camelCase peers.
 
 For a compact document id, `--route` composes the contract at route time: the
 group's header contract plus each `compact_members` member contract as a named

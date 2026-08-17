@@ -55,6 +55,7 @@ from runtime.common.python.provenance_frontmatter import (
 )
 from runtime.common.python import provenance_store as store
 from runtime.common.python.evidence_hash import classify_source, raw_blob_hash
+from runtime.common.python.agent_context import AGENT_CONTEXT_GROUP
 from runtime.manifest.python.migrate_metadata import (
     MANIFEST_CURRENT,
     migrate as migrate_manifest_metadata,
@@ -672,7 +673,23 @@ def plan(repo: Path, manifest: dict) -> dict:
         by_dir.setdefault(posixpath.dirname(page["output_path"]), []).append(page)
     missing_index = any(page["url"] == BASE_URL for page in ledger["pages"])
     if not missing_index:
-        problems.append("no docs index: docs/README.md is not a written document")
+        # An agents-only run writes no human-facing tree, so a browsable site
+        # has nothing to show. That is a scope fact, not a defect to revise --
+        # and forcing a docs/README.md here would make the human tree index the
+        # agent overlay, which the one-way boundary forbids. Read the manifest's
+        # scope rather than what is written yet, so the message is right from
+        # the first run.
+        selected = [
+            doc for doc in manifest.get("documents", [])
+            if doc.get("status") not in {"skipped", "retired"}
+        ]
+        if selected and all(doc.get("group") == AGENT_CONTEXT_GROUP for doc in selected):
+            problems.append(
+                "agent-context only: this repository has no human-facing documentation "
+                "to render; agent documents are read as files, not browsed"
+            )
+        else:
+            problems.append("no docs index: docs/README.md is not a written document")
     return {
         "base_url": BASE_URL,
         "pages": ledger["pages"],
@@ -1238,6 +1255,23 @@ def _plan_only(args: argparse.Namespace, manifest: dict, render_sig: str, shell_
     return 0 if ok else 1
 
 
+def revise_advice(scan_result: dict) -> str:
+    """What to tell the user after a scan that found problems.
+
+    An agents-only repository has nothing for a browsable site to show. That is
+    a scope fact, so pointing the user at `/docforge-revise` would be wrong --
+    there is nothing to fix."""
+    if any(
+        problem["kind"] == "route_plan" and problem["detail"].startswith("agent-context only:")
+        for problem in scan_result["problems"]
+    ):
+        return (
+            "nothing to render: this run wrote agent context only. Add human-facing "
+            "areas to build a dashboard, or read the agent documents directly."
+        )
+    return "you should revise again: run /docforge-revise to fix the documentation"
+
+
 def _prepare(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path, render_sig: str, shell_sig: str, force: bool) -> tuple[dict, str]:
     """Shared `start`/`export` pipeline: scan, metadata reconcile, signature,
     build-if-changed, install-if-missing. Returns (new_state, render_sig)."""
@@ -1250,7 +1284,8 @@ def _prepare(args: argparse.Namespace, dashboard: Path, manifest: dict, template
             who = f"{problem['doc']}: " if problem["doc"] else ""
             tag = " (blocking)" if problem["blocking"] else ""
             print(f"  [{problem['kind']}]{tag} {who}{problem['detail']}")
-        print("you should revise again: run /docforge-revise to fix the documentation before relying on this dashboard")
+        advice = revise_advice(scan_result)
+        print(advice if advice.startswith("nothing to render") else f"{advice} before relying on this dashboard")
     else:
         print("scan: 0 problems")
     if scan_result["blocking"]:
@@ -1337,7 +1372,8 @@ def cmd_scan(args: argparse.Namespace, manifest: dict) -> int:
             who = f"{problem['doc']}: " if problem["doc"] else ""
             tag = " (blocking)" if problem["blocking"] else ""
             print(f"  [{problem['kind']}]{tag} {who}{problem['detail']}")
-        print("you should revise again: run /docforge-revise to fix the documentation, then `dashboard start` again")
+        advice = revise_advice(result)
+        print(advice if advice.startswith("nothing to render") else f"{advice}, then `dashboard start` again")
     if result["unmanaged"]:
         print(f"unmanaged: {len(result['unmanaged'])} self-managed docs (never tracked, never re-asked)")
         for rel in result["unmanaged"]:

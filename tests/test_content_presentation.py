@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import blob_hash, initialize, load_manifest, markdown_with_provenance, provenance, run
+from _support import ROOT, blob_hash, initialize, load_manifest, markdown_with_provenance, provenance, run
 
 
 class PresentationRoutingTests(unittest.TestCase):
@@ -103,6 +103,81 @@ Retry attempt 2 failed.
                 result = run(runtime, "lint_document", "--file", str(document), "--json")
                 payload = json.loads(result.stdout)
                 self.assertNotIn("prose-in-code-fence", {item["kind"] for item in payload["defects"]})
+
+
+SHARED = ROOT / "skills" / "docforge" / "_shared"
+HUMAN_TREE_LINKS = (
+    "../architecture/", "../engineering/", "../reference/", "../flows/",
+    "../product/", "../operations/", "../security/",
+)
+
+
+class StandaloneAgentContentTests(unittest.TestCase):
+    """In standalone mode the agent views own their facts, because no
+    human-facing document was generated to link. A link into the human tree is
+    then both a dead link and a fact with no owner."""
+
+    STANDALONE_TEMPLATES = SHARED / "content" / "agent-context" / "templates" / "standalone"
+
+    def test_standalone_templates_never_link_the_human_tree(self) -> None:
+        targets = sorted(self.STANDALONE_TEMPLATES.glob("*.md"))
+        self.assertTrue(targets, "standalone templates must exist")
+        for target in targets:
+            with self.subTest(template=target.name):
+                body = target.read_text(encoding="utf-8")
+                for prefix in HUMAN_TREE_LINKS:
+                    self.assertNotIn(f"]({prefix}", body)
+
+    def test_linked_templates_still_link_their_owners(self) -> None:
+        """The linked mode is unchanged; standalone is additive."""
+        linked = SHARED / "content" / "agent-context" / "templates"
+        architecture = (linked / "agents-architecture.md").read_text(encoding="utf-8")
+        self.assertIn("](../architecture/high-level.md)", architecture)
+        testing = (linked / "agents-testing.md").read_text(encoding="utf-8")
+        self.assertIn("](../engineering/testing.md)", testing)
+
+    def test_standalone_instruction_replaces_the_linking_rule(self) -> None:
+        instruction = (
+            SHARED / "content" / "agent-context" / "agents-standalone.instruction.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Own the fact, do not route to it", instruction)
+        self.assertIn("Agent-sufficient, not a human documentation set", instruction)
+        # The depth ceiling is what keeps standalone from becoming a second
+        # human documentation set.
+        for excluded in ("rationale", "business context", "operational procedure"):
+            self.assertIn(excluded, instruction)
+
+    def test_standalone_run_selects_standalone_templates_and_contracts(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = initialize(
+                    runtime, repo, "spine",
+                    audiences=("coding-agents",), layout="standard", groups=("agents",),
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                manifest = load_manifest(repo)
+                self.assertEqual(manifest["project"]["agent_context"]["mode"], "standalone")
+                by_id = {doc["id"]: doc for doc in manifest["documents"]}
+                for doc_id in ("agents_architecture", "agents_testing", "agents_flow"):
+                    self.assertIn("/standalone/", by_id[doc_id]["scaffold_template"], doc_id)
+                    self.assertEqual(
+                        by_id[doc_id]["instruction_file"],
+                        "content/agent-context/agents-standalone.instruction.md",
+                    )
+                # agents_patterns already owns its content in either mode, so it
+                # keeps its own template and only swaps contract + instruction.
+                self.assertNotIn("/standalone/", by_id["agents_patterns"]["scaffold_template"])
+
+    def test_linked_run_is_untouched_by_the_variant_machinery(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="standard")
+                manifest = load_manifest(repo)
+                self.assertEqual(manifest["project"]["agent_context"]["mode"], "linked")
+                for doc in manifest["documents"]:
+                    self.assertNotIn("/standalone/", doc["scaffold_template"], doc["id"])
 
 
 if __name__ == "__main__":

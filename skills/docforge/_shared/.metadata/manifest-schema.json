@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["version", "generated_at", "project", "discovery", "documents", "metadata"],
   "properties": {
-    "version": {"const": "3.7"},
+    "version": {"const": "3.8"},
     "generated_at": {"type": "string"},
     "project": {
       "type": "object",
@@ -38,6 +38,23 @@
           "additionalProperties": false
         },
         "provenance_storage": {"enum": ["json"]},
+        "groups": {
+          "description": "Catalog groups this repository's documentation covers. Absent means every group, which is what a pre-3.8 manifest meant; the filter is subtractive and never adds a document.",
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "agent_context": {
+          "description": "Whether the agent-context documents own their facts (standalone) or link human-facing owners (linked). Written only when the manifest holds an agent-context document. decided_by 'user' pins a 'keep self-contained' answer so reconcile stops re-asking.",
+          "type": "object",
+          "required": ["mode", "decided_by", "decided_at"],
+          "properties": {
+            "mode": {"enum": ["standalone", "linked"]},
+            "decided_by": {"enum": ["derived", "user"]},
+            "decided_at": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
         "unmanaged_docs": {
           "type": "array",
           "items": {

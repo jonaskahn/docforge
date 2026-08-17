@@ -8,7 +8,8 @@
 - [`references/graph/`](references/graph/README.md): provider dispatch and
   selection.
 - [`references/document-composition.md`](references/document-composition.md):
-  topic ownership and no-duplication.
+  topic ownership, no-duplication, and the one-way agent-context reference
+  boundary.
 - [`references/provenance-tracking.md`](references/provenance-tracking.md):
   metadata format and staleness.
 - [`references/evidence-presentation.md`](references/evidence-presentation.md):

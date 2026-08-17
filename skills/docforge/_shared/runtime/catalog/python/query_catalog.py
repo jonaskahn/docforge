@@ -67,7 +67,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.19.0"
+CATALOG_VERSION = "2.20.0"
 PRESENTATION_VALUES = {
     "code": {"contract-only", "task-focused"},
     "related_docs": {"none", "compact", "traceability"},
@@ -197,6 +197,23 @@ GROUP_SUMMARIES = {
     "portfolio": "Cross-repository portfolio layer for multi-repo diligence.",
     "agent-context": "Agent-facing context: AGENTS.md and coding-agent views.",
 }
+# Spoken names for a group, so `--group` and `/docforge-revise <area>` accept
+# what a person would actually type. `flow`/`flows` is deliberately absent:
+# it is a reserved revise keyword for the full harvest pipeline, which is
+# strictly more than revising the `flows` group.
+GROUP_ALIASES = {
+    "readme": "root", "root-files": "root",
+    "overview": "product",
+    "arch": "architecture",
+    "eng": "engineering",
+    "ops": "operations", "runbooks": "operations",
+    "ref": "reference", "api": "reference",
+    "sec": "security",
+    "contrib": "contributing",
+    "decisions": "records", "adr": "records", "adrs": "records",
+    "agents": "agent-context", "agent": "agent-context",
+    "coding-agents": "agent-context", "ai": "agent-context",
+}
 
 
 def category(group: str) -> dict:
@@ -320,7 +337,13 @@ def manifest_compact_members(repo: Path | None, doc_id: str) -> list | None:
     return None
 
 
-def composed_compact_contract(detail: dict, repo: Path | None = None) -> tuple[str, list[dict]]:
+def composed_compact_contract(
+    detail: dict,
+    repo: Path | None = None,
+    *,
+    agent_mode: str | None = None,
+    layout: str | None = None,
+) -> tuple[str, list[dict]]:
     """Compose the merged file's content contract at route time: the group's
     short header contract plus each member's existing contract as a named
     section, in `compact_members` order. Member contracts are reused, never
@@ -337,6 +360,8 @@ def composed_compact_contract(detail: dict, repo: Path | None = None) -> tuple[s
     for order, entry in enumerate(entries, start=1):
         member_id = member_type_id(entry)
         member = load_type(member_id)
+        if agent_mode or layout:
+            member = resolve_variants(member, agent_context_mode=agent_mode, layout=layout)
         member_contract = member.get("contract_file")
         row = {
             "id": member_id,
@@ -363,10 +388,23 @@ def composed_compact_contract(detail: dict, repo: Path | None = None) -> tuple[s
     return "\n\n".join(parts), members
 
 
-def route(value: str, audiences: list[str] | None = None, repo: Path | None = None) -> dict:
+def route(
+    value: str,
+    audiences: list[str] | None = None,
+    repo: Path | None = None,
+    agent_mode: str | None = None,
+    layout: str | None = None,
+) -> dict:
+    """Resolve one document's writing card.
+
+    `agent_mode`/`layout` select declared variants. Omitted, the payload is
+    byte-identical to the pre-variant behavior, which the route-parity tests
+    depend on."""
     doc_id = resolve_catalog_id(value)
     row = index_row(doc_id)
     detail = load_type(doc_id)
+    if agent_mode or layout:
+        detail = resolve_variants(detail, agent_context_mode=agent_mode, layout=layout)
     record = row.get("record", f"types/{doc_id}.json")
     model_depth = {
         model: detail["model_depth"][model]
@@ -394,7 +432,9 @@ def route(value: str, audiences: list[str] | None = None, repo: Path | None = No
         "presentation_origin": presentation_origin,
     }
     if compact_members:
-        composed, members = composed_compact_contract(detail, repo)
+        composed, members = composed_compact_contract(
+            detail, repo, agent_mode=agent_mode, layout=layout
+        )
         result["contract"] = composed
         result["compact"] = {
             "header_contract": detail.get("contract_file"),
@@ -464,6 +504,89 @@ def _normalize_profile_ids(
     return resolved
 
 
+VARIANT_FILE_KEYS = ("contract_file", "instruction_file", "template_file")
+
+
+def resolve_variants(
+    detail: dict,
+    *,
+    agent_context_mode: str | None = None,
+    layout: str | None = None,
+) -> dict:
+    """Overlay a record's declared variants for this run's axes.
+
+    Returns the record unchanged when nothing applies, so an unscoped call is
+    byte-identical to the pre-variant behavior. Axes compose: a compact,
+    standalone agent document takes both overlays, layout last."""
+    variants = detail.get("variants") or {}
+    if not variants:
+        return detail
+    resolved = detail
+    for axis, value in (("agent_context_mode", agent_context_mode), ("layout", layout)):
+        override = (variants.get(axis) or {}).get(value) if value else None
+        if not override:
+            continue
+        if resolved is detail:
+            resolved = dict(detail)
+        for key in VARIANT_FILE_KEYS:
+            if override.get(key):
+                resolved[key] = override[key]
+    return resolved
+
+
+def normalize_groups(values: list[str] | None) -> list[str]:
+    """Canonical group ids for user-supplied names, aliases accepted.
+
+    An empty or absent list means "every group" -- the filter is subtractive
+    and is applied after tier/selector/condition selection, so omitting it
+    reproduces the unscoped selection exactly."""
+    if not values:
+        return []
+    known = set(load_index().get("groups", []))
+    resolved: list[str] = []
+    for value in values:
+        canonical = GROUP_ALIASES.get(value, value)
+        if canonical not in known:
+            raise ValueError(
+                f"unknown group: {value} (choose from {', '.join(sorted(known))})"
+            )
+        if canonical not in resolved:
+            resolved.append(canonical)
+    return resolved
+
+
+def groups() -> list[dict]:
+    """Every catalog group with the audiences that unlock it.
+
+    A group whose every document is audience-gated selects nothing on its own;
+    `audiences` is what intake pre-checks and what the empty-selection guard
+    names when a scope would produce no documents."""
+    index = load_index()
+    rows = []
+    for group in index.get("groups", []):
+        unlocking: list[str] = []
+        for row in index["document_types"]:
+            detail = load_type(row["id"])
+            if detail.get("group") != group:
+                continue
+            for audience in detail["selection"].get("selectors", {}).get("audiences", []):
+                if audience not in unlocking:
+                    unlocking.append(audience)
+        rows.append({
+            "id": group,
+            "summary": GROUP_SUMMARIES.get(group, ""),
+            "aliases": sorted(name for name, target in GROUP_ALIASES.items() if target == group),
+            "audiences": unlocking,
+        })
+    return rows
+
+
+def group_audiences(group: str) -> list[str]:
+    """Audiences that unlock any document in `group`; empty when ungated."""
+    canonical = normalize_groups([group])[0]
+    return next(row["audiences"] for row in groups() if row["id"] == canonical)
+
+
 def applicable(
     *,
     shape: list[str] | None = None,
@@ -472,11 +595,13 @@ def applicable(
     concern: list[str] | None = None,
     audience: list[str] | None = None,
     tier: str | None = None,
+    group: list[str] | None = None,
     include_dynamic: bool = False,
 ) -> list[str]:
     """Return document-type ids applicable for the given profile/tier selection."""
     index = load_index()
     profiles = load_profiles()
+    scoped_groups = set(normalize_groups(group))
     selected = {
         "shapes": _normalize_profile_ids("shapes", shape or [], profiles),
         "platforms": _normalize_profile_ids("platforms", platform or [], profiles),
@@ -500,6 +625,8 @@ def applicable(
         detail = load_type(row["id"])
         rule = detail["selection"]
         if rule["mode"] in {"dynamic", "compact"} and not include_dynamic:
+            continue
+        if scoped_groups and detail.get("group") not in scoped_groups:
             continue
         if ranks[rule["min_tier"]] > tier_rank:
             continue
@@ -704,6 +831,25 @@ def validate() -> list[str]:
         instruction = doc.get("instruction_file")
         if instruction and not (SKILL_ROOT / instruction).is_file():
             errors.append(f"{doc_id}: missing instruction {instruction}")
+        variants = doc.get("variants") or {}
+        if "agent_context_mode" in variants and doc.get("group") != "agent-context":
+            errors.append(
+                f"{doc_id}: variants.agent_context_mode is only valid on an agent-context record"
+            )
+        for axis, by_value in variants.items():
+            if axis not in {"agent_context_mode", "layout"}:
+                errors.append(f"{doc_id}: unknown variant axis {axis}")
+                continue
+            for value, files in (by_value or {}).items():
+                if axis == "agent_context_mode" and value != "standalone":
+                    errors.append(f"{doc_id}: variants.agent_context_mode only overrides 'standalone'")
+                if axis == "layout" and value != "compact":
+                    errors.append(f"{doc_id}: variants.layout only overrides 'compact'")
+                for key, path in (files or {}).items():
+                    if key not in VARIANT_FILE_KEYS:
+                        errors.append(f"{doc_id}: unknown variant file key {key}")
+                    elif not (SKILL_ROOT / path).is_file():
+                        errors.append(f"{doc_id}: missing {axis}/{value} {key} {path}")
         if selection.get("mode") == "static":
             if doc["id"] in static_ids:
                 errors.append(f"duplicate static id: {doc['id']}")
@@ -817,6 +963,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--concern", action="append", default=[])
     parser.add_argument("--audience", action="append", default=[])
     parser.add_argument(
+        "--group", action="append", default=[],
+        help="Restrict --applicable to these catalog groups (repeatable, "
+             "aliases accepted). Omit for every group.",
+    )
+    parser.add_argument(
+        "--groups", action="store_true",
+        help="List every catalog group with its aliases and unlocking audiences",
+    )
+    parser.add_argument(
         "--applicable-tier",
         dest="applicable_tier",
         choices=["spine", "diligence", "portfolio"],
@@ -827,6 +982,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--validate", action="store_true")
     parser.add_argument("--category", dest="category", help="Group id, e.g. architecture")
     parser.add_argument("--route", dest="route_id", help="Document id to resolve")
+    parser.add_argument(
+        "--agent-mode", choices=["linked", "standalone"],
+        help="Agent-context mode for --route variant resolution; omit to use the record's own files",
+    )
+    parser.add_argument(
+        "--route-layout", choices=["standard", "compact"], dest="route_layout",
+        help="Layout for --route variant resolution; omit to use the record's own files",
+    )
     parser.add_argument(
         "--repo", type=Path, default=None,
         help="Target repo, for --route on a tier-spanning compact document: "
@@ -847,12 +1010,13 @@ def main(argv: list[str] | None = None) -> int:
             args.legacy,
             args.category,
             args.route_id,
+            args.groups,
         )
     )
     if modes != 1:
         return fail(
             "specify exactly one of --tier, --id, --ids, --profile, "
-            "--applicable, --legacy, --validate, --category, --route",
+            "--applicable, --legacy, --validate, --category, --route, --groups",
             2,
         )
 
@@ -890,15 +1054,22 @@ def main(argv: list[str] | None = None) -> int:
                 concern=args.concern,
                 audience=args.audience,
                 tier=args.applicable_tier,
+                group=args.group,
                 include_dynamic=args.include_dynamic,
             )
             print(dump_json(ids), end="")
+            return 0
+        if args.groups:
+            print(dump_json(groups()), end="")
             return 0
         if args.category:
             print(dump_json(category(args.category)), end="")
             return 0
         if args.route_id:
-            print(dump_json(route(args.route_id, args.audience, args.repo)), end="")
+            print(dump_json(route(
+                args.route_id, args.audience, args.repo,
+                agent_mode=args.agent_mode, layout=args.route_layout,
+            )), end="")
             return 0
     except ValueError as exc:
         return fail(str(exc), 2)

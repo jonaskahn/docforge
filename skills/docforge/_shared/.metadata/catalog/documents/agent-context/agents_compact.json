@@ -35,5 +35,13 @@
     "agents_tech_debt",
     "agents_flow",
     "agents_glossary"
-  ]
+  ],
+  "variants": {
+    "agent_context_mode": {
+      "standalone": {
+        "contract_file": "content/compact/contracts/agents.standalone.md",
+        "template_file": "content/compact/templates/agents.standalone.template.md"
+      }
+    }
+  }
 }

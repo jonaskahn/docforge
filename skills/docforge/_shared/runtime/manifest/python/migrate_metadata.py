@@ -45,8 +45,8 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-MANIFEST_CURRENT = "3.7"
-MANIFEST_IN_PLACE = ("3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
+MANIFEST_CURRENT = "3.8"
+MANIFEST_IN_PLACE = ("3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")

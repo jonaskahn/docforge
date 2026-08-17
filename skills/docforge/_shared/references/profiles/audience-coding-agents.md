@@ -7,6 +7,8 @@ truth.
 
 ## Generated structure
 
+Standard layout:
+
 ```text
 AGENTS.md
 CLAUDE.md
@@ -23,6 +25,19 @@ docs/agents/
 └── glossary.md
 ```
 
+Compact layout — the eight `docs/agents/*` views fold into one merged file, one
+`##` per view. The four host-contract paths are tooling-owned locations and
+never fold:
+
+```text
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+.claude/settings.json
+docs/agents.md       # at a glance, architecture, patterns, testing,
+                     # conventions, tech debt, flows, terms
+```
+
 `CLAUDE.local.md` is added to the target repository’s ignore rules.
 `.claude/settings.json` is deep-merged so existing configuration survives.
 Cross-vendor mirrors beyond the fixed shims are generated only when requested
@@ -30,6 +45,24 @@ or when existing target configuration makes them applicable. `AGENTS.md` and
 architecture/pattern views use `code_graph`; testing uses manifests; `conventions.md` is
 selected only when a conventions source exists; only `flow.md` and flow-derived `glossary.md`
 require `flow_graph`. A missing flow graph delays two views, not the whole profile.
+
+`requires` gates **evidence, not selection**: a view whose capability is absent
+is still selected into the manifest and is then marked `skipped`, rather than
+never appearing. Only `selection.min_tier`, `selection.selectors`, and
+`selection.condition` decide membership.
+
+## One-way references
+
+Agent-context documents may link any human-facing document. **No human-facing
+document may link, mention, or `@`-reference an agent-context output** —
+`docs/agents/`, `docs/agents.md`, `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`,
+or `.claude/settings.json`. The agent overlay knows the whole tree; the tree
+reads exactly as it would if this audience had never been confirmed. That is
+why these views are routed from `AGENTS.md` and appear in no human-facing
+index, and why the reachability rule in
+[`../quality-bar.md`](../quality-bar.md) exempts them from `docs/README.md`.
+The mechanical gate is the `agent-context leak` finding in
+`scaffold_docs --audit`.
 
 ## Content ownership
 
@@ -62,9 +95,18 @@ without discarding user values.
 - `flow.md`: triggers and entry points linked to canonical flow documents;
 - `glossary.md`: flow/domain terms linked to their owning glossary or flow.
 
-These are token-budgeted retrieval views. They link to the human document that
-owns each fact and include agent-specific exemplars only when no human-facing
-document owns that guidance.
+These are token-budgeted retrieval views in both modes. What changes is who
+owns the facts:
+
+| Mode | When | These views |
+|---|---|---|
+| `linked` (default) | human-facing documentation exists | link to the human document that owns each fact, and include agent-specific exemplars only when no human-facing document owns that guidance |
+| `standalone` | the agent-context group is all this run writes | own their facts, because there is no human document to link. The depth ceiling is unchanged: durable paths, boundaries, entry points, verified commands, and observable hazards — never design rationale, business context, or operational procedure |
+
+`standalone` is agent-sufficient, not a replacement human documentation set.
+A later run that adds human-facing documentation asks whether to convert these
+views into linked stubs or keep them self-contained; see
+[`../../workflows/revision.md`](../../workflows/revision.md).
 
 ## Evidence recipe
 

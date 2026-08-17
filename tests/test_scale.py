@@ -17,7 +17,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import ROOT, initialize, load_manifest, run
+from _support import MANIFEST_VERSION, ROOT, initialize, load_manifest, run
 
 SHARED_ROOT = ROOT / "skills" / "docforge" / "_shared"
 sys.path.insert(0, str(SHARED_ROOT))
@@ -334,7 +334,7 @@ class ScaleRecordTests(unittest.TestCase):
                         migrated = run(runtime, "migrate_metadata", "--repo", str(repo))
                         self.assertIn(migrated.returncode, (0, 1), migrated.stderr)
                         reloaded = load_manifest(repo)
-                        self.assertEqual(reloaded["version"], "3.7")
+                        self.assertEqual(reloaded["version"], MANIFEST_VERSION)
                         scale = reloaded["project"]["scale"]
                         self.assertEqual(scale["class"], "small")
                         self.assertEqual(scale["layout"], "compact")
@@ -364,7 +364,7 @@ class ScaleRecordTests(unittest.TestCase):
                     migrated = run(runtime, "migrate_metadata", "--repo", str(repo))
                     self.assertIn(migrated.returncode, (0, 1), migrated.stderr)
                     reloaded = load_manifest(repo)
-                    self.assertEqual(reloaded["version"], "3.7")
+                    self.assertEqual(reloaded["version"], MANIFEST_VERSION)
                     scale = reloaded["project"]["scale"]
                     self.assertEqual(scale["class"], "large")
                     self.assertEqual(scale["layout"], "standard")
@@ -470,7 +470,7 @@ class ScaleSchemaTests(unittest.TestCase):
         schema = json.loads(
             (SHARED_ROOT / ".metadata" / "manifest-schema.json").read_text(encoding="utf-8"),
         )
-        self.assertEqual(schema["properties"]["version"]["const"], "3.7")
+        self.assertEqual(schema["properties"]["version"]["const"], MANIFEST_VERSION)
         self.assertIn("scale", schema["properties"]["project"]["required"])
         scale = schema["properties"]["project"]["properties"]["scale"]
         self.assertEqual(

@@ -63,7 +63,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.19.0";
+const CATALOG_VERSION = "2.20.0";
 const PRESENTATION_VALUES = {
   code: new Set(["contract-only", "task-focused"]),
   related_docs: new Set(["none", "compact", "traceability"]),
@@ -149,6 +149,92 @@ const GROUP_SUMMARIES = {
   portfolio: "Cross-repository portfolio layer for multi-repo diligence.",
   "agent-context": "Agent-facing context: AGENTS.md and coding-agent views.",
 };
+// Spoken names for a group, so `--group` and `/docforge-revise <area>` accept
+// what a person would actually type. `flow`/`flows` is deliberately absent:
+// it is a reserved revise keyword for the full harvest pipeline, which is
+// strictly more than revising the `flows` group.
+const GROUP_ALIASES = {
+  readme: "root", "root-files": "root",
+  overview: "product",
+  arch: "architecture",
+  eng: "engineering",
+  ops: "operations", runbooks: "operations",
+  ref: "reference", api: "reference",
+  sec: "security",
+  contrib: "contributing",
+  decisions: "records", adr: "records", adrs: "records",
+  agents: "agent-context", agent: "agent-context",
+  "coding-agents": "agent-context", ai: "agent-context",
+};
+
+const VARIANT_FILE_KEYS = ["contract_file", "instruction_file", "template_file"];
+
+// Overlay a record's declared variants for this run's axes. Returns the record
+// unchanged when nothing applies, so an unscoped call is byte-identical to the
+// pre-variant behavior. Axes compose: a compact, standalone agent document
+// takes both overlays, layout last.
+function resolveVariants(detail, { agentContextMode = null, layout = null } = {}) {
+  const variants = detail.variants || {};
+  if (!Object.keys(variants).length) return detail;
+  let resolved = detail;
+  for (const [axis, value] of [["agent_context_mode", agentContextMode], ["layout", layout]]) {
+    const override = value ? (variants[axis] || {})[value] : null;
+    if (!override) continue;
+    if (resolved === detail) resolved = { ...detail };
+    for (const key of VARIANT_FILE_KEYS) if (override[key]) resolved[key] = override[key];
+  }
+  return resolved;
+}
+
+// Canonical group ids for user-supplied names, aliases accepted. An empty or
+// absent list means "every group" -- the filter is subtractive and is applied
+// after tier/selector/condition selection, so omitting it reproduces the
+// unscoped selection exactly.
+function normalizeGroups(values) {
+  if (!values || !values.length) return [];
+  const known = new Set(loadIndex().groups || []);
+  const resolved = [];
+  for (const value of values) {
+    const canonical = GROUP_ALIASES[value] || value;
+    if (!known.has(canonical)) {
+      throw new Error(`unknown group: ${value} (choose from ${[...known].sort().join(", ")})`);
+    }
+    if (!resolved.includes(canonical)) resolved.push(canonical);
+  }
+  return resolved;
+}
+
+// Every catalog group with the audiences that unlock it. A group whose every
+// document is audience-gated selects nothing on its own; `audiences` is what
+// intake pre-checks and what the empty-selection guard names when a scope
+// would produce no documents.
+function groups() {
+  const index = loadIndex();
+  const rows = [];
+  for (const group of index.groups || []) {
+    const unlocking = [];
+    for (const row of index.document_types) {
+      const detail = loadType(row.id);
+      if (detail.group !== group) continue;
+      for (const audience of (detail.selection.selectors || {}).audiences || []) {
+        if (!unlocking.includes(audience)) unlocking.push(audience);
+      }
+    }
+    rows.push({
+      id: group,
+      summary: GROUP_SUMMARIES[group] || "",
+      aliases: Object.keys(GROUP_ALIASES).filter((name) => GROUP_ALIASES[name] === group).sort(),
+      audiences: unlocking,
+    });
+  }
+  return rows;
+}
+
+/** Audiences that unlock any document in `group`; empty when ungated. */
+function groupAudiences(group) {
+  const canonical = normalizeGroups([group])[0];
+  return groups().find((row) => row.id === canonical).audiences;
+}
 
 function category(group) {
   const index = loadIndex();
@@ -278,7 +364,7 @@ function manifestCompactMembers(repo, docId) {
 // rewritten. `repo`, when given, narrows a tier-spanning group's full
 // catalog roster to what this project's manifest actually folded — see
 // manifestCompactMembers.
-function composedCompactContract(detail, repo = null) {
+function composedCompactContract(detail, repo = null, { agentMode = null, layout = null } = {}) {
   const parts = [];
   const members = [];
   const header = detail.contract_file;
@@ -291,7 +377,8 @@ function composedCompactContract(detail, repo = null) {
   for (const entry of entries) {
     order += 1;
     const memberId = memberTypeId(entry);
-    const member = loadType(memberId);
+    let member = loadType(memberId);
+    if (agentMode || layout) member = resolveVariants(member, { agentContextMode: agentMode, layout });
     const memberContract = member.contract_file;
     const row = {
       id: memberId,
@@ -321,10 +408,14 @@ function composedCompactContract(detail, repo = null) {
   return [parts.join("\n\n"), members];
 }
 
-function route(value, audiences = [], repo = null) {
+// Resolve one document's writing card. `agentMode`/`layout` select declared
+// variants. Omitted, the payload is byte-identical to the pre-variant
+// behavior, which the route-parity tests depend on.
+function route(value, audiences = [], repo = null, { agentMode = null, layout = null } = {}) {
   const docId = resolveCatalogId(value);
   const row = indexRow(docId);
-  const detail = loadType(docId);
+  let detail = loadType(docId);
+  if (agentMode || layout) detail = resolveVariants(detail, { agentContextMode: agentMode, layout });
   const record = row.record || `types/${docId}.json`;
   const modelDepth = {};
   for (const model of MODEL_DEPTH_ORDER) {
@@ -352,7 +443,7 @@ function route(value, audiences = [], repo = null) {
     presentation_origin: presentationOrigin,
   };
   if (detail.compact_members && detail.compact_members.length) {
-    const [composed, members] = composedCompactContract(detail, repo);
+    const [composed, members] = composedCompactContract(detail, repo, { agentMode, layout });
     result.contract = composed;
     result.compact = {
       header_contract: detail.contract_file,
@@ -454,6 +545,7 @@ function applicable(options = {}) {
     concerns: normalizeProfileIds("concerns", options.concern || [], profiles),
     audiences: normalizeProfileIds("audiences", options.audience || [], profiles),
   };
+  const scopedGroups = new Set(normalizeGroups(options.group));
   const tiers = index.tiers;
   const ranks = Array.isArray(tiers)
     ? Object.fromEntries(tiers.map((t) => [t.id, t.order]))
@@ -466,6 +558,7 @@ function applicable(options = {}) {
     const detail = loadType(row.id);
     const rule = detail.selection;
     if ((rule.mode === "dynamic" || rule.mode === "compact") && !options.includeDynamic) continue;
+    if (scopedGroups.size && !scopedGroups.has(detail.group)) continue;
     if (ranks[rule.min_tier] > tierRank) continue;
     const selectors = rule.selectors || {};
     const hasSelectors = Object.values(selectors).some((v) => v && v.length);
@@ -712,6 +805,30 @@ function validate() {
         errors.push(`${docId}: missing instruction ${doc.instruction_file}`);
       }
     }
+    const variants = doc.variants || {};
+    if ("agent_context_mode" in variants && doc.group !== "agent-context") {
+      errors.push(`${docId}: variants.agent_context_mode is only valid on an agent-context record`);
+    }
+    for (const [axis, byValue] of Object.entries(variants)) {
+      if (axis !== "agent_context_mode" && axis !== "layout") {
+        errors.push(`${docId}: unknown variant axis ${axis}`);
+        continue;
+      }
+      for (const [value, files] of Object.entries(byValue || {})) {
+        if (axis === "agent_context_mode" && value !== "standalone") {
+          errors.push(`${docId}: variants.agent_context_mode only overrides 'standalone'`);
+        }
+        if (axis === "layout" && value !== "compact") {
+          errors.push(`${docId}: variants.layout only overrides 'compact'`);
+        }
+        for (const [key, target] of Object.entries(files || {})) {
+          if (!VARIANT_FILE_KEYS.includes(key)) errors.push(`${docId}: unknown variant file key ${key}`);
+          else if (!fs.existsSync(path.join(SKILL_ROOT, target))) {
+            errors.push(`${docId}: missing ${axis}/${value} ${key} ${target}`);
+          }
+        }
+      }
+    }
     if (selection.mode === "static") {
       if (staticIds.has(doc.id)) errors.push(`duplicate static id: ${doc.id}`);
       if (staticPaths.has(doc.path)) errors.push(`duplicate static path: ${doc.path}`);
@@ -809,6 +926,7 @@ function parseArgs(argv) {
     framework: [],
     concern: [],
     audience: [],
+    group: [],
     applicableTier: "diligence",
     includeDynamic: false,
   };
@@ -828,12 +946,16 @@ function parseArgs(argv) {
     else if (arg === "--framework") args.framework.push(next());
     else if (arg === "--concern") args.concern.push(next());
     else if (arg === "--audience") args.audience.push(next());
+    else if (arg === "--group") args.group.push(next());
+    else if (arg === "--groups") args.groups = true;
     else if (arg === "--applicable-tier") args.applicableTier = next();
     else if (arg === "--include-dynamic") args.includeDynamic = true;
     else if (arg === "--legacy") args.legacy = true;
     else if (arg === "--validate") args.validate = true;
     else if (arg === "--category") args.category = next();
     else if (arg === "--route") args.routeId = next();
+    else if (arg === "--agent-mode") args.agentMode = next();
+    else if (arg === "--route-layout") args.routeLayout = next();
     else if (arg === "--repo") args.repo = next();
     else throw new Error(`unknown flag: ${arg}`);
   }
@@ -857,10 +979,11 @@ function main(argv = process.argv.slice(2)) {
     args.legacy,
     args.category,
     args.routeId,
+    args.groups,
   ].filter(Boolean).length;
   if (modes !== 1) {
     return fail(
-      "specify exactly one of --tier, --id, --ids, --profile, --applicable, --legacy, --validate, --category, --route",
+      "specify exactly one of --tier, --id, --ids, --profile, --applicable, --legacy, --validate, --category, --route, --groups",
       2,
     );
   }
@@ -906,10 +1029,15 @@ function main(argv = process.argv.slice(2)) {
             concern: args.concern,
             audience: args.audience,
             tier: args.applicableTier,
+            group: args.group,
             includeDynamic: args.includeDynamic,
           }),
         ),
       );
+      return 0;
+    }
+    if (args.groups) {
+      process.stdout.write(dumpJson(groups()));
       return 0;
     }
     if (args.category) {
@@ -917,7 +1045,7 @@ function main(argv = process.argv.slice(2)) {
       return 0;
     }
     if (args.routeId) {
-      process.stdout.write(dumpJson(route(args.routeId, args.audience, args.repo || null)));
+      process.stdout.write(dumpJson(route(args.routeId, args.audience, args.repo || null, { agentMode: args.agentMode || null, layout: args.routeLayout || null })));
       return 0;
     }
   } catch (error) {
@@ -937,6 +1065,10 @@ module.exports = {
   mergedRecord,
   applicable,
   category,
+  groups,
+  groupAudiences,
+  normalizeGroups,
+  resolveVariants,
   route,
   resolvePresentation,
   validate,

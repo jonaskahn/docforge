@@ -95,7 +95,10 @@ unless both were READY and the user chose a primary. Detail:
    and source blobs.
 5. A writer never marks its own artifact complete; mechanical lint is
    necessary but never sufficient.
-6. State a fact once in its owning document; link to it elsewhere.
+6. State a fact once in its owning document; link to it elsewhere. Links run
+   one way across the agent-context boundary: agent-context documents link
+   human-facing documents; human-facing documents never link, mention, or
+   `@`-reference an agent-context document.
 7. Generated prose stays provider-neutral and host-neutral.
 
 ## Completion requirement

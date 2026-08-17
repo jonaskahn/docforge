@@ -9,6 +9,7 @@ const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { planEntries } = require("../../common/js/plan.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
+const { AGENT_CONTEXT_GROUP, agentContextLeaks } = require("../../common/js/agent_context.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const PLACEHOLDER = /\{\{[^}]+\}\}|TODO\([^)]*\)/g;
@@ -39,8 +40,21 @@ function resolveManifest(value, repo) {
 function activeDocuments(manifest) {
   return manifest.documents.filter((doc) => doc.status !== "skipped" && doc.status !== "retired");
 }
-function preview(manifest, repo, revise) {
-  const docs = activeDocuments(manifest);
+// Children a routing document may enumerate. Agent-context documents see
+// everything; nothing else sees agent-context. The reference boundary is
+// one-way by construction, so docs/README.md never lists docs/agents/README.md
+// while docs/agents/README.md still lists its own children. Entries without a
+// group predate the field and are treated as human-facing, the safe direction.
+function routableChildren(doc, manifest) {
+  const children = activeDocuments(manifest);
+  if (doc.group === AGENT_CONTEXT_GROUP) return children;
+  return children.filter((child) => child.group !== AGENT_CONTEXT_GROUP);
+}
+// `groups` is the transient `<area>` work filter: it narrows which documents
+// this run reports on and never touches `project.groups`.
+function preview(manifest, repo, revise, groups = null) {
+  const scoped = new Set(groups || []);
+  const docs = activeDocuments(manifest).filter((doc) => !scoped.size || scoped.has(doc.group));
   const project = manifest.project || {};
   console.log(`Generation plan — tier: ${project.tier || "unknown"}`);
   const profiles = project.profiles || {};
@@ -49,7 +63,7 @@ function preview(manifest, repo, revise) {
   }
   console.log();
   const flowIndexPath = path.join(repo, ".docforge", "flow-index.json");
-  const entries = planEntries(repo, manifest, flowIndexPath, revise);
+  const entries = planEntries(repo, manifest, flowIndexPath, revise, groups);
   const manifestEntries = new Map(entries.filter((entry) => !entry.is_flow).map((entry) => [entry.id, entry]));
   const flowEntries = entries.filter((entry) => entry.is_flow);
   for (const doc of docs) {
@@ -98,7 +112,7 @@ function isDirectChild(directory, candidate) {
 }
 function childRows(doc, manifest) {
   const directory = posixDirname(doc.path);
-  const children = activeDocuments(manifest)
+  const children = routableChildren(doc, manifest)
     .filter((candidate) => candidate.id !== doc.id && isDirectChild(directory, candidate))
     .sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path));
   const rows = children.map((child) => {
@@ -336,7 +350,7 @@ function readmeChildCoverage(repo, doc, manifest, text) {
   if (!INDEX_TYPES.has(doc.type) && doc.type !== COMPACT_TYPE) return [];
   const [childrenFolders, linkBase] = coverageScope(doc);
   const missing = new Set();
-  for (const candidate of activeDocuments(manifest)) {
+  for (const candidate of routableChildren(doc, manifest)) {
     if (candidate.id === doc.id) continue;
     if (!childrenFolders.some((folder) => isDirectChild(folder, candidate))) continue;
     if (!fs.existsSync(path.join(repo, ...candidate.path.split("/")))) continue;
@@ -360,6 +374,7 @@ function audit(repo, manifest) {
     "unknown section": [],
     "broken links": [],
     "readme child coverage": [],
+    "agent-context leak": [],
     "invalid json": [],
     "folder-only promotion": [],
     "forge leakage": [],
@@ -419,6 +434,9 @@ function audit(repo, manifest) {
       if (/\{\{[^}]+\}\}|<[A-Z][A-Z0-9_]{2,}>/.test(clean)) continue;
       if (!fs.existsSync(path.resolve(path.dirname(target), clean))) findings["broken links"].push(`${doc.path} -> ${link}`);
     }
+    for (const leak of agentContextLeaks(doc, manifest, text)) {
+      findings["agent-context leak"].push(`${doc.path}:${leak.line} -> ${leak.target}`);
+    }
     for (const item of readmeChildCoverage(repo, doc, manifest, text)) {
       findings["readme child coverage"].push(`${doc.path}: missing link to ${item}`);
     }
@@ -451,8 +469,8 @@ function audit(repo, manifest) {
   return total ? 1 : 0;
 }
 function parseArgs(argv) {
-  const result = {};
-  const allowed = new Set(["repo", "manifest", "dry-run", "document", "audit", "revise"]);
+  const result = { group: [] };
+  const allowed = new Set(["repo", "manifest", "dry-run", "document", "audit", "revise", "group"]);
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
     if (token === "-h" || token === "--help") return { help: true };
@@ -463,13 +481,14 @@ function parseArgs(argv) {
     if (raw === "dry-run" || raw === "audit" || raw === "revise") result[key] = true;
     else {
       if (i + 1 >= argv.length || argv[i + 1].startsWith("--")) throw new Error(`option requires a value: ${token}`);
-      result[key] = argv[++i];
+      if (raw === "group") result.group.push(argv[++i]);
+      else result[key] = argv[++i];
     }
   }
   return result;
 }
 function usage() {
-  console.log("usage: scaffold_docs.js --repo <path> --manifest <path> (--dry-run [--revise] | --document <id> | --audit)");
+  console.log("usage: scaffold_docs.js --repo <path> --manifest <path> (--dry-run [--revise] [--group <id>] | --document <id> | --audit)");
 }
 function main() {
   let args;
@@ -483,7 +502,15 @@ function main() {
     const manifest = loadManifest(resolveManifest(args.manifest, args.repo), {
       requireDocuments: true,
     });
-    if (args.dry_run) return preview(manifest, args.repo, args.revise);
+    if (args.dry_run) {
+      let scopedGroups;
+      try {
+        scopedGroups = queryCatalog.normalizeGroups(args.group);
+      } catch (error) {
+        return fail(error.message, 2);
+      }
+      return preview(manifest, args.repo, args.revise, scopedGroups);
+    }
     if (args.document) return materialize(args.repo, manifest, args.document);
     return audit(args.repo, manifest);
   } catch (error) {

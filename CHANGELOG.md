@@ -1,6 +1,99 @@
 # Changelog
 
-## Unreleased
+## 2.20.0
+
+- **Agent documentation is a one-way overlay, and can be generated on its own
+  (manifest 3.8).** Two related changes.
+
+  **References run one way.** No human-facing document may link, mention, or
+  `@`-reference an agent-context output — `docs/agents/`, `docs/agents.md`,
+  `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json`. Agent
+  documents still link the whole human tree. The outbound half was already
+  policy; the inbound half was mechanically forced *against* it, because
+  `readme_child_coverage` required `docs/README.md` to link
+  `docs/agents/README.md` and `child_rows` wrote that row automatically.
+  - `routable_children` filters both enumerations relative to the referencing
+    document, so `docs/agents/README.md` still routes its own children.
+  - New whole-tree finding **`agent-context leak`** in `scaffold_docs --audit`.
+    Targets are derived from the manifest, never hardcoded: a repository that
+    owns `agents/` or `.claude/settings.json` itself cannot trip it, and a
+    fenced `cat AGENTS.md` is not a reference.
+  - Reachability is amended: agent documents are reachable from `AGENTS.md`,
+    not from `docs/README.md`, and appear in no human index in either layout.
+
+  **`--group` scopes a run to catalog groups.** Repeatable, alias-accepting
+  (`agents`, `arch`, `ops`, `adr`, …), include-list only, and strictly
+  subtractive — omitting it reproduces the previous selection exactly. Added to
+  `manage_manifest init|preview|reconcile`, `query_catalog --applicable`, and
+  `scaffold_docs --dry-run`; `query_catalog --groups` lists every group with
+  its aliases and unlocking audiences.
+  - Out-of-scope indexes are not pulled back in as ancestors, so an agents-only
+    run writes no `docs/README.md` — which would otherwise have to index the
+    agent overlay.
+  - A scope that selects nothing now fails, naming the audience that would
+    unlock it, instead of writing an empty manifest.
+  - `project.groups` and `project.agent_context` are new optional manifest
+    fields (**schema 3.8**). Both stay absent when they carry no information,
+    so a pre-3.8 manifest reads identically.
+
+  **Standalone agent documentation.** When the agent-context group is all a run
+  writes, its documents *own* their facts instead of linking human documents
+  that were never generated. Selected through a new catalog `variants` block
+  (axes: `agent_context_mode`, `layout`), resolved at manifest-build time so
+  `scaffold_docs` needs no mode awareness. Standalone stays agent-sufficient —
+  durable paths, boundaries, entry points, verified commands, observable
+  hazards — and never claims design rationale, business context, or operational
+  procedure, none of which is derivable from a graph.
+  - A later run that adds human documentation reports an **`agent-mode`**
+    reconcile delta and stops. `manage_manifest agent-mode --decision
+    convert|keep` applies the answer: `convert` demotes the agent documents for
+    re-grounding, `keep` records `decided_by: "user"` so reconcile never asks
+    again. Reconcile reports and never demotes — the `retire` precedent, not
+    the `sync_presentations` one.
+  - A linked → standalone → linked round trip is **not** content-preserving,
+    unlike compact ↔ standard.
+
+  **Fixed: `AGENTS.md` emitted dangling `@` refs in compact layout.**
+  `agents_kernel` declares no `compact_group`, so it is written in every
+  layout, but its §7 fan-out hardcoded `@docs/agents/*.md` — files compact never
+  materializes. A kernel written faithfully from its own template produced seven
+  `dangling-at-ref` defects. Fixed with a layout variant referencing
+  `@docs/agents.md`; the linter was correct and is unchanged.
+
+  **Fixed: the dashboard told agents-only repositories to "revise again".**
+  Nothing was broken — there is simply no human-facing documentation to render.
+  `dashboard scan` now reports `agent-context only` and says so.
+
+  `/docforge-revise <area>` is finally defined: the catalog group ids plus
+  aliases, listed by `query_catalog --groups`, with unknown areas an error
+  rather than a silent full-tree fallback. `flow`/`flows` stays reserved for the
+  flow pipeline. **`<area>` never passes `--group` to reconcile** — that is a
+  persistent scope whose narrowing correctly retires every out-of-area written
+  document, while `<area>` is only a transient work filter.
+
+- **Illustrations are no longer capped per document.** The depth table in
+  `references/illustration.md` fused two unrelated limits: a count budget per
+  document (orientation 1 / working 2 / deep-dive 3 / reference 1 / router 0)
+  and a complexity bound per illustration. The count budget contradicted its
+  own neighbouring rule — "split any illustration that exceeds its bound" adds
+  an illustration, which then tripped the cap, making the prescribed remedy for
+  an over-dense diagram a violation and pushing writers toward the single
+  overloaded diagram instead. It also had no external support: of ~20 primary
+  sources surveyed (Google, Microsoft, GitLab, Kubernetes, The Good Docs
+  Project, Diátaxis, C4, arc42, ISO/IEC/IEEE 42010, SEI *Views and Beyond*,
+  Mermaid/PlantUML), **none caps diagrams per document**, and three prescribe
+  the opposite as the remedy for complexity. Count is an output of per-diagram
+  scope in every framework surveyed, never an input.
+  - `illustration_metrics.{py,js}` drop the `illustrations` counter and the
+    per-document check; `BUDGETS` is now a plain depth → max-elements map.
+  - `router` gains a real element bound (12). Its previous `(0, 0)` made any
+    illustration in a router document a defect — a count ban in disguise.
+  - The relevance test under "Choose the smallest useful form" is now the only
+    thing limiting how many illustrations a document carries, which is what the
+    literature actually supports.
+  - Per-illustration bounds, the sequence/state/ER/journey sub-limits, the
+    mandatory surrounding prose, and the audit's illustration-continuity rule
+    are all unchanged.
 
 - **Compact layout is now actually compact (catalog 2.19.0).** Previously only
   documents carrying a `compact_group` folded, so every profile-driven,

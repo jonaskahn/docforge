@@ -38,6 +38,16 @@ reads. `docs/agents/*` never restates a fact a human-facing document already
 owns — it links briefly. The only facts this dimension owns are ones no human
 document does yet (topology-derived conventions, patterns exemplars).
 
+**References across this boundary run one way.** An agent-context document may
+link any human-facing document. A human-facing document may never link,
+mention, or `@`-reference an agent-context output — `docs/agents/`,
+`docs/agents.md`, `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, or
+`.claude/settings.json`. The agent overlay knows the whole tree; the tree does
+not know the overlay exists, and reads exactly as it would if no coding-agent
+audience had been confirmed. Agent documents are reachable from `AGENTS.md`,
+never from `docs/README.md`. The mechanical gate is the `agent-context leak`
+finding in `scaffold_docs --audit`.
+
 ## One owner per fact
 
 Choose the document whose reader question naturally owns a fact, write it there
@@ -57,7 +67,7 @@ definitions.
 | Success metric / KPI target | PO `success-metrics.md` | BA omits; does not cross-link |
 | Roadmap timing | `product/roadmap.md` | PO README links; does not duplicate |
 | Warning / critical constraint | topic `README.md` | subfile may expand it |
-| Agent-specific non-obvious convention | `AGENTS.md` or `docs/agents/patterns.md` | nowhere else |
+| Agent-specific non-obvious convention | `AGENTS.md` or `docs/agents/patterns.md` | nowhere else; human documents never link back into the agent-context group |
 | What the repository is built with | `reference/tech-stack.md` | architecture and setup link; do not restate |
 | What it depends on operationally and what breaks | `architecture/dependencies.md` (`dependencies-inventory`) | tech-stack omits failure framing |
 

@@ -3,7 +3,11 @@
 
 const FENCE = /^\s*(`{3,})([\w-]*)/;
 const CONNECTOR = /(?:-->|--|\|\|--|->>|-->>)/;
-const BUDGETS = { orientation: [1, 5], "deep-dive": [3, 12], reference: [1, 12], router: [0, 0] };
+// Maximum meaningful elements within a single illustration, per target depth.
+// There is deliberately no cap on the number of illustrations in a document:
+// every documentation authority surveyed prescribes splitting a dense diagram
+// into several simpler ones, so a count cap would forbid the recommended remedy.
+const BUDGETS = { orientation: 5, "deep-dive": 12, reference: 12, router: 12 };
 function illustrationDefects(text, targetDepth) {
   const defects = []; const blocks = []; let active = null;
   for (const [index, line] of text.split(/\r?\n/).entries()) {
@@ -12,11 +16,11 @@ function illustrationDefects(text, targetDepth) {
     if (active) active.rows.push(line);
   }
   if (active) defects.push({ kind: "unclosed illustration fence", line: active.line, detail: active.language || "untagged" });
-  let illustrations = 0; const [maxIllustrations, maxElements] = BUDGETS[targetDepth] || BUDGETS["deep-dive"];
+  const maxElements = BUDGETS[targetDepth] || BUDGETS["deep-dive"];
   for (const block of blocks) {
     const structuralAscii = ["text", "ascii"].includes(block.language) && block.rows.some((row) => CONNECTOR.test(row));
     if (!(["mermaid", "text", "ascii"].includes(block.language)) || (["text", "ascii"].includes(block.language) && !structuralAscii)) continue;
-    illustrations += 1; const content = block.rows.map((row) => row.trim()).filter((row) => row && !row.startsWith("%%")); let elements;
+    const content = block.rows.map((row) => row.trim()).filter((row) => row && !row.startsWith("%%")); let elements;
     if (block.language === "mermaid") {
       const kind = content.length ? content[0].split(/\s+/)[0] : "";
       if (kind === "stateDiagram") defects.push({ kind: "deprecated state diagram", line: block.line, detail: "use stateDiagram-v2" });
@@ -31,7 +35,6 @@ function illustrationDefects(text, targetDepth) {
     } else elements = content.filter((row) => !CONNECTOR.test(row)).length;
     if (elements > maxElements) defects.push({ kind: "illustration budget", line: block.line, detail: `${elements} elements exceeds ${maxElements}` });
   }
-  if (illustrations > maxIllustrations) defects.push({ kind: "illustration budget", line: 1, detail: `${illustrations} illustrations exceeds ${maxIllustrations}` });
   return defects;
 }
 module.exports = { illustrationDefects, BUDGETS };

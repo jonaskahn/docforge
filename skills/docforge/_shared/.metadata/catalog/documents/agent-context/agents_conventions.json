@@ -23,5 +23,13 @@
   "audit_profile": "agent-view",
   "template_file": "content/agent-context/templates/agents-conventions.md",
   "compact_group": "agents_compact",
-  "compact_order": 5
+  "compact_order": 5,
+  "variants": {
+    "agent_context_mode": {
+      "standalone": {
+        "contract_file": "content/agent-context/contracts/standalone/agents-view.md",
+        "instruction_file": "content/agent-context/agents-standalone.instruction.md"
+      }
+    }
+  }
 }

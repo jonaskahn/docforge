@@ -15,6 +15,20 @@ CLI_JS = ROOT / "skills" / "docforge" / "_shared" / "runtime" / "cli" / "js"
 sys.path.insert(0, str(ROOT / "skills" / "docforge" / "_shared"))
 sys.path.insert(0, str(CLI_PY))
 
+# Read the current manifest schema version from the schema itself. Pinning the
+# literal in ~20 assertions turned every schema bump into a mass test edit, and
+# an assertion that merely repeats the constant it is checking proves nothing.
+MANIFEST_VERSION = json.loads(
+    (ROOT / "skills" / "docforge" / "_shared" / ".metadata" / "manifest-schema.json")
+    .read_text(encoding="utf-8")
+)["properties"]["version"]["const"]
+
+# Likewise the catalog version, from the catalog index itself.
+CATALOG_VERSION = json.loads(
+    (ROOT / "skills" / "docforge" / "_shared" / ".metadata" / "catalog" / "index.json")
+    .read_text(encoding="utf-8")
+)["version"]
+
 PORTFOLIO_PATHS = {
     "docs-portfolio/README.md",
     "docs-portfolio/repo-inventory.md",
@@ -97,6 +111,7 @@ def initialize(
     frameworks: tuple[str, ...] = (),
     concerns: tuple[str, ...] = (),
     audiences: tuple[str, ...] = (),
+    groups: tuple[str, ...] = (),
     layout: str | None = "standard",
 ) -> subprocess.CompletedProcess:
     """Standard layout by default so tree-shape assertions stay stable; pass
@@ -110,6 +125,7 @@ def initialize(
         ("framework", frameworks),
         ("concern", concerns),
         ("audience", audiences),
+        ("group", groups),
     ):
         for value in values:
             args += [f"--{flag}", value]
