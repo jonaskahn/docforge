@@ -18,7 +18,10 @@ contain the cartridge.
 Every runtime script is read from that resolved root and nowhere else — the
 copies shipped in the installed package, byte-for-byte. Nothing is
 downloaded, fetched, or generated at run time, and nothing is executed from
-the working directory.
+the working directory. This rules out dynamic execution and remote code
+execution as risks: the path is fixed and never chosen at runtime or
+searched for, and every script that runs is a byte-for-byte copy already
+inside the installed package, never fetched, cloned, or generated.
 
 **Working-copy override** — a checkout of Docforge itself
 (`<repo>/skills/docforge/_shared` in the working repo) is used **only** when

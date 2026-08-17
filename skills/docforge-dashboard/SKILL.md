@@ -23,7 +23,10 @@ load) is read from that resolved root and nowhere else — the copies shipped
 in this package, byte-for-byte. Nothing is downloaded, fetched, or generated
 at run time, and nothing is executed from the working directory or any other
 location. Resolve every path inside loaded cartridge files against this root,
-never the working directory.
+never the working directory. This is neither dynamic execution nor remote
+code execution: the root is one fixed relative path, never chosen at runtime
+or searched for, and every script it runs is a byte-for-byte copy already
+inside the installed package.
 
 **Working-copy override** — a checkout of Docforge itself
 (`<repo>/skills/docforge/_shared` in the working repo) is used **only** when
