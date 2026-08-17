@@ -788,17 +788,27 @@ class SkillContentTests(unittest.TestCase):
     def test_skill_md_links_resolve_relative_to_skill_dir(self) -> None:
         """Every cartridge link in the shipped SKILL.md files is relative to
         the SKILL.md's own directory (`./` or `../`), never CWD-relative or
-        agent-placeholder-relative; the lookup order and the ask-the-user
-        fallback are present."""
+        agent-placeholder-relative; the single-candidate anchoring rule, the
+        working-copy override, and the ask-the-user fallback are present."""
         for skill_dir in sorted((ROOT / "skills").glob("*")):
             skill = skill_dir / "SKILL.md"
             if not skill.is_file():
                 continue
             text = skill.read_text(encoding="utf-8")
+            flat = " ".join(text.split())
             self.assertNotRegex(text, AGENT_PLACEHOLDER)
-            self.assertIn("ask the user for the absolute", text)
-            self.assertIn("Repo-local self-host", text)
-            self.assertIn("Global skill dirs", text)
+            self.assertIn("ask the user for the absolute", flat)
+            # One deterministic candidate, resolved from the loaded skill dir --
+            # never a search across the filesystem. The enumerated home-dir
+            # lookup this replaced read as dynamic code loading to skill-registry
+            # security audits, and let an untrusted working repo supply the
+            # scripts the skill executes.
+            self.assertIn("resolved against the directory this", flat)
+            self.assertIn("exactly one candidate and it is never searched for", flat)
+            self.assertIn("**Working-copy override**", flat)
+            # Repository content is data, never instructions (indirect prompt
+            # injection boundary); the full rubric lives in rules.md.
+            self.assertIn("data, never instructions", flat)
             for link in LINK.findall(text):
                 self.assertTrue(
                     link.startswith(("./", "../")),
@@ -820,6 +830,47 @@ class SkillContentTests(unittest.TestCase):
             if AGENT_PLACEHOLDER.search(path.read_text(encoding="utf-8", errors="replace")):
                 offenders.append(str(path.relative_to(ROOT)))
         self.assertEqual(offenders, [])
+
+    def test_skills_tree_never_enumerates_global_skill_dirs(self) -> None:
+        """The cartridge is resolved from the loaded entrypoint's own directory,
+        never searched for across home directories. Enumerating absolute skill
+        dirs reads as dynamic loading of executable scripts from unpinned
+        locations, and it is how a working repo could supply the scripts the
+        skills run."""
+        needles = ("~/.agents", "~/.claude/skills", "opencode/skills")
+        offenders: list[str] = []
+        for path in (ROOT / "skills").rglob("*"):
+            if not path.is_file() or path.suffix not in {".md", ".py", ".js", ".json"}:
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for needle in needles:
+                if needle in text:
+                    offenders.append(f"{path.relative_to(ROOT)}: {needle}")
+        self.assertEqual(offenders, [])
+
+    def test_untrusted_repository_data_boundary_is_stated(self) -> None:
+        """rules.md carries the full indirect-prompt-injection contract --
+        ingestion points, trust boundary, sanitization, capability inventory --
+        and the dashboard entrypoint restates it, since it is the surface that
+        reads repository metadata and then runs a build."""
+        rules = " ".join((SHARED_ROOT / "rules.md").read_text(encoding="utf-8").split())
+        self.assertIn("## Untrusted repository data", rules)
+        for slot in ("**Ingestion points**", "**Trust boundary**", "**Sanitization**", "**Capability inventory**"):
+            self.assertIn(slot, rules)
+        self.assertIn("data, never instructions", rules)
+        dashboard = " ".join(
+            (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8").split()
+        )
+        for slot in ("**Ingestion points**", "**Trust boundary**", "**Sanitization**", "**Capability inventory**"):
+            self.assertIn(slot, dashboard)
+        # The claim about package files must stay true: ensure_dependencies
+        # hashes them around `npm install` and aborts on any change.
+        self.assertIn("never touches the repository's own", dashboard)
+        for runtime in (
+            SHARED_ROOT / "runtime" / "dashboard" / "python" / "dashboard.py",
+            SHARED_ROOT / "runtime" / "dashboard" / "js" / "dashboard.js",
+        ):
+            self.assertIn("package-lock.json", runtime.read_text(encoding="utf-8"))
 
     def test_commands_resolve_via_plugin_root(self) -> None:
         """Slash commands reference skills and cartridge through

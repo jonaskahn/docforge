@@ -12,17 +12,21 @@ migrations,portfolio,validation,dashboard}/README.md`.
 
 ## Installation
 
-The cartridge may live in a **global** skill dir (`~/.agents/skills/docforge/_shared`,
-`~/.claude/skills/docforge/_shared`, or `~/.config/opencode/skills/docforge/_shared`),
-inside a **plugin root** (`<plugin-root>/skills/docforge/_shared`), or be
-checked out **inside the repo** (`<repo>/skills/docforge/_shared`). Use the
-same location-ordered lookup as the entrypoints: repo-local self-host first,
-then the plugin root, then the global dirs. Tools run with the cartridge root
-as the working directory.
+The cartridge is the `_shared/` directory inside the installed skill package —
+a **plugin root** (`<plugin-root>/skills/docforge/_shared`) and a **skill
+directory** keep the same layout, so the path relative to the loaded
+entrypoint is identical either way. Use the same rule as the entrypoints:
+resolve against the directory the entrypoint was loaded from, never search
+for it, and treat a Docforge checkout in the working repo
+(`<repo>/skills/docforge/_shared`) as a working-copy override the user has to
+ask for and confirm. Tools run with the cartridge root as the working
+directory.
 
 To make the plain documented invocations below work from the repo root
-without the cartridge checked out in-repo, link the runtime once (user-run,
-commit the link only if it points at a location shared by the team):
+without the cartridge checked out in-repo, the **user** may link the runtime
+once by hand. This is an optional local convenience for developing Docforge
+itself — never something the agent creates on its own, and commit the link
+only if it points at a location shared by the team:
 
 ```sh
 ln -s <cartridge>/runtime <repo>/runtime

@@ -42,13 +42,15 @@ root at load time, never to the session working directory:
 
 - Skill content (`skills/*/SKILL.md`) links relatively: `./_shared/…` for
   `docforge`, `../docforge/_shared/…` for the thin entrypoints. The layout is
-  identical in every install mode — repo-local self-host, plugin root, or any
-  global skill dir — so the relative links resolve everywhere.
-- The entrypoints carry a location-ordered lookup rule (repo-local, plugin
-  root, then global skill dirs such as `~/.agents/skills`, `~/.claude/skills`,
-  `~/.config/opencode/skills`) that pins down the copy the host loaded;
-  `rules.md`'s always-loaded path-anchoring rule makes every `./`/`../`
-  reference inside cartridge files resolve against that root.
+  identical in every install mode — a plugin root or any skill directory — so
+  the relative links resolve everywhere.
+- Those relative links are resolved against the directory the entrypoint was
+  loaded from. There is exactly one candidate and the cartridge is never
+  searched for across the filesystem; `rules.md`'s always-loaded
+  path-anchoring rule makes every `./`/`../` reference inside cartridge files
+  resolve against that root. A checkout of Docforge itself in the working
+  repo is used only when the user explicitly asks for the working copy, after
+  confirming the absolute path.
 - All entrypoints carry the fallback: if the cartridge cannot be located, ask
   the user for the absolute cartridge root before following any cartridge
   link. Tests in `tests/test_structure.py` enforce the contract (no
