@@ -4,7 +4,7 @@ Owns: repository inspection, tier and profile selection, dynamic-document
 discovery, manifest initialization, the dry-run tree, and the plan
 checkpoint with document cards.
 
-## 1. Precheck and inspect
+## Precheck and inspect
 
 Lock one CLI engine for this session (see [`../rules.md`](../rules.md)), then
 confirm a readable code graph:
@@ -84,7 +84,7 @@ archive` (archive is a file move and stays separately approved, never
 `--auto-accept`). A self-managed doc is never scaffolded over, never merged,
 and never added to the manifest.
 
-## 2. Select scope
+## Select scope
 
 Choose exactly one catalog tier:
 
@@ -117,7 +117,7 @@ documented flows, and add dynamic deep-dive flow documents only for
 main-priority rows (with a user NOTICE — see [`revision.md`](revision.md)).
 Never seed an example artifact to stand in for discovery.
 
-## 3. Initialize and preview
+## Initialize and preview
 
 ```sh
 python3 runtime/cli/python/manage_manifest.py init \
@@ -154,6 +154,15 @@ common case). See
 [`../references/graph/graph-sources.md`](../references/graph/graph-sources.md)
 "Session persistence" for the mechanics every later step, including spawned
 parallel writers, relies on.
+
+**Target readers → init flags** ([`intake.md`](intake.md) "Target readers"):
+`Both` adds `--audience coding-agents` to the confirmed audience flags;
+`Human readers` adds nothing — agent-context types are audience-gated, so
+none are selected; `AI coding agents` passes
+`--group agent-context --audience coding-agents`, and the manifest records
+`project.groups: ["agent-context"]`. Never pass `--group agent-context`
+without the coding-agents audience: that scope selects zero documents and
+`init` fails naming the unlocking audience.
 
 `init` also detects project scale and records `project.scale`. Turn 1 of
 intake confirms the layout, before Turn 2 asks tier, profiles, and audiences
@@ -235,8 +244,9 @@ Present a human-readable plan before writing. It must contain:
    label conditional items that were omitted and why.
 4. **Document cards** — one line per path stating the reader question/content
    contract, depth, evidence capabilities, and write order. For audience
-   profiles, group cards under Business Analyst, Product Owner, and Coding
-   Agent headings.
+   profiles, group cards under Business Analyst and Product Owner headings —
+   and under a Coding Agent heading only when the confirmed reader pick
+   generates agent context.
 5. **Capability schedule** — which documents can proceed from the code graph
    now, which wait for `flow_graph`, and whether flow evidence will be native or
    Docforge-derived. Call flow evidence **native** only when Understand

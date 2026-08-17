@@ -273,9 +273,9 @@ but `project.groups` excludes `agent-context`, offer to widen the scope
 
 Agent-context isolation never changes with scope. Outputs remain self-contained
 and zero-reference whether revised alone, alongside human-facing documentation,
-or after the selected area set changes. Contract revision `2.22.0` therefore
-rewrites any older routed or importing form through steps 1a and 1b without a
-conversion prompt. Standard and compact layout switches remain
+or after the selected area set changes. The catalog contract revision `2.22.0`
+therefore rewrites any older routed or importing form through steps 1a and 1b
+without a conversion prompt. Standard and compact layout switches remain
 content-preserving under the normal split/merge mechanics.
 
 ## Annotated plan tree
@@ -370,21 +370,14 @@ dashboard.
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
 2. Migration is unconditional (see [`validation.md`](validation.md) "Manifest
-   and provenance"): upgrade manifest 3.6 / 3.5 / 3.4 / 3.3 (or
-   3.2 / 3.1 / 3.0 / provenance 1.0) to 3.9 / 2.1 — seeding each document's
-   catalog-owned `description` from the catalog `summary`, normalizing
-   `provenance_storage` to `json`, the project's `unmanaged_docs`
-   list (default empty), the project's `scale` record
-   (`decided_by: "detected"` when absent, and its measurement `signals`
-   refreshed with the 3.7 dependency and flow fields) — and re-register
-   any pre-3.0 shape as 3.8
-   (adopting legacy written documents as `generated` with provenance 2.1,
-   demoting incomplete or unconvertible documents to `in_progress`), and
-   print the migration report. The same run moves
+   and provenance"): upgrade any manifest below 3.9 to 3.9 / provenance 2.1 —
+   moving
    each section-provenance document's inline frontmatter into the folder
-   sidecar (`.docforge/provenance/<folder>.json`) and strips it from the
+   sidecar (`.docforge/provenance/<folder>.json`) and stripping it from the
    markdown, so generated files become pure content; the `--dry-run`
-   preview lists the moves before anything is written.
+   preview lists the moves before anything is written. The full version list,
+   seeded defaults, and legacy re-registration mechanics live in
+   `validation.md`, never here.
 3. When the manifest is already current, report that nothing needed
    migrating and stop — optionally point at the scoped invocations
    (`/docforge-revise all`, `<area>`, `flow`) for a structural refresh.
@@ -405,25 +398,14 @@ up-to-date manifest is a clean no-op (scripts and README:
 Flags combine with a scope argument, e.g.
 `/docforge-revise flow --plan-only`.
 
-`migrate_metadata.{py,js}` also re-registers legacy manifests the same way
-here as in the bare path above (see [`validation.md`](validation.md)
-"Manifest and provenance" for the full adoption mechanics), so a revise run
-over an old manifest re-grounds and audits the adopted documents like any
-other written tree (steps 1 / 1a / 1b above). Both the bare and the scoped
-paths stamp `.docforge/provenance/` sidecars and leave markdown
-frontmatter-free; a document still carrying inline frontmatter from before
-the sidecar store existed is moved in the same migration pass.
+Because migration re-registers legacy manifests the same way as the bare
+path ([`validation.md`](validation.md) "Manifest and provenance"), a revise
+run over an old manifest re-grounds and audits the adopted documents like any
+other written tree (steps 1 / 1a / 1b above).
 
-```sh
-python3 runtime/cli/python/check_staleness.py \
-node runtime/cli/js/check_staleness.js \
-# bun  runtime/cli/js/check_staleness.js \
-# deno run -A runtime/cli/js/check_staleness.js \
-  --manifest <repo>/.docforge/manifest.json \
-  --sync-provenance --json
-```
-
-Unless `--plan-only`: re-ground blocking `PARTIAL` (`STALE` / `MISSING` /
+The staleness sync runs `check_staleness.{py,js}` — canonical invocations in
+[`validation.md`](validation.md) "Manifest and provenance". Unless
+`--plan-only`: re-ground blocking `PARTIAL` (`STALE` / `MISSING` /
 `NO_BLOB`) sections; fully re-ground `UNTRACKED`. Re-detect and add missing /
 newly selected documents. Refresh big-picture and connection surfaces.
 Preserve verbatim only sections that are `FRESH` or `COSMETIC` **and**
@@ -450,13 +432,9 @@ the doc wherever it now lives.
    sidecars; see [`validation.md`](validation.md) "Manifest and provenance") —
    unconditionally, even for a single-document update. An already-current
    manifest reports a clean no-op.
-2. Scan only that document:
-
-   ```sh
-   python3 runtime/cli/python/check_staleness.py \
-     --manifest <repo>/.docforge/manifest.json \
-     --document <id|path> --sync-provenance --json
-   ```
+2. Scan only that document — `check_staleness.{py,js}` with
+   `--document <id|path> --sync-provenance --json` (canonical invocations:
+   [`validation.md`](validation.md) "Manifest and provenance").
 
 3. Branch on the result:
    - all `FRESH` or `COSMETIC` → report that recorded sources are unchanged (a
@@ -545,14 +523,6 @@ picture, connections) inside that area.
 ## Completion
 
 After the last document in scope passes its independent audit, run the
-whole-tree gate exactly as a fresh-start run does
-([`validation.md`](validation.md) §7). Unless the invocation included
-`--plan-only` or `--no-dashboard`, start the dashboard
-(`dashboard.{py,js} start`, see
-[`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)),
-wait for the healthy server, and report the `dashboard: <url>` line and URL
-in the final response — a revised tree without a started, reported dashboard
-is not a finished revise run. The compact-layout exception of
-`validation.md` §8 applies unchanged: when `project.scale.layout ==
-"compact"`, append the offer line instead of starting the dashboard, and an
-explicit yes in the same turn runs the lifecycle unchanged.
+whole-tree gate and the dashboard auto-serve step exactly as a fresh-start
+run does ([`validation.md`](validation.md) "Whole-tree gate" and "Dashboard
+auto-serve"), including the compact-layout offer exception.

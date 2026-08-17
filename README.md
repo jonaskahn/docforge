@@ -47,9 +47,10 @@ entrypoints on top of it.
 Plain language works — *"Document this repository from scratch"*,
 *"Check which docs have drifted"*. Or call a skill directly:
 
-**`/docforge`** — fresh start. Intake asks scope in two short turns (goal +
-layout, then tier/profiles/audience), summarizes, and waits for your
-confirm before writing anything.
+**`/docforge`** — fresh start. Intake asks scope in two short turns (goal,
+layout, and target readers — Human, AI coding agents, or Both — then tier,
+profiles, and audience), summarizes, and waits for your confirm before
+writing anything.
 
 | | |
 |---|---|

@@ -3,7 +3,7 @@
 Owns: staleness checks, manifest/provenance migration, the whole-tree audit,
 the cross-document quality gate, and completion criteria.
 
-## 7. Whole-tree gate
+## Whole-tree gate
 
 After all selected documents pass individually:
 
@@ -31,14 +31,16 @@ that changes one artifact sends that artifact through its independent audit
 again ([`writing.md`](writing.md)).
 
 Unmanaged docs (`project.unmanaged_docs`) and everything under
-`docs/_archive/` are known, never findings: the audit's `unexpected` check
+`docs/_archive/` (or `docs-portfolio/_archive/`) are known, never findings: the audit's `unexpected` check
 skips them, and the gate neither requires nor offers anything for them. The
 gate's exit code reflects real defects only.
 
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit record.
-Its schema version is `3.8`; there is no secondary runtime state file.
+Its schema version is `3.9`. There is no second manifest or shadow state
+file — `.docforge/flow-index.json` (the flow ledger) and the provenance
+sidecars are the only other persistent records.
 
 **Migration is unconditional.** Every invocation that touches an existing
 manifest — every `/docforge-revise` path regardless of scope argument,
@@ -48,7 +50,7 @@ covering both manifest schema and provenance storage. Migration is idempotent,
 so an already-current manifest reports a clean no-op; that cheapness is why
 the run is unconditional, never "when needed".
 
-Manifest 3.7 (and 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
+Manifest 3.8 (and 3.7 / 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
 `migrate_metadata.{py,js}`
 (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
 resume, revision, or provenance synchronization — every run, version-agnostic
@@ -120,7 +122,7 @@ file moved or deleted by the approved retirement step; a `retired` document
 carries no whole-tree-gate coverage expectations, exactly like `skipped`), and
 the whole-tree gate above exits zero.
 
-## 8. Dashboard auto-serve
+## Dashboard auto-serve
 
 Starting the dashboard is a **required** part of run completion, not an
 optional nicety: when the whole-tree gate exits zero, run the dashboard so the

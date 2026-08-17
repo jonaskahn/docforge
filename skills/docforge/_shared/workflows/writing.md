@@ -2,8 +2,7 @@
 
 Owns: the per-document execution card, evidence retrieval, scaffolding,
 provenance stamping, status transitions, mechanical linting, the independent
-audit, and continuing an incomplete run (intake goal or plain language — there
-is no `--resume` flag).
+audit, and continuing an incomplete run (intake goal or plain language).
 
 For each routed document, load `model_depth` from
 `query_catalog.{py,js} --route` (see
@@ -20,24 +19,26 @@ documentation run: always run `migrate_metadata.{py,js}` first (schema +
 provenance sidecars; see
 [`validation.md`](validation.md) "Manifest and provenance" — idempotent, a
 clean no-op when current), load the
-version-3.5
+current-version
 manifest, and continue the first non-complete, non-skipped document in write
 order. Then follow **Write one document** below for that document. May combine
 with `--auto-accept`.
 
-## 4. Write one document
+## Write one document
 
 ### Parallel fan-out of independent documents
 
 When several pending documents are independent — no child-before-ancestor
-ordering (§6) and no shared target file with a sibling worker — the
+ordering (see Bottom-up README closeout) and no shared target file with a
+sibling worker — the
 orchestrator may spawn sub-agents to write them in parallel. Spawn only when
 it genuinely helps (large batches, many small independent documents);
 otherwise keep the serial `write_order` loop. Contract
 ([`../references/parallel-execution.md`](../references/parallel-execution.md)):
 
 - Before fan-out, the orchestrator scaffolds any shared ancestor indexes
-  serially (indexes may exist before their children, §6), sets each document
+  serially (indexes may exist before their children — see Bottom-up README
+  closeout), sets each document
   `in_progress` serially, and ensures `manifest["graph"]` is locked — self-healing
   with `set-graph --repo <repo>` first if it is somehow still absent. A worker
   never calls `precheck_graph` or `set-graph` itself and never selects or
@@ -62,8 +63,8 @@ After all workers return, the orchestrator merges (including serially
 merge-editing each worker's provenance payload into its folder sidecar when
 `project.provenance_storage` is `json`), applies the status
 transitions (`in_progress` → `generated`) serially per returned artifact, then
-proceeds to the independent audit (§5), which may also run concurrently with
-serial recording.
+proceeds to the independent audit (see Independent audit), which may also run
+concurrently with serial recording.
 
 For the next document in `write_order` (serial mode):
 
@@ -76,8 +77,8 @@ For the next document in `write_order` (serial mode):
    ```sh
     python3 runtime/cli/python/query_catalog.py --route <id> --audience <audience>
     node runtime/cli/js/query_catalog.js --route <id> --audience <audience>
-   # bun  runtime/cli/js/query_catalog.js --route <id>
-   # deno run -A runtime/cli/js/query_catalog.js --route <id>
+   # bun  runtime/cli/js/query_catalog.js --route <id> --audience <audience>
+   # deno run -A runtime/cli/js/query_catalog.js --route <id> --audience <audience>
    ```
 
     Apply the returned `primary_audience` and `presentation`, read its content
@@ -164,7 +165,7 @@ For the next document in `write_order` (serial mode):
    sources and leave FRESH sections' provenance rows unchanged.
 
    In `json` storage mode the folder sidecar is a **shared file** — parallel
-   workers never write it (see §Parallel fan-out): each worker returns its
+   workers never write it (see Parallel fan-out): each worker returns its
    stamped provenance payload in its result contract, and the orchestrator
    merge-edits the sidecar entries serially per returned artifact, together
    with the status transitions. Serial writers may merge-edit the sidecar
@@ -203,7 +204,7 @@ planned → in_progress → generated → complete
 `skipped` is explicit. `complete` is rejected unless the manifest contains a
 passing `cold-pass` audit record.
 
-## 5. Independent audit
+## Independent audit
 
 After writing, start a separate cold, artifact-only pass with only the artifact,
 its catalog contract, target depth, relevant quality checks, and cited sources;
@@ -217,7 +218,7 @@ Independent artifact-only audits may run concurrently, but their manifest
 results are recorded serially by the orchestrator as required by
 [`../references/parallel-execution.md`](../references/parallel-execution.md).
 
-## 6. Bottom-up README closeout
+## Bottom-up README closeout
 
 Section READMEs are the top-down entry points of the tree, so they are
 finalized **after** their child documents — never before. Ancestor indexes may

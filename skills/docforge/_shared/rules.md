@@ -145,4 +145,4 @@ included `--plan-only` or `--no-dashboard`, or the manifest's
 `project.scale.layout` is `compact` and the offered dashboard was declined —
 the dashboard has been started
 and its URL reported in the final response
-([`workflows/validation.md`](workflows/validation.md) §8).
+([`workflows/validation.md`](workflows/validation.md) "Dashboard auto-serve").

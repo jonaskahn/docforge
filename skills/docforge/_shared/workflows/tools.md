@@ -105,18 +105,12 @@ from the absolute cartridge root with `query_catalog --validate`,
 - `precheck_graph.{py,js}`: `--need code|flow`.
 - `check_staleness.{py,js}`: `--document <id|path>`, `--section`, JSON output,
   and provenance sync.
-- `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade;
-  upgrades manifest 3.6 / 3.5 / 3.4 / 3.3 (or 3.2 / 3.1 / 3.0 / provenance 1.0) to 3.7 / 2.1, moving
-  a pre-migration document's inline frontmatter into its `.docforge/provenance/`
-  sidecar,
-  seeding each document's catalog-owned `description` from the catalog
-  `summary`, the project's `unmanaged_docs` list, and the project's `scale`
-  record (detected when absent; measurement signals refreshed on upgrade), and re-registers
-  any legacy pre-3.0 manifest (1.1, 2.0, or another shape) as 3.7 (written
-  documents adopted as `generated` with provenance 2.1, bodies preserved,
-  plan entries kept);
-  incomplete or unconvertible written documents are reported as `FAILED` and
-  demoted to `in_progress` for agent regeneration.
+- `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata upgrade
+  to manifest 3.9 / provenance 2.1 — sidecar moves, catalog-owned
+  `description` seeding, `unmanaged_docs` and `scale` record defaults, and
+  legacy pre-3.0 re-registration. Mechanics:
+  [`validation.md`](validation.md) "Manifest and provenance" and
+  [`../runtime/manifest/README.md`](../runtime/manifest/README.md).
 - `flow_index.{py,js}`: harvest, revise (label/candidate dedup, compact
   communities summary, placeholder stubs, main NOTICE), and render the flow
   matrix; GitNexus input uses deterministic MCP-export JSON.

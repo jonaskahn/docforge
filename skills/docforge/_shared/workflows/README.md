@@ -30,7 +30,8 @@ Canonical workflow responsibility is owned by [`../ownership.md`](../ownership.m
   [tools.md](tools.md).
 
 `/docforge` and `/docforge-revise` share flags: see
-[`../flags.md`](../flags.md) (`--plan-only`, `--auto-accept`).
+[`../flags.md`](../flags.md) (`--plan-only`, `--auto-accept`,
+`--no-dashboard`).
 There is no `--resume` or `--status` skill flag — see [`../flags.md`](../flags.md).
 
 ## Boundaries

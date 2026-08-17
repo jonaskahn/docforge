@@ -79,6 +79,7 @@ class SkillContentTests(unittest.TestCase):
         for question in (
             "Goal or action",
             "Documentation layout",
+            "Target readers",
             "Documentation tier",
             "Repository profiles",
             "Output audience",
@@ -107,8 +108,9 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Business analysts (BA)", intake)
         self.assertIn("Product owners (PO)", intake)
         self.assertIn("Coding agents", intake)
-        self.assertIn("all seven", intake)
-        self.assertIn("never drop BA/PO/agents", intake)
+        self.assertIn("all six", intake)
+        self.assertIn("never drop BA/PO from the", intake)
+        self.assertIn("never add Coding agents to it", intake)
         self.assertIn("`/docforge-revise flow`", intake)
         self.assertIn("Auto-accept (permissionless)", intake)
         self.assertIn("mode-only follow-up", intake)
@@ -328,29 +330,47 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("`requires` gates evidence, not selection.", prose)
         self.assertIn("## Permanent isolation", profile)
 
-    def test_intake_asks_documentation_areas_in_turn_one(self) -> None:
-        """Areas decide which branches exist at all and change what Tier and
-        Audience mean, so they belong beside Layout in Turn 1 -- and revise's
-        `<area>` is the same control, asked in the same turn."""
+    def test_intake_asks_target_readers_in_turn_one(self) -> None:
+        """The reader pick decides whether the agent-context group exists at
+        all, so it belongs beside Layout in Turn 1 — and the Turn-2 audience
+        control never re-asks it. The old twelve-group areas multi-select must
+        not survive."""
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
-        self.assertIn("**Documentation areas.**", intake)
-        turn_two = intake.index("### Turn 2 — Scope")
-        self.assertLess(intake.index("**Documentation areas.**"), turn_two)
-        # Every consequence must be stated, never applied silently.
-        self.assertIn("Root files are opt-in under a partial scope", intake)
-        self.assertIn("pre-checks the audiences that unlock it", intake)
-        self.assertIn("Never add an audience silently", intake)
-        self.assertIn("Tier is reported as a fact when it is not a control", intake)
-        self.assertIn("Never reach the confirmation summary with an empty projection", intake)
         prose = compact_whitespace(intake)
+        self.assertIn("**Target readers.**", intake)
+        turn_two = intake.index("### Turn 2 — Scope")
+        self.assertLess(intake.index("**Target readers.**"), turn_two)
+        self.assertNotIn("**Documentation areas.**", intake)
+        self.assertNotIn("Pick areas", intake)
+        # The three reader picks and their consequences.
+        self.assertIn("**Both** (recommended)", intake)
+        self.assertIn("**AI coding agents**", intake)
+        self.assertIn("**Human readers**", intake)
+        # Coding agents is decided here and never re-offered in Turn 2; the
+        # audience control states the pick as a baseline fact.
+        self.assertIn("lists the six reader audiences only and reports the pick", prose)
+        self.assertIn("Coding agents: included (from your reader choice)", intake)
+        self.assertIn("Coding agents: not generated", intake)
+        # The pick maps to init flags exactly — the single canonical mapping
+        # lives in planning.md (the init owner), never restated in intake.
+        planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
+        self.assertIn("**Target readers → init flags**", planning)
+        self.assertIn("`--group agent-context --audience coding-agents`", planning)
+        self.assertIn('project.groups: ["agent-context"]', planning)
+        self.assertIn("Never pass `--group agent-context`", planning)
+        # Tier becomes a fact when the agent-only scope makes it a no-op.
+        self.assertIn("Tier is reported as a fact when the pick is `AI coding agents`.", prose)
         self.assertIn(
-            "No human-facing documentation is written. Every agent-context output is self-contained "
-            "and contains zero documentation references, regardless of whether human documentation "
-            "exists now or is added later.",
+            "Every agent-context output is self-contained and contains zero documentation references, "
+            "regardless of whether human documentation exists now or is added later.",
             prose,
         )
-        self.assertNotIn("standalone consequence", prose.lower())
-        self.assertIn("query_catalog.{py,js} --groups", intake)
+        self.assertIn("Target readers: Both", prose)
+        # The removed multi-select's machinery must not survive: no root-file
+        # opt-in rule, no audience pre-check, no --groups rendering.
+        self.assertNotIn("Root files are opt-in", intake)
+        self.assertNotIn("pre-checks the audiences", intake)
+        self.assertNotIn("query_catalog.{py,js} --groups", intake)
 
     def test_revise_area_is_a_work_filter_not_a_scope_change(self) -> None:
         """Passing `--group` to reconcile for an `<area>` revise would nominate
@@ -665,11 +685,57 @@ class SkillContentTests(unittest.TestCase):
 
     def test_validation_workflow_auto_serves_dashboard_on_completion(self) -> None:
         validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
-        self.assertIn("## 8. Dashboard auto-serve", validation)
+        self.assertIn("## Dashboard auto-serve", validation)
         self.assertIn("Never under `--plan-only`", validation)
         self.assertIn("`--no-dashboard`", validation)
         self.assertIn("every completed\n`/docforge` (fresh start) and `/docforge-revise` run", validation)
         self.assertIn("Node.js 22+ / npm", validation)
+
+    def test_manifest_and_provenance_versions_agree_across_workflows(self) -> None:
+        """The migration target versions are derived from the schemas, not
+        restated per file — stale versions happened because every workflow
+        copied them. Any workflow that names a version must name the current
+        one, and the old cross-file step numbering must not return."""
+        manifest_schema = json.loads(
+            (SHARED_ROOT / ".metadata" / "manifest-schema.json").read_text(encoding="utf-8")
+        )
+        current = manifest_schema["properties"]["version"]["const"]
+        provenance_schema = (SHARED_ROOT / ".metadata" / "provenance-schema.json").read_text(
+            encoding="utf-8"
+        )
+        match = re.search(r'Docforge Provenance ([\d.]+)', provenance_schema)
+        self.assertIsNotNone(match)
+        provenance = match.group(1)
+
+        validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
+        tools = (SHARED_ROOT / "workflows" / "tools.md").read_text(encoding="utf-8")
+        writing = (SHARED_ROOT / "workflows" / "writing.md").read_text(encoding="utf-8")
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        dashboard = (SHARED_ROOT / "workflows" / "dashboard.md").read_text(encoding="utf-8")
+
+        self.assertIn(f"Its schema version is `{current}`", validation)
+        self.assertIn(f"to manifest {current} / provenance {provenance}", tools)
+        self.assertIn(f"to {current} / provenance {provenance}", revision)
+        self.assertIn(f"auto-migrated to {current}", dashboard)
+        self.assertIn(f"require a manifest {current} (or", dashboard)
+        # The stale forms each drift round produced must never return.
+        self.assertNotIn("version-3.5", writing)
+        self.assertNotIn("to 3.7 / 2.1", tools)
+        self.assertNotIn("as 3.8", revision)
+        self.assertNotIn("auto-migrated to 3.5", dashboard)
+        self.assertNotIn("schema 2.0", dashboard)
+        # No orphaned cross-file step numbering.
+        planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
+        self.assertNotIn("## 1. Precheck and inspect", planning)
+        self.assertNotIn("## 2. Select scope", planning)
+        self.assertNotIn("## 3. Initialize and preview", planning)
+        self.assertNotIn("## 4. Write one document", writing)
+        self.assertNotIn("## 5. Independent audit", writing)
+        self.assertNotIn("## 6. Bottom-up README closeout", writing)
+        self.assertNotIn("## 7. Whole-tree gate", validation)
+        self.assertNotIn("## 8. Dashboard auto-serve", validation)
+        self.assertNotIn("§7", revision)
+        self.assertNotIn("§8", revision)
 
     def test_completion_requires_dashboard_start_and_reported_url(self) -> None:
         """A run is complete only when the dashboard was started and its URL
@@ -680,7 +746,7 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("`--plan-only` or `--no-dashboard`", rules)
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
         self.assertIn("## Completion", revision)
-        self.assertIn("dashboard: <url>", revision)
+        self.assertIn("whole-tree gate and the dashboard auto-serve step exactly as a fresh-start", revision)
         for skill in (
             ROOT / "skills" / "docforge" / "SKILL.md",
             ROOT / "skills" / "docforge-revise" / "SKILL.md",
@@ -831,12 +897,11 @@ class SkillContentTests(unittest.TestCase):
     def test_root_readme_describes_bare_invocation(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("/docforge", readme)
-        self.assertIn("asks its scope questions in two turns", readme)
-        self.assertIn("goal and the documentation layout", readme)
-        self.assertIn("summarizes the complete scope and", readme)
-        self.assertIn("asks you to confirm, edit, or cancel", readme)
-        self.assertIn("confirm, edit, or cancel", readme)
-        self.assertIn("repository evidence", readme)
+        self.assertIn("Intake asks scope in two short turns", readme)
+        self.assertIn("target readers", readme)
+        self.assertIn("Human, AI coding agents, or Both", readme)
+        self.assertIn("waits for your confirm before", readme)
+        self.assertIn("grounded in the actual source", readme)
 
     def test_claude_plugin_is_whole_repo(self) -> None:
         """Marketplace installs this GitHub repo as the plugin; no mirrored package."""

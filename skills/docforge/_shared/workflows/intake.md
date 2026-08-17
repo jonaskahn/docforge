@@ -41,10 +41,10 @@ decisions only in the bounded pack, and emit judgment JSON (`promote` / `keep`
 judgment, fail open to deterministic ranks. Detection and the gate propose
 profiles; they never confirm them on the user's behalf.
 
-When exactly one readable code-graph provider is ready, use it as the proposed
-default. Do not ask the user to choose among absent providers. This read-only
-provider selection is not permission to build, refresh, install, or configure
-anything.
+When exactly one readable code-graph provider is ready, it is the proposed
+default — provider handling follows the provider sufficiency rule below, and
+this read-only selection is not permission to build, refresh, install, or
+configure anything.
 
 When the repository root contains any nested `.git` directory (a candidate
 multi-repo workspace), also run the read-only `discover_child_repos.{py,js}`
@@ -114,7 +114,7 @@ Intake asks its scope questions in exactly two turns.
 
 | Turn | Asks | Why it is separate |
 |---|---|---|
-| 1 — Direction | Goal or action (Scope, on revise), Documentation layout, and Documentation areas | Layout fixes the shape of the tree that every later answer describes; areas fix which branches exist at all |
+| 1 — Direction | Goal or action (Scope, on revise), Documentation layout, and Target readers (fresh start only) | Layout fixes the shape of the tree that every later answer describes; the reader pick decides whether the agent-context group is generated at all |
 | 2 — Scope | Tier, repository profiles, output audience, graph source, execution mode | These describe the content *inside* the tree Turn 1 fixed |
 
 The orchestrator applies these rules when it builds a pack:
@@ -163,7 +163,9 @@ Instead, controls represent only requested changes:
 - **Profiles and output audiences:** show `Currently selected: <values>` and
   offer `Add <value>` for unselected values and `Remove <value>` for selected
   values. Freshly detected profiles and suitable missing audiences are
-  recommended `Add` actions with their evidence or unlock reason.
+  recommended `Add` actions with their evidence or unlock reason. Coding
+  agents is the exception: it appears only as a `Remove` action (or through
+  the `/docforge-revise agents` repair), never as an `Add` in this control.
 
 An empty set of changes preserves the displayed manifest values, but it is not
 silent acceptance: include those unchanged values in the final confirmation and
@@ -178,8 +180,8 @@ wait for the user's explicit confirmation before reconciling the manifest.
    manifest, offer creating a new documentation plan or planning without
    writing. When a manifest exists,
    also offer resuming it (plain language / intake goal →
-   [`writing.md`](writing.md); no `--resume` flag), checking status or
-   staleness (read-only; no `--status` flag — use plain language or
+   [`writing.md`](writing.md)), checking status or
+   staleness (read-only — use plain language or
    `manage_manifest.{py,js} status`, see
    [`../runtime/manifest/README.md`](../runtime/manifest/README.md)), updating
    or refreshing a named document,
@@ -199,7 +201,7 @@ wait for the user's explicit confirmation before reconciling the manifest.
    | Manifest exists and detection drifted from `project.scale` | **Asked** as a `Change to <detected layout>` control (see Revise selection changes) |
    | Manifest exists, no drift, goal is Resume / Status / single-document update | **Not asked.** Stated as a baseline fact in the confirmation summary |
    | Goal is Portfolio, or the invocation names the `portfolio` tier | **Not asked.** `standard` is stated as a fixed consequence of the tier |
-   | `/docforge-revise all`, or any invocation that names a tier | **Asked** (mirrors the tier-naming exception below) |
+   | `/docforge-revise all`, or any invocation that names a tier | **Not asked.** The tier-naming exception affects only the Tier control in Turn 2; layout still follows the drift / requested-change rule above |
 
    Present a native single-select with both layouts, each carrying the
    detected evidence from the discovery brief's scale line:
@@ -211,12 +213,14 @@ wait for the user's explicit confirmation before reconciling the manifest.
    - **Standard** — one file per subject; the tree grows with every confirmed
      profile and every discovered flow. The only layout Portfolio supports.
 
-   **Compact excludes Portfolio.** When nested repos were detected — that is,
-   when the discovery brief's Portfolio-readiness bullet is present — say so in
-   this question: picking Compact forecloses Portfolio in Turn 2. See
+   **Compact excludes Portfolio.** Compact cannot *hold* Portfolio — see
    [`../references/docs-tree.md`](../references/docs-tree.md) "Compact layout"
    for the rule and
    [`../references/portfolio.md`](../references/portfolio.md) "Layout" for why.
+   When nested repos were detected — that is, when the discovery brief's
+   Portfolio-readiness bullet is present — say so in this question: choosing
+   Portfolio in Turn 2 switches the layout to standard, and the confirmation
+   summary carries that change (see the tier question below).
 
    Mark the detected layout `(suggested — <source_files> source files,
    <declared_dependencies> declared dependencies, <flow_candidates> flow
@@ -230,62 +234,57 @@ wait for the user's explicit confirmation before reconciling the manifest.
    to use layout, discard the layout answer and report the manifest value as a
    baseline fact — never silently apply the discarded answer.
 
-3. **Documentation areas.** Which parts of the documentation tree this run
-   produces. Ask it in Turn 1, not Turn 2: areas decide which branches exist at
-   all, and they change what Tier and Audience mean. Revise asks the same
-   control in the same turn as `<area>` scope.
-
-   - **Everything** (recommended) — the full tree for the chosen tier and
-     audiences.
-   - **Agent context only** — `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`,
-     `.claude/settings.json`, and seven topic views under `docs/agents/` (or one
-     seven-section `docs/agents.md` in compact). No human-facing documentation
-     is written. Every agent-context output is self-contained and contains zero
-     documentation references, regardless of whether human documentation exists
-     now or is added later.
-   - **Pick areas…** — a multi-select of the twelve catalog groups.
-
-   Render the twelve options from `query_catalog.{py,js} --groups`, using each
-   group's own `summary` as its consequence line; never re-author the labels.
-   Apply these rules:
-
-   - **Root files are opt-in under a partial scope.** `README.md`,
-     `CHANGELOG.md`, and `docs/README.md` are an explicit choice, off by
-     default, and the confirmation summary says so: `Root files: not written by
-     this run.` Overwriting a repository's own `README.md` is the most
-     surprising thing a scoped run can do.
-   - **Selecting an area pre-checks the audiences that unlock it**, from the
-     `audiences` field of `--groups`, and the pack states the consequence:
-     *"Coding agents added — the Agent context area is unavailable without
-     it."* Never add an audience silently.
-   - **Tier is reported as a fact when it is not a control.** Run
-     `manage_manifest.{py,js} preview` with the confirmed areas at `spine` and
-     at `diligence`; when the counts are equal, report the tier instead of
-     asking (`Tier: spine — every agent-context document is Spine-tier; a
-     higher tier adds nothing inside this scope`). It is still recorded,
-     because a later run may widen the areas.
-   - **Never reach the confirmation summary with an empty projection.** When
-     areas and audiences together select nothing, `preview` reports `0`; ask
-     the user to add the unlocking audience or widen the areas. `init` fails
-     independently rather than writing an empty manifest.
-
-   The confirmation summary gains one line: `Areas: agent-context only (1 of
-   12)`, or `Areas: all`.
-
-   The confirmed pick is carried into `init` ([`planning.md`](planning.md)):
+   The confirmed layout pick is carried into `init` ([`planning.md`](planning.md)):
    no flag when it matches detection (`decided_by: "detected"`);
    `--layout <compact|standard>` (with `--scale-class` when the user also
    changed the class) when it differs (`decided_by: "user"`).
+
+3. **Target readers.** Fresh starts only — decide once, in Turn 1, because the
+   reader pick determines whether the agent-context group exists at all, and
+   Turn 2's audience control never re-asks it. Present a native single-select:
+
+   - **Both** (recommended) — human-facing documentation plus the coding-agent
+     context: `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`,
+     `.claude/settings.json`, and seven topic views under `docs/agents/` (or
+     one seven-section `docs/agents.md` in compact).
+   - **AI coding agents** — the coding-agent context only. No human-facing
+     documentation is written. Every agent-context output is self-contained
+     and contains zero documentation references, regardless of whether human
+     documentation exists now or is added later.
+   - **Human readers** — human-facing documentation only; no coding-agent
+     context is generated.
+
+  The pick is stated, never asked again: Turn 2's Output audience control
+  lists the six reader audiences only and reports the pick as a baseline
+  fact — `Coding agents: included (from your reader choice)` or
+  `Coding agents: not generated` (see Output audience below).
+   - **Tier is reported as a fact when the pick is `AI coding agents`.** Run
+     `manage_manifest.{py,js} preview` for the agent scope at `spine` and at
+     `diligence`; when the counts are equal, report the tier instead of asking
+     (`Tier: spine — every agent-context document is Spine-tier; a higher tier
+     adds nothing inside this scope`). It is still recorded, because a later
+     widened run may use it. Turn 2 then asks only graph source and execution
+     mode; tier, profiles, and audiences are stated as baseline facts, never
+     as controls, because nothing in them changes the agent-only projection.
+  - **The pick maps to init flags exactly** — the mapping in
+    [`planning.md`](planning.md) "Target readers → init flags" is the only
+    one; intake never invents another flag combination for agent-context
+    documents.
+
+   The confirmation summary gains one line: `Target readers: Both — AI coding
+   agent context included`, `Target readers: AI coding agents — agent-context
+   scope only`, or `Target readers: Human readers — no agent context
+   generated`.
 
 ### Turn 2 — Scope
 
 Open Turn 2 only after Turn 1 is answered. Restate the confirmed goal and
 layout as baseline facts at the top of the pack, never as controls.
 
-3. **Documentation tier.** For a new or plan-only scope, offer Spine
+4. **Documentation tier.** For a new or plan-only scope, always offer Spine
    (essential repository documentation) and Diligence (Spine plus flows,
-   risks, security, operations, dependencies, and ADRs) always, or a grounded
-   recommendation that Docforge will explain after inspection. Offer
+   risks, security, operations, dependencies, and ADRs), marking one as the
+   grounded recommendation that Docforge will explain after inspection. Offer
    Portfolio (Diligence plus `docs-portfolio/` diligence views) only when
    nested repos were detected during discovery: if every included member is
    already at Diligence or higher, offer it normally and say why it
@@ -300,7 +299,7 @@ layout as baseline facts at the top of the pack, never as controls.
    your layout from compact to standard)`. Portfolio is standard-only; compact
    covers Spine and Diligence. If the user selects it anyway, the confirmation
    summary carries the layout change and requires explicit confirmation.
-4. **Repository profiles.** Require one multi-select per applicable dimension.
+5. **Repository profiles.** Require one multi-select per applicable dimension.
    Each dimension is a separate control with its own user-facing label and its
    own question text; internal catalog ids and CLI flags are unchanged:
 
@@ -327,26 +326,38 @@ layout as baseline facts at the top of the pack, never as controls.
    on weak cues only keeps the "these are weak candidates" framing. Detection
    and the gate never finalize profiles; do not
    silent-confirm them on the user's behalf.
-5. **Output audience.** Always present a native multi-select that lists
-   **every** catalog audience as a visible option — never drop BA/PO/agents
-   from the control:
+6. **Output audience.** Always present a native multi-select that lists the
+   six reader audiences as visible options — never drop BA/PO from the
+   control, and never add Coding agents to it (the Turn-1 reader pick decides
+   coding agents; see Target readers):
    - Engineers
    - Beginners
    - Business analysts (BA)
    - Product owners (PO)
-   - Coding agents
    - Operators
    - Security reviewers
-   BA, PO, coding agents, operators, and security reviewers add their
-   catalog-owned views. A yes/no “add more?” with no option list is not
-   enough; the unchecked audiences must appear in the same multi-select.
-   - **New or plan-only** (audience unresolved): required. Pre-select
-     Engineers + beginners as the suggested starting point (matching the
-     manifest CLI default when no audience flag is supplied), but never apply
-     that default silently — the user must confirm or edit. Leave BA, PO,
-     Coding agents, Operators, and Security reviewers unchecked but visible.
-     If the reply omits audience, ask one audience-only follow-up that again
-     lists all seven options.
+   BA, PO, operators, and security reviewers add their catalog-owned views. A
+   yes/no “add more?” with no option list is not enough; the unchecked
+   audiences must appear in the same multi-select.
+   - **Coding agents baseline.** State the Turn-1 reader outcome in this pack,
+     never as a control: `Coding agents: included (from your reader choice)`
+     for `Both` / `AI coding agents`, or `Coding agents: not generated` for
+     `Human readers`. On a revise whose manifest already stores the
+     coding-agents audience, it is stated as a baseline fact and may be
+     dropped only through the explicit `Remove` action below — dropping it
+     removes the entire agent-context group, so the action carries the
+     consequence `removes AGENTS.md, CLAUDE.md, and the agent views`. The
+     repair for a missing agent context is `/docforge-revise agents`
+     ([`revision.md`](revision.md)), never an `Add` action here.
+   - **New or plan-only** (audience unresolved): required — unless the reader
+     pick is `AI coding agents`, in which case this question is skipped and
+     tier, profiles, and audiences are stated as baseline facts (see Target
+     readers). Pre-select Engineers + beginners as the suggested starting
+     point (matching the manifest CLI default when no audience flag is
+     supplied), but never apply that default silently — the user must confirm
+     or edit. Leave BA, PO, Operators, and Security reviewers unchecked but
+     visible. If the reply omits audience, ask one audience-only follow-up
+     that again lists all six options.
    - **Any revise that rediscovers docs** (`/docforge-revise all`,
      `/docforge-revise <area>`, `/docforge-revise flow`, or natural-language
      revise that detects missing / updated / new documents): after analysis,
@@ -356,28 +367,29 @@ layout as baseline facts at the top of the pack, never as controls.
       Show the current manifest audiences separately as the baseline. Mark
       suitable missing and discovery-brief evidenced audiences as recommended
       `Add` actions with a one-line reason (which new/missing doc types they
-      unlock, e.g. BA → `ba_*`, PO → `po_*`, Coding agents → `agents_*`). Show
-      **all seven** actions: `Remove` for current audiences and `Add` for every
-      other audience. If the manifest has no audiences, use the new/plan-only
-      path above. Never keep defaults silently; preserve an unchanged audience
-      set only after the full delta control and explicit confirmation.
+      unlock, e.g. BA → `ba_*`, PO → `po_*`). Show all six audiences:
+      `Remove` for current audiences and `Add` for every other audience.
+      If the manifest has no audiences, use the new/plan-only path above.
+      Never keep defaults silently; preserve an unchanged audience set only
+      after the full delta control and explicit confirmation.
    - **Resume or Status**: omit audience when the manifest already resolves
      it; otherwise use the new/plan-only path. Single-document update/refresh
      does not re-prompt audience unless the named document's catalog
-   audiences are missing from the manifest — then offer only those suitable
-   missing audiences plus the current set (still list all seven).
-6. **Graph source, only when unresolved.** With several ready providers, offer
-   only those providers. With no ready provider, explain setup paths and their
-   approval requirements. With exactly one ready provider, record it as the
-   proposed source and skip this question; include it in the final confirmation
-   so the user can still ask to compare or change it. When the user picks among
-   several ready providers here, carry that id into `planning.md`'s `init` call
-   as `--graph-provider`, so it is locked into the manifest for the whole
-   session — not narrated only (see
+     audiences are missing from the manifest — then offer only those suitable
+     missing audiences plus the current set (still list all six).
+7. **Graph source, only when unresolved.** Follow the provider sufficiency
+   rule (below). With several ready providers, offer only those providers;
+   with no ready provider, explain setup paths and their approval
+   requirements; with exactly one ready provider, record it as the proposed
+   source and skip this question — include it in the final confirmation so
+   the user can still ask to compare or change it. When the user picks among
+   several ready providers here, carry that id into `planning.md`'s `init`
+   call as `--graph-provider`, so it is locked into the manifest for the
+   whole session — not narrated only (see
    [`../references/graph/graph-sources.md`](../references/graph/graph-sources.md)
-   "Session persistence"). With exactly one ready provider, omit the flag; `init`
-   locks it automatically.
-7. **Execution mode.** Required whenever the action will plan or write (new
+   "Session persistence"). With exactly one ready provider, omit the flag;
+   `init` locks it automatically.
+8. **Execution mode.** Required whenever the action will plan or write (new
    plan, plan-only, or resume writing). Only Status, staleness-only, or
    revise-flow inventory paths may omit it when no further tree pauses will
    occur. Present a native single-select with these exact labels:
@@ -451,13 +463,19 @@ It is read-only — it writes no manifest, no directories, nothing — so it sit
 inside intake's no-side-effect boundary. Report its result as a **Projected
 tree size** line:
 
-`Projected tree size: 26 documents (compact) / 50 (standard)`
+`Projected tree size: 15 documents (compact) / 34 (standard)`
 
 Name any single selection responsible for **25% or more** of the projected
 documents, using `preview`'s ablation count — how many documents disappear if
-that value is dropped:
+that value is dropped. When the confirmed reader pick is `Both`, always
+include the coding-agents ablation line, computed against the `Human readers`
+projection, even below 25% — the cost of the agent context must be visible on
+the summary itself:
 
-`Coding agents adds 5 of the 26 documents (19%).`
+`Coding agents adds 5 of the 34 documents (15%).`
+
+When the pick is `AI coding agents`, the whole projection is the agent
+context — say so once instead of an ablation line.
 
 This is a report, not a gate. It never blocks confirmation, never drops a
 selection on the user's behalf, and never argues the user out of a choice. It
@@ -480,12 +498,13 @@ confirming, not discover it in the tree:
 `docs/architecture.md reached the 14-section cap; the overflow keeps its own standard paths.`
 
 After resolving the answers, display one confirmation summary containing the
-action, the confirmed layout, tier, every selected profile dimension, and
-every selected audience, selected graph provider and its code/flow
-capabilities, and execution mode (include “permissionless” in the label when
-Auto-accept was selected). The summary restates the confirmed layout with its
-detected evidence: `Layout: compact (confirmed — 34 source files, 28 declared
-dependencies, 3 flow candidates, 2 confirmed profiles)`.
+action, the confirmed layout, the confirmed target readers, tier, every
+selected profile dimension, and every selected audience, selected graph
+provider and its code/flow capabilities, and execution mode (include
+“permissionless” in the label when Auto-accept was selected). The summary
+restates the confirmed layout with its detected evidence: `Layout: compact
+(confirmed — 34 source files, 28 declared dependencies, 3 flow candidates,
+2 confirmed profiles)`.
 
 When Turn 1 confirmed compact and Turn 2 selected Portfolio, the summary
 states the override instead: `Layout: standard (required by Portfolio tier —
@@ -559,18 +578,13 @@ Shared flag definitions:
   routine conversational pauses; see [`../flags.md`](../flags.md) for the
   explicit list of excluded side effects.
 
-Structural revise uses `/docforge-revise` (not `/docforge --revise`). There is
-no `--resume` or `--status` skill flag.
+Structural revise uses `/docforge-revise` (not `/docforge --revise`).
 
 An explicit single-document **update** or **refresh** follows the Update one
-document path in [`revision.md`](revision.md): blob-first, no rediscovery.
-**Revise** (`/docforge-revise` all / area / flow) is broader: obsolete docs via
-`git_blob`, new docs from detect/catalog, missing files from new instructions,
-big-picture and connection updates, and — for revise flow — the full harvest →
-organize → derive → write pipeline. `FRESH` blobs do not skip work when new
-flows or connections change a document's role. A brand-new single-document
-write still requires graph precheck and the full [`writing.md`](writing.md)
-path.
+document path in [`revision.md`](revision.md) (blob-first, no rediscovery);
+**Revise** (`/docforge-revise` all / area / flow) follows the full revise
+meaning there. A brand-new single-document write still requires graph
+precheck and the full [`writing.md`](writing.md) path.
 
 Next: once scope is confirmed, proceed to
 [`planning.md`](planning.md).

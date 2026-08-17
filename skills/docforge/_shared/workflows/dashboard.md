@@ -31,9 +31,9 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan`, `start`, `export`, and `status` all require a manifest 3.7 (or 3.6 / 3.5 /
-3.4 / 3.3 / 3.2 / 3.1, which `migrate_metadata.{py,js}` — see
-[`../runtime/manifest/README.md`](../runtime/manifest/README.md) — upgrades
+`scan`, `start`, `export`, and `status` all require a manifest 3.9 (or 3.8 / 3.7 /
+3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1, which `migrate_metadata.{py,js}` — see
+[`validation.md`](validation.md) "Manifest and provenance" — upgrades
 in place). What happens on an **older legacy manifest version** (1.1
 `project_context` / `document_groups`, 2.0 flat `documents` with overlays, or
 any other pre-3.0 shape) depends on whether the command writes:
@@ -50,7 +50,7 @@ any other pre-3.0 shape) depends on whether the command writes:
   migrated manifest:
 
   ```
-  manifest: legacy manifest auto-migrated to 3.5 (4 migrate, 1 skip)
+  manifest: legacy manifest auto-migrated to 3.9 (4 migrate, 1 skip)
   ```
 
   `--plan-only` runs the same `migrate_metadata.{py,js} --dry-run` preview
@@ -104,7 +104,7 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 -> INSTALL (if missing) -> EXPORT               (export)
 ```
 
-- **Preflight:** repository, manifest 3.7 (or 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1), and a readable `docs/` tree.
+- **Preflight:** repository, manifest 3.9 (or 3.8 / 3.7 / 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1), and a readable `docs/` tree.
   When the manifest is a legacy pre-3.0 version (or any other unsupported
   version), apply the [Legacy manifest gate](#legacy-manifest-gate)
   before continuing. The
@@ -333,9 +333,13 @@ file ending in `.md` / `.mdx` that live under `docs/` **or at the repository
 root** (a path with no `/`). Root-level documents (for example `README.md`,
 `CHANGELOG.md`, `CONTRIBUTING.md`, `AGENTS.md`, `SECURITY.md`) become pages
 under `/docs/root/<slug>` so `docs/` pages can link to them and resolve. Root
-files are only included when they carry docforge provenance (schema 2.0) — in
-file frontmatter for section-provenance documents, or in the manifest for
-`provenance_mode: manifest` documents such as `AGENTS.md`. `CLAUDE.local.md`
+files are only included when they carry docforge provenance (2.1): in the
+folder sidecar — or inline frontmatter in `markdown` storage mode — for
+section-provenance documents, and in the manifest for
+`provenance_mode: manifest` documents such as `AGENTS.md`, sourced per
+`project.provenance_storage` (see
+[`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)
+"Provenance storage"). `CLAUDE.local.md`
 is **always excluded**: it is gitignored, machine-local preferences, and must
 never become a shared page even when it carries provenance.
 Machine JSON, planned/skipped docs, subdirectory-rooted docs outside `docs/`,
