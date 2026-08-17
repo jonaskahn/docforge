@@ -12,8 +12,7 @@ const { detect: detectProfiles, inventory: inventoryFiles } = require("../../cat
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
-const { SOURCES: GRAPH_SOURCES, resolveAllReady, resolveFirstReady } = require("../../graph/js/graph_source_registry.js");
-const { reportFlowGraph } = require("../../graph/js/precheck_graph.js");
+const { SOURCES: GRAPH_SOURCES, flowCapabilityOf, resolveAllReady, resolveFirstReady } = require("../../graph/js/graph_source_registry.js");
 
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const FLOW_INDEX_REL = path.join(".docforge", "flow-index.json");
@@ -417,11 +416,15 @@ function resolveGraphLock(repo, provider) {
     if (!readyNames.has(provider)) {
       throw new Error(`graph provider ${provider} is not ready in this repo`);
     }
-    return { provider, flow: reportFlowGraph(repo), locked_at: nowIso() };
+    // flowCapabilityOf, not precheck's reportFlowGraph: the stored value must
+    // describe the *chosen* provider. The repo-wide question answered "native" for
+    // a CodeGraph lock whenever an unrelated .ua/domain-graph.json existed, which
+    // is the "Native flow source: CodeGraph" claim graph-sources.md forbids.
+    return { provider, flow: flowCapabilityOf(repo, provider), locked_at: nowIso() };
   }
   const [source] = resolveFirstReady(repo, "code_graph");
   if (!source) return null;
-  return { provider: source.name, flow: reportFlowGraph(repo), locked_at: nowIso() };
+  return { provider: source.name, flow: flowCapabilityOf(repo, source.name), locked_at: nowIso() };
 }
 // Build the `project.scale` record. Omitted flags adopt detection; any
 // explicit flag records `decided_by: "user"` with `detected_class` preserved

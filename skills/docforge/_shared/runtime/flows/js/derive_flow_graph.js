@@ -40,7 +40,11 @@ const {
   validateFlowGraphShape,
   writeFlowGraph,
 } = require("../../graph/js/graph_storage.js");
-const { resolveFirstReady } = require("../../graph/js/graph_source_registry.js");
+const {
+  readGraphLock,
+  resolveAllReady,
+  resolveLocked,
+} = require("../../graph/js/graph_source_registry.js");
 
 const TMP_REL = ".docforge/tmp";
 const CONTEXT_NAME = "flow-context.json";
@@ -260,12 +264,62 @@ function nativeInterfaceContext(src, graphPath, repo, readMode) {
   };
 }
 
-// Resolve the code graph and build the analyzer context, dispatched on the
-// source's read_mode. Only a JSON source is ever text-loaded here — a db/mcp
-// source is routed to its native interface, so a binary graph never reaches a
-// JSON reader (the crash fix).
+// How the provider was chosen, for the context file and the report. Sharing one
+// vocabulary between resolveLocked, the JSON, and stdout keeps them from drifting.
+const ORIGIN_LABELS = {
+  lock: "session lock",
+  priority: "registry priority, no lock recorded",
+};
+
+/** Record how the provider was chosen, right beside which one it was. A lock is
+ * only trustworthy if a run can be seen to have honored it. */
+function withOrigin(context, origin) {
+  context.sourceOrigin = origin;
+  return context;
+}
+
+/** A locked provider whose graph has left the disk. Hard-fail rather than quietly
+ * deriving from a provider the user declined: the provider decides the readMode
+ * and the entry-point seeds, so falling back would silently change the shape of
+ * the analysis mid-session, and every document already written carries the locked
+ * provider in its provenance. */
+function staleLockMessage(repo, provider) {
+  const lines = [
+    `graph provider '${provider}' is locked for this session in ` +
+      ".docforge/manifest.json, but its graph is not on disk (moved, deleted, " +
+      "or never built).",
+  ];
+  const ready = resolveAllReady(repo, "code_graph").map(([src]) => src.name);
+  if (ready.length) {
+    lines.push(`Ready now: ${ready.join(", ")}.`);
+    lines.push(
+      "Rebuild the locked graph, or relock deliberately: " +
+        `manage_manifest.py set-graph --repo <repo> --provider ${ready[0]} --force`
+    );
+  } else {
+    lines.push(
+      "No provider is ready — run precheck_graph.py --need code for how to " +
+        "build one, then relock with set-graph --force if you change provider."
+    );
+  }
+  return lines.join(" ");
+}
+
+/* Resolve the code graph and build the analyzer context, dispatched on the
+ * source's read_mode. Only a JSON source is ever text-loaded here — a db/mcp
+ * source is routed to its native interface, so a binary graph never reaches a
+ * JSON reader (the crash fix).
+ *
+ * The provider comes from the session lock, not registry priority: the user
+ * already answered which graph to use and `init` recorded it, so re-detecting
+ * here would analyze a provider they declined (references/graph/graph-sources.md
+ * "Session persistence"). */
 function buildContext(repo, maxFlows, hops) {
-  const [src, graphPath] = resolveFirstReady(repo, "code_graph");
+  const [src, graphPath, origin] = resolveLocked(repo, "code_graph");
+  if (origin === "lock-stale") {
+    const lock = readGraphLock(repo);
+    throw new Error(staleLockMessage(repo, lock ? String(lock.provider) : "unknown"));
+  }
   if (!graphPath) {
     throw new Error(
       "no code graph found — derivation needs one to work from. Run " +
@@ -279,9 +333,12 @@ function buildContext(repo, maxFlows, hops) {
     const doc = loadJson(graphPath);
     const seeds = entryFn ? entryFn(repo) : [];
     if (seeds.length) {
-      return entryPointContext(doc, seeds, src, graphPath, repo, maxFlows, hops);
+      return withOrigin(
+        entryPointContext(doc, seeds, src, graphPath, repo, maxFlows, hops),
+        origin
+      );
     }
-    return flatContext(doc, src, graphPath, repo);
+    return withOrigin(flatContext(doc, src, graphPath, repo), origin);
   }
 
   // db / mcp: binary graph — never loadJson it.
@@ -317,9 +374,9 @@ function buildContext(repo, maxFlows, hops) {
         "Seeds read offline; spread each via the source's reader or MCP, main " +
         "flows first (references/graph/flow-derivation.md).";
     }
-    return context;
+    return withOrigin(context, origin);
   }
-  return nativeInterfaceContext(src, graphPath, repo, readMode);
+  return withOrigin(nativeInterfaceContext(src, graphPath, repo, readMode), origin);
 }
 
 /** Ordered call chains per seed, when the source exposes a path reader.
@@ -341,23 +398,38 @@ function readerClusters(src, repo, seeds, hops) {
   }));
 }
 
+/** `<name> [<how it was chosen>]` — one helper so the three strategy branches and
+ * both runtimes cannot drift on the wording. */
+function sourceLabel(context) {
+  const label = ORIGIN_LABELS[context.sourceOrigin];
+  return label ? `${context.source} [${label}]` : String(context.source);
+}
+
 function reportPrepare(context) {
   const strategy = context.strategy;
   if (strategy === "entry-point-first") {
     console.log(
       `Strategy: entry-point-first — ${context.mainFlows} main flow(s) of ` +
         `${context.entryPointCount} entry points (${context.tail} in the tail), ` +
-        `source: ${context.source}`
+        `source: ${sourceLabel(context)}`
     );
   } else if (strategy === "flat-fallback") {
     console.log(
       `Strategy: flat-fallback (no entry-point signal) — ${context.nodeCount} ` +
-        `nodes, ${context.edgeCount} flow-signal edges, source: ${context.source}`
+        `nodes, ${context.edgeCount} flow-signal edges, source: ${sourceLabel(context)}`
     );
   } else {
     console.log(
       `Strategy: ${strategy} — read via the source's native interface, source: ` +
-        `${context.source} (no graph dumped)`
+        `${sourceLabel(context)} (no graph dumped)`
+    );
+  }
+  if (context.sourceOrigin === "priority") {
+    // The self-heal path graph-sources.md documents: a manifest written before
+    // the lock existed, or a run before init.
+    console.log(
+      'Note: no provider is locked in manifest["graph"]; this pick is registry ' +
+        "priority. Pin it with `manage_manifest.py set-graph --repo <repo>`."
     );
   }
 }
@@ -401,12 +473,14 @@ function runWrite(args) {
 
   let contextSrc = null;
   let contextPath = null;
+  let contextOrigin = null;
   const ctxFile = path.join(path.resolve(args.repo), TMP_REL, CONTEXT_NAME);
   if (fs.existsSync(ctxFile)) {
     try {
       const ctx = JSON.parse(fs.readFileSync(ctxFile, "utf-8"));
       contextSrc = ctx.source;
       contextPath = ctx.generatedFrom;
+      contextOrigin = ctx.sourceOrigin;
     } catch {
       /* ignore */
     }
@@ -419,6 +493,9 @@ function runWrite(args) {
     generatedAt: new Date().toISOString(),
     flows: analysis.flows,
   };
+  // Free provenance on a provisional artifact whose whole risk is "which provider
+  // did this actually come from".
+  if (contextOrigin) flowGraph.sourceOrigin = contextOrigin;
   if ("domains" in analysis) flowGraph.domains = analysis.domains;
 
   const error = validateFlowGraphShape(flowGraph);

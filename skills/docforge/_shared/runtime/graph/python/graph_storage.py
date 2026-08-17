@@ -24,6 +24,12 @@ from runtime.common.python._util import ensure_docforge_gitignore, ensure_gitign
 # used solely to list folder contents on a miss.
 KNOWN_GRAPH_DIRS = (".ua", ".understand-anything", ".gitnexus", ".codegraph", ".docforge/tmp")
 
+# Where Docforge's own provisional flow graph lands — the same path
+# write_flow_graph() writes with its default dest_rel. Defined here, next to the
+# writer, so precheck_graph and the registry's flow-capability check agree on one
+# spelling instead of each carrying a literal.
+DERIVED_FLOW_CANDIDATES = [".docforge/tmp/flow-graph.json"]
+
 
 def find_graph_file(repo: Path, candidates: list[str]) -> Path | None:
     """Search the repo root, then every ancestor up to the project root

@@ -40,7 +40,11 @@ python3 runtime/cli/python/flow_index.py <harvest|revise|update|import|organize|
   [--summary <text>] [--written] [--analysis <flow-analysis.json>]
 ```
 
-There are **no provider flags**: flows come from whatever flow evidence the
+There are **no provider flags** — but there is a lock. When
+`manifest["graph"]` records a provider, `harvest` collects that provider's flow
+evidence; other providers' artifacts are not harvested even when present (it
+falls through to them only if the locked provider yields nothing, and says so in
+`sources`). Without a lock, flows come from whatever flow evidence the
 repository holds. Understand Anything `.ua/domain-graph.json` /
 `.ua/knowledge-graph.json` are read in place; GitNexus flows arrive as the
 auto-discovered interchange `.docforge/tmp/gitnexus-flows.json`
@@ -88,9 +92,13 @@ python3 runtime/cli/python/derive_flow_graph.py prepare --repo <repo> [--max-flo
 python3 runtime/cli/python/derive_flow_graph.py write --repo <repo> --analysis <analysis.json>
 ```
 
-- `prepare` — uses the registry's first ready code provider; JSON sources get
+- `prepare` — uses the session's locked code provider (`resolve_locked`), falling
+  back to registry priority only when no lock exists; JSON sources get
   bounded entry-point clusters, DB/MCP sources get native-interface/MCP
-  exploration instructions. **Writes** ignored `.docforge/tmp/flow-context.json`.
+  exploration instructions. Records which it was as `sourceOrigin` and prints it
+  (`source: codegraph [session lock]`). A lock whose graph has left the disk
+  fails with exit 1 and the `set-graph --force` remedy rather than silently
+  using another provider. **Writes** ignored `.docforge/tmp/flow-context.json`.
 - `write` — validates the agent analysis (non-empty `flows`, each with `name`
   and `steps`) and **writes** ignored `.docforge/tmp/flow-graph.json`
   (`derived: true` + provenance).

@@ -38,7 +38,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from runtime.graph.python.graph_storage import ensure_tmp_dir_gitignored, validate_flow_graph_shape, write_flow_graph
-from runtime.graph.python.graph_source_registry import resolve_first_ready
+from runtime.graph.python.graph_source_registry import read_graph_lock, resolve_all_ready, resolve_locked
 
 TMP_REL = ".docforge/tmp"
 CONTEXT_NAME = "flow-context.json"
@@ -248,12 +248,61 @@ def _native_interface_context(source, path, repo, read_mode) -> dict:
     }
 
 
+# How the provider was chosen, for the context file and the report. Sharing one
+# vocabulary between resolve_locked, the JSON, and stdout keeps them from drifting.
+ORIGIN_LABELS = {
+    "lock": "session lock",
+    "priority": "registry priority, no lock recorded",
+}
+
+
+def _with_origin(context: dict, origin: str) -> dict:
+    """Record how the provider was chosen, right beside which one it was. A lock
+    is only trustworthy if a run can be seen to have honored it."""
+    context["sourceOrigin"] = origin
+    return context
+
+
+def _stale_lock_message(repo: Path, provider: str) -> str:
+    """A locked provider whose graph has left the disk. Hard-fail rather than
+    quietly deriving from a provider the user declined: the provider decides the
+    read_mode and the entry-point seeds, so falling back would silently change
+    the shape of the analysis mid-session, and every document already written
+    carries the locked provider in its provenance."""
+    lines = [
+        f"graph provider '{provider}' is locked for this session in "
+        ".docforge/manifest.json, but its graph is not on disk (moved, deleted, "
+        "or never built).",
+    ]
+    ready = [src["name"] for src, _ in resolve_all_ready(repo, "code_graph")]
+    if ready:
+        lines.append(f"Ready now: {', '.join(ready)}.")
+        lines.append(
+            "Rebuild the locked graph, or relock deliberately: "
+            f"manage_manifest.py set-graph --repo <repo> --provider {ready[0]} --force"
+        )
+    else:
+        lines.append(
+            "No provider is ready — run precheck_graph.py --need code for how to "
+            "build one, then relock with set-graph --force if you change provider."
+        )
+    return " ".join(lines)
+
+
 def build_context(repo: Path, max_flows: int, hops: int) -> dict:
     """Resolve the code graph and build the analyzer context, dispatched on the
     source's read_mode. Only a JSON source is ever text-loaded here — a db/mcp
     source is routed to its native interface, so a binary graph never reaches a
-    JSON reader (the crash fix)."""
-    source, path = resolve_first_ready(repo, "code_graph")
+    JSON reader (the crash fix).
+
+    The provider comes from the session lock, not registry priority: the user
+    already answered which graph to use and `init` recorded it, so re-detecting
+    here would analyze a provider they declined (references/graph/graph-sources.md
+    "Session persistence")."""
+    source, path, origin = resolve_locked(repo, "code_graph")
+    if origin == "lock-stale":
+        lock = read_graph_lock(repo)
+        raise ValueError(_stale_lock_message(repo, str(lock["provider"]) if lock else "unknown"))
     if not path:
         raise ValueError(
             "no code graph found — derivation needs one to work from. Run "
@@ -266,8 +315,10 @@ def build_context(repo: Path, max_flows: int, hops: int) -> dict:
         doc = load_json(path)
         seeds = entry_fn(repo) if entry_fn else []
         if seeds:
-            return _entry_point_context(doc, seeds, source, path, repo, max_flows, hops)
-        return _flat_context(doc, source, path, repo)
+            return _with_origin(
+                _entry_point_context(doc, seeds, source, path, repo, max_flows, hops), origin
+            )
+        return _with_origin(_flat_context(doc, source, path, repo), origin)
 
     # db / mcp: binary graph — never load_json it.
     seeds = entry_fn(repo) if entry_fn else []
@@ -303,8 +354,8 @@ def build_context(repo: Path, max_flows: int, hops: int) -> dict:
                 "Seeds read offline; spread each via the source's reader or MCP, "
                 "main flows first (references/graph/flow-derivation.md)."
             )
-        return context
-    return _native_interface_context(source, path, repo, read_mode)
+        return _with_origin(context, origin)
+    return _with_origin(_native_interface_context(source, path, repo, read_mode), origin)
 
 
 def _reader_clusters(source, repo: Path, seeds: list, hops: int) -> list:
@@ -331,19 +382,32 @@ def _reader_clusters(source, repo: Path, seeds: list, hops: int) -> list:
     return clusters
 
 
+def _source_label(context: dict) -> str:
+    """`<name> [<how it was chosen>]` — one helper so the three strategy branches
+    and both runtimes cannot drift on the wording."""
+    label = ORIGIN_LABELS.get(context.get("sourceOrigin", ""))
+    return f"{context['source']} [{label}]" if label else str(context["source"])
+
+
 def _report_prepare(context: dict) -> None:
     strategy = context.get("strategy")
     if strategy == "entry-point-first":
         print(f"Strategy: entry-point-first — {context.get('mainFlows')} main flow(s) "
               f"of {context.get('entryPointCount')} entry points "
-              f"({context.get('tail')} in the tail), source: {context['source']}")
+              f"({context.get('tail')} in the tail), source: {_source_label(context)}")
     elif strategy == "flat-fallback":
         print(f"Strategy: flat-fallback (no entry-point signal) — "
               f"{context.get('nodeCount')} nodes, {context.get('edgeCount')} "
-              f"flow-signal edges, source: {context['source']}")
+              f"flow-signal edges, source: {_source_label(context)}")
     else:
         print(f"Strategy: {strategy} — read via the source's native interface, "
-              f"source: {context['source']} (no graph dumped)")
+              f"source: {_source_label(context)} (no graph dumped)")
+    if context.get("sourceOrigin") == "priority":
+        # The self-heal path graph-sources.md documents: a manifest written before
+        # the lock existed, or a run before init.
+        print("Note: no provider is locked in manifest[\"graph\"]; this pick is "
+              "registry priority. Pin it with `manage_manifest.py set-graph "
+              "--repo <repo>`.")
 
 
 def run_prepare(args: argparse.Namespace) -> int:
@@ -377,12 +441,14 @@ def run_write(args: argparse.Namespace) -> int:
 
     context_src = None
     context_path = None
+    context_origin = None
     context_file = args.repo.resolve() / TMP_REL / CONTEXT_NAME
     if context_file.is_file():
         try:
             context = json.loads(context_file.read_text(encoding="utf-8"))
             context_src = context.get("source")
             context_path = context.get("generatedFrom")
+            context_origin = context.get("sourceOrigin")
         except (OSError, json.JSONDecodeError):
             pass
 
@@ -393,6 +459,10 @@ def run_write(args: argparse.Namespace) -> int:
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "flows": analysis.get("flows"),
     }
+    # Free provenance on a provisional artifact whose whole risk is "which
+    # provider did this actually come from".
+    if context_origin:
+        flow_graph["sourceOrigin"] = context_origin
     if "domains" in analysis:
         flow_graph["domains"] = analysis["domains"]
 

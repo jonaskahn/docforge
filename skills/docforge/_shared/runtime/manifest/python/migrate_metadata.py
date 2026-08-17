@@ -44,6 +44,7 @@ from runtime.common.python.provenance_frontmatter import (
     scaffold_provenance,
     split_frontmatter,
 )
+from runtime.graph.python.graph_source_registry import flow_capability_of, resolve_first_ready
 
 MANIFEST_CURRENT = "3.9"
 MANIFEST_IN_PLACE = ("3.9", "3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
@@ -947,16 +948,24 @@ def match_definition(
     return by_path.get(path)
 
 
-def probe_code_graph(repo: Path) -> dict[str, str]:
-    """Read-only detection of a ready code-graph artifact, so adopted written
-    documents get a concrete graph provider (schema 2.0 requires one)."""
-    if (repo / ".ua").is_dir() or (repo / ".ua" / "knowledge-graph.json").is_file():
-        return {"provider": "understand-anything", "flow": "native"}
-    if (repo / ".gitnexus").is_dir():
-        return {"provider": "gitnexus", "flow": "native"}
-    if (repo / ".codegraph").is_dir():
-        return {"provider": "codegraph", "flow": "none"}
-    return {"provider": "none", "flow": "none"}
+def probe_code_graph(repo: Path, manifest: dict | None = None) -> dict[str, str]:
+    """The graph provider to stamp on adopted written documents (schema 2.0
+    requires one).
+
+    A recorded lock wins: `manifest["graph"]` is the provider the user chose, so
+    re-probing here would stamp adopted documents with a provider they declined.
+    Only a genuinely lock-free legacy manifest falls through to detection, and
+    that detection goes through the registry rather than a hardcoded directory
+    ladder — the old ladder claimed gitnexus had `flow: "native"` from the mere
+    presence of a `.gitnexus/` directory, with no artifact and no capability
+    check."""
+    lock = (manifest or {}).get("graph")
+    if isinstance(lock, dict) and lock.get("provider") and lock.get("flow"):
+        return {"provider": str(lock["provider"]), "flow": str(lock["flow"])}
+    source, _ = resolve_first_ready(repo, "code_graph")
+    if source is None:
+        return {"provider": "none", "flow": "none"}
+    return {"provider": source["name"], "flow": flow_capability_of(repo, source["name"])}
 
 
 def provenance_from_legacy_sections(
@@ -1188,7 +1197,7 @@ def migrate_legacy(
     by_id, by_type, by_path = load_catalog_maps()
     project = legacy_project(manifest, repo)
     generated_at = manifest.get("generated_at") or datetime.now(timezone.utc).isoformat()
-    graph = probe_code_graph(repo)
+    graph = probe_code_graph(repo, manifest)
     new_manifest = {
         "version": MANIFEST_CURRENT,
         "generated_at": generated_at,
@@ -1206,6 +1215,17 @@ def migrate_legacy(
         "documents": [],
         "metadata": {},
     }
+    # Defensive: this path rebuilds the manifest from scratch, so anything not
+    # named here is dropped. Pre-3.0 manifests predate the lock convention and
+    # carry no `graph`, so today this is a no-op — but a rebuild that silently
+    # unlocked the provider would send every later step back to registry
+    # priority, the exact substitution the lock exists to prevent. In-place
+    # upgrades (migrate_manifest_object) mutate and already preserve it.
+    # Passed through untouched rather than synthesizing a `locked_at`: the
+    # schema requires provider/flow/locked_at and forbids extra keys.
+    existing_lock = manifest.get("graph")
+    if isinstance(existing_lock, dict) and {"provider", "flow", "locked_at"} <= set(existing_lock):
+        new_manifest["graph"] = existing_lock
     adopted = 0
     kept_planned = 0
     skipped = 0

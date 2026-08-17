@@ -1121,12 +1121,19 @@ def unread_flow_sources(repo: Path, harvested: list[str]) -> list[str]:
     used to be skipped in silence — the run then fell through to derived
     candidates without ever saying a native flow source went unread."""
     try:
-        from runtime.graph.python.graph_source_registry import resolve_all_ready
+        from runtime.graph.python.graph_source_registry import read_graph_lock, resolve_all_ready
     except ImportError:  # registry is optional for the flows runtime
         return []
+    lock = read_graph_lock(repo)
+    locked_provider = str(lock["provider"]) if lock else None
     lines: list[str] = []
     for source, path in resolve_all_ready(repo, "flow_graph"):
         name = source.get("name")
+        # Only the locked provider's unread flows are the user's problem. Telling
+        # a codegraph-locked session to produce a GitNexus interchange reads like
+        # a required step for a provider they declined.
+        if locked_provider is not None and name != locked_provider:
+            continue
         if any(name in entry or entry in str(path) for entry in harvested):
             continue
         if name == "gitnexus":
@@ -1155,35 +1162,105 @@ def relative_or_str(path: Path, repo: Path) -> str:
         return str(path)
 
 
-def collect_candidates(args: argparse.Namespace) -> tuple[list[dict], list[str], Path | None]:
+def harvest_understand_anything(repo: Path, _main_limit: int) -> tuple[list[dict], list[str]]:
+    """UA rows from whichever of the two graphs exist, with their source paths."""
     rows: list[dict] = []
     sources: list[str] = []
-    gitnexus_interchange: Path | None = None
-    domain = find_ua(args.repo, "domain-graph.json")
-    knowledge = find_ua(args.repo, "knowledge-graph.json")
+    domain = find_ua(repo, "domain-graph.json")
+    knowledge = find_ua(repo, "knowledge-graph.json")
     if domain:
         # The knowledge graph is passed in so domain steps can resolve to a
         # real file:line — the domain graph alone carries no locators.
         rows.extend(harvest_ua_domain(domain, knowledge))
-        sources.append(str(domain.relative_to(args.repo)))
+        sources.append(str(domain.relative_to(repo)))
     if knowledge:
         rows.extend(harvest_ua_knowledge(knowledge))
-        sources.append(str(knowledge.relative_to(args.repo)))
-    gitnexus_interchange = find_gitnexus_interchange(args.repo)
-    if gitnexus_interchange is not None:
-        rows.extend(harvest_gitnexus(gitnexus_interchange))
-        sources.append(str(gitnexus_interchange.relative_to(args.repo)))
-    if not rows:
-        # Last resort: a code graph with no native flow evidence. These rows
-        # are structural (entry + ordered call chain), not business flows —
-        # `import --analysis` still layers the semantics on top. Before this,
-        # harvest simply failed on a CodeGraph-only repo and the whole flow
-        # set came from an unguided LLM pass.
-        codegraph_rows = harvest_codegraph(args.repo, args.main_limit)
-        if codegraph_rows:
-            rows.extend(codegraph_rows)
-            sources.append(".codegraph/codegraph.db")
-    return rows, sources, gitnexus_interchange
+        sources.append(str(knowledge.relative_to(repo)))
+    return rows, sources
+
+
+def harvest_gitnexus_provider(repo: Path, _main_limit: int) -> tuple[list[dict], list[str]]:
+    """GitNexus rows from the auto-discovered interchange, if it was produced."""
+    interchange = find_gitnexus_interchange(repo)
+    if interchange is None:
+        return [], []
+    return harvest_gitnexus(interchange), [str(interchange.relative_to(repo))]
+
+
+def harvest_codegraph_provider(repo: Path, main_limit: int) -> tuple[list[dict], list[str]]:
+    """CodeGraph rows: structural (entry + ordered call chain), not business
+    flows — `import --analysis` still layers the semantics on top."""
+    rows = harvest_codegraph(repo, main_limit)
+    return rows, ([".codegraph/codegraph.db"] if rows else [])
+
+
+# Provider id -> harvester, so the locked provider can be dispatched by name and
+# a fourth source slots in exactly as graph_source_registry already promises.
+HARVESTERS = {
+    "understand-anything": harvest_understand_anything,
+    "gitnexus": harvest_gitnexus_provider,
+    "codegraph": harvest_codegraph_provider,
+}
+
+# Fallback order when no provider is locked — native flow evidence first, then
+# CodeGraph's structural rows as a last resort.
+HARVEST_FALLBACK_ORDER = ("understand-anything", "gitnexus", "codegraph")
+
+
+def collect_candidates(
+    args: argparse.Namespace,
+) -> tuple[list[dict], list[str], Path | None, list[str]]:
+    """Harvest flow candidates from the session's locked provider.
+
+    The provider the user chose at intake is locked into `manifest["graph"]` and
+    is authoritative here (references/graph/graph-sources.md "Session
+    persistence"). Harvesting whatever artifact happened to be on disk is what
+    made a repo with both `.ua/` and `.codegraph/` ignore a `codegraph` lock
+    entirely — CodeGraph sat behind an `if not rows` guard and was never reached.
+
+    Without a lock (a harvest before `init`) the original fallback order stands:
+    native flow evidence first, CodeGraph's structural rows last.
+
+    Returns (rows, sources, gitnexus_interchange, notes). `sources` stays real
+    artifact paths only — it is persisted into the index — so a provider
+    substitution is reported through `notes` instead."""
+    from runtime.graph.python.graph_source_registry import read_graph_lock
+
+    lock = read_graph_lock(args.repo)
+    locked_provider = str(lock["provider"]) if lock else None
+
+    rows: list[dict] = []
+    sources: list[str] = []
+    notes: list[str] = []
+    if locked_provider and locked_provider in HARVESTERS:
+        rows, sources = HARVESTERS[locked_provider](args.repo, args.main_limit)
+        if not rows:
+            # The locked provider yielded nothing. Falling back beats failing,
+            # but it is a substitution the user must be told about.
+            for name in HARVEST_FALLBACK_ORDER:
+                if name == locked_provider:
+                    continue
+                extra_rows, extra_sources = HARVESTERS[name](args.repo, args.main_limit)
+                if extra_rows:
+                    rows, sources = extra_rows, extra_sources
+                    notes.append(
+                        f"locked provider {locked_provider} contributed no flow "
+                        f"candidates; harvested {name} instead. Confirm this is "
+                        f"intended, or relock with set-graph --provider {name} --force."
+                    )
+                    break
+    else:
+        for name in HARVEST_FALLBACK_ORDER:
+            provider_rows, provider_sources = HARVESTERS[name](args.repo, args.main_limit)
+            rows.extend(provider_rows)
+            sources.extend(provider_sources)
+            # CodeGraph is structural, not native flow evidence — only reach for
+            # it when the native providers produced nothing at all.
+            if rows and name == "gitnexus":
+                break
+
+    # `revise` needs the interchange path itself, independent of who harvested.
+    return rows, sources, find_gitnexus_interchange(args.repo), notes
 
 
 def harvest_codegraph(repo: Path, main_limit: int) -> list[dict]:
@@ -1248,9 +1325,12 @@ def maybe_write_communities(repo: Path, export: Path | None) -> Path | None:
 
 def cmd_harvest(args: argparse.Namespace) -> int:
     try:
-        rows, sources, gitnexus_interchange = collect_candidates(args)
+        rows, sources, gitnexus_interchange, notes = collect_candidates(args)
     except ValueError as error:
         return fail(str(error), 2)
+    for note in notes:
+        # A provider substitution is never silent, on either path.
+        print(f"NOTICE: {note}")
     if not rows:
         unread = unread_flow_sources(args.repo, sources)
         if unread:
@@ -1281,9 +1361,12 @@ def cmd_harvest(args: argparse.Namespace) -> int:
 
 def cmd_revise(args: argparse.Namespace) -> int:
     try:
-        rows, sources, gitnexus_interchange = collect_candidates(args)
+        rows, sources, gitnexus_interchange, notes = collect_candidates(args)
     except ValueError as error:
         return fail(str(error), 2)
+    for note in notes:
+        # A provider substitution is never silent, on either path.
+        print(f"NOTICE: {note}")
     if not rows:
         unread = unread_flow_sources(args.repo, sources)
         if unread:

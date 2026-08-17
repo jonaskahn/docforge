@@ -24,6 +24,12 @@ const { ensureDocforgeGitignore, ensureGitignoredDir } = require("../../common/j
 // list is used solely to list folder contents on a miss.
 const KNOWN_GRAPH_DIRS = [".ua", ".understand-anything", ".gitnexus", ".codegraph", ".docforge/tmp"];
 
+// Where Docforge's own provisional flow graph lands — the same path
+// writeFlowGraph() writes with its default destRel. Defined here, next to the
+// writer, so precheck_graph and the registry's flow-capability check agree on one
+// spelling instead of each carrying a literal.
+const DERIVED_FLOW_CANDIDATES = [".docforge/tmp/flow-graph.json"];
+
 function isFile(p) {
   try {
     return fs.statSync(p).isFile();
@@ -182,6 +188,7 @@ function ensureTmpDirGitignored(repo) {
 
 module.exports = {
   KNOWN_GRAPH_DIRS,
+  DERIVED_FLOW_CANDIDATES,
   findGraphFile,
   relativeDisplayPath,
   listKnownGraphDirs,

@@ -27,6 +27,7 @@ const store = require("../../common/js/provenance_store.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const { computeScale, layoutFor } = require("../../common/js/scale.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
+const { flowCapabilityOf, resolveFirstReady } = require("../../graph/js/graph_source_registry.js");
 
 const MANIFEST_CURRENT = "3.9";
 const MANIFEST_IN_PLACE = ["3.9", "3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
@@ -854,17 +855,23 @@ function matchDefinition(maps, docId, legacyType, docPath) {
   return maps.byPath[docPath] || null;
 }
 
-function probeCodeGraph(repo) {
-  if (fs.existsSync(path.join(repo, ".ua")) && fs.statSync(path.join(repo, ".ua")).isDirectory()) {
-    return { provider: "understand-anything", flow: "native" };
+/** The graph provider to stamp on adopted written documents (schema 2.0 requires
+ * one).
+ *
+ * A recorded lock wins: manifest["graph"] is the provider the user chose, so
+ * re-probing here would stamp adopted documents with a provider they declined.
+ * Only a genuinely lock-free legacy manifest falls through to detection, and that
+ * detection goes through the registry rather than a hardcoded directory ladder —
+ * the old ladder claimed gitnexus had `flow: "native"` from the mere presence of
+ * a `.gitnexus/` directory, with no artifact and no capability check. */
+function probeCodeGraph(repo, manifest) {
+  const lock = (manifest || {}).graph;
+  if (lock && typeof lock === "object" && lock.provider && lock.flow) {
+    return { provider: String(lock.provider), flow: String(lock.flow) };
   }
-  if (fs.existsSync(path.join(repo, ".gitnexus")) && fs.statSync(path.join(repo, ".gitnexus")).isDirectory()) {
-    return { provider: "gitnexus", flow: "native" };
-  }
-  if (fs.existsSync(path.join(repo, ".codegraph")) && fs.statSync(path.join(repo, ".codegraph")).isDirectory()) {
-    return { provider: "codegraph", flow: "none" };
-  }
-  return { provider: "none", flow: "none" };
+  const [source] = resolveFirstReady(repo, "code_graph");
+  if (!source) return { provider: "none", flow: "none" };
+  return { provider: source.name, flow: flowCapabilityOf(repo, source.name) };
 }
 
 function provenanceFromLegacySections(sections, docId, docPath, generatedAt, tier, graph, targetDepth, version) {
@@ -1005,7 +1012,7 @@ function migrateLegacy(repo, manifestPath, manifest, dryRun) {
   const maps = loadCatalogMaps();
   const project = legacyProject(manifest, repo);
   const generatedAt = manifest.generated_at || new Date().toISOString();
-  const graph = probeCodeGraph(repo);
+  const graph = probeCodeGraph(repo, manifest);
   const newManifest = {
     version: MANIFEST_CURRENT,
     generated_at: generatedAt,
@@ -1023,6 +1030,22 @@ function migrateLegacy(repo, manifestPath, manifest, dryRun) {
     documents: [],
     metadata: {},
   };
+  // Defensive: this path rebuilds the manifest from scratch, so anything not
+  // named here is dropped. Pre-3.0 manifests predate the lock convention and
+  // carry no `graph`, so today this is a no-op — but a rebuild that silently
+  // unlocked the provider would send every later step back to registry priority,
+  // the exact substitution the lock exists to prevent. In-place upgrades
+  // (migrateManifestObject) mutate and already preserve it. Passed through
+  // untouched rather than synthesizing a `locked_at`: the schema requires
+  // provider/flow/locked_at and forbids extra keys.
+  const existingLock = manifest.graph;
+  if (
+    existingLock &&
+    typeof existingLock === "object" &&
+    ["provider", "flow", "locked_at"].every((key) => key in existingLock)
+  ) {
+    newManifest.graph = existingLock;
+  }
   let adopted = 0;
   let keptPlanned = 0;
   let skipped = 0;

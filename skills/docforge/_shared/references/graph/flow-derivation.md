@@ -43,7 +43,11 @@ node runtime/cli/js/flow_index.js revise --repo <repo> \
   [--main-limit 15]
 ```
 
-There are no provider flags: harvest and revise discover whatever flow
+There are no provider flags — but the session lock decides whose evidence is
+read. With a provider locked in `manifest["graph"]`, harvest collects that
+provider's flow evidence and leaves other providers' artifacts alone (falling
+through only if the locked provider yields nothing, and naming the fallback in
+`sources`). Without a lock, harvest and revise discover whatever flow
 evidence the repository holds. Understand Anything `.ua/domain-graph.json`
 and `.ua/knowledge-graph.json` are read in place. GitNexus flows arrive as
 the auto-discovered interchange `.docforge/tmp/gitnexus-flows.json` (see

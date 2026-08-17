@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 from _support import blob_hash, initialize, load_manifest, markdown_with_provenance, normalized, normalized_blob_hash, provenance, run, write_flow_index
+from test_graph_and_flows import _two_provider_repo
 
 
 class RuntimeParityTests(unittest.TestCase):
@@ -109,6 +110,42 @@ class RuntimeParityTests(unittest.TestCase):
                 )
                 self.assertEqual(result.returncode, 2)
                 self.assertIn("unknown graph provider", result.stderr)
+
+    def test_locked_provider_prepare_parity(self) -> None:
+        """Honoring the session lock must produce identical stdout and an identical
+        flow-context on both runtimes — the lock's read side is parity surface now,
+        including the `[session lock]` label and `sourceOrigin`."""
+        with tempfile.TemporaryDirectory() as tmp:
+            # Same basename under different parents, so the embedded repo name is
+            # identical on both sides and only the parent path has to normalize.
+            repos = {"py": Path(tmp) / "py" / "repo", "js": Path(tmp) / "js" / "repo"}
+            stdouts, contexts = {}, {}
+            for runtime, repo in repos.items():
+                repo.mkdir(parents=True)
+                _two_provider_repo(repo)
+                self.assertEqual(
+                    initialize(runtime, repo, "spine", graph_provider="codegraph").returncode, 0
+                )
+                result = run(runtime, "derive_flow_graph", "prepare", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                # resolve() too: on macOS the tmp dir is reached through a
+                # /private symlink, so the printed path differs from `repo`.
+                text = normalized(result.stdout, [repo.resolve(), repo])
+                # The trailing "then run:" hint names each runtime's own launcher
+                # (python .../python/... vs node .../js/...) and is meant to differ.
+                stdouts[runtime] = "\n".join(
+                    line for line in text.splitlines() if "runtime/cli/" not in line
+                )
+                context = json.loads(
+                    (repo / ".docforge" / "tmp" / "flow-context.json").read_text(encoding="utf-8")
+                )
+                context["generatedFrom"] = "<PATH>"
+                context["repo"] = "<NAME>"
+                contexts[runtime] = context
+            self.assertEqual(stdouts["py"], stdouts["js"])
+            self.assertEqual(contexts["py"], contexts["js"])
+            self.assertEqual(contexts["py"]["source"], "codegraph")
+            self.assertEqual(contexts["py"]["sourceOrigin"], "lock")
 
     def test_agent_settings_merge_and_local_ignore_are_safe(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

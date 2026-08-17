@@ -64,7 +64,10 @@ The graph provider is locked into `manifest["graph"]` once — automatically, by
 `manage_manifest.{py,js} init` — and every sub-agent for the rest of the
 session, including a spawned parallel writer, reads that lock instead of
 re-detecting or re-asking. It is not re-selected mid-session without
-`set-graph --force`. Detail:
+`set-graph --force`. The runtime enforces this rather than trusting memory:
+provider resolution goes through `graph_source_registry.resolve_locked`, and a
+lock whose graph has left the disk fails the step loudly instead of falling back
+to another provider. Detail:
 [`references/graph/graph-sources.md`](references/graph/graph-sources.md)
 "Session persistence", [`workflows/writing.md`](workflows/writing.md).
 

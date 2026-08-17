@@ -41,10 +41,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from .graph_storage import relative_display_path, find_graph_file, list_known_graph_dirs
+from .graph_storage import DERIVED_FLOW_CANDIDATES, relative_display_path, find_graph_file, list_known_graph_dirs
+# Deliberately lock-free: precheck is the pre-lock discovery tool. Its job is to
+# report *every* ready provider so intake can ask which should be primary — that
+# question is what creates the lock. Teaching it resolve_locked would hide the
+# alternatives the user is being asked to choose between.
 from .graph_source_registry import setup_hints_for_missing, resolve_all_ready
-
-DERIVED_FLOW_CANDIDATES = [".docforge/tmp/flow-graph.json"]
 
 # How each source's graph is read, keyed by its read_mode, for the report.
 READ_MECHANISM = {

@@ -36,10 +36,17 @@
  */
 
 const fs = require("fs");
-const { relativeDisplayPath, findGraphFile, listKnownGraphDirs } = require("./graph_storage.js");
+const {
+  DERIVED_FLOW_CANDIDATES,
+  relativeDisplayPath,
+  findGraphFile,
+  listKnownGraphDirs,
+} = require("./graph_storage.js");
+// Deliberately lock-free: precheck is the pre-lock discovery tool. Its job is to
+// report *every* ready provider so intake can ask which should be primary — that
+// question is what creates the lock. Teaching it resolveLocked would hide the
+// alternatives the user is being asked to choose between.
 const { setupHintsForMissing, resolveAllReady } = require("./graph_source_registry.js");
-
-const DERIVED_FLOW_CANDIDATES = [".docforge/tmp/flow-graph.json"];
 
 // How each source's graph is read, keyed by its readMode, for the report.
 const READ_MECHANISM = {

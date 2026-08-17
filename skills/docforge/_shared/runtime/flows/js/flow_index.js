@@ -941,15 +941,22 @@ function relativeOrString(target, repo) {
  * without ever saying a native flow source went unread. */
 function unreadFlowSources(repo, harvested) {
   let resolveAllReady;
+  let readGraphLock;
   try {
-    ({ resolveAllReady } = require("../../graph/js/graph_source_registry.js"));
+    ({ resolveAllReady, readGraphLock } = require("../../graph/js/graph_source_registry.js"));
   } catch {
     return []; // registry is optional for the flows runtime
   }
+  const lock = readGraphLock(repo);
+  const lockedProvider = lock ? String(lock.provider) : null;
   const lines = [];
   const interchangeRel = GITNEXUS_FLOWS_REL.split(path.sep).join("/");
   for (const [source, target] of resolveAllReady(repo, "flow_graph")) {
     const name = source.name;
+    // Only the locked provider's unread flows are the user's problem. Telling a
+    // codegraph-locked session to produce a GitNexus interchange reads like a
+    // required step for a provider they declined.
+    if (lockedProvider !== null && name !== lockedProvider) continue;
     if (harvested.some((entry) => entry.includes(name) || String(target).includes(entry))) continue;
     const display = source.display || name;
     if (name === "gitnexus") {
@@ -1009,40 +1016,111 @@ function harvestCodegraph(repo, mainLimit) {
   return rows;
 }
 
-function collectCandidates(args) {
+/** UA rows from whichever of the two graphs exist, with their source paths. */
+function harvestUnderstandAnything(repo) {
   const rows = [];
   const sources = [];
-  let gitnexusInterchange = null;
-  const domain = findUa(args.repo, "domain-graph.json");
-  const knowledge = findUa(args.repo, "knowledge-graph.json");
+  const domain = findUa(repo, "domain-graph.json");
+  const knowledge = findUa(repo, "knowledge-graph.json");
   if (domain) {
     // The knowledge graph is passed in so domain steps can resolve to a real
     // file:line — the domain graph alone carries no locators.
     rows.push(...harvestUaDomain(domain, knowledge));
-    sources.push(path.relative(args.repo, domain).split(path.sep).join("/"));
+    sources.push(path.relative(repo, domain).split(path.sep).join("/"));
   }
   if (knowledge) {
     rows.push(...harvestUaKnowledge(knowledge));
-    sources.push(path.relative(args.repo, knowledge).split(path.sep).join("/"));
+    sources.push(path.relative(repo, knowledge).split(path.sep).join("/"));
   }
-  gitnexusInterchange = findGitnexusInterchange(args.repo);
-  if (gitnexusInterchange) {
-    rows.push(...harvestGitnexus(gitnexusInterchange));
-    sources.push(path.relative(args.repo, gitnexusInterchange).split(path.sep).join("/"));
+  return [rows, sources];
+}
+
+/** GitNexus rows from the auto-discovered interchange, if it was produced. */
+function harvestGitnexusProvider(repo) {
+  const interchange = findGitnexusInterchange(repo);
+  if (!interchange) return [[], []];
+  return [harvestGitnexus(interchange), [path.relative(repo, interchange).split(path.sep).join("/")]];
+}
+
+/** CodeGraph rows: structural (entry + ordered call chain), not business flows —
+ * `import --analysis` still layers the semantics on top. */
+function harvestCodegraphProvider(repo, mainLimit) {
+  const rows = harvestCodegraph(repo, mainLimit);
+  return [rows, rows.length ? [".codegraph/codegraph.db"] : []];
+}
+
+// Provider id -> harvester, so the locked provider can be dispatched by name and
+// a fourth source slots in exactly as graph_source_registry already promises.
+const HARVESTERS = {
+  "understand-anything": (repo) => harvestUnderstandAnything(repo),
+  gitnexus: (repo) => harvestGitnexusProvider(repo),
+  codegraph: (repo, mainLimit) => harvestCodegraphProvider(repo, mainLimit),
+};
+
+// Fallback order when no provider is locked — native flow evidence first, then
+// CodeGraph's structural rows as a last resort.
+const HARVEST_FALLBACK_ORDER = ["understand-anything", "gitnexus", "codegraph"];
+
+/* Harvest flow candidates from the session's locked provider.
+ *
+ * The provider the user chose at intake is locked into manifest["graph"] and is
+ * authoritative here (references/graph/graph-sources.md "Session persistence").
+ * Harvesting whatever artifact happened to be on disk is what made a repo with
+ * both `.ua/` and `.codegraph/` ignore a `codegraph` lock entirely — CodeGraph
+ * sat behind an `if (!rows.length)` guard and was never reached.
+ *
+ * Without a lock (a harvest before `init`) the original fallback order stands:
+ * native flow evidence first, CodeGraph's structural rows last.
+ *
+ * Returns [rows, sources, gitnexusInterchange, notes]. `sources` stays real
+ * artifact paths only — it is persisted into the index — so a provider
+ * substitution is reported through `notes` instead. */
+function collectCandidates(args) {
+  let readGraphLock;
+  try {
+    ({ readGraphLock } = require("../../graph/js/graph_source_registry.js"));
+  } catch {
+    readGraphLock = () => null; // registry is optional for the flows runtime
   }
-  if (!rows.length) {
-    // Last resort: a code graph with no native flow evidence. These rows are
-    // structural (entry + ordered call chain), not business flows — `import
-    // --analysis` still layers the semantics on top. Before this, harvest
-    // simply failed on a CodeGraph-only repo and the whole flow set came from
-    // an unguided LLM pass.
-    const codegraphRows = harvestCodegraph(args.repo, args.main_limit);
-    if (codegraphRows.length) {
-      rows.push(...codegraphRows);
-      sources.push(".codegraph/codegraph.db");
+  const lock = readGraphLock(args.repo);
+  const lockedProvider = lock ? String(lock.provider) : null;
+
+  let rows = [];
+  let sources = [];
+  const notes = [];
+  if (lockedProvider && HARVESTERS[lockedProvider]) {
+    [rows, sources] = HARVESTERS[lockedProvider](args.repo, args.main_limit);
+    if (!rows.length) {
+      // The locked provider yielded nothing. Falling back beats failing, but it
+      // is a substitution the user must be told about.
+      for (const name of HARVEST_FALLBACK_ORDER) {
+        if (name === lockedProvider) continue;
+        const [extraRows, extraSources] = HARVESTERS[name](args.repo, args.main_limit);
+        if (extraRows.length) {
+          rows = extraRows;
+          sources = extraSources;
+          notes.push(
+            `locked provider ${lockedProvider} contributed no flow candidates; ` +
+              `harvested ${name} instead. Confirm this is intended, or relock ` +
+              `with set-graph --provider ${name} --force.`
+          );
+          break;
+        }
+      }
+    }
+  } else {
+    for (const name of HARVEST_FALLBACK_ORDER) {
+      const [providerRows, providerSources] = HARVESTERS[name](args.repo, args.main_limit);
+      rows.push(...providerRows);
+      sources.push(...providerSources);
+      // CodeGraph is structural, not native flow evidence — only reach for it
+      // when the native providers produced nothing at all.
+      if (rows.length && name === "gitnexus") break;
     }
   }
-  return [rows, sources, gitnexusInterchange];
+
+  // `revise` needs the interchange path itself, independent of who harvested.
+  return [rows, sources, findGitnexusInterchange(args.repo), notes];
 }
 function maybeWriteCommunities(repo, exportPath) {
   if (!exportPath) return null;
@@ -1115,7 +1193,9 @@ function usage() {
   ].join("\n"));
 }
 function cmdHarvest(args) {
-  const [rows, sources, gitnexusInterchange] = collectCandidates(args);
+  const [rows, sources, gitnexusInterchange, notes] = collectCandidates(args);
+  // A provider substitution is never silent, on either path.
+  for (const note of notes) console.log(`NOTICE: ${note}`);
   if (!rows.length) {
     const unread = unreadFlowSources(args.repo, sources);
     // A ready native flow source going unread is a setup gap, not an absence
@@ -1137,7 +1217,9 @@ function cmdHarvest(args) {
   return 0;
 }
 function cmdRevise(args) {
-  const [rows, sources, gitnexusInterchange] = collectCandidates(args);
+  const [rows, sources, gitnexusInterchange, notes] = collectCandidates(args);
+  // A provider substitution is never silent, on either path.
+  for (const note of notes) console.log(`NOTICE: ${note}`);
   if (!rows.length) {
     const unread = unreadFlowSources(args.repo, sources);
     // A ready native flow source going unread is a setup gap, not an absence

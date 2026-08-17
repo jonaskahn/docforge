@@ -26,8 +26,7 @@ from runtime.catalog.python.detect_profiles import inventory as inventory_files
 from runtime.common.python import provenance_store as store
 from runtime.common.python.provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 from runtime.catalog.python import query_catalog
-from runtime.graph.python.graph_source_registry import SOURCES as GRAPH_SOURCES, resolve_all_ready, resolve_first_ready
-from runtime.graph.python.precheck_graph import report_flow_graph
+from runtime.graph.python.graph_source_registry import SOURCES as GRAPH_SOURCES, flow_capability_of, resolve_all_ready, resolve_first_ready
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 MANIFEST_REL = Path(".docforge/manifest.json")
@@ -493,7 +492,11 @@ def resolve_graph_lock(repo: Path, provider: str | None) -> dict | None:
         if source is None:
             return None
         chosen = source["name"]
-    return {"provider": chosen, "flow": report_flow_graph(repo), "locked_at": now_iso()}
+    # flow_capability_of, not precheck's report_flow_graph: the stored value must
+    # describe the *chosen* provider. The repo-wide question answered "native" for
+    # a CodeGraph lock whenever an unrelated .ua/domain-graph.json existed, which
+    # is the "Native flow source: CodeGraph" claim graph-sources.md forbids.
+    return {"provider": chosen, "flow": flow_capability_of(repo, chosen), "locked_at": now_iso()}
 
 
 def resolve_scale(

@@ -48,6 +48,13 @@ agent surfaces instead of reconstructing the same query with filesystem tools:
 | flows | `understand-domain` | process resources through `gitnexus-exploring` | provisional derivation from structural paths |
 | change/blast radius | `understand-diff` | `gitnexus-impact-analysis` / `detect_changes` | `codegraph_explore` blast-radius output |
 
+Once a provider is locked (see `## Session persistence`), read through **that
+provider's** column. The other columns are not alternatives to reach for
+mid-session: an unselected provider's MCP is corroboration at most, and
+answering a question from it produces evidence whose provenance names the
+provider the user declined. If the locked provider genuinely cannot answer a
+need, say so and derive — do not switch columns silently.
+
 Skill invocation spelling is host-specific. On Codex, Understand Anything uses
 the installed `$understand*` skills; on slash-command hosts it uses
 `/understand*`. GitNexus skills call its MCP tools/resources according to
@@ -108,6 +115,12 @@ this file's `## Selection` question above was actually asked and answered
 (`native` / `derived` / `none`) is computed and stored alongside it — never
 a flag.
 
+The stored `flow` describes **the locked provider only**, not the repository.
+A session locked to CodeGraph records `derived` or `none` even when an
+unrelated `.ua/domain-graph.json` sits in the same repo, because CodeGraph
+advertises no `flow_graph` — see the rule below against ever claiming
+"Native flow source: CodeGraph".
+
 Every later step reads the lock from `manifest["graph"]` and never re-runs
 `precheck_graph.{py,js}` or re-asks the user — including a freshly spawned
 parallel document-writer, which never goes through `## Selection` itself
@@ -122,6 +135,43 @@ Switching the locked provider mid-session requires
 than silently changing what a parallel worker relied on. Relocking is a
 deliberate action for a fresh planning pass, never something the writing loop
 does on its own.
+
+### How the runtime enforces it
+
+The lock is not a convention the agent has to remember — the scripts read it.
+`graph_source_registry.{py,js}` exposes `resolve_locked(repo, capability)`, the
+one resolver every step that picks a provider for real work goes through
+(`derive_flow_graph`, `flow_index` harvest). It returns the chosen source plus
+an `origin`:
+
+| `origin` | meaning |
+|---|---|
+| `lock` | the locked provider supplies the capability; authoritative |
+| `priority` | no lock recorded — registry-order fallback, reported as such |
+| `lock-stale` | a lock exists but its graph is gone from disk |
+| `lock-uncapable` | the locked provider does not advertise that capability |
+
+`resolve_first_ready` remains the lock-blind, registry-order resolver: correct
+only for callers that run *before* a lock exists. `precheck_graph.{py,js}` and
+`diagnose_graphs.{py,js}` are deliberately lock-free — reporting every ready
+provider is what makes the `## Selection` question above possible in the first
+place.
+
+`derive_flow_graph prepare` records the origin as `sourceOrigin` in
+`.docforge/tmp/flow-context.json` and prints it (`source: codegraph
+[session lock]`), so a run can be seen to have honored the choice.
+
+A `lock-stale` graph **fails the step loudly** rather than falling back: the
+provider decides the read mechanism and the entry-point seeds, so substituting
+another one would change the shape of the analysis mid-session while documents
+already written cite the locked provider in their provenance. The remedy is the
+deliberate one — rebuild the graph, or
+`set-graph --provider <id> --force`.
+
+A locked provider with no `flow_graph` (`lock-uncapable`) is not an error: it is
+the normal derive path below. It must never borrow an unselected provider's
+native flows — that would both mislabel provenance and break the rule against
+merging provider schemas.
 
 ## Preparation and authority
 
@@ -177,6 +227,12 @@ Anything + GitNexus" when one or both are absent:
 2. use GitNexus indexed processes when ready;
 3. otherwise derive `.docforge/tmp/flow-graph.json` from the selected code
    graph through [`flow-derivation.md`](flow-derivation.md).
+
+Once a provider is locked, the lock outranks this order: steps 1 and 2 apply
+only to *the locked provider's* native flows. A session locked to CodeGraph goes
+straight to step 3 even with a ready `.ua/domain-graph.json` in the repo —
+`flow_index harvest` and `derive_flow_graph` both resolve through
+`resolve_locked`, so they will not harvest a provider the user declined.
 
 CodeGraph is first-class for `code_graph` and an excellent derivation input,
 but it has no native `flow_graph`. When CodeGraph is the only ready code

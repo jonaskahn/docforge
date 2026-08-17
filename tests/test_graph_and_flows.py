@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from _support import (
+    CLI_JS,
+    ROOT,
     initialize,
     load_manifest,
     normalized,
@@ -1283,6 +1287,218 @@ class CodegraphReaderTests(unittest.TestCase):
                 cluster = context["clusters"][0]
                 self.assertEqual(cluster["entryPoint"]["id"], "route:1")
                 self.assertTrue(cluster["paths"][0][0]["file"])
+
+
+def _two_provider_repo(repo: Path) -> None:
+    """A repo where Understand Anything and CodeGraph are BOTH ready — the case
+    intake asks about, and the case every lock consumer used to get wrong by
+    silently taking UA (first in registry priority)."""
+    _write_ua(repo, _ua_domain(), {"nodes": [], "edges": []})
+    _build_codegraph_db(repo / ".codegraph" / "codegraph.db")
+
+
+class GraphLockConsumptionTests(unittest.TestCase):
+    """The lock is written by `init`/`set-graph` and must be *read* by every step
+    that picks a provider for real work. These pin the read side: without them the
+    lock was write-only and the user's answered choice was silently discarded.
+    See references/graph/graph-sources.md "Session persistence"."""
+
+    def _prepare(self, runtime: str, repo: Path):
+        return run(runtime, "derive_flow_graph", "prepare", "--repo", str(repo))
+
+    def _context(self, repo: Path) -> dict:
+        return json.loads((repo / ".docforge" / "tmp" / "flow-context.json").read_text(encoding="utf-8"))
+
+    def test_prepare_uses_the_locked_provider_not_registry_priority(self) -> None:
+        """The reported bug: locked to codegraph beside a ready .ua/, derivation
+        still built its context from Understand Anything."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _two_provider_repo(repo)
+                self.assertEqual(
+                    initialize(runtime, repo, "spine", graph_provider="codegraph").returncode, 0
+                )
+                result = self._prepare(runtime, repo)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                context = self._context(repo)
+                self.assertEqual(context["source"], "codegraph")
+                self.assertEqual(context["sourceOrigin"], "lock")
+                # Not just the label: the read_mode branch must have followed the
+                # lock too. CodeGraph resolves through its offline reader into
+                # ordered clusters; a UA context would be a flat JSON dump.
+                self.assertEqual(context["strategy"], "entry-point-first")
+                self.assertIn("clusters", context)
+                self.assertIn("[session lock]", result.stdout)
+
+    def test_prepare_without_a_lock_still_uses_registry_priority(self) -> None:
+        """No manifest at all — derivation must keep working, and must say the
+        pick was priority rather than a honored choice."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _two_provider_repo(repo)
+                result = self._prepare(runtime, repo)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                context = self._context(repo)
+                self.assertEqual(context["source"], "understand-anything")
+                self.assertEqual(context["sourceOrigin"], "priority")
+                self.assertIn("no provider is locked", result.stdout)
+                self.assertIn("set-graph", result.stdout)
+
+    def test_prepare_hard_fails_when_the_locked_graph_is_gone(self) -> None:
+        """A stale lock must stop the run, not quietly analyze the provider the
+        user declined. Falling back would change read_mode and entry-point seeds
+        mid-session while written documents already cite the locked provider."""
+        stderrs = []
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _two_provider_repo(repo)
+                initialize(runtime, repo, "spine", graph_provider="codegraph")
+                shutil.rmtree(repo / ".codegraph")
+                result = self._prepare(runtime, repo)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("PREPARE FAILED", result.stderr)
+                self.assertIn("codegraph", result.stderr)
+                self.assertIn("set-graph", result.stderr)
+                self.assertIn("--force", result.stderr)
+                # Nothing written: a previous provider's context must not be
+                # overwritten with the wrong provider's data.
+                self.assertFalse((repo / ".docforge" / "tmp" / "flow-context.json").exists())
+                stderrs.append(normalized(result.stderr, [repo]))
+        self.assertEqual(stderrs[0], stderrs[1], "stale-lock message must match across runtimes")
+
+    def test_harvest_uses_the_locked_provider_even_when_ua_graphs_exist(self) -> None:
+        """flow_index harvest is the flow-recognition entry point. It used to probe
+        artifacts in a fixed order with CodeGraph behind an `if not rows` guard, so
+        a codegraph-locked repo with a residual .ua/ harvested only UA rows."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _two_provider_repo(repo)
+                initialize(runtime, repo, "spine", graph_provider="codegraph")
+                result = run(runtime, "flow_index", "harvest", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                index = json.loads((repo / ".docforge" / "flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(index["providers"], ["codegraph"])
+                self.assertEqual(index["sources"], [".codegraph/codegraph.db"])
+
+    def test_harvest_uses_ua_when_ua_is_the_locked_provider(self) -> None:
+        """The mirror of the case above — the fix must honor whichever provider was
+        chosen, not merely prefer CodeGraph."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _two_provider_repo(repo)
+                initialize(runtime, repo, "spine", graph_provider="understand-anything")
+                result = run(runtime, "flow_index", "harvest", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                index = json.loads((repo / ".docforge" / "flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(index["providers"], ["understand-anything"])
+
+    def test_harvest_fallback_is_announced_and_keeps_sources_clean(self) -> None:
+        """When the locked provider genuinely has no flow evidence, falling back
+        beats failing — but the substitution must be stated, and `sources` must
+        stay real artifact paths because it is persisted into the index."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                # UA is ready as a *code* graph but has no domain graph, so it
+                # contributes no flow rows; CodeGraph does.
+                (repo / ".ua").mkdir()
+                (repo / ".ua" / "knowledge-graph.json").write_text(
+                    json.dumps({"nodes": [], "edges": []}), encoding="utf-8"
+                )
+                _build_codegraph_db(repo / ".codegraph" / "codegraph.db")
+                initialize(runtime, repo, "spine", graph_provider="understand-anything")
+                result = run(runtime, "flow_index", "harvest", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("NOTICE:", result.stdout)
+                self.assertIn("locked provider understand-anything contributed no flow", result.stdout)
+                index = json.loads((repo / ".docforge" / "flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(index["sources"], [".codegraph/codegraph.db"])
+                for source in index["sources"]:
+                    self.assertNotIn("fallback", source)
+
+    def test_locked_flow_field_describes_the_chosen_provider_only(self) -> None:
+        """CodeGraph advertises no flow_graph. Locking it in a repo whose .ua/
+        domain graph is present must not record flow: "native" — graph-sources.md
+        forbids ever claiming "Native flow source: CodeGraph"."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _two_provider_repo(repo)
+                initialize(runtime, repo, "spine", graph_provider="codegraph")
+                self.assertEqual(load_manifest(repo)["graph"]["flow"], "none")
+                run(runtime, "manage_manifest", "set-graph", "--repo", str(repo),
+                    "--provider", "understand-anything", "--force")
+                # UA really does have native flows, so the same repo now says so.
+                self.assertEqual(load_manifest(repo)["graph"]["flow"], "native")
+
+    def _resolve_locked_js(self, repo: Path, capability: str) -> list:
+        """Drive the JS resolver directly — there is no CLI for it, and the four
+        origins are a documented contract both runtimes must agree on."""
+        result = subprocess.run(
+            [
+                "node", "-e",
+                "const { resolveLocked } = require(process.argv[1]); "
+                "const [s, p, o] = resolveLocked(process.argv[2], process.argv[3]); "
+                "process.stdout.write(JSON.stringify([s ? s.name : null, p ? true : false, o]));",
+                str(CLI_JS / "graph_source_registry.js"), str(repo), capability,
+            ],
+            cwd=ROOT, text=True, capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def test_resolve_locked_reports_all_four_origins_identically(self) -> None:
+        """`lock-uncapable` is the signal that a locked provider has no native
+        flows and derivation must take over — it must stay distinguishable from
+        `lock-stale`, which is an error. Pinned directly because no CLI reaches
+        every branch."""
+        from runtime.graph.python.graph_source_registry import resolve_locked
+
+        def py(repo: Path, capability: str) -> list:
+            source, path, origin = resolve_locked(repo, capability)
+            return [source["name"] if source else None, bool(path), origin]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            # No manifest at all -> registry priority.
+            _two_provider_repo(repo)
+            self.assertEqual(py(repo, "code_graph"), ["understand-anything", True, "priority"])
+            self.assertEqual(self._resolve_locked_js(repo, "code_graph"),
+                             ["understand-anything", True, "priority"])
+
+            initialize("py", repo, "spine", graph_provider="codegraph")
+            self.assertEqual(py(repo, "code_graph"), ["codegraph", True, "lock"])
+            self.assertEqual(self._resolve_locked_js(repo, "code_graph"),
+                             ["codegraph", True, "lock"])
+            # CodeGraph advertises no flow_graph: derive, do not borrow UA's.
+            self.assertEqual(py(repo, "flow_graph"), ["codegraph", False, "lock-uncapable"])
+            self.assertEqual(self._resolve_locked_js(repo, "flow_graph"),
+                             ["codegraph", False, "lock-uncapable"])
+
+            shutil.rmtree(repo / ".codegraph")
+            self.assertEqual(py(repo, "code_graph"), ["codegraph", False, "lock-stale"])
+            self.assertEqual(self._resolve_locked_js(repo, "code_graph"),
+                             ["codegraph", False, "lock-stale"])
+
+    def test_precheck_and_diagnose_stay_lock_free(self) -> None:
+        """Precheck is the *pre-lock* discovery tool: it must keep reporting every
+        ready provider so intake can ask which should be primary — that question is
+        what creates the lock. It gains no lock awareness and no flag, ever."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _two_provider_repo(repo)
+                initialize(runtime, repo, "spine", graph_provider="codegraph")
+                result = run(runtime, "precheck_graph", "--repo", str(repo), "--need", "code")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("2 sources are ready", result.stdout)
+                self.assertIn("understand-anything", result.stdout)
+                self.assertIn("codegraph", result.stdout)
 
 
 if __name__ == "__main__":

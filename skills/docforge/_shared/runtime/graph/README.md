@@ -14,7 +14,15 @@ or `node runtime/cli/js/<name>.js`, never the implementation files directly.
 | GitNexus | yes | yes | DB (Ladybug) | staleness warns, does not block |
 | CodeGraph | yes | no | MCP | DB presence ≠ MCP wiring; no offline reader |
 
-Registry priority: Understand Anything → GitNexus → CodeGraph.
+Registry priority: Understand Anything → GitNexus → CodeGraph. **Priority applies
+only when no provider is locked.** Once `manage_manifest init` / `set-graph`
+records one in `manifest["graph"]`, `resolve_locked(repo, capability)` returns the
+locked provider plus an `origin` (`lock` / `priority` / `lock-stale` /
+`lock-uncapable`); `resolve_first_ready` is the lock-blind resolver and is correct
+only before a lock exists. `flow_capability_of(repo, provider)` answers the flow
+question for one named provider, never repo-wide. See
+[`../../references/graph/graph-sources.md`](../../references/graph/graph-sources.md)
+"Session persistence".
 
 ## Load this when
 

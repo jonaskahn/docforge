@@ -102,7 +102,9 @@ inline from the absolute cartridge root with `query_catalog --validate`,
   (offline; fail-open).
 - `scaffold_docs.{py,js}`: exact dry-run, one-document materialization, and
   manifest-backed audit.
-- `precheck_graph.{py,js}`: `--need code|flow`.
+- `precheck_graph.{py,js}`: `--need code|flow`. Reports every ready
+  provider, deliberately ignoring the session lock — it is the pre-lock
+  discovery tool whose output feeds the selection question.
 - `check_staleness.{py,js}`: `--document <id|path>`, `--section`, JSON
   output, and provenance sync.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata
@@ -118,9 +120,10 @@ inline from the absolute cartridge root with `query_catalog --validate`,
   rows), import (derived candidates from agent flow analysis when the
   code graph has no native flows), and render the
   flow matrix (schema 1.2; a 1.1 index upgrades additively on load).
-  No provider flags: UA graphs are read in place and GitNexus flows
-  arrive as the auto-discovered `.docforge/tmp/gitnexus-flows.json`
-  interchange.
+  No provider flags: harvest reads the provider locked in
+  `manifest["graph"]`, not whatever artifact happens to be on disk. UA
+  graphs are read in place and GitNexus flows arrive as the
+  auto-discovered `.docforge/tmp/gitnexus-flows.json` interchange.
 - `validate_metadata.{py,js}`: registry/schema/path/version/peer
   validation, including generated-router drift (`generate_indexes
   --check`).

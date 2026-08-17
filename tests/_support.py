@@ -129,12 +129,19 @@ def initialize(
     audiences: tuple[str, ...] = (),
     groups: tuple[str, ...] = (),
     layout: str | None = "standard",
+    graph_provider: str | None = None,
 ) -> subprocess.CompletedProcess:
     """Standard layout by default so tree-shape assertions stay stable; pass
-    `layout=None` to let scale detection (and the compact fold) apply."""
+    `layout=None` to let scale detection (and the compact fold) apply.
+
+    `graph_provider` locks that provider at init, the way intake does after the
+    user picks among several ready ones; omit it to let init auto-pick in
+    registry-priority order."""
     args = ["init", "--repo", str(repo), "--tier", tier]
     if layout is not None:
         args += ["--layout", layout]
+    if graph_provider is not None:
+        args += ["--graph-provider", graph_provider]
     for flag, values in (
         ("shape", shapes),
         ("platform", platforms),

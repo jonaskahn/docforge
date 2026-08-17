@@ -573,6 +573,25 @@ class SkillContentTests(unittest.TestCase):
         )
         self.assertIn("registry-priority pick", graph_sources)
 
+    def test_graph_sources_documents_runtime_lock_enforcement(self) -> None:
+        """The lock used to be documented as authoritative while no code read it.
+        These pin the enforcement half, so the promise cannot drift back into
+        being aspirational."""
+        graph_sources = (SHARED_ROOT / "references" / "graph" / "graph-sources.md").read_text(encoding="utf-8")
+        self.assertIn("resolve_locked", graph_sources)
+        self.assertIn("lock-stale", graph_sources)
+        self.assertIn("lock-uncapable", graph_sources)
+        self.assertIn("deliberately lock-free", graph_sources)
+
+    def test_flows_docs_describe_lock_first_resolution_not_first_ready(self) -> None:
+        """`prepare` resolved the registry's first ready provider and the README
+        said so. Both the code and the sentence are fixed; keep them fixed."""
+        flows_readme = (SHARED_ROOT / "runtime" / "flows" / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("registry's first ready code provider", flows_readme)
+        self.assertIn("locked code provider", flows_readme)
+        graph_readme = (SHARED_ROOT / "runtime" / "graph" / "README.md").read_text(encoding="utf-8")
+        self.assertIn("only when no provider is locked", graph_readme)
+
     def test_portfolio_reference_gates_on_member_tier_readiness(self) -> None:
         portfolio = (SHARED_ROOT / "references" / "portfolio.md").read_text(encoding="utf-8")
         self.assertIn("## Readiness gate", portfolio)

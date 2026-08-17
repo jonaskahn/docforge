@@ -78,7 +78,7 @@ class LibraryMirrorParityTests(unittest.TestCase):
         "provenance_frontmatter": ("runtime.common.python.provenance_frontmatter", ["parse_frontmatter", "emit_yaml", "scaffold_provenance"]),
         "manifest_deps": ("runtime.common.python.manifest_deps", ["extract_dependencies", "extract_package_identities"]),
         "graph_storage": ("runtime.graph.python.graph_storage", ["ensure_tmp_dir_gitignored", "KNOWN_GRAPH_DIRS"], {"writejson"}),
-        "graph_source_registry": ("runtime.graph.python.graph_source_registry", ["SOURCES", "resolve_all_ready"]),
+        "graph_source_registry": ("runtime.graph.python.graph_source_registry", ["SOURCES", "resolve_all_ready", "resolve_locked", "read_graph_lock", "source_by_name"]),
         "graph_source_understand_anything": ("runtime.graph.python.graph_source_understand_anything", ["detect", "read_mode"]),
         "discovery_gate": ("runtime.catalog.python.discovery_gate", ["apply_judgment", "validate_judgment", "needs_gate", "load_schema"]),
     }
