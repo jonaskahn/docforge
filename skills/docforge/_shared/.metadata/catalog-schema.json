@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["version", "tiers", "profiles", "groups", "capabilities", "documents"],
   "properties": {
-    "version": {"const": "2.21.0"},
+    "version": {"const": "2.22.0"},
     "tiers": {"type": "array", "items": {"$ref": "#/definitions/namedOrder"}},
     "profiles": {
       "type": "object",
@@ -36,16 +36,6 @@
     "documents": {"type": "array", "items": {"$ref": "#/definitions/document"}}
   },
   "definitions": {
-    "variantFiles": {
-      "description": "Files that replace the record's own for one variant value. Every key is optional; an omitted key keeps the record's top-level file.",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "contract_file": {"type": "string"},
-        "instruction_file": {"type": "string"},
-        "template_file": {"type": "string"}
-      }
-    },
     "namedOrder": {
       "type": "object",
       "required": ["id", "order"],
@@ -133,25 +123,6 @@
         "summary": {"type": "string", "maxLength": 160},
         "contract_file": {"type": "string"},
         "template_file": {"type": "string"},
-        "variants": {
-          "description": "Per-axis overrides of the record's own contract/instruction/template. Resolved at manifest-build time, so scaffolding reads the already-chosen file from the manifest. An absent axis, or an absent value within one, keeps the record's top-level fields.",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "agent_context_mode": {
-              "description": "Keyed by project.agent_context.mode. Only 'standalone' is overridable; 'linked' is the record's own files. Valid only on agent-context records.",
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {"standalone": {"$ref": "#/definitions/variantFiles"}}
-            },
-            "layout": {
-              "description": "Keyed by project.scale.layout. Only 'compact' is overridable; 'standard' is the record's own files.",
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {"compact": {"$ref": "#/definitions/variantFiles"}}
-            }
-          }
-        },
         "instruction_file": {"type": ["string", "null"]},
         "requires": {"type": "array", "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}},
         "target_depth": {"enum": ["orientation", "deep-dive", "reference", "router"]},

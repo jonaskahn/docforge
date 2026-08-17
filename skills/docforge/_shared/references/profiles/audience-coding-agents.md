@@ -1,9 +1,10 @@
 # Coding-agent audience profile
 
-Select the `coding-agents` audience when AI coding agents need a compact, repository-local
-operating map. It writes last because it links to completed human-facing
-documentation and compresses facts rather than creating another source of
-truth.
+Select the `coding-agents` audience when coding agents need a concise,
+repository-local operating context. Every generated output is permanently
+self-contained and independently useful for its own reader question. The
+profile may repeat evidence-backed facts across outputs to preserve that
+property.
 
 ## Generated structure
 
@@ -15,129 +16,121 @@ CLAUDE.md
 CLAUDE.local.md
 .claude/settings.json
 docs/agents/
-├── README.md
-├── architecture.md
-├── patterns.md
-├── testing.md
-├── tech-debt.md
-├── conventions.md   # conditional on an existing conventions source
-├── flow.md
-└── glossary.md
+|-- architecture.md
+|-- patterns.md
+|-- testing.md
+|-- conventions.md   # conditional on an evidenced conventions source
+|-- tech-debt.md
+|-- flow.md
+`-- glossary.md
 ```
 
-Compact layout — the eight `docs/agents/*` views fold into one merged file, one
-`##` per view. The four host-contract paths are tooling-owned locations and
-never fold:
+Compact layout combines the seven topic views into one file. The tooling-owned
+root and local configuration outputs never fold:
 
 ```text
 AGENTS.md
 CLAUDE.md
 CLAUDE.local.md
 .claude/settings.json
-docs/agents.md       # at a glance, architecture, patterns, testing,
-                     # conventions, tech debt, flows, terms
+docs/agents.md       # architecture, patterns, testing, conventions,
+                     # tech debt, flows, terms
 ```
 
-`CLAUDE.local.md` is added to the target repository’s ignore rules.
+`CLAUDE.local.md` is added to the target repository's ignore rules.
 `.claude/settings.json` is deep-merged so existing configuration survives.
-Cross-vendor mirrors beyond the fixed shims are generated only when requested
-or when existing target configuration makes them applicable. `AGENTS.md` and
-architecture/pattern views use `code_graph`; testing uses manifests; `conventions.md` is
-selected only when a conventions source exists; only `flow.md` and flow-derived `glossary.md`
-require `flow_graph`. A missing flow graph delays two views, not the whole profile.
+`AGENTS.md` and `CLAUDE.md` resolve the same kernel contract, instruction,
+template, target depth, and audit profile; each materializes the full concise
+kernel.
 
-`requires` gates **evidence, not selection**: a view whose capability is absent
-is still selected into the manifest and is then marked `skipped`, rather than
-never appearing. Only `selection.min_tier`, `selection.selectors`, and
-`selection.condition` decide membership.
+Architecture, patterns, and both kernels use `code_graph`; testing and both
+kernels use manifests. Conventions is selected only when a conventions source
+exists. Flow and glossary require `flow_graph`. A missing required capability
+marks only the affected output `skipped`; `requires` gates evidence, not
+selection.
 
-## One-way references
+## Permanent isolation
 
-Agent-context documents may link any human-facing document. **No human-facing
-document may link, mention, or `@`-reference an agent-context output** —
-`docs/agents/`, `docs/agents.md`, `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`,
-or `.claude/settings.json`. The agent overlay knows the whole tree; the tree
-reads exactly as it would if this audience had never been confirmed. That is
-why these views are routed from `AGENTS.md` and appear in no human-facing
-index, and why the reachability rule in
-[`../quality-bar.md`](../quality-bar.md) exempts them from `docs/README.md`.
-The mechanical gate is the `agent-context leak` finding in
-`scaffold_docs --audit`.
+Every agent-context output directly states the facts needed to answer its own
+question. It contains none of the following:
 
-## Content ownership
+- Markdown links or URLs;
+- `@` imports;
+- references to another agent output or a human-facing document;
+- bare paths naming generated documentation;
+- directions to open, read, or consult another document.
 
-### `AGENTS.md`
+Plain source and configuration paths and verified commands are allowed.
+Generated non-agent documentation never links, mentions, or exposes an
+agent-context output. Agent-context outputs therefore do not participate in
+the generated documentation navigation graph.
 
-Keep a small root kernel: repository map, verified commands, validation rules,
-critical constraints, and links to deeper context. It is exempt from
-frontmatter, records provenance in the manifest, and must pass the dedicated
-`lint_agents_kernel.{py,js}` size/content rubric (see
-[`../../runtime/documents/README.md`](../../runtime/documents/README.md)).
+## Content contracts
 
-### Fixed shims and settings
+### Root kernels
 
-`CLAUDE.md` points to the canonical root kernel. `CLAUDE.local.md` is a local
-extension point. Settings contain only safe, portable defaults and are merged
-without discarding user values.
+Both root kernels are full concise duplicates. Each directly states the
+project purpose and stack, verified commands, durable repository map and entry
+points, precedence, hard boundaries, non-obvious evidenced conventions, and
+validation expectations. Neither includes a deeper-context section. Both pass
+the `agents-kernel` size and content rubric.
 
-### `docs/agents/`
+### Local preferences and settings
 
-- `architecture.md`: short layer/entry-point map linked to the owning
-  architecture documents;
-- `patterns.md`: representative paths, recurring conventions, and complexity
-  hotspots useful before editing;
-- `testing.md`: exact commands, test locations, and the minimum validation
-  matrix;
-- `tech-debt.md`: editing hazards linked to the authoritative debt/limitation
-  entries;
-- `conventions.md`: evidenced local conventions, generated only when the
-  source condition is satisfied;
-- `flow.md`: triggers and entry points linked to canonical flow documents;
-- `glossary.md`: flow/domain terms linked to their owning glossary or flow.
+The local-preferences output states its uncommitted, developer-specific scope,
+keeps shared project behavior out, and warns against secrets. Settings contain
+only safe portable denials and optional hooks backed by verified commands;
+merge preserves existing user keys.
 
-These are token-budgeted retrieval views in both modes. What changes is who
-owns the facts:
+### Topic views
 
-| Mode | When | These views |
-|---|---|---|
-| `linked` (default) | human-facing documentation exists | link to the human document that owns each fact, and include agent-specific exemplars only when no human-facing document owns that guidance |
-| `standalone` | the agent-context group is all this run writes | own their facts, because there is no human document to link. The depth ceiling is unchanged: durable paths, boundaries, entry points, verified commands, and observable hazards — never design rationale, business context, or operational procedure |
+- `architecture.md`: stack, durable component and entry-point source paths,
+  responsibilities, dependency direction, data boundaries, and material
+  constraints.
+- `patterns.md`: repeated implementation shapes, representative source paths,
+  complexity hotspots, safe edit constraints, and applicable checks.
+- `testing.md`: exact commands, suite layout and naming, test selection,
+  fixtures and isolation, required validation matrix, and success signals.
+- `conventions.md`: evidenced safety, naming, structural, and workflow
+  directives with practical consequences; omitted when its condition is false.
+- `tech-debt.md`: observed limitations, affected source paths, editing risks,
+  safe handling, and tempting incidental fixes that need separate scope.
+- `flow.md`: evidence-backed triggers, entry source paths, durable component
+  sequences, terminal effects, and material failure behavior.
+- `glossary.md`: concise evidence-backed definitions, code context,
+  distinctions, aliases, and material state constraints.
 
-`standalone` is agent-sufficient, not a replacement human documentation set.
-A later run that adds human-facing documentation asks whether to convert these
-views into linked stubs or keep them self-contained; see
-[`../../workflows/revision.md`](../../workflows/revision.md).
+The compact form presents those same seven topics in that order. Each selected
+section remains independently useful, contains no documentation reference, and
+is budgeted to roughly 25 lines. Omit Conventions when its condition is false;
+omit Flows and Terms when flow evidence is unavailable. Never emit an empty
+conditional section.
 
 ## Evidence recipe
 
-Follow the evidence loop in [`source-analysis.md`](../source-analysis.md).
-Retrieve the smallest structural context from the code graph, and use flow data only for
-`flow.md` and `glossary.md` (see [`graph-sources.md`](../graph/graph-sources.md)). Convert
-raw graph nodes into durable paths, responsibilities, commands, constraints, and links; never
-paste raw graph schemas or volatile line numbers.
+Retrieve the smallest sufficient structural context from the selected code
+graph. Use flow data only for flow and glossary. Convert raw nodes into durable
+source/configuration paths, responsibilities, commands, constraints, stable
+sequences, and direct definitions. Never paste raw graph schemas, volatile line
+numbers, or inferred intent.
+
+Commands must be verified against manifests, task definitions, CI, or direct
+execution evidence. A convention needs repository policy, enforcement, or a
+repeated structural signal. A limitation or flow step must be observed, not
+plausible. When evidence cannot establish a required fact, state the bounded
+uncertainty or skip the affected output instead of filling the gap.
 
 ### Non-obvious conventions
 
-§5 of the kernel exists only for surprises the graph actually surfaced — omit the
-section (heading included) when nothing qualifies. Mine the *topology*, not the
-names: every bullet must trace to a real graph edge, and each claim is checked
-against the graph before it is written.
+The kernel's optional Conventions section exists only for surprises the graph
+actually surfaced. Mine topology rather than names. Strong signals include:
 
-Signals to look for, in order of evidence strength:
+- rare cross-layer import anomalies;
+- naming deviators inside an otherwise consistent layer;
+- layer and source-path disagreements;
+- dependency edges against the dominant direction;
+- repeated non-generic return-shape or naming behavior.
 
-- **Cross-layer import anomalies** — edges that occur once or twice between
-  layers that otherwise never talk;
-- **Naming deviators within a layer** — files whose names do not match the
-  layer's modal suffix or pattern;
-- **Layer/path disagreements** — a file's location contradicts its graph
-  classification (e.g. a source file parked under `tests/`);
-- **Dependency-direction violations** — upward imports against the layer
-  precedence the module map states;
-- **Recurring return-shape / naming signals** — patterns repeated across
-  non-generic function summaries (e.g. every factory returns a tuple in the
-  same order).
-
-Rank candidates by rarity and traceability, keep only the top few, and cap the
-bullet count to fit the kernel's `lint_agents_kernel.{py,js}` line budget.
-Never
-restate a convention a human architecture document already owns — link instead.
+Trace every candidate to real evidence, verify it across more than one signal
+when possible, rank by rarity and editing impact, and keep only the few that fit
+the kernel budget. Omit the entire section when nothing qualifies.

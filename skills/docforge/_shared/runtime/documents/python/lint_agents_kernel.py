@@ -1,250 +1,413 @@
 #!/usr/bin/env python3
-"""
-lint_agents_kernel.py — mechanical rubric check for the coding-agents audience.
+"""Mechanical rubric check for generated AGENTS.md and CLAUDE.md kernels.
 
-Runs the format-specific checks runtime/cli/python/lint_document.py has no concept of: the
-100-line cap, the 7-numbered-section shape, the tagline/test-sentence convention,
-and dangling `@docs/agents/...` references. Run alongside lint_document.py, which
-still covers this file's generic checks (scaffold markers, empty headings, dead
-`[](...)`  links, unlinked mentions) — this script never replaces it.
-
-Checks, for the single AGENTS.md-shaped file given:
-  * line count <= 100                                         (defect; 85-100 is a
-                                                                  non-fatal warning)
-  * line 1 is a level-1 heading, line 2 is non-heading prose   (defect)
-  * every "## " heading matches "## <n>. <Title>"              (defect)
-  * every section title is 1-4 words, Title Case, and ends
-    with no "?"                                                 (defect)
-  * no "### " heading outside section 6 (Absolute Rules)       (defect)
-  * a bold "**tagline**" as the first non-blank line of every
-    section                                                    (defect)
-  * every tagline is 5-12 words                                 (defect)
-  * a "The test: ... ." line in every section except 2
-    (Boundaries) and 6 (Absolute Rules)                        (defect)
-  * no bare MUST/NEVER/ALWAYS outside section 6                (defect)
-  * at most one fenced code block                              (defect)
-  * no " you "/" we "/" I " in prose                            (defect)
-  * last non-blank line starts with "Working if:"              (defect)
-  * no bare http(s):// URL outside an HTML comment              (defect)
-  * a provenance HTML comment in the first 10 lines            (defect)
-  * every "@docs/agents/..." reference resolves to a file on
-    disk, relative to --repo                                   (defect)
-  * every tagline carries a negation word ("No", "Not",
-    "Never", ...)                                               (warning)
-  * guidance sections (2, 5, 6) have at least half of their
-    "- " bullets starting with a negation/guard word            (warning)
-  * guidance bullets are 6-14 words                             (warning)
+The kernel must stay concise and self-contained: required operating sections,
+verified commands, hard safety boundaries, and no documentation references.
+Run this in place of the generic document linter for an ``agents-kernel``
+output.
 
 Usage:
-    python lint_agents_kernel.py --file AGENTS.md --repo .
-    python lint_agents_kernel.py --file AGENTS.md --repo . --json
+    python lint_agents_kernel.py --file AGENTS.md [--json]
 
-Exit code 0 if no defects, 1 if any defect, 2 on a usage/IO error. Standard library only.
+Exit 0 when no defects exist, 1 for defects, and 2 for usage or IO errors.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import sys
 import re
-from pathlib import Path
+import sys
+from pathlib import Path, PurePosixPath
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
-H2_NUMBERED_RE = re.compile(r"^## (\d+)\. [A-Z]")
-H2_TITLE_RE = re.compile(r"^## \d+\.\s+(.*\S)\s*$")
-TAGLINE_RE = re.compile(r"^\*\*.+\*\*$")
-TEST_LINE_RE = re.compile(r"^The test: .+\.$")
-BARE_MODAL_RE = re.compile(r"(?<![\w-])(MUST|NEVER|ALWAYS)(?![\w-])")
-FENCE_RE = re.compile(r"^```")
+H2_RE = re.compile(r"^##\s+(.+?)\s*#*\s*$")
+FENCE_MARKER_RE = re.compile(r"^\s*(`{3,}|~{3,})")
 BARE_URL_RE = re.compile(r"https?://")
-AT_REF_RE = re.compile(r"@([\w./-]+\.md)")
-WEAK_PRONOUN_RE = re.compile(r" (you|we|I) ")
+RAW_URL_TOKEN_RE = re.compile(r"\bhttps?://[^\s<>)\]\"']+")
+MARKDOWN_LINK_RE = re.compile(r"!?\[([^\]\n]*)\]\(([^)\n]*)\)")
+AT_IMPORT_RE = re.compile(
+    r"(?<![\w@])@((?:(?:\.{1,2}/|/)?[\w.~+-]+)(?:/[\w.~+-]+)*/?(?:#[\w.~:-]+)?)"
+)
+DOC_PATH_RE = re.compile(
+    r"(?<![\w@])((?:(?:\.{1,2}/|/)?(?:[\w.~+-]+/)*[\w.~+-]+\."
+    r"(?:md|mdx|markdown|rst|adoc|asciidoc)(?:#[\w.~:-]+)?|docs/[\w.~+/-]*))"
+    r"(?![\w./-])",
+    re.IGNORECASE,
+)
+DOCUMENT_SUFFIXES = {".md", ".mdx", ".markdown", ".rst", ".adoc", ".asciidoc"}
+REQUIRED_SECTIONS = (
+    "Commands",
+    "Repository map",
+    "Precedence",
+    "Boundaries",
+    "Validation",
+)
+SECTION_ORDER = (
+    "Commands",
+    "Repository map",
+    "Precedence",
+    "Boundaries",
+    "Conventions",
+    "Validation",
+)
+MAX_NONBLANK_LINES = 80
+LINE_WARNING_AT = 68
+GUARD_RE = re.compile(r"\b(?:never|must not|do not|without)\b", re.IGNORECASE)
+SECRET_RE = re.compile(r"(?:\b(?:secret|credential)\w*\b|\.env\b)", re.IGNORECASE)
+VALIDATION_ACTION_RE = re.compile(r"\b(?:disable|skip|bypass|remove)\w*\b", re.IGNORECASE)
+VALIDATION_TARGET_RE = re.compile(r"\b(?:test|validation|check)\w*\b", re.IGNORECASE)
+DESTRUCTIVE_RE = re.compile(r"\bdestructive\b", re.IGNORECASE)
+APPROVAL_RE = re.compile(r"\b(?:approval|permission|ask)\w*\b", re.IGNORECASE)
 
-EXEMPT_SECTIONS = ("2", "6")  # Boundaries, Absolute Rules — no "The test:" line required
-GUIDANCE_SECTIONS = ("2", "5", "6")  # Boundaries, Non-Obvious Conventions, Absolute Rules
-NEGATION_WORDS = ("no", "not", "don't", "never", "unless", "without", "except", "instead")
-GUARD_SINGLE_WORDS = {"no", "don't", "never", "if", "unless", "without", "avoid"}
-GUARD_PAIR_WORDS = {"must not", "do not"}
-MIN_TITLE_WORDS, MAX_TITLE_WORDS = 1, 4
-MIN_TAGLINE_WORDS, MAX_TAGLINE_WORDS = 5, 12
-MIN_BULLET_WORDS, MAX_BULLET_WORDS = 6, 14
-MIN_GUARD_RATIO = 0.5
+
+def _clean_reference(raw: str) -> str:
+    return raw.strip().strip("`\"'<>").rstrip(".,;:!?")
 
 
-def _word_count(text: str) -> int:
-    return sum(1 for token in text.split() if re.search(r"[A-Za-z0-9]", token))
+def _link_target(raw: str) -> str:
+    value = raw.strip()
+    if value.startswith("<") and ">" in value:
+        return value[1:value.index(">")]
+    return value.split(maxsplit=1)[0] if value else ""
 
 
-def _is_guard_bullet(bullet: str) -> bool:
-    tokens = bullet.split()
-    if not tokens:
-        return False
-    first = tokens[0].strip(":;,.-").lower()
-    if first in GUARD_SINGLE_WORDS:
-        return True
-    if len(tokens) > 1:
-        pair = first + " " + tokens[1].strip(":;,.-").lower()
-        return pair in GUARD_PAIR_WORDS
-    return False
+def _looks_like_document_reference(raw: str) -> bool:
+    value = _clean_reference(raw).split("#", 1)[0].split("?", 1)[0].rstrip("/")
+    return (
+        value.startswith("docs/")
+        or PurePosixPath(value).suffix.lower() in DOCUMENT_SUFFIXES
+    )
 
 
-def lint_agents_kernel(path: Path, repo: Path) -> dict:
+def _mask_spans(line: str, spans: list[tuple[int, int]]) -> str:
+    chars = list(line)
+    for start, end in spans:
+        chars[start:end] = " " * (end - start)
+    return "".join(chars)
+
+
+def _fence_blocks(lines: list[str]) -> tuple[list[dict], set[int]]:
+    blocks: list[dict] = []
+    protected: set[int] = set()
+    current: dict | None = None
+    for index, line in enumerate(lines):
+        if current is not None:
+            protected.add(index)
+            marker = current["marker"]
+            if re.match(rf"^\s*{re.escape(marker[0])}{{{len(marker)},}}\s*$", line):
+                current["end"] = index
+                current = None
+            continue
+        match = FENCE_MARKER_RE.match(line)
+        if match:
+            current = {"start": index, "end": None, "marker": match.group(1)}
+            blocks.append(current)
+            protected.add(index)
+    return blocks, protected
+
+
+def _sections(lines: list[str], protected: set[int], end: int) -> list[dict]:
+    headings: list[tuple[int, str]] = []
+    for index, line in enumerate(lines[:end]):
+        if index in protected:
+            continue
+        match = H2_RE.match(line)
+        if match:
+            headings.append((index, match.group(1).strip()))
+    return [
+        {
+            "title": title,
+            "line": index + 1,
+            "start": index + 1,
+            "end": headings[position + 1][0] if position + 1 < len(headings) else end,
+        }
+        for position, (index, title) in enumerate(headings)
+    ]
+
+
+def _canonical_title(title: str) -> str | None:
+    by_name = {name.casefold(): name for name in SECTION_ORDER}
+    return by_name.get(title.casefold())
+
+
+def _section(sections: list[dict], title: str) -> dict | None:
+    return next(
+        (item for item in sections if item["title"].casefold() == title.casefold()),
+        None,
+    )
+
+
+def _document_reference_defects(lines: list[str]) -> list[dict]:
+    """Reject references rather than treating existing targets as valid."""
+    defects: list[dict] = []
+    for number, line in enumerate(lines, 1):
+        link_spans: list[tuple[int, int]] = []
+        for match in MARKDOWN_LINK_RE.finditer(line):
+            target = _link_target(match.group(2)) or "<empty>"
+            defects.append({
+                "kind": "doc-reference",
+                "line": number,
+                "detail": f"markdown-link: {target}",
+            })
+            link_spans.append(match.span())
+        working = _mask_spans(line, link_spans)
+
+        url_spans = [match.span() for match in RAW_URL_TOKEN_RE.finditer(working)]
+        working = _mask_spans(working, url_spans)
+
+        import_spans: list[tuple[int, int]] = []
+        for match in AT_IMPORT_RE.finditer(working):
+            target = match.group(1)
+            if _looks_like_document_reference(target):
+                defects.append({
+                    "kind": "doc-reference",
+                    "line": number,
+                    "detail": f"at-import: @{_clean_reference(target)}",
+                })
+                import_spans.append(match.span())
+        working = _mask_spans(working, import_spans)
+
+        for match in DOC_PATH_RE.finditer(working):
+            defects.append({
+                "kind": "doc-reference",
+                "line": number,
+                "detail": f"bare-path: {_clean_reference(match.group(1))}",
+            })
+    return defects
+
+
+def _required_section_defects(sections: list[dict]) -> list[dict]:
+    defects: list[dict] = []
+    for title in REQUIRED_SECTIONS:
+        matches = [
+            item for item in sections
+            if item["title"].casefold() == title.casefold()
+        ]
+        if not matches:
+            defects.append({
+                "kind": "missing-section",
+                "line": 0,
+                "detail": f"missing required section: {title}",
+            })
+        for duplicate in matches[1:]:
+            defects.append({
+                "kind": "duplicate-section",
+                "line": duplicate["line"],
+                "detail": title,
+            })
+
+    ordered = [
+        (item, _canonical_title(item["title"]))
+        for item in sections
+        if _canonical_title(item["title"]) is not None
+    ]
+    positions = [SECTION_ORDER.index(canonical) for _item, canonical in ordered]
+    for index in range(1, len(positions)):
+        if positions[index] < positions[index - 1]:
+            defects.append({
+                "kind": "section-order",
+                "line": ordered[index][0]["line"],
+                "detail": "expected: " + ", ".join(SECTION_ORDER),
+            })
+            break
+    return defects
+
+
+def _command_defects(lines: list[str], sections: list[dict], blocks: list[dict]) -> list[dict]:
+    commands = _section(sections, "Commands")
+    if commands is None:
+        return []
+    command_blocks = [
+        block for block in blocks
+        if commands["start"] <= block["start"] < commands["end"]
+    ]
+    if not command_blocks:
+        return [{
+            "kind": "missing-command-block",
+            "line": commands["line"],
+            "detail": "Commands must contain a fenced block",
+        }]
+    block = command_blocks[0]
+    if block["end"] is None:
+        return []
+    commands_in_block = [
+        line.strip()
+        for line in lines[block["start"] + 1:block["end"]]
+        if line.strip()
+        and not line.lstrip().startswith("#")
+        and "{{" not in line
+        and "TODO(" not in line
+    ]
+    if commands_in_block:
+        return []
+    return [{
+        "kind": "empty-command-block",
+        "line": block["start"] + 1,
+        "detail": "Commands must contain at least one concrete command",
+    }]
+
+
+def _safety_defects(lines: list[str], sections: list[dict]) -> list[dict]:
+    boundaries = _section(sections, "Boundaries")
+    if boundaries is None:
+        return []
+    body = lines[boundaries["start"]:boundaries["end"]]
+    checks = {
+        "secrets": any(GUARD_RE.search(line) and SECRET_RE.search(line) for line in body),
+        "validation": any(
+            GUARD_RE.search(line)
+            and VALIDATION_ACTION_RE.search(line)
+            and VALIDATION_TARGET_RE.search(line)
+            for line in body
+        ),
+        "destructive commands": any(
+            DESTRUCTIVE_RE.search(line) and APPROVAL_RE.search(line)
+            for line in body
+        ),
+    }
+    return [
+        {
+            "kind": "missing-safety-rule",
+            "line": boundaries["line"],
+            "detail": f"Boundaries must cover {name}",
+        }
+        for name, present in checks.items()
+        if not present
+    ]
+
+
+def lint_agents_kernel(path: Path, repo: Path | None = None) -> dict:
+    # Retained for API compatibility. References are never resolved against
+    # disk now that every document reference is a defect.
+    _ = repo
     text = path.read_text(encoding="utf-8", errors="ignore")
     lines = text.split("\n")
-
-    n = len(lines)
-    while n > 0 and not lines[n - 1].strip():
-        n -= 1  # trailing blank lines don't count toward the cap
+    content_end = len(lines)
+    while content_end > 0 and not lines[content_end - 1].strip():
+        content_end -= 1
 
     defects: list[dict] = []
     warnings: list[dict] = []
-
-    if n > 100:
-        defects.append({"kind": "line-cap", "line": n, "detail": f"{n} lines, cap is 100"})
-    elif n >= 85:
-        warnings.append({"kind": "line-cap-warning", "line": n,
-                          "detail": f"{n} lines, approaching the 100-line cap"})
+    nonblank_lines = [
+        index + 1 for index, line in enumerate(lines[:content_end]) if line.strip()
+    ]
+    nonblank_count = len(nonblank_lines)
+    if nonblank_count > MAX_NONBLANK_LINES:
+        defects.append({
+            "kind": "line-cap",
+            "line": nonblank_lines[MAX_NONBLANK_LINES],
+            "detail": f"{nonblank_count} nonblank lines, cap is {MAX_NONBLANK_LINES}",
+        })
+    elif nonblank_count >= LINE_WARNING_AT:
+        warnings.append({
+            "kind": "line-cap-warning",
+            "line": nonblank_lines[-1],
+            "detail": (
+                f"{nonblank_count} nonblank lines, approaching the "
+                f"{MAX_NONBLANK_LINES}-line cap"
+            ),
+        })
 
     if not lines or not lines[0].startswith("# "):
-        defects.append({"kind": "opening-shape", "line": 1,
-                         "detail": "line 1 must be a level-1 heading"})
+        defects.append({
+            "kind": "opening-shape",
+            "line": 1,
+            "detail": "line 1 must be a level-1 heading",
+        })
 
-    heads = [(i, m) for i, m in ((j, HEADING_RE.match(l)) for j, l in enumerate(lines)) if m]
+    blocks, protected = _fence_blocks(lines[:content_end])
+    sections = _sections(lines, protected, content_end)
+    first_h2 = sections[0]["line"] - 1 if sections else content_end
+    preamble = lines[1:first_h2]
+    if not any(
+        line.strip()
+        and not HEADING_RE.match(line)
+        and not line.lstrip().startswith("<!--")
+        for line in preamble
+    ):
+        defects.append({
+            "kind": "opening-shape",
+            "line": 2,
+            "detail": "no description prose between the title and first section",
+        })
 
-    first_h2_line = next((i for i, m in heads if m.group(1) == "##"), n)
-    preamble = lines[1:first_h2_line]
-    if not any(l.strip() and not HEADING_RE.match(l) for l in preamble):
-        defects.append({"kind": "opening-shape", "line": 2,
-                         "detail": "no description prose between the title and the first section"})
-    h2s = [(i, m) for i, m in heads if m.group(1) == "##"]
+    defects.extend(_required_section_defects(sections))
+    defects.extend(_command_defects(lines, sections, blocks))
+    defects.extend(_safety_defects(lines, sections))
 
-    # locate section 6 (Absolute Rules)'s line range so its exemptions apply only inside it
-    section6_range = (n, n)
-    for idx, (i, _m) in enumerate(h2s):
-        numbered = H2_NUMBERED_RE.match(lines[i])
-        if numbered and numbered.group(1) == "6":
-            end = h2s[idx + 1][0] if idx + 1 < len(h2s) else n
-            section6_range = (i, end)
+    if len(blocks) > 1:
+        defects.append({
+            "kind": "too-many-code-blocks",
+            "line": blocks[1]["start"] + 1,
+            "detail": f"{len(blocks)} fenced blocks, max 1",
+        })
+    for block in blocks:
+        if block["end"] is None:
+            defects.append({
+                "kind": "unclosed-code-block",
+                "line": block["start"] + 1,
+                "detail": "fenced block is not closed",
+            })
 
-    def in_section6(i: int) -> bool:
-        return section6_range[0] <= i < section6_range[1]
+    if not any("<!--" in line for line in lines[:10]):
+        defects.append({
+            "kind": "missing-provenance",
+            "line": 0,
+            "detail": "no HTML-comment provenance in first 10 lines",
+        })
 
-    for i, l in enumerate(lines):
-        if l.startswith("## ") and not H2_NUMBERED_RE.match(l):
-            defects.append({"kind": "heading-shape", "line": i + 1, "detail": l.strip()})
-        if l.startswith("### ") and not in_section6(i):
-            defects.append({"kind": "stray-h3", "line": i + 1, "detail": l.strip()})
-        if BARE_MODAL_RE.search(l) and not in_section6(i) and not l.lstrip().startswith("#"):
-            defects.append({"kind": "bare-modal-outside-rules", "line": i + 1, "detail": l.strip()})
-        if WEAK_PRONOUN_RE.search(l):
-            defects.append({"kind": "weak-pronoun", "line": i + 1, "detail": l.strip()})
-        if BARE_URL_RE.search(l) and "<!--" not in l:
-            defects.append({"kind": "bare-url", "line": i + 1, "detail": l.strip()})
+    for index, line in enumerate(lines):
+        without_links = _mask_spans(
+            line, [match.span() for match in MARKDOWN_LINK_RE.finditer(line)]
+        )
+        if BARE_URL_RE.search(without_links):
+            defects.append({
+                "kind": "bare-url",
+                "line": index + 1,
+                "detail": line.strip(),
+            })
 
-    for idx, (i, _m) in enumerate(h2s):
-        numbered = H2_NUMBERED_RE.match(lines[i])
-        sec_no = numbered.group(1) if numbered else None
-        end = h2s[idx + 1][0] if idx + 1 < len(h2s) else n
-        body = lines[i + 1:end]
-        first_nonblank = next((l for l in body if l.strip()), "")
-
-        title_m = H2_TITLE_RE.match(lines[i])
-        if numbered and title_m:
-            title = title_m.group(1)
-            words = _word_count(title)
-            if words < MIN_TITLE_WORDS or words > MAX_TITLE_WORDS:
-                defects.append({"kind": "title-shape", "line": i + 1,
-                                "detail": f"{words} words, want {MIN_TITLE_WORDS}-{MAX_TITLE_WORDS}: {lines[i].strip()}"})
-            if title.rstrip().endswith("?"):
-                defects.append({"kind": "title-shape", "line": i + 1,
-                                "detail": f"title ends in '?': {lines[i].strip()}"})
-            if any(w[0].isalpha() and not w[0].isupper() for w in title.split()
-                   if re.search(r"[A-Za-z0-9]", w)):
-                defects.append({"kind": "title-shape", "line": i + 1,
-                                "detail": f"not Title Case: {lines[i].strip()}"})
-
-        first = first_nonblank.strip()
-        if not TAGLINE_RE.match(first):
-            defects.append({"kind": "missing-tagline", "line": i + 1, "detail": lines[i].strip()})
-        else:
-            tagline = first[2:-2].strip()
-            words = _word_count(tagline)
-            if words < MIN_TAGLINE_WORDS or words > MAX_TAGLINE_WORDS:
-                defects.append({"kind": "tagline-length", "line": i + 1,
-                                "detail": f"{words} words, want {MIN_TAGLINE_WORDS}-{MAX_TAGLINE_WORDS}: {first}"})
-            low = tagline.lower()
-            if not any(re.search(rf"\b{re.escape(w)}\b", low) for w in NEGATION_WORDS):
-                warnings.append({"kind": "weak-tagline", "line": i + 1,
-                                 "detail": f"no negation word: {first}"})
-
-        if sec_no in GUIDANCE_SECTIONS:
-            bullets = [(i + 2 + bi, b.lstrip()[2:].strip()) for bi, b in enumerate(body) if b.lstrip().startswith("- ")]
-            if bullets:
-                guards = sum(1 for _bl, b in bullets if _is_guard_bullet(b))
-                if guards / len(bullets) < MIN_GUARD_RATIO:
-                    warnings.append({"kind": "low-negation-ratio", "line": i + 1,
-                                     "detail": f"section {sec_no}: {guards}/{len(bullets)} bullets start with a negation/guard"})
-                for bl, b in bullets:
-                    words = _word_count(b)
-                    if words < MIN_BULLET_WORDS or words > MAX_BULLET_WORDS:
-                        warnings.append({"kind": "bullet-length", "line": bl,
-                                         "detail": f"{words} words, want {MIN_BULLET_WORDS}-{MAX_BULLET_WORDS}: {b}"})
-
-        if sec_no not in EXEMPT_SECTIONS:
-            if not any(TEST_LINE_RE.match(l.strip()) for l in body):
-                defects.append({"kind": "missing-test-line", "line": i + 1, "detail": lines[i].strip()})
-
-    fence_count = sum(1 for l in lines if FENCE_RE.match(l.strip())) // 2
-    if fence_count > 1:
-        defects.append({"kind": "too-many-code-blocks", "line": 0,
-                         "detail": f"{fence_count} fenced blocks, max 1"})
-
-    if not any("<!--" in l for l in lines[:10]):
-        defects.append({"kind": "missing-provenance", "line": 0,
-                         "detail": "no HTML-comment provenance in first 10 lines"})
-
-    stripped = [l for l in lines[:n] if l.strip()]
-    if not stripped or not stripped[-1].startswith("Working if:"):
-        defects.append({"kind": "missing-working-if", "line": n,
-                         "detail": "last line must start with 'Working if:'"})
-
-    for i, l in enumerate(lines):
-        for m in AT_REF_RE.finditer(l):
-            target = m.group(1)
-            if not (repo / target).resolve().exists():
-                defects.append({"kind": "dangling-at-ref", "line": i + 1, "detail": f"@{target}"})
-
+    defects.extend(_document_reference_defects(lines))
     return {"file": str(path), "defects": defects, "warnings": warnings}
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--file", required=True, type=Path, help="the AGENTS.md-shaped file to check")
-    ap.add_argument("--repo", type=Path, default=Path("."),
-                     help="repo root, for resolving @docs/agents/... references (default: .)")
-    ap.add_argument("--json", action="store_true", help="emit machine-readable JSON")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--file", required=True, type=Path, help="AGENTS.md or CLAUDE.md")
+    parser.add_argument(
+        "--repo",
+        type=Path,
+        default=Path("."),
+        help="accepted for compatibility; document references are always rejected",
+    )
+    parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    args = parser.parse_args()
 
     if not args.file.is_file():
         print(f"error: not a file: {args.file}", file=sys.stderr)
         return 2
 
     result = lint_agents_kernel(args.file, args.repo)
-
     if args.json:
         print(json.dumps(result, indent=2))
     else:
         if not result["defects"]:
             print(f"CLEAN    {result['file']}")
-        for d in result["defects"]:
-            loc = f":{d['line']}" if d["line"] else ""
-            print(f"DEFECT   {result['file']}{loc}  {d['kind']}: {d['detail']}")
-        for w in result["warnings"]:
-            loc = f":{w['line']}" if w["line"] else ""
-            print(f"WARNING  {result['file']}{loc}  {w['kind']}: {w['detail']}")
-
+        for defect in result["defects"]:
+            location = f":{defect['line']}" if defect["line"] else ""
+            print(
+                f"DEFECT   {result['file']}{location}  "
+                f"{defect['kind']}: {defect['detail']}"
+            )
+        for warning in result["warnings"]:
+            location = f":{warning['line']}" if warning["line"] else ""
+            print(
+                f"WARNING  {result['file']}{location}  "
+                f"{warning['kind']}: {warning['detail']}"
+            )
     return 1 if result["defects"] else 0
 
 

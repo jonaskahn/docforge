@@ -1,7 +1,7 @@
 {
   "id": "agents_kernel",
   "type": "agents-kernel",
-  "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views",
+  "summary": "Concise self-contained operating kernel with verified commands, repository map, precedence, boundaries, and validation",
   "contract_file": "content/agent-context/contracts/agents-kernel.md",
   "path": "AGENTS.md",
   "group": "agent-context",
@@ -24,12 +24,9 @@
   "write_order": 200,
   "provenance_mode": "manifest",
   "audit_profile": "agents-kernel",
-  "template_file": "content/agent-context/templates/agents-kernel.md",
-  "variants": {
-    "layout": {
-      "compact": {
-        "template_file": "content/agent-context/templates/agents-kernel.compact.md"
-      }
-    }
-  }
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
+  "template_file": "content/agent-context/templates/agents-kernel.md"
 }

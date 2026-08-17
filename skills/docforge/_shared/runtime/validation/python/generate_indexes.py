@@ -39,7 +39,7 @@ GROUP_DETAILS = {
     "contributing": "Contribution documents route collaborators to ownership, contribution rules, and the supporting process needed to make changes safely.",
     "records": "Decision records preserve why durable architectural choices were made. Their router indexes status and links; each individual record owns its rationale.",
     "portfolio": "Portfolio documents align multiple repositories for diligence, ownership, system context, operations, and cross-repository decision making.",
-    "agent-context": "Agent-context documents provide compact, verified operating context for coding agents while linking to the human-facing owners of detailed facts.",
+    "agent-context": "Agent-context documents provide compact, verified, self-contained operating context for coding agents.",
 }
 
 

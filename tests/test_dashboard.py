@@ -184,7 +184,16 @@ graph TD;
 """
 
 
-def written_doc(doc_id: str, path: str, body: str, write_order: int = 10, nav_order: int | None = None) -> dict:
+def written_doc(
+    doc_id: str,
+    path: str,
+    body: str,
+    write_order: int = 10,
+    nav_order: int | None = None,
+    group: str = "architecture",
+    doc_type: str = "generic",
+    provenance_mode: str = "sections",
+) -> dict:
     value = provenance(
         doc_id=doc_id,
         path=path,
@@ -198,16 +207,16 @@ def written_doc(doc_id: str, path: str, body: str, write_order: int = 10, nav_or
         "id": doc_id,
         "title": doc_id.replace("_", " ").title(),
         "description": f"Fixture description for {doc_id.replace('_', ' ')}.",
-        "type": "generic",
+        "type": doc_type,
         "path": path,
-        "group": "architecture",
+        "group": group,
         "selection": {"origins": [{"kind": "dynamic", "id": "generic"}], "evidence": []},
         "status": "generated",
         "requires": [],
         "scaffold_template": "unused",
         "target_depth": "orientation",
         "write_order": write_order,
-        "provenance_mode": "sections",
+        "provenance_mode": provenance_mode,
         "audit_profile": "standard",
         "provenance": value,
         "audit": None,
@@ -264,6 +273,27 @@ def reconcile_report(runtime: str, repo: Path) -> dict:
     )
     result = subprocess.run(
         ["node", "-e", script, str(DASH_CLI_JS / "dashboard.js"), str(repo), str(manifest_path)],
+        text=True, capture_output=True, check=True,
+    )
+    return json.loads(result.stdout)
+
+
+def rewrite_with_documents(runtime: str, documents: list[dict], source_path: str, body: str) -> str:
+    """Run link projection against a supplied mixed document set."""
+    if runtime == "py":
+        from runtime.dashboard.python.dashboard import build_ledger, convert_body
+        ledger = build_ledger(documents)
+        ledger["assets"] = set()
+        return convert_body(body, source_path, ledger, set())[0]
+    script = (
+        "const d=require(process.argv[1]);const fs=require('fs');"
+        "const p=JSON.parse(fs.readFileSync(0,'utf8'));"
+        "const ledger=d.buildLedger(p.documents);ledger.assets=new Set();"
+        "console.log(JSON.stringify(d.convertBody(p.body,p.source_path,ledger,new Set())[0]));"
+    )
+    result = subprocess.run(
+        ["node", "-e", script, str(DASH_CLI_JS / "dashboard.js")],
+        input=json.dumps({"documents": documents, "source_path": source_path, "body": body}),
         text=True, capture_output=True, check=True,
     )
     return json.loads(result.stdout)
@@ -436,19 +466,23 @@ class DashboardNavigationTests(unittest.TestCase):
                 finally:
                     stop_dashboard(runtime, repo)
 
-    def test_dashboard_excludes_claude_local_from_routes(self) -> None:
+    def test_dashboard_excludes_agent_context_from_routes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             seed_repo(repo)
             manifest = load_manifest(repo)
             manifest["documents"].append(written_doc("changelog", "CHANGELOG.md", "# Changelog\n", write_order=5))
-            manifest["documents"].append(written_doc("claude_local", "CLAUDE.local.md", "# Local\n", write_order=202))
+            manifest["documents"].append(written_doc(
+                "claude_local", "CLAUDE.local.md", "# Local\n", write_order=202,
+                group="agent-context", doc_type="fixed-shim", provenance_mode="manifest",
+            ))
             (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             write_written_doc(repo, manifest["documents"][-2], "# Changelog\n")
             write_written_doc(repo, manifest["documents"][-1], "# Local\n")
             for runtime in ("py", "js"):
                 result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
                 self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertNotIn("claude_local", result.stdout)
                 self.assertNotIn("/docs/root/claude.local", result.stdout)
                 self.assertIn("-> /docs/root/changelog", result.stdout)
                 self.assertIn("0 problems", result.stdout)
@@ -524,64 +558,85 @@ class DashboardBuildTests(unittest.TestCase):
                 finally:
                     stop_dashboard(runtime, repo)
 
-    def test_start_build_renders_manifest_provenance_agents_and_rewrites_link(self) -> None:
+    def test_start_build_excludes_agent_context_from_mixed_tree(self) -> None:
         env, _bin = fake_npm_env()
-        agents_body = "# Demo Repo\n\nKernel rules.\n"
-        agents_provenance = {
-            "schema": "2.0",
-            "doc_id": "agents_kernel",
-            "path": "AGENTS.md",
-            "generated_at": "2026-08-01T00:00:00Z",
-            "generator": {"name": "docforge", "version": "2.19.0"},
-            "tier": "spine",
-            "target_depth": "orientation",
-            "graph": {"provider": "fixture", "flow": "none"},
-            "sections": [],
-        }
-        agents_doc = {
-            "id": "agents_kernel",
-            "title": "Agent Kernel",
-            "type": "agents-kernel",
-            "path": "AGENTS.md",
-            "group": "agent-context",
-            "selection": {"origins": [{"kind": "static", "id": "agents-kernel"}], "evidence": []},
-            "status": "complete",
-            "requires": ["code_graph", "manifests"],
-            "scaffold_template": "content/agent-context/templates/agents-kernel.md",
-            "target_depth": "orientation",
-            "write_order": 200,
-            "provenance_mode": "manifest",
-            "audit_profile": "agents-kernel",
-            "provenance": agents_provenance,
-            "audit": {"mode": "cold-pass", "verdict": "PASS", "report": ".docforge/audits/agents.md"},
-        }
+        agent_specs = [
+            ("agents_kernel", "AGENTS.md", "agents-kernel", "# Demo Repo\n\nKernel rules.\n", "manifest"),
+            ("claude_shim", "CLAUDE.md", "agents-kernel", "# Claude\n\nAgent shim.\n", "manifest"),
+            ("claude_local", "CLAUDE.local.md", "fixed-shim", "# Local\n\nPreferences.\n", "manifest"),
+            ("claude_settings", ".claude/settings.json", "machine-config", "{}\n", "manifest"),
+            (
+                "agents_index", "docs/agents/README.md", "folder-index",
+                "# Agents\n\nKernel lives at [AGENTS.md](../../AGENTS.md).\n", "sections",
+            ),
+            (
+                "agents_compact", "docs/agents.md", "compact-doc",
+                "# Coding-agent views\n\n[Architecture](agents/architecture.md).\n", "sections",
+            ),
+            (
+                "agents_architecture", "docs/agents/architecture.md", "agents-architecture",
+                "# Agent architecture\n\n[Human docs](../README.md).\n", "sections",
+            ),
+        ]
+        link_body = (
+            "[kernel](../AGENTS.md) [shim](../CLAUDE.md) "
+            "[local](../CLAUDE.local.md) [settings](../.claude/settings.json) "
+            "[index](agents/README.md) [compact](agents.md) "
+            "[topic](agents/architecture.md)\n"
+        )
         with tempfile.TemporaryDirectory() as tmp:
             for runtime in ("py", "js"):
                 repo = Path(tmp) / runtime
                 repo.mkdir()
                 seed_repo(repo)
                 manifest = load_manifest(repo)
-                agents_index = written_doc("agents_index", "docs/agents/README.md", "# Agents\n", write_order=28)
-                manifest["documents"].append(agents_doc)
-                manifest["documents"].append(agents_index)
+                agent_docs = []
+                for offset, (doc_id, path, doc_type, body, provenance_mode) in enumerate(agent_specs):
+                    doc = written_doc(
+                        doc_id, path, body, write_order=200 + offset,
+                        group="agent-context", doc_type=doc_type,
+                        provenance_mode=provenance_mode,
+                    )
+                    agent_docs.append(doc)
+                    target = repo / path
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(body, encoding="utf-8")
+                manifest["documents"].extend(agent_docs)
                 (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-                (repo / "AGENTS.md").write_text(agents_body, encoding="utf-8")
-                write_written_doc(
-                    repo, agents_index, "# Agents\n\nKernel lives at [AGENTS.md](../../AGENTS.md).\n",
-                )
+                src = repo / "src"
+                src.mkdir()
+                (src / "main.ts").write_bytes(b"evidence")
                 try:
                     plan = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
-                    self.assertEqual(plan.returncode, 0, plan.stderr)
-                    self.assertIn("-> /docs/root/agents", plan.stdout)
+                    self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
+                    self.assertIn("3 pages in 3 folders; 0 problems", plan.stdout)
+                    for doc in agent_docs:
+                        self.assertNotIn(doc["id"], plan.stdout)
+                    self.assertNotIn("/docs/agents", plan.stdout)
+                    self.assertNotIn("/docs/root/agents", plan.stdout)
+                    self.assertEqual(
+                        rewrite_with_documents(runtime, manifest["documents"], "docs/README.md", link_body),
+                        link_body,
+                        "agent-context documents must not become dashboard link targets",
+                    )
+
                     result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
-                    self.assertEqual(result.returncode, 0, result.stderr)
-                    root_page = repo / ".docforge" / "dashboard" / "content" / "docs" / "root" / "agents.mdx"
-                    self.assertTrue(root_page.is_file(), "AGENTS.md must render as a dashboard page")
-                    self.assertIn('title: "Demo Repo"', root_page.read_text(encoding="utf-8"))
-                    agents_index_mdx = repo / ".docforge" / "dashboard" / "content" / "docs" / "agents" / "index.mdx"
-                    text = agents_index_mdx.read_text(encoding="utf-8")
-                    self.assertIn("](/docs/root/agents)", text)
-                    self.assertNotIn("../../AGENTS.md", text)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn("metadata: 0 reconciled, 3 unchanged", result.stdout)
+                    self.assertIn("converted 3 documents", result.stdout)
+                    content = repo / ".docforge" / "dashboard" / "content" / "docs"
+                    self.assertFalse((content / "agents").exists())
+                    self.assertFalse((content / "root").exists())
+                    self.assertFalse((content / "agents.mdx").exists())
+                    root_meta = json.loads((content / "meta.json").read_text(encoding="utf-8"))
+                    self.assertEqual(root_meta["pages"], ["index", "architecture", "product"])
+                    rendered = "\n".join(
+                        path.read_text(encoding="utf-8")
+                        for path in content.rglob("*")
+                        if path.is_file()
+                    )
+                    for doc in agent_docs:
+                        self.assertNotIn(doc["id"], rendered)
                 finally:
                     stop_dashboard(runtime, repo)
 
@@ -662,17 +717,45 @@ class DashboardBuildTests(unittest.TestCase):
 
 
 class DashboardSignatureTests(unittest.TestCase):
-    def test_render_signature_parity_and_sensitivity(self) -> None:
+    def test_render_signature_ignores_agent_changes_but_tracks_human_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             seed_repo(repo)
-            py = run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout
-            js = run_dashboard("js", "start", "--repo", str(repo), "--plan-only").stdout
-            self.assertEqual(SIG_RE.search(py).group(1), SIG_RE.search(js).group(1))
-            before = SIG_RE.search(py).group(1)
-            write_written_doc(repo, load_manifest(repo)["documents"][0], "# Documentation\n\nChanged.\n")
-            after = run_dashboard("py", "start", "--repo", str(repo), "--plan-only").stdout
-            self.assertNotEqual(before, SIG_RE.search(after).group(1))
+            manifest = load_manifest(repo)
+            agent = written_doc(
+                "agents_architecture", "docs/agents/architecture.md", "# Agent architecture\n",
+                write_order=205, group="agent-context", doc_type="agents-architecture",
+            )
+            manifest["documents"].append(agent)
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            write_written_doc(repo, agent, "# Agent architecture\n\nInitial agent detail.\n")
+
+            def signatures() -> dict[str, str]:
+                values = {}
+                for runtime in ("py", "js"):
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--plan-only")
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    match = SIG_RE.search(result.stdout)
+                    self.assertIsNotNone(match, result.stdout)
+                    values[runtime] = match.group(1)
+                self.assertEqual(values["py"], values["js"])
+                return values
+
+            before = signatures()
+            (repo / agent["path"]).write_text("# Agent architecture\n\nChanged agent detail.\n", encoding="utf-8")
+            manifest = load_manifest(repo)
+            manifest_agent = next(doc for doc in manifest["documents"] if doc["id"] == agent["id"])
+            manifest_agent["title"] = "Changed Agent Metadata"
+            manifest_agent["description"] = "Still not reader-facing."
+            manifest_agent["nav_order"] = 1
+            (repo / ".docforge" / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            after_agent_change = signatures()
+            self.assertEqual(before, after_agent_change)
+
+            human = repo / "docs" / "README.md"
+            human.write_text(human.read_text(encoding="utf-8") + "\nHuman-facing change.\n", encoding="utf-8")
+            after_human_change = signatures()
+            self.assertNotEqual(after_agent_change, after_human_change)
 
     def test_render_signature_changes_when_description_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -934,15 +1017,15 @@ class CompactRoutePlanTests(unittest.TestCase):
 
     DOCS = [
         {"id": "docs_index", "path": "docs/README.md", "type": "docs-index",
-         "title": "Documentation", "nav_order": 0},
+         "title": "Documentation", "group": "root", "nav_order": 0},
         {"id": "product_compact", "path": "docs/product.md", "type": "compact-doc",
-         "title": "Product", "nav_order": 10},
+         "title": "Product", "group": "product", "nav_order": 10},
         {"id": "reference_compact", "path": "docs/reference.md", "type": "compact-doc",
-         "title": "Reference", "nav_order": 40},
+         "title": "Reference", "group": "reference", "nav_order": 40},
         {"id": "api_reference", "path": "docs/reference/api.md", "type": "api-reference",
-         "title": "API", "nav_order": 41},
+         "title": "API", "group": "reference", "nav_order": 41},
         {"id": "library_compatibility", "path": "docs/reference/compatibility.md",
-         "type": "generic", "title": "Compatibility", "nav_order": 42},
+         "type": "generic", "title": "Compatibility", "group": "reference", "nav_order": 42},
     ]
 
     def _plan(self, runtime: str) -> tuple[dict[str, str], dict[str, list[str]]]:
@@ -1005,21 +1088,61 @@ class DashboardAgentOnlyTreeTests(unittest.TestCase):
     and forcing a `docs/README.md` would make the human tree index the agent
     overlay, which the one-way boundary forbids."""
 
-    def test_scan_names_the_scope_instead_of_demanding_a_docs_index(self) -> None:
+    NO_HUMAN_DOCS = "no human-facing documentation to render"
+
+    def test_scan_reports_clean_no_human_docs_state(self) -> None:
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
-                initialize(
+                initialized = initialize(
                     runtime, repo, "spine",
                     audiences=("coding-agents",), layout="standard", groups=("agents",),
                 )
-                result = run(runtime, "dashboard", "scan", "--repo", str(repo))
-                combined = result.stdout + result.stderr
-                self.assertIn("agent-context only", combined)
-                self.assertNotIn("no docs index", combined)
-                # Pointing the user at revise would be wrong: nothing is broken.
-                self.assertIn("nothing to render", combined)
-                self.assertNotIn("you should revise again", combined)
+                self.assertEqual(initialized.returncode, 0, initialized.stdout + initialized.stderr)
+                result = run_dashboard(runtime, "scan", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                lines = [line for line in (result.stdout + result.stderr).splitlines() if line.strip()]
+                self.assertEqual(len(lines), 1, lines)
+                self.assertIn(self.NO_HUMAN_DOCS, lines[0])
+                self.assertNotIn("no docs index", lines[0])
+                self.assertNotIn("revise", lines[0].lower())
+
+                json_result = run_dashboard(runtime, "scan", "--repo", str(repo), "--json")
+                self.assertEqual(json_result.returncode, 0, json_result.stderr)
+                payload = json.loads(json_result.stdout)
+                self.assertTrue(payload["no_human_docs"])
+                self.assertFalse(payload["blocking"])
+                self.assertEqual(payload["problems"], [])
+                self.assertIn(self.NO_HUMAN_DOCS, payload["message"])
+                self.assertTrue(all(count == 0 for count in payload["counts"].values()))
+
+    def test_start_and_export_exit_before_dashboard_work(self) -> None:
+        env, _bin = fake_npm_env()
+        for runtime in ("py", "js"):
+            for command in ("start", "export"):
+                with self.subTest(runtime=runtime, command=command), tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    initialized = initialize(
+                        runtime, repo, "spine",
+                        audiences=("coding-agents",), layout="standard", groups=("agents",),
+                    )
+                    self.assertEqual(initialized.returncode, 0, initialized.stdout + initialized.stderr)
+                    args = [command, "--repo", str(repo)]
+                    if command == "start":
+                        args.append("--no-open")
+                    try:
+                        result = run_dashboard(runtime, *args, env=env)
+                        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                        lines = [line for line in (result.stdout + result.stderr).splitlines() if line.strip()]
+                        self.assertEqual(len(lines), 1, lines)
+                        self.assertIn(self.NO_HUMAN_DOCS, lines[0])
+                        self.assertNotIn("revise", lines[0].lower())
+                        self.assertFalse(
+                            (repo / ".docforge" / "dashboard").exists(),
+                            f"{command} performed dashboard work for an agent-only manifest",
+                        )
+                    finally:
+                        stop_dashboard(runtime, repo)
 
     def test_a_human_tree_still_demands_its_docs_index(self) -> None:
         """The original message must survive for the case it was written for."""
@@ -1030,7 +1153,7 @@ class DashboardAgentOnlyTreeTests(unittest.TestCase):
                 result = run(runtime, "dashboard", "scan", "--repo", str(repo))
                 combined = result.stdout + result.stderr
                 self.assertIn("no docs index", combined)
-                self.assertNotIn("agent-context only", combined)
+                self.assertNotIn(self.NO_HUMAN_DOCS, combined)
 
 
 if __name__ == "__main__":

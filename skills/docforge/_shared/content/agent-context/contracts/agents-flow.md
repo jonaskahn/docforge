@@ -2,8 +2,6 @@
 
 Content contract for document type `agents-flow`.
 
-Aliased with: `agents-glossary` (same content contract).
-
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| agents-flow | compact flow/term lookup grounded in declared flow evidence and linked owners | inferred flows or duplicated business prose | Reference | reference |
+| agents-flow | self-contained flow lookup grounded in declared flow evidence: trigger, entry path, durable sequence, terminal effect, material failure behavior | every documentation reference, inferred steps, business rationale not present in evidence, volatile call traces | Reference | reference |

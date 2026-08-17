@@ -1,18 +1,18 @@
-# Conventions (agent view)
-
-<!-- Only produced if CONVENTIONS.md exists in the repo. Distilled, AI-targeted
-     directives — never a verbatim copy of the source file. -->
+# Conventions
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
 ## Safety
 
-{{directives from CONVENTIONS.md, rephrased as short imperative rules}}
+{{Short imperative directives supported by repository policy or enforcement.}}
 
-## Naming and patterns
+## Naming and structure
 
-{{directives}}
+{{Evidenced naming, placement, import, and dependency directives.}}
 
 ## Workflow
 
-{{directives}}
+{{Evidenced edit, validation, review, and approval directives.}}
+
+For each rule, state the practical consequence of violating it. Do not copy
+source policy verbatim.

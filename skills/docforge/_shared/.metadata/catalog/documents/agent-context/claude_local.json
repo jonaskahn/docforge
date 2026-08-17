@@ -1,7 +1,7 @@
 {
   "id": "claude_local",
   "type": "fixed-shim",
-  "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views",
+  "summary": "Self-contained local preference extension with commit and secret-handling boundaries",
   "contract_file": "content/agent-context/contracts/fixed-shim.md",
   "path": "CLAUDE.local.md",
   "group": "agent-context",
@@ -17,9 +17,13 @@
   },
   "instruction_file": "content/agent-context/agents-kernel.instruction.md",
   "requires": [],
-  "target_depth": "router",
+  "target_depth": "reference",
   "write_order": 202,
   "provenance_mode": "manifest",
   "audit_profile": "shim",
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
   "template_file": "content/agent-context/templates/claude-local-md.md"
 }

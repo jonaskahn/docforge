@@ -9,7 +9,11 @@ const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { planEntries } = require("../../common/js/plan.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
-const { AGENT_CONTEXT_GROUP, agentContextLeaks } = require("../../common/js/agent_context.js");
+const {
+  AGENT_CONTEXT_GROUP,
+  agentContextLeaks,
+  agentContextOutboundFindings,
+} = require("../../common/js/agent_context.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const PLACEHOLDER = /\{\{[^}]+\}\}|TODO\([^)]*\)/g;
@@ -40,15 +44,11 @@ function resolveManifest(value, repo) {
 function activeDocuments(manifest) {
   return manifest.documents.filter((doc) => doc.status !== "skipped" && doc.status !== "retired");
 }
-// Children a routing document may enumerate. Agent-context documents see
-// everything; nothing else sees agent-context. The reference boundary is
-// one-way by construction, so docs/README.md never lists docs/agents/README.md
-// while docs/agents/README.md still lists its own children. Entries without a
-// group predate the field and are treated as human-facing, the safe direction.
+// Agent outputs are never routing rows. This keeps human indexes isolated and
+// prevents a legacy agent index from enumerating peer agent outputs. Entries
+// without a group predate the field and remain human-facing.
 function routableChildren(doc, manifest) {
-  const children = activeDocuments(manifest);
-  if (doc.group === AGENT_CONTEXT_GROUP) return children;
-  return children.filter((child) => child.group !== AGENT_CONTEXT_GROUP);
+  return activeDocuments(manifest).filter((child) => child.group !== AGENT_CONTEXT_GROUP);
 }
 // `groups` is the transient `<area>` work filter: it narrows which documents
 // this run reports on and never touches `project.groups`.
@@ -375,6 +375,7 @@ function audit(repo, manifest) {
     "broken links": [],
     "readme child coverage": [],
     "agent-context leak": [],
+    "agent-context outbound": [],
     "invalid json": [],
     "folder-only promotion": [],
     "forge leakage": [],
@@ -408,6 +409,12 @@ function audit(repo, manifest) {
       continue;
     }
     const text = fs.readFileSync(target, "utf8");
+    for (const finding of agentContextLeaks(doc, manifest, text)) {
+      findings["agent-context leak"].push(`${doc.path}:${finding.line} [${finding.kind}] -> ${finding.target}`);
+    }
+    for (const finding of agentContextOutboundFindings(doc, manifest, text)) {
+      findings["agent-context outbound"].push(`${doc.path}:${finding.line} [${finding.kind}] -> ${finding.target}`);
+    }
     if (doc.type === "machine-config") {
       try { JSON.parse(text); } catch { findings["invalid json"].push(doc.path); }
       continue;
@@ -433,9 +440,6 @@ function audit(repo, manifest) {
       if (!clean || /^(https?:\/\/|mailto:)/.test(clean)) continue;
       if (/\{\{[^}]+\}\}|<[A-Z][A-Z0-9_]{2,}>/.test(clean)) continue;
       if (!fs.existsSync(path.resolve(path.dirname(target), clean))) findings["broken links"].push(`${doc.path} -> ${link}`);
-    }
-    for (const leak of agentContextLeaks(doc, manifest, text)) {
-      findings["agent-context leak"].push(`${doc.path}:${leak.line} -> ${leak.target}`);
     }
     for (const item of readmeChildCoverage(repo, doc, manifest, text)) {
       findings["readme child coverage"].push(`${doc.path}: missing link to ${item}`);

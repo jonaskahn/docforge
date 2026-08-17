@@ -33,29 +33,34 @@ when the repo ships user-facing features with an independent release lifecycle;
 skip either (and say so) for pure infrastructure or libraries.
 
 The `coding-agents` audience is orthogonal to these three classes: it answers
-which consumption modality must hold a token-budgeted context, not which human
-reads. `docs/agents/*` never restates a fact a human-facing document already
-owns — it links briefly. The only facts this dimension owns are ones no human
-document does yet (topology-derived conventions, patterns exemplars).
+which consumption modality needs a token-budgeted context, not which human
+reads. Every generated agent-context output directly contains the facts needed
+for its own reader question. It may duplicate a fact from another output or
+from human-facing documentation when that duplication makes the output
+independently useful.
 
-**References across this boundary run one way.** An agent-context document may
-link any human-facing document. A human-facing document may never link,
-mention, or `@`-reference an agent-context output — `docs/agents/`,
-`docs/agents.md`, `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, or
-`.claude/settings.json`. The agent overlay knows the whole tree; the tree does
-not know the overlay exists, and reads exactly as it would if no coding-agent
-audience had been confirmed. Agent documents are reachable from `AGENTS.md`,
-never from `docs/README.md`. The mechanical gate is the `agent-context leak`
-finding in `scaffold_docs --audit`.
+**The boundary is zero-reference isolation in both directions.** Agent-context
+outputs contain no Markdown links, URLs, `@` imports, references to peer-agent
+outputs or human-facing documents, or bare generated-document paths. Source
+and configuration paths and verified commands remain allowed. Generated
+non-agent documents never link, mention, or otherwise expose agent-context
+outputs. Agent-context files therefore sit outside the generated documentation
+navigation graph. The mechanical gate reports non-agent references as
+`agent-context leak` and outbound agent references as `agent-context outbound`.
 
 ## One owner per fact
 
-Choose the document whose reader question naturally owns a fact, write it there
-once, and link from every other view. Indexes summarize only enough to route;
-section READMEs own orientation (introduction, scope, reading path, and child
-map) and never duplicate child-owned facts. Agent and audience views do not
-restate architecture, flow steps, configuration, limitations, or glossary
-definitions.
+For non-agent documentation, choose the document whose reader question
+naturally owns a fact, write it there once, and link from every other view.
+Indexes summarize only enough to route; section READMEs own orientation
+(introduction, scope, reading path, and child map) and never duplicate
+child-owned facts. Human audience views do not restate architecture, flow
+steps, configuration, limitations, or glossary definitions.
+
+Agent-context outputs are exempt from this no-duplication rule and from normal
+navigation. Each repeats the minimum evidence-backed facts needed to answer its
+own reader question and never substitutes a documentation reference for those
+facts.
 
 | Fact | Owner | Linked from |
 |---|---|---|
@@ -67,7 +72,7 @@ definitions.
 | Success metric / KPI target | PO `success-metrics.md` | BA omits; does not cross-link |
 | Roadmap timing | `product/roadmap.md` | PO README links; does not duplicate |
 | Warning / critical constraint | topic `README.md` | subfile may expand it |
-| Agent-specific non-obvious convention | `AGENTS.md` or `docs/agents/patterns.md` | nowhere else; human documents never link back into the agent-context group |
+| Agent-specific non-obvious convention | each selected agent-context output whose reader question needs it | may repeat across isolated outputs; never cross-referenced |
 | What the repository is built with | `reference/tech-stack.md` | architecture and setup link; do not restate |
 | What it depends on operationally and what breaks | `architecture/dependencies.md` (`dependencies-inventory`) | tech-stack omits failure framing |
 
@@ -92,9 +97,10 @@ Compact layout demotes a group in the mirror direction, governed by the same
 sharing one catalog `compact_group` become `##` sections of one merged file at
 the group's `compact_target`, ordered by `compact_order`. Every member keeps
 owning its facts; the merged file presents them as named sections with
-per-section provenance, never as a merged narrative. One fact still has one
-owner — a compact section is a member document hosted in a shared file, not a
-rewrite. Reversing the demotion (compact → standard) is atomic promotion run
+per-section provenance, never as a merged narrative. One non-agent fact still
+has one owner — a compact section is a member document hosted in a shared file,
+not a rewrite. Agent-context compact sections retain their explicit duplication
+exception and zero-reference isolation. Reversing the demotion (compact → standard) is atomic promotion run
 backwards: scaffold the component files, migrate each section's prose to its
 component, retire the merged file — no content lost in either direction (see
 `revision.md`).
@@ -134,8 +140,10 @@ Write at the slowest-changing useful layer:
 
 - behavior and boundaries instead of private symbols;
 - file/module paths instead of line numbers;
-- source mentions rendered as human-readable links to the repository file,
-  never bare `path:line` references (see `host-neutrality.md`);
+- source mentions in non-agent documents rendered as human-readable links to
+  the repository file, never bare `path:line` references (see
+  `host-neutrality.md`); agent-context outputs instead use plain durable source
+  or configuration paths because they cannot contain links;
 - observable contracts instead of implementation trivia;
 - decision rationale in append-only records;
 - volatile values in reference documents.

@@ -22,10 +22,8 @@ Write the README so a reader who knows nothing about this area can:
 List only the children that exist, are selected for this run, are
 materialized, and are not agent-context, each with a one-line purpose stated as
 the reader question that child answers — not its title restated, not a summary
-of its contents. The coding-agent views (`docs/agents/`, `docs/agents.md`, and
-the `AGENTS.md` / `CLAUDE.md` host-contract files) are routed from `AGENTS.md`,
-not from any human-facing index; a section README that lists them is a defect.
-Order
+of its contents. Agent-context outputs are permanently isolated and must never
+be linked or mentioned by a generated non-agent document. Order
 children the way a reader would want to navigate them (most-orienting first),
 not alphabetically. Never link a document that wasn't selected or hasn't been
 written yet; an index promising a future document is worse than no link at all,

@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Docforge Manifest 3.7",
+  "title": "Docforge Manifest 3.9",
   "type": "object",
   "required": ["version", "generated_at", "project", "discovery", "documents", "metadata"],
   "properties": {
-    "version": {"const": "3.8"},
+    "version": {"const": "3.9"},
     "generated_at": {"type": "string"},
     "project": {
       "type": "object",
@@ -43,17 +43,6 @@
           "type": "array",
           "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
-        },
-        "agent_context": {
-          "description": "Whether the agent-context documents own their facts (standalone) or link human-facing owners (linked). Written only when the manifest holds an agent-context document. decided_by 'user' pins a 'keep self-contained' answer so reconcile stops re-asking.",
-          "type": "object",
-          "required": ["mode", "decided_by", "decided_at"],
-          "properties": {
-            "mode": {"enum": ["standalone", "linked"]},
-            "decided_by": {"enum": ["derived", "user"]},
-            "decided_at": {"type": "string"}
-          },
-          "additionalProperties": false
         },
         "unmanaged_docs": {
           "type": "array",

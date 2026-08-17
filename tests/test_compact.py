@@ -159,6 +159,32 @@ class CompactFoldTests(unittest.TestCase):
                     )
                     self.assertEqual([member["order"] for member in members], [1, 2, 3, 4, 5, 6, 7, 8])
 
+    def test_agents_compact_route_preserves_member_requires_without_gating_aggregate(self) -> None:
+        expected = {
+            "agents_architecture": ["code_graph"],
+            "agents_patterns": ["code_graph"],
+            "agents_testing": ["manifests"],
+            "agents_conventions": [],
+            "agents_tech_debt": [],
+            "agents_flow": ["flow_graph"],
+            "agents_glossary": ["flow_graph"],
+        }
+        observed = {}
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                result = run(runtime, "query_catalog", "--route", "agents_compact")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload["requires"], [])
+                members = payload["compact"]["members"]
+                self.assertEqual(
+                    {member["id"]: member["requires"] for member in members},
+                    expected,
+                )
+                self.assertEqual([member["order"] for member in members], list(range(1, 8)))
+                observed[runtime] = payload
+        self.assertEqual(observed["py"], observed["js"])
+
     def test_member_ordering_is_total_when_orders_tie(self) -> None:
         """`compact_order` defaults to 0, so two members can tie. The sort key
         must fall through to the id — comparing the raw `(order, document)`
@@ -414,6 +440,7 @@ class CompactWithProfilesTests(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as tmp:
                     repo = Path(tmp)
                     seed_source_files(repo, 7)
+                    (repo / ".editorconfig").write_text("root = true\n", encoding="utf-8")
                     self.assertEqual(
                         initialize(runtime, repo, "diligence", layout="compact", **self.SCOPE).returncode, 0
                     )
@@ -421,15 +448,19 @@ class CompactWithProfilesTests(unittest.TestCase):
                     by_id = {doc["id"]: doc for doc in docs}
                     merged = by_id["agents_compact"]
                     self.assertEqual(merged["path"], "docs/agents.md")
-                    # agents_conventions is condition-gated and absent here.
                     self.assertEqual(
                         merged["compact_members"],
                         [
-                            "agents_index", "agents_architecture", "agents_patterns",
-                            "agents_testing", "agents_tech_debt", "agents_flow",
+                            "agents_architecture", "agents_patterns", "agents_testing",
+                            "agents_conventions", "agents_tech_debt", "agents_flow",
                             "agents_glossary",
                         ],
                     )
+                    self.assertEqual(
+                        merged["requires"], [],
+                        "member evidence requirements must not gate the whole aggregate",
+                    )
+                    self.assertNotIn("agents_index", by_id)
                     paths = {doc["path"] for doc in docs}
                     self.assertFalse(
                         {p for p in paths if p.startswith("docs/agents/")},

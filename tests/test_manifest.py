@@ -61,6 +61,11 @@ class ManifestSelectionTests(unittest.TestCase):
                     for selected in paths:
                         if not selected.startswith(("docs/", "docs-portfolio/")):
                             continue
+                        # Agent topics are deliberately index-free: a
+                        # docs/agents/README.md would duplicate the isolated
+                        # views instead of adding a human-facing parent.
+                        if selected.startswith("docs/agents/"):
+                            continue
                         parent = str(Path(selected).parent).replace(os.sep, "/")
                         while parent not in ("docs", "docs-portfolio", "."):
                             self.assertIn(f"{parent}/README.md", paths, (tier, profile, selected))
@@ -2425,15 +2430,113 @@ class GroupScopeTests(unittest.TestCase):
                 self.assertIn("agent-context", combined)
 
 
-class AgentContextModeTests(unittest.TestCase):
-    """Reconcile reports the standalone->linked flip; a separate approved
-    `agent-mode` command applies it. The precedent is `retire`, not
-    `sync_presentations`: this trigger needs a human answer."""
+class AgentContextIsolationTests(unittest.TestCase):
+    """Agent context is one permanently isolated, catalog-owned surface.
 
-    def _agents_only(self, runtime: str, repo: Path) -> None:
+    It has no project mode, no conversion command, and no folder index that
+    could become a bridge from the human documentation tree.
+    """
+
+    INSTRUCTION = "content/agent-context/agents-kernel.instruction.md"
+    PRESENTATION = {
+        "primary_audience": "coding-agents",
+        "code": "task-focused",
+        "related_docs": "none",
+        "repository_paths": "actionable-only",
+        "source_evidence": "provenance-only",
+    }
+    STANDARD_SHAPE = {
+        "agents_kernel": (
+            "AGENTS.md",
+            "content/agent-context/templates/agents-kernel.md",
+            INSTRUCTION,
+        ),
+        "claude_shim": (
+            "CLAUDE.md",
+            "content/agent-context/templates/agents-kernel.md",
+            INSTRUCTION,
+        ),
+        "claude_local": (
+            "CLAUDE.local.md",
+            "content/agent-context/templates/claude-local-md.md",
+            INSTRUCTION,
+        ),
+        "claude_settings": (
+            ".claude/settings.json",
+            "content/agent-context/templates/claude-settings.json",
+            INSTRUCTION,
+        ),
+        "agents_architecture": (
+            "docs/agents/architecture.md",
+            "content/agent-context/templates/agents-architecture.md",
+            INSTRUCTION,
+        ),
+        "agents_patterns": (
+            "docs/agents/patterns.md",
+            "content/agent-context/templates/agents-patterns.md",
+            INSTRUCTION,
+        ),
+        "agents_testing": (
+            "docs/agents/testing.md",
+            "content/agent-context/templates/agents-testing.md",
+            INSTRUCTION,
+        ),
+        "agents_tech_debt": (
+            "docs/agents/tech-debt.md",
+            "content/agent-context/templates/agents-tech-debt.md",
+            INSTRUCTION,
+        ),
+        "agents_flow": (
+            "docs/agents/flow.md",
+            "content/agent-context/templates/agents-flow.md",
+            INSTRUCTION,
+        ),
+        "agents_glossary": (
+            "docs/agents/glossary.md",
+            "content/agent-context/templates/agents-glossary.md",
+            INSTRUCTION,
+        ),
+    }
+    COMPACT_SHAPE = {
+        "agents_kernel": (
+            "AGENTS.md",
+            "content/agent-context/templates/agents-kernel.md",
+            INSTRUCTION,
+        ),
+        "claude_shim": (
+            "CLAUDE.md",
+            "content/agent-context/templates/agents-kernel.md",
+            INSTRUCTION,
+        ),
+        "claude_local": (
+            "CLAUDE.local.md",
+            "content/agent-context/templates/claude-local-md.md",
+            INSTRUCTION,
+        ),
+        "claude_settings": (
+            ".claude/settings.json",
+            "content/agent-context/templates/claude-settings.json",
+            INSTRUCTION,
+        ),
+        "agents_compact": (
+            "docs/agents.md",
+            "content/compact/templates/agents.template.md",
+            "content/compact/instructions/agents.md",
+        ),
+    }
+    COMPACT_MEMBERS = [
+        "agents_architecture",
+        "agents_patterns",
+        "agents_testing",
+        "agents_tech_debt",
+        "agents_flow",
+        "agents_glossary",
+    ]
+
+    def _agents_only(self, runtime: str, repo: Path, layout: str = "standard") -> None:
         result = initialize(
             runtime, repo, "spine",
-            audiences=("coding-agents",), layout="standard", groups=("agents",),
+            audiences=("coding-agents",), layout=layout, groups=("agents",),
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -2449,78 +2552,142 @@ class AgentContextModeTests(unittest.TestCase):
                 }
         path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-    def test_agents_only_run_is_standalone(self) -> None:
+    def test_agent_only_shapes_are_canonical_and_have_no_mode_or_index(self) -> None:
         for runtime in ("py", "js"):
-            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
-                repo = Path(tmp)
-                self._agents_only(runtime, repo)
-                record = load_manifest(repo)["project"]["agent_context"]
-                self.assertEqual(record["mode"], "standalone")
-                self.assertEqual(record["decided_by"], "derived")
+            for layout, expected in (
+                ("standard", self.STANDARD_SHAPE),
+                ("compact", self.COMPACT_SHAPE),
+            ):
+                with self.subTest(runtime=runtime, layout=layout), tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    self._agents_only(runtime, repo, layout)
+                    manifest = load_manifest(repo)
+                    self.assertNotIn("agent_context", manifest["project"])
+                    by_id = {doc["id"]: doc for doc in manifest["documents"]}
+                    self.assertEqual(set(by_id), set(expected))
+                    self.assertEqual({doc["group"] for doc in by_id.values()}, {"agent-context"})
+                    self.assertNotIn("agents_index", by_id)
+                    self.assertNotIn(
+                        "docs/agents/README.md",
+                        {doc["path"] for doc in by_id.values()},
+                    )
+                    for doc_id, (path, template, instruction) in expected.items():
+                        doc = by_id[doc_id]
+                        self.assertEqual(doc["path"], path, doc_id)
+                        self.assertEqual(doc["scaffold_template"], template, doc_id)
+                        self.assertEqual(doc["instruction_file"], instruction, doc_id)
+                        self.assertEqual(doc["presentation"], self.PRESENTATION, doc_id)
+                    if layout == "compact":
+                        self.assertEqual(
+                            by_id["agents_compact"]["compact_members"],
+                            self.COMPACT_MEMBERS,
+                        )
 
-    def test_repo_without_agent_documents_stores_no_record(self) -> None:
+    def test_human_only_manifest_also_has_no_agent_context_state(self) -> None:
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
-                initialize(runtime, repo, "spine", layout="standard")
+                result = initialize(runtime, repo, "spine", layout="standard")
+                self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertNotIn("agent_context", load_manifest(repo)["project"])
 
-    def test_adding_human_docs_reports_the_flip_and_demotes_nothing(self) -> None:
+    def test_adding_human_groups_preserves_completed_agent_documents(self) -> None:
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
                 self._agents_only(runtime, repo)
                 self._complete_agent_docs(repo)
-                result = run(runtime, "manage_manifest", "reconcile", "--repo", str(repo), "--group", "none")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn("1 agent-mode", result.stdout)
-                self.assertIn("standalone -> linked", result.stdout)
-                statuses = {
-                    doc["status"] for doc in load_manifest(repo)["documents"]
+                before = {
+                    doc["id"]: {
+                        field: doc.get(field)
+                        for field in (
+                            "status", "audit", "scaffold_template",
+                            "instruction_file", "presentation",
+                        )
+                    }
+                    for doc in load_manifest(repo)["documents"]
                     if doc["group"] == "agent-context"
                 }
-                self.assertEqual(statuses, {"complete"}, "reconcile must report, never demote")
 
-    def test_convert_demotes_every_agent_document_for_re_grounding(self) -> None:
-        for runtime in ("py", "js"):
-            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
-                repo = Path(tmp)
-                self._agents_only(runtime, repo)
-                self._complete_agent_docs(repo)
-                run(runtime, "manage_manifest", "reconcile", "--repo", str(repo), "--group", "none")
                 result = run(
-                    runtime, "manage_manifest", "agent-mode",
-                    "--repo", str(repo), "--decision", "convert",
+                    runtime, "manage_manifest", "reconcile", "--repo", str(repo),
+                    "--group", "agents", "--group", "root",
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertNotIn("agent-mode", result.stdout + result.stderr)
                 manifest = load_manifest(repo)
-                self.assertEqual(manifest["project"]["agent_context"]["mode"], "linked")
-                agents = [d for d in manifest["documents"] if d["group"] == "agent-context"]
-                self.assertEqual({d["status"] for d in agents}, {"in_progress"})
-                self.assertEqual({d["audit"] for d in agents}, {None})
+                self.assertNotIn("agent_context", manifest["project"])
+                self.assertTrue(any(
+                    doc["group"] != "agent-context" for doc in manifest["documents"]
+                ))
+                after = {
+                    doc["id"]: {
+                        field: doc.get(field)
+                        for field in (
+                            "status", "audit", "scaffold_template",
+                            "instruction_file", "presentation",
+                        )
+                    }
+                    for doc in manifest["documents"]
+                    if doc["group"] == "agent-context"
+                }
+                self.assertEqual(after, before)
 
-    def test_keep_pins_the_answer_so_reconcile_stops_asking(self) -> None:
+    def test_agent_mode_command_is_absent_and_unknown(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                help_result = run(runtime, "manage_manifest", "--help")
+                self.assertEqual(help_result.returncode, 0, help_result.stderr)
+                self.assertNotIn("agent-mode", help_result.stdout + help_result.stderr)
+
+                result = run(
+                    runtime, "manage_manifest", "agent-mode", "--repo", str(repo),
+                    "--decision", "convert",
+                )
+                self.assertEqual(result.returncode, 2)
+                combined = result.stdout + result.stderr
+                self.assertIn("agent-mode", combined)
+                self.assertTrue(
+                    "unknown command" in combined or "invalid choice" in combined,
+                    combined,
+                )
+
+    def test_agent_related_docs_is_fixed_to_none(self) -> None:
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
                 self._agents_only(runtime, repo)
-                self._complete_agent_docs(repo)
-                run(runtime, "manage_manifest", "reconcile", "--repo", str(repo), "--group", "none")
-                result = run(
-                    runtime, "manage_manifest", "agent-mode",
-                    "--repo", str(repo), "--decision", "keep",
+                original = next(
+                    doc for doc in load_manifest(repo)["documents"]
+                    if doc["id"] == "agents_architecture"
                 )
-                self.assertEqual(result.returncode, 0, result.stderr)
-                record = load_manifest(repo)["project"]["agent_context"]
-                self.assertEqual(record["mode"], "standalone")
-                self.assertEqual(record["decided_by"], "user")
-                statuses = {
-                    doc["status"] for doc in load_manifest(repo)["documents"]
-                    if doc["group"] == "agent-context"
-                }
-                self.assertEqual(statuses, {"complete"}, "keep must demote nothing")
-                again = run(runtime, "manage_manifest", "reconcile", "--repo", str(repo))
-                self.assertNotIn("agent-mode", again.stdout)
+                for related_docs in ("compact", "traceability"):
+                    result = run(
+                        runtime, "manage_manifest", "presentation", "--repo", str(repo),
+                        "--id", "agents_architecture", "--related-docs", related_docs,
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn(
+                        "agent-context documents require --related-docs none",
+                        result.stdout + result.stderr,
+                    )
+                    current = next(
+                        doc for doc in load_manifest(repo)["documents"]
+                        if doc["id"] == "agents_architecture"
+                    )
+                    self.assertEqual(current, original)
+
+                accepted = run(
+                    runtime, "manage_manifest", "presentation", "--repo", str(repo),
+                    "--id", "agents_architecture", "--related-docs", "none",
+                )
+                self.assertEqual(accepted.returncode, 0, accepted.stderr)
+                current = next(
+                    doc for doc in load_manifest(repo)["documents"]
+                    if doc["id"] == "agents_architecture"
+                )
+                self.assertEqual(current["presentation"]["related_docs"], "none")
 
 
 class AreaScopeVersusGroupScopeTests(unittest.TestCase):

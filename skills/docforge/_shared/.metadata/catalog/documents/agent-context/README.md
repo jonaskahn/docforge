@@ -6,7 +6,7 @@ Agent-facing context: AGENTS.md and coding-agent views.
 
 ## Purpose
 
-Agent-context documents provide compact, verified operating context for coding agents while linking to the human-facing owners of detailed facts.
+Agent-context documents provide compact, verified, self-contained operating context for coding agents.
 
 ## How to use this index
 
@@ -14,19 +14,18 @@ Use the entries below to locate a document definition, then resolve it with `que
 
 ## Contents
 
-- `agents_kernel` — Compact entry points, verified commands, precedence, safe links to owning agent views → [index.json](index.json)
-- `claude_shim` — Compact entry points, verified commands, precedence, safe links to owning agent views → [index.json](index.json)
-- `claude_local` — Compact entry points, verified commands, precedence, safe links to owning agent views → [index.json](index.json)
-- `claude_settings` — Compact entry points, verified commands, precedence, safe links to owning agent views → [index.json](index.json)
-- `agents_compact` — Compact coding-agent section: retrieval views for architecture, patterns, testing, conventions, tech debt, flows, and terms in one file → [index.json](index.json)
-- `agents_index` — Coding-agent views overview: what these views cover and the reader question each agent view answers → [index.json](index.json)
-- `agents_architecture` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [index.json](index.json)
-- `agents_patterns` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [index.json](index.json)
-- `agents_testing` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [index.json](index.json)
-- `agents_conventions` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [index.json](index.json)
-- `agents_tech_debt` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [index.json](index.json)
-- `agents_flow` — Compact flow/term lookup grounded in declared flow evidence and linked owners → [index.json](index.json)
-- `agents_glossary` — Compact flow/term lookup grounded in declared flow evidence and linked owners → [index.json](index.json)
+- `agents_kernel` — Concise self-contained operating kernel with verified commands, repository map, precedence, boundaries, and validation → [index.json](index.json)
+- `claude_shim` — Concise self-contained operating kernel with verified commands, repository map, precedence, boundaries, and validation → [index.json](index.json)
+- `claude_local` — Self-contained local preference extension with commit and secret-handling boundaries → [index.json](index.json)
+- `claude_settings` — Self-contained safe Claude Code permissions and optional verified validation hook configuration → [index.json](index.json)
+- `agents_compact` — Self-contained compact coding-agent reference with seven independently useful topic sections → [index.json](index.json)
+- `agents_architecture` — Self-contained component map with durable source paths, entry points, dependency direction, and boundaries → [index.json](index.json)
+- `agents_patterns` — Self-contained recurring implementation shapes, representative source paths, hotspots, and validation commands → [index.json](index.json)
+- `agents_testing` — Self-contained verified test commands, suite layout, selection patterns, fixtures, mocks, and success criteria → [index.json](index.json)
+- `agents_conventions` — Self-contained repository-specific safety, naming, structural, and workflow rules → [index.json](index.json)
+- `agents_tech_debt` — Self-contained known limitations, editing hazards, affected source paths, and safe handling constraints → [index.json](index.json)
+- `agents_flow` — Self-contained trigger-to-effect flow lookup grounded in declared flow evidence → [index.json](index.json)
+- `agents_glossary` — Self-contained definitions for evidenced domain and flow terms with their code context → [index.json](index.json)
 
 ## Boundaries
 

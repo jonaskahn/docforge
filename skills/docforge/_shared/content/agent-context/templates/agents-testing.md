@@ -1,20 +1,23 @@
-# Testing (agent view)
+# Testing
 
-<!-- Brief stub — strategy and rationale live in engineering/testing.md, link only. -->
+## Commands
 
-## Runner
-
-```
+```sh
 {{full-suite command}}
 {{single-test command}}
+{{lint, typecheck, or integration command when required}}
 ```
 
 ## Layout
 
-{{one line: where tests live, naming convention}}
+- Tests: `{{source path}}`
+- Naming: {{file and case naming rule.}}
+- Selection: {{how a focused test is chosen.}}
 
-## Mock stance
+## Fixtures and isolation
 
-{{one line: what's mocked vs real in tests — use a typed <MOCK_STANCE> token only if genuinely not inferable from the test suite}}
+{{State what is real, mocked, faked, or fixture-backed, with durable source paths where useful.}}
 
-For strategy, coverage policy, and the test pyramid, see [engineering/testing.md](../engineering/testing.md).
+## Completion check
+
+{{Minimum command matrix for the changed area and the observable passing result.}}

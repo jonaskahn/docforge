@@ -8,7 +8,7 @@ path list is `.metadata/catalog/` (queried via `runtime/cli/python/query_catalog
 - Reader documentation lives under `docs/`.
 - Root files exist only where repository tooling expects them: `README.md`,
   `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, and explicitly selected
-  agent shims/configuration.
+  agent kernels/local configuration.
 - Portfolio documents live under `docs-portfolio/`.
 - Collection folders use plural nouns; single-subject areas use singular nouns.
 - Every selected folder index is a manifest document. Its child map is generated
@@ -113,14 +113,14 @@ docs/                                     CONTRIBUTING.md
 Three groups appear only when their audience is confirmed, and each folds to
 one file of its own rather than swelling a neighbour: `docs/agents.md`
 (coding agents), `docs/business-analyst.md`, `docs/product-owner.md`. Coding
-agents additionally bring the fixed host-contract paths `AGENTS.md`,
-`CLAUDE.md`, `CLAUDE.local.md`, and `.claude/settings.json`, which are
-tooling-owned locations and never fold. The agent-context outputs are reachable
-from `AGENTS.md`, never from `docs/README.md`, and appear in no human-facing
-index in either layout — see the one-way reference boundary in
+agents additionally bring the tooling-owned paths `AGENTS.md`, `CLAUDE.md`,
+`CLAUDE.local.md`, and `.claude/settings.json`, which never fold. Every
+agent-context output is self-contained and sits outside generated documentation
+navigation: no generated document links or refers to it, and it contains no
+documentation reference itself. See the permanent isolation boundary in
 [`document-composition.md`](document-composition.md). With three shapes, a platform, three
 concerns, and all seven audiences confirmed, Compact Diligence is 22 files
-against Standard's 71 — the standard tree grew by 37, the compact one by 7.
+against Standard's 70 — the standard tree grew by 36, the compact one by 7.
 
 #### What folds
 
@@ -129,7 +129,7 @@ against Standard's 71 — the standard tree grew by 37, the compact one by 7.
 | Tier-driven core (no selector, no condition) | Always | One `##` per member, in `compact_order` |
 | Profile- and audience-driven | Always | One `##` per selected member, after the core |
 | Dynamic instances (flows, decisions, concepts, runbooks, datasets, migrations) | Up to the section budget | One `##` per instance, plus a row in the file's candidate matrix |
-| Fixed tooling paths (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, agent shims) | Never | — |
+| Fixed tooling paths (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, agent host outputs) | Never | — |
 
 **Two caps bound a merged file**, both owned by
 [`document-composition.md`](document-composition.md) "Depth brakes":
@@ -156,8 +156,8 @@ preview` names any group that spilled.
 Three routing rules follow, and all are mechanically checked by
 `scaffold_docs --audit`:
 
-- A merged file links every selected, materialized document in the folders it
-  stands for that is not one of its own `compact_members`. A merged file can
+- A non-agent merged file links every selected, materialized document in the
+  folders it stands for that is not one of its own `compact_members`. A merged file can
   stand for a folder its own path does not name — `docs/decisions.md` stands
   for `docs/architecture/decisions/` — and for more than one, so the folders
   come from the members it merged, not from its path.
@@ -165,12 +165,11 @@ Three routing rules follow, and all are mechanically checked by
   at the standard path that compact never materialized. `docs/README.md`
   linking `reference/configuration.md` in a compact tree is a broken link;
   `reference.md#configuration` is the correct target.
-- A human-facing index never lists an agent-context child, in either layout.
-  The compact anchor rule above does not apply across this boundary, because
-  the boundary forbids the link itself: `docs/README.md` links neither
-  `agents/README.md` nor `agents.md#architecture`. Agent-context documents are
-  routed from `AGENTS.md`, and `docs/agents.md` still covers its own merged
-  and spilled members normally.
+- A generated non-agent index never lists or mentions an agent-context child,
+  in either layout. Agent-context outputs also never link their component,
+  compact, kernel, peer, or human-facing documents. The seven compact topic
+  members remain within the compact core budget, so they require no spill
+  navigation.
 
 `project.scale.layout` records which tree was generated; switching layouts is a
 selection change like any other and flows through the revise preview and

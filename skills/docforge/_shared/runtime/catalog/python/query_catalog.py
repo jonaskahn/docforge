@@ -67,7 +67,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.21.0"
+CATALOG_VERSION = "2.22.0"
 PRESENTATION_VALUES = {
     "code": {"contract-only", "task-focused"},
     "related_docs": {"none", "compact", "traceability"},
@@ -340,9 +340,6 @@ def manifest_compact_members(repo: Path | None, doc_id: str) -> list | None:
 def composed_compact_contract(
     detail: dict,
     repo: Path | None = None,
-    *,
-    agent_mode: str | None = None,
-    layout: str | None = None,
 ) -> tuple[str, list[dict]]:
     """Compose the merged file's content contract at route time: the group's
     short header contract plus each member's existing contract as a named
@@ -360,8 +357,6 @@ def composed_compact_contract(
     for order, entry in enumerate(entries, start=1):
         member_id = member_type_id(entry)
         member = load_type(member_id)
-        if agent_mode or layout:
-            member = resolve_variants(member, agent_context_mode=agent_mode, layout=layout)
         member_contract = member.get("contract_file")
         row = {
             "id": member_id,
@@ -369,6 +364,7 @@ def composed_compact_contract(
             "contract": member_contract,
             "instruction": member.get("instruction_file"),
             "template": member.get("template_file"),
+            "requires": member.get("requires", []),
             "target_depth": member.get("target_depth"),
             "model_depth": member.get("model_depth", {}),
             "dominant_form": member.get("dominant_form"),
@@ -392,19 +388,11 @@ def route(
     value: str,
     audiences: list[str] | None = None,
     repo: Path | None = None,
-    agent_mode: str | None = None,
-    layout: str | None = None,
 ) -> dict:
-    """Resolve one document's writing card.
-
-    `agent_mode`/`layout` select declared variants. Omitted, the payload is
-    byte-identical to the pre-variant behavior, which the route-parity tests
-    depend on."""
+    """Resolve one document's canonical writing card."""
     doc_id = resolve_catalog_id(value)
     row = index_row(doc_id)
     detail = load_type(doc_id)
-    if agent_mode or layout:
-        detail = resolve_variants(detail, agent_context_mode=agent_mode, layout=layout)
     record = row.get("record", f"types/{doc_id}.json")
     model_depth = {
         model: detail["model_depth"][model]
@@ -432,9 +420,7 @@ def route(
         "presentation_origin": presentation_origin,
     }
     if compact_members:
-        composed, members = composed_compact_contract(
-            detail, repo, agent_mode=agent_mode, layout=layout
-        )
+        composed, members = composed_compact_contract(detail, repo)
         result["contract"] = composed
         result["compact"] = {
             "header_contract": detail.get("contract_file"),
@@ -501,36 +487,6 @@ def _normalize_profile_ids(
         canonical = aliases[value]
         if canonical not in resolved:
             resolved.append(canonical)
-    return resolved
-
-
-VARIANT_FILE_KEYS = ("contract_file", "instruction_file", "template_file")
-
-
-def resolve_variants(
-    detail: dict,
-    *,
-    agent_context_mode: str | None = None,
-    layout: str | None = None,
-) -> dict:
-    """Overlay a record's declared variants for this run's axes.
-
-    Returns the record unchanged when nothing applies, so an unscoped call is
-    byte-identical to the pre-variant behavior. Axes compose: a compact,
-    standalone agent document takes both overlays, layout last."""
-    variants = detail.get("variants") or {}
-    if not variants:
-        return detail
-    resolved = detail
-    for axis, value in (("agent_context_mode", agent_context_mode), ("layout", layout)):
-        override = (variants.get(axis) or {}).get(value) if value else None
-        if not override:
-            continue
-        if resolved is detail:
-            resolved = dict(detail)
-        for key in VARIANT_FILE_KEYS:
-            if override.get(key):
-                resolved[key] = override[key]
     return resolved
 
 
@@ -831,25 +787,6 @@ def validate() -> list[str]:
         instruction = doc.get("instruction_file")
         if instruction and not (SKILL_ROOT / instruction).is_file():
             errors.append(f"{doc_id}: missing instruction {instruction}")
-        variants = doc.get("variants") or {}
-        if "agent_context_mode" in variants and doc.get("group") != "agent-context":
-            errors.append(
-                f"{doc_id}: variants.agent_context_mode is only valid on an agent-context record"
-            )
-        for axis, by_value in variants.items():
-            if axis not in {"agent_context_mode", "layout"}:
-                errors.append(f"{doc_id}: unknown variant axis {axis}")
-                continue
-            for value, files in (by_value or {}).items():
-                if axis == "agent_context_mode" and value != "standalone":
-                    errors.append(f"{doc_id}: variants.agent_context_mode only overrides 'standalone'")
-                if axis == "layout" and value != "compact":
-                    errors.append(f"{doc_id}: variants.layout only overrides 'compact'")
-                for key, path in (files or {}).items():
-                    if key not in VARIANT_FILE_KEYS:
-                        errors.append(f"{doc_id}: unknown variant file key {key}")
-                    elif not (SKILL_ROOT / path).is_file():
-                        errors.append(f"{doc_id}: missing {axis}/{value} {key} {path}")
         if selection.get("mode") == "static":
             if doc["id"] in static_ids:
                 errors.append(f"duplicate static id: {doc['id']}")
@@ -983,14 +920,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--category", dest="category", help="Group id, e.g. architecture")
     parser.add_argument("--route", dest="route_id", help="Document id to resolve")
     parser.add_argument(
-        "--agent-mode", choices=["linked", "standalone"],
-        help="Agent-context mode for --route variant resolution; omit to use the record's own files",
-    )
-    parser.add_argument(
-        "--route-layout", choices=["standard", "compact"], dest="route_layout",
-        help="Layout for --route variant resolution; omit to use the record's own files",
-    )
-    parser.add_argument(
         "--repo", type=Path, default=None,
         help="Target repo, for --route on a tier-spanning compact document: "
              "narrows its composed contract to what the manifest actually "
@@ -1066,10 +995,7 @@ def main(argv: list[str] | None = None) -> int:
             print(dump_json(category(args.category)), end="")
             return 0
         if args.route_id:
-            print(dump_json(route(
-                args.route_id, args.audience, args.repo,
-                agent_mode=args.agent_mode, layout=args.route_layout,
-            )), end="")
+            print(dump_json(route(args.route_id, args.audience, args.repo)), end="")
             return 0
     except ValueError as exc:
         return fail(str(exc), 2)

@@ -238,8 +238,8 @@ Rules:
   not group scope" below.
 - The command prints the delta — a counts summary first (`3 add, 2 retire`)
   so the shape of the change is legible, then the detail lines (tier,
-  profiles, added, removed-planned, retire, contract-updated, agent-mode,
-  kept) and the annotated plan tree; then continue with `scaffold_docs.{py,js}
+  profiles, added, removed-planned, retire, contract-updated, and kept) and the
+  annotated plan tree; then continue with `scaffold_docs.{py,js}
   --dry-run --revise` and the writing workflow.
 
 ### Area scope is not group scope
@@ -269,36 +269,14 @@ but `project.groups` excludes `agent-context`, offer to widen the scope
 (widening adds no retire candidates). Declined, stop with `nothing in scope for
 'agents'`. Never add either silently.
 
-### Agent-context mode change
+### Agent-context revision
 
-When reconcile reports an `agent-mode` delta, the agent documentation was
-written **self-contained** (each file owns its facts, because no human-facing
-document existed to link) and this run changes that. Ask before applying —
-never under `--auto-accept`:
-
-> Your agent documentation is self-contained. This run adds *N* human-facing
-> documents that now own those facts.
->
-> - **Convert to linked views** (recommended) — the *M* agent documents are
->   re-grounded as short pointers into the new human documents.
-> - **Keep self-contained** — they stay as they are. Docforge records the
->   choice and will not ask again.
-
-Apply the answer mechanically:
-
-```sh
-python3 runtime/cli/python/manage_manifest.py agent-mode --repo <repo> \
-  --decision <convert|keep>
-```
-
-`convert` demotes every agent-context document to `in_progress` with cleared
-audits, so the annotated plan tree shows them as `rewrite` and the writing
-workflow re-grounds them. `keep` records `decided_by: "user"`, which is what
-stops the question recurring on every later run.
-
-A linked → standalone → linked round trip is **not** content-preserving:
-standalone prose is deleted and rewritten, not re-linked. This is a real
-asymmetry with the compact ↔ standard round trip, which is preserving.
+Agent-context isolation never changes with scope. Outputs remain self-contained
+and zero-reference whether revised alone, alongside human-facing documentation,
+or after the selected area set changes. Contract revision `2.22.0` therefore
+rewrites any older routed or importing form through steps 1a and 1b without a
+conversion prompt. Standard and compact layout switches remain
+content-preserving under the normal split/merge mechanics.
 
 ## Annotated plan tree
 
@@ -393,7 +371,7 @@ dashboard.
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
 2. Migration is unconditional (see [`validation.md`](validation.md) "Manifest
    and provenance"): upgrade manifest 3.6 / 3.5 / 3.4 / 3.3 (or
-   3.2 / 3.1 / 3.0 / provenance 1.0) to 3.8 / 2.1 — seeding each document's
+   3.2 / 3.1 / 3.0 / provenance 1.0) to 3.9 / 2.1 — seeding each document's
    catalog-owned `description` from the catalog `summary`, normalizing
    `provenance_storage` to `json`, the project's `unmanaged_docs`
    list (default empty), the project's `scale` record

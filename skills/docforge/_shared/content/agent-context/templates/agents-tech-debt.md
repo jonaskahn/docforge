@@ -1,8 +1,9 @@
-# Tech debt (agent view)
+# Tech debt
 
-<!-- Brief stub by default. Add real content only for a gap that is genuinely
-     agent-specific and absent from the human register. -->
+| Area or source path | Observed limitation | Editing risk | Safe handling |
+|---|---|---|---|
+| `{{durable path}}` | {{evidenced limitation}} | {{failure or regression risk}} | {{bounded action}} |
 
-See [architecture/tech-debt.md](../architecture/tech-debt.md) for the full register.
+## Do not fold in
 
-{{Only if genuinely agent-specific and not already there: one or two bullets naming a footgun an agent, not a human, is likely to hit.}}
+{{Short bullets naming tempting incidental fixes that require separate scope or approval.}}

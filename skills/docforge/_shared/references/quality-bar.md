@@ -12,10 +12,13 @@ This file owns mechanical and whole-tree acceptance.
 - no invented claims or untyped external unknowns;
 - no links into Docforge’s internal `references/` directory;
 - one primary mode and the catalog's must-present/keep-out contract;
-- no reference from a human-facing document into the agent-context group
-  (`docs/agents/`, `docs/agents.md`, `AGENTS.md`, `CLAUDE.md`,
-  `CLAUDE.local.md`, `.claude/settings.json`) — the `agent-context leak`
-  finding; agent-context documents may link human-facing documents freely;
+- agent-context outputs contain no documentation references of any kind:
+  Markdown links, URLs, `@` imports, peer-agent or human-document references,
+  and bare generated-document paths are all defects; plain source/configuration
+  paths and verified commands are allowed;
+- generated non-agent documents never link or mention an agent-context output;
+  the gate reports that direction as `agent-context leak` and a forbidden
+  reference emitted by an agent output as `agent-context outbound`;
 - section READMEs additionally: open with a self-introduction (what, why, for
   whom), state scope and boundaries, offer a start-here reading path, link
   every selected and materialized direct child **outside the agent-context
@@ -35,18 +38,20 @@ Mechanical success does not complete a document; the independent audit in
    scaffold paths; every expected file exists and no fake dynamic seed exists.
 2. **Reachability:** every human-facing reader document is reachable from
    `docs/README.md` within two links; portfolio content is reachable from
-   `docs-portfolio/README.md`. Agent-context documents are reachable only from
-   the agent kernel — `CLAUDE.md` → `@AGENTS.md` → the agent views — and appear
-   in no human-facing index. A human-facing document that links into the
-   agent-context group is a defect, not a convenience.
+   `docs-portfolio/README.md`. Agent-context outputs are intentionally outside
+   this link graph and are not linked from any generated document, including
+   each other. The two root kernels are complete self-contained duplicates
+   rather than a redirect chain.
 3. **Onboarding:** a competent new contributor can reach a verified local run
    without asking a human.
-4. **Location:** each fact is in the document whose reader question owns it.
+4. **Location:** each non-agent fact is in the document whose reader question
+   owns it; each agent output contains the facts its own question needs.
 5. **Reviewer:** risk, security, dependency, and diligence claims expose both
    evidence and uncertainty.
-6. **Stranger:** terms, boundaries, failure behavior, and next links make sense
-   without prior team lore.
-7. **No duplication:** shared facts have one owner and other views link.
+6. **Stranger:** terms, boundaries, and failure behavior make sense without
+   prior team lore; human-facing documents also provide useful next links.
+7. **No duplication:** shared non-agent facts have one owner and other
+   non-agent views link. Self-contained agent-context duplication is allowed.
 8. **Promotion integrity:** no flow or concept folder contains only README.
 
 `scaffold_docs.{py,js} --audit` must exit nonzero on any mechanical defect and

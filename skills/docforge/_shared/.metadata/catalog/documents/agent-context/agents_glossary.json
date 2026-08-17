@@ -1,7 +1,7 @@
 {
   "id": "agents_glossary",
   "type": "agents-glossary",
-  "summary": "Compact flow/term lookup grounded in declared flow evidence and linked owners",
+  "summary": "Self-contained definitions for evidenced domain and flow terms with their code context",
   "contract_file": "content/agent-context/contracts/agents-glossary.md",
   "path": "docs/agents/glossary.md",
   "group": "agent-context",
@@ -19,20 +19,15 @@
   "requires": [
     "flow_graph"
   ],
-  "target_depth": "orientation",
+  "target_depth": "reference",
   "write_order": 209,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
   "template_file": "content/agent-context/templates/agents-glossary.md",
   "compact_group": "agents_compact",
-  "compact_order": 8,
-  "variants": {
-    "agent_context_mode": {
-      "standalone": {
-        "contract_file": "content/agent-context/contracts/standalone/agents-lookup.md",
-        "instruction_file": "content/agent-context/agents-standalone.instruction.md",
-        "template_file": "content/agent-context/templates/standalone/agents-glossary.md"
-      }
-    }
-  }
+  "compact_order": 7
 }

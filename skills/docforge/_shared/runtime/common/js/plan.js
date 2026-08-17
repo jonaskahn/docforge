@@ -77,7 +77,8 @@ function planEntries(repo, manifest, flowIndexPath, revise, groups = null) {
       is_flow: false,
     });
   }
-  if (flowIndexPath && fs.existsSync(flowIndexPath)) {
+  const includeSyntheticFlows = !scoped.size || scoped.has("flows");
+  if (includeSyntheticFlows && flowIndexPath && fs.existsSync(flowIndexPath)) {
     let index = {};
     try {
       index = JSON.parse(fs.readFileSync(flowIndexPath, "utf8"));
@@ -126,7 +127,7 @@ function planLines(repo, manifest, flowIndexPath, revise, groups = null) {
     lines.push(`  ${dimension}: ${(profiles[dimension] || []).join(", ") || "none"}`);
   }
   lines.push("");
-  const entries = planEntries(repo, manifest, flowIndexPath, revise);
+  const entries = planEntries(repo, manifest, flowIndexPath, revise, groups);
   for (const entry of entries.filter((item) => !item.is_flow)) {
     lines.push(`${entry.id.padEnd(28)}  ${entry.path}`);
     lines.push(`     action: ${entry.action} — ${entry.reason}`);

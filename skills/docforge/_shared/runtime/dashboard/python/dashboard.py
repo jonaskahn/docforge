@@ -61,7 +61,7 @@ from runtime.manifest.python.migrate_metadata import (
     migrate as migrate_manifest_metadata,
 )
 
-TOOL_VERSION = "2.19.0"
+TOOL_VERSION = "2.22.0"
 TEMPLATE_VERSION = "1"
 STATE_SCHEMA = 1
 STATE_FILE = ".docforge-dashboard.json"
@@ -69,6 +69,10 @@ BASE_URL = "/docs"
 DOC_PREFIX = "docs/"
 COMPACT_TYPE = "compact-doc"
 WRITTEN = {"generated", "needs_review", "complete"}
+INACTIVE = {"skipped", "retired"}
+NO_HUMAN_DOCS_MESSAGE = (
+    "no human-facing documentation to render; agent-context documents are excluded from the dashboard"
+)
 FRONTMATTER_HEAD_BYTES = 64 * 1024
 ASSET_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".ico", ".bmp"}
 ASSET_MAX_BYTES = 10 * 1024 * 1024
@@ -146,15 +150,24 @@ def _manifest_provenance(doc: dict) -> bool:
     return isinstance(provenance, dict) and provenance.get("schema") in SUPPORTED_SCHEMA_VERSIONS
 
 
+def dashboard_documents(manifest: dict) -> list[dict]:
+    """Manifest records in the human-facing dashboard scope."""
+    return [
+        doc for doc in manifest.get("documents", [])
+        if doc.get("group") != AGENT_CONTEXT_GROUP
+    ]
+
+
+def has_human_facing_documents(manifest: dict) -> bool:
+    return any(doc.get("status") not in INACTIVE for doc in dashboard_documents(manifest))
+
+
 def included_documents(repo: Path, manifest: dict) -> list[dict]:
     out = []
-    for doc in manifest.get("documents", []):
+    for doc in dashboard_documents(manifest):
         if doc.get("status") not in WRITTEN:
             continue
         path = doc.get("path", "")
-        if path == "CLAUDE.local.md":
-            # gitignored, machine-local preferences: never a shared page
-            continue
         if not (path.endswith(".md") or path.endswith(".mdx")):
             continue
         if not (path.startswith(DOC_PREFIX) or "/" not in path):
@@ -194,6 +207,8 @@ def route_for_doc(doc: dict) -> tuple[str, str]:
 def build_ledger(docs: list[dict]) -> dict:
     ledger = {"pages": [], "by_path": {}, "by_url": {}}
     for doc in docs:
+        if doc.get("group") == AGENT_CONTEXT_GROUP:
+            continue
         output, url = route_for_doc(doc)
         page = {
             "id": doc["id"],
@@ -236,7 +251,7 @@ def _manifest_projection(manifest: dict) -> list[dict]:
     selection, audit records, ...) does not change the site and must not
     trigger a rebuild."""
     docs = []
-    for doc in sorted(manifest.get("documents", []), key=lambda d: d.get("path", "")):
+    for doc in sorted(dashboard_documents(manifest), key=lambda d: d.get("path", "")):
         entry = {
             "id": doc.get("id", ""),
             "title": title_for(doc),
@@ -252,36 +267,49 @@ def _manifest_projection(manifest: dict) -> list[dict]:
 
 
 def render_signature(repo: Path, manifest: dict) -> str:
-    """Working-tree signature of everything that renders: `docs/` file bytes
-    (including assets), included root-document bytes, and the manifest
-    projection. No git HEAD, no flow index, no repository package files —
-    those do not affect the generated site."""
+    """Working-tree signature of human-facing render inputs only.
+
+    Agent-context records are excluded by manifest group. Included Markdown,
+    renderable assets, render-relevant sidecar metadata, and the human manifest
+    projection remain; git state and repository package files do not."""
     records: list[str] = []
     projection = _manifest_projection(manifest)
+    rendered_docs = included_documents(repo, manifest)
     for doc in projection:
-        records.append("doc\x00" + json.dumps(doc, sort_keys=True, separators=(",", ":")))
-    for rel in tree_files(repo):
+        records.append("doc\x00" + json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
+    rendered_paths = {
+        doc["path"] for doc in rendered_docs
+        if doc["path"].startswith(DOC_PREFIX)
+    }
+    agent_paths = {
+        doc.get("path", "") for doc in manifest.get("documents", [])
+        if doc.get("group") == AGENT_CONTEXT_GROUP
+    }
+    rendered_paths.update(
+        rel for rel in tree_files(repo)
+        if rel.endswith(tuple(ASSET_EXTS)) and rel not in agent_paths
+    )
+    for rel in sorted(rendered_paths):
         records.append(f"file\x00{rel}\x00{sha256_bytes((repo / rel).read_bytes())}")
-    provenance_root = repo / ".docforge" / store.SIDECAR_DIRNAME
-    if provenance_root.is_dir():
-        # Sort by the POSIX relative-path string, not by `Path` parts — the
-        # two orderings disagree whenever a folder and a same-named sibling
-        # file collide at a path-separator boundary (e.g. `docs.json` vs
-        # `docs/architecture.json`: `.` sorts before `/` as a raw string, but
-        # `Path` comparison treats "docs" as a shorter, earlier segment).
-        # JS sorts full path strings, so Python must match that ordering for
-        # the two peers to hash the same bytes.
-        sidecar_files = [path for path in provenance_root.rglob("*") if path.is_file()]
-        for path in sorted(sidecar_files, key=lambda p: str(p.relative_to(repo)).replace("\\", "/")):
-            rel = str(path.relative_to(repo)).replace("\\", "/")
-            records.append(f"provenance\x00{rel}\x00{sha256_bytes(path.read_bytes())}")
-    for doc in projection:
+    for doc in rendered_docs:
         rel = doc["path"]
-        if not rel or "/" in rel or not rel.endswith((".md", ".mdx")):
-            continue
-        target = repo / rel
-        if target.is_file():
-            records.append(f"root\x00{rel}\x00{sha256_bytes(target.read_bytes())}")
+        entry = store.entry_for(repo, rel)
+        if entry is not None:
+            provenance = entry.get("provenance")
+            metadata = {
+                "description": entry.get("description") or "",
+                "id": entry.get("id") or "",
+                "path": rel,
+                "provenance_schema": provenance.get("schema", "") if isinstance(provenance, dict) else "",
+                "title": entry.get("title") or "",
+            }
+            records.append(
+                "metadata\x00" + json.dumps(
+                    metadata, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                )
+            )
+        if "/" not in rel:
+            records.append(f"root\x00{rel}\x00{sha256_bytes((repo / rel).read_bytes())}")
     settings = {
         "base_url": BASE_URL,
         "generator": TOOL_VERSION,
@@ -346,8 +374,8 @@ def page_frontmatter(doc_id: str, title: str, description: str | None = None) ->
 
 def reconcile_metadata(repo: Path, manifest: dict, dry_run: bool = False) -> dict:
     report = {"reconciled": [], "unchanged": [], "skipped": [], "errors": []}
-    for doc in manifest.get("documents", []):
-        if doc.get("status") in {"skipped", "retired"} or doc.get("provenance_mode") == "manifest":
+    for doc in dashboard_documents(manifest):
+        if doc.get("status") in INACTIVE or doc.get("provenance_mode") == "manifest":
             continue
         path = doc.get("path", "")
         if not path.startswith(DOC_PREFIX) or not path.endswith(".md"):
@@ -583,13 +611,26 @@ def scan(repo: Path, manifest: dict) -> dict:
     ignore for now: `incomplete`, `missing_file`, `drift`, `untracked`); any
     finding still means the documentation should be revised, but only a
     blocking one stops `start`/`export` before attempting to render."""
+    self_managed = unmanaged_paths(manifest)
+    kinds = ("metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan")
+    if not has_human_facing_documents(manifest):
+        return {
+            "problems": [],
+            "counts": {kind: 0 for kind in kinds},
+            "unmanaged": sorted(self_managed),
+            "blocking": False,
+            "no_human_docs": True,
+            "message": NO_HUMAN_DOCS_MESSAGE,
+        }
+
+    human_docs = dashboard_documents(manifest)
     docs = included_documents(repo, manifest)
     included_ids = {doc["id"] for doc in docs}
     problems: list[dict] = []
     report = reconcile_metadata(repo, manifest, dry_run=True)
     for entry in report["errors"] + report["skipped"]:
         problems.append({"kind": "metadata", "doc": entry["doc"], "detail": entry["detail"], "blocking": entry["doc"] in included_ids})
-    for doc in manifest.get("documents", []):
+    for doc in human_docs:
         path = doc.get("path", "")
         if not (path.endswith(".md") or path.endswith(".mdx")):
             continue
@@ -598,7 +639,7 @@ def scan(repo: Path, manifest: dict) -> dict:
             continue
         if not (repo / path).is_file():
             problems.append({"kind": "missing_file", "doc": doc.get("id", ""), "detail": path, "blocking": False})
-    for doc in manifest.get("documents", []):
+    for doc in human_docs:
         provenance = doc.get("provenance")
         if not isinstance(provenance, dict) or provenance.get("schema") not in SUPPORTED_SCHEMA_VERSIONS:
             continue
@@ -617,7 +658,6 @@ def scan(repo: Path, manifest: dict) -> dict:
     ledger = build_ledger(docs)
     ledger["assets"] = collect_asset_map(repo)
     tracked = {doc.get("path") for doc in manifest.get("documents", []) if doc.get("path")}
-    self_managed = unmanaged_paths(manifest)
     for rel in tree_files(repo):
         if not rel.endswith((".md", ".mdx")) or rel in tracked:
             continue
@@ -647,19 +687,21 @@ def scan(repo: Path, manifest: dict) -> dict:
     route_plan = plan(repo, manifest)
     for detail in route_plan["problems"]:
         problems.append({"kind": "route_plan", "doc": "", "detail": detail, "blocking": True})
-    kinds = ("metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan")
     counts = {kind: sum(1 for p in problems if p["kind"] == kind) for kind in kinds}
     return {
         "problems": problems,
         "counts": counts,
         "unmanaged": sorted(self_managed),
         "blocking": any(p["blocking"] for p in problems),
+        "no_human_docs": False,
+        "message": None,
     }
 
 
 def plan(repo: Path, manifest: dict) -> dict:
     docs = included_documents(repo, manifest)
     ledger = build_ledger(docs)
+    no_human_docs = not has_human_facing_documents(manifest)
     problems: list[str] = []
     folded: dict[str, str] = {}
     for page in ledger["pages"]:
@@ -672,29 +714,14 @@ def plan(repo: Path, manifest: dict) -> dict:
     for page in ledger["pages"]:
         by_dir.setdefault(posixpath.dirname(page["output_path"]), []).append(page)
     missing_index = any(page["url"] == BASE_URL for page in ledger["pages"])
-    if not missing_index:
-        # An agents-only run writes no human-facing tree, so a browsable site
-        # has nothing to show. That is a scope fact, not a defect to revise --
-        # and forcing a docs/README.md here would make the human tree index the
-        # agent overlay, which the one-way boundary forbids. Read the manifest's
-        # scope rather than what is written yet, so the message is right from
-        # the first run.
-        selected = [
-            doc for doc in manifest.get("documents", [])
-            if doc.get("status") not in {"skipped", "retired"}
-        ]
-        if selected and all(doc.get("group") == AGENT_CONTEXT_GROUP for doc in selected):
-            problems.append(
-                "agent-context only: this repository has no human-facing documentation "
-                "to render; agent documents are read as files, not browsed"
-            )
-        else:
-            problems.append("no docs index: docs/README.md is not a written document")
+    if not missing_index and not no_human_docs:
+        problems.append("no docs index: docs/README.md is not a written document")
     return {
         "base_url": BASE_URL,
         "pages": ledger["pages"],
         "folder_count": len(by_dir),
         "problems": problems,
+        "no_human_docs": no_human_docs,
     }
 
 
@@ -703,7 +730,7 @@ def meta_title(folder: str, ledger: dict, manifest: dict) -> str:
         if page["output_path"] == (f"{folder}/index.mdx" if folder else "index.mdx"):
             return page["title"]
     if folder == "":
-        for doc in manifest.get("documents", []):
+        for doc in dashboard_documents(manifest):
             if doc.get("id") == "docs_index":
                 return title_for(doc)
     if folder == "root":
@@ -1261,14 +1288,8 @@ def revise_advice(scan_result: dict) -> str:
     An agents-only repository has nothing for a browsable site to show. That is
     a scope fact, so pointing the user at `/docforge-revise` would be wrong --
     there is nothing to fix."""
-    if any(
-        problem["kind"] == "route_plan" and problem["detail"].startswith("agent-context only:")
-        for problem in scan_result["problems"]
-    ):
-        return (
-            "nothing to render: this run wrote agent context only. Add human-facing "
-            "areas to build a dashboard, or read the agent documents directly."
-        )
+    if scan_result.get("no_human_docs"):
+        return NO_HUMAN_DOCS_MESSAGE
     return "you should revise again: run /docforge-revise to fix the documentation"
 
 
@@ -1321,6 +1342,9 @@ def _prepare(args: argparse.Namespace, dashboard: Path, manifest: dict, template
 
 
 def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:
+    if not has_human_facing_documents(manifest):
+        print(NO_HUMAN_DOCS_MESSAGE)
+        return 0
     render_sig = render_signature(args.repo, manifest)
     shell_sig = shell_signature(template_dir, args.repo, manifest)
     if args.plan_only:
@@ -1336,6 +1360,9 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
 
 
 def cmd_export(args: argparse.Namespace, dashboard: Path, manifest: dict, template_dir: Path) -> int:
+    if not has_human_facing_documents(manifest):
+        print(NO_HUMAN_DOCS_MESSAGE)
+        return 0
     render_sig = render_signature(args.repo, manifest)
     shell_sig = shell_signature(template_dir, args.repo, manifest)
     new_state, render_sig = _prepare(args, dashboard, manifest, template_dir, render_sig, shell_sig, False)
@@ -1364,6 +1391,9 @@ def cmd_scan(args: argparse.Namespace, manifest: dict) -> int:
     if args.json:
         print(dump_json(result))
         return 0 if not result["problems"] else 1
+    if result["no_human_docs"]:
+        print(NO_HUMAN_DOCS_MESSAGE)
+        return 0
     if not result["problems"]:
         print("scan: 0 problems; the documentation is ready to render")
     else:

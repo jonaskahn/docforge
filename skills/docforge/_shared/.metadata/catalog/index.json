@@ -1,6 +1,6 @@
 {
   "$schema": "catalog-index-schema.json",
-  "version": "2.21.0",
+  "version": "2.22.0",
   "profiles": {
     "shapes": "profiles/shapes.json",
     "platforms": "profiles/platforms.json",
@@ -145,12 +145,6 @@
       "tier": "spine",
       "path": "docs/agents/glossary.md",
       "record": "documents/agent-context/agents_glossary.json"
-    },
-    {
-      "id": "agents_index",
-      "tier": "spine",
-      "path": "docs/agents/README.md",
-      "record": "documents/agent-context/agents_index.json"
     },
     {
       "id": "agents_kernel",

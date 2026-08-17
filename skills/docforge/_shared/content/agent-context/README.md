@@ -1,6 +1,7 @@
 # agent-context
 
-Agent-facing context: AGENTS.md and coding-agent views.
+Self-contained coding-agent kernels, topic views, local preferences, and safe
+machine settings.
 
 ## Load this when
 
@@ -9,8 +10,8 @@ Agent-facing context: AGENTS.md and coding-agent views.
 ## Contents
 
 - [contracts/](contracts/README.md) — 10 contracts
-- [templates/](templates/README.md) — 11 templates
-- `agents-kernel.instruction.md` — Compact entry points, verified commands, precedence, safe links to owning agent views → [agents-kernel.instruction.md](agents-kernel.instruction.md)
+- [templates/](templates/README.md) — 10 templates
+- `agents-kernel.instruction.md` — Permanent self-contained writing and isolation policy → [agents-kernel.instruction.md](agents-kernel.instruction.md)
 
 ## Boundaries
 

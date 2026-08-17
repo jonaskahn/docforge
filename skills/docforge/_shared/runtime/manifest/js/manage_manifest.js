@@ -29,7 +29,7 @@ const TRANSITIONS = {
   retired: new Set(["planned"]),
 };
 const TOOL_VERSION = pf.GENERATOR_VERSION;
-const MANIFEST_VERSION = "3.8";
+const MANIFEST_VERSION = "3.9";
 const USER_CONFIRMED_TRIGGERS = new Set([
   "new-trust-boundary", "per-interaction-review", "regulated-workload",
   "high-criticality", "new-external-integration", "new-data-classification",
@@ -139,7 +139,7 @@ function validateSelectionEvidence(repo, values) {
   }
   return validated;
 }
-function makeDocument(definition, origins, evidence = [], catalogId = null, audiences = [], variantAxes = {}) {
+function makeDocument(definition, origins, evidence = [], catalogId = null, audiences = []) {
   // `definition` comes from the legacy-view catalog (bare filenames, kept
   // stable for --legacy CLI output); the manifest's scaffold_template must
   // be a skill-root-relative path so scaffold_docs.js can locate the file
@@ -147,16 +147,7 @@ function makeDocument(definition, origins, evidence = [], catalogId = null, audi
   // dynamic types, `definition.id` is already the per-instance manifest id
   // by the time this runs, so callers pass the original catalog id
   // explicitly via `catalogId`.
-  let detail = queryCatalog.loadType(catalogId || definition.id);
-  // Variants are resolved here, not in scaffold_docs: scaffoldBody reads
-  // `scaffold_template` straight from the manifest, so choosing the file at
-  // manifest-build time means the writer path needs no mode awareness.
-  if (variantAxes.agentMode || variantAxes.layout) {
-    detail = queryCatalog.resolveVariants(detail, {
-      agentContextMode: variantAxes.agentMode || null,
-      layout: variantAxes.layout || null,
-    });
-  }
+  const detail = queryCatalog.loadType(catalogId || definition.id);
   const [primaryAudience, presentation] = queryCatalog.resolvePresentation(detail, audiences);
   const document = {
     id: definition.id,
@@ -300,7 +291,6 @@ function foldCompactGroups(catalog, selected, audiences) {
       audiences,
     );
     merged.compact_members = members.map(([, doc]) => doc.id);
-    merged.requires = [...new Set(members.flatMap(([, doc]) => doc.requires || []))].sort();
     for (const [, doc] of members) foldedIds.add(doc.id);
     kept.push(merged);
   }
@@ -335,30 +325,11 @@ function emptySelectionMessage(groups, profiles) {
   return `no documents selected: group scope ${groups.join(", ")}${detail} — add the audience or widen --group`;
 }
 
-// `standalone` when the agent-context group is all this run writes. Standalone
-// agent documents own their facts, because there is no human-facing document to
-// link. Retired and skipped documents do not count: a tree whose human
-// documents were all retired is standalone again.
-function deriveAgentMode(documents) {
-  for (const doc of documents) {
-    if (doc.group === AGENT_CONTEXT_GROUP) continue;
-    if (doc.status === "retired" || doc.status === "skipped") continue;
-    return "linked";
-  }
-  return "standalone";
-}
-
-/** The project's agent-context mode, or null when no agent document exists. */
-function agentContextRecord(documents, decidedBy = "derived") {
-  if (!documents.some((doc) => doc.group === AGENT_CONTEXT_GROUP)) return null;
-  return { mode: deriveAgentMode(documents), decided_by: decidedBy, decided_at: nowIso() };
-}
-
 // `groups` restricts the run to those catalog groups; empty means all. The
 // filter is strictly subtractive and runs before every other test, so it can
 // never add a document and skips `conditionEvidence` filesystem work for
 // out-of-scope types.
-function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standard", groups = null, agentMode = null) {
+function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standard", groups = null) {
   const ranks = Object.fromEntries(catalog.tiers.map((item) => [item.id, item.order]));
   const scoped = new Set(groups || []);
   let selected = [];
@@ -386,40 +357,18 @@ function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standa
     // An out-of-scope index must not be pulled back in as an ancestor: an
     // agents-only run writes no docs/README.md, and a docs/README.md that
     // indexed only docs/agents/ would be the human->agent reference the
-    // one-way boundary forbids.
+    // isolation boundary forbids.
     for (const definition of catalog.documents) {
       if (!scoped.has(definition.group)) skipIds.add(definition.id);
     }
   }
   addAncestorIndexes(catalog, selected, profiles.audiences, skipIds);
-  applyDocumentVariants(selected, layout, agentMode);
   return selected.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
-}
-
-// Re-point each document at its variant contract/instruction/template. A second
-// pass, because the agent-context mode is a property of the whole selection:
-// whether the agent documents stand alone is only knowable once every document
-// is chosen. Mutates in place; a record declaring no variants is left
-// untouched, so an ordinary run is byte-identical.
-function applyDocumentVariants(documents, layout = "standard", agentMode = null) {
-  const mode = agentMode || deriveAgentMode(documents);
-  for (const doc of documents) {
-    let detail;
-    try {
-      detail = queryCatalog.loadType(doc.catalog_id || doc.id);
-    } catch (error) {
-      continue; // dynamic instance ids are resolved by their own type
-    }
-    if (!detail.variants) continue;
-    const resolved = queryCatalog.resolveVariants(detail, { agentContextMode: mode, layout });
-    doc.scaffold_template = resolved.template_file;
-    doc.instruction_file = resolved.instruction_file === undefined ? null : resolved.instruction_file;
-  }
 }
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "preview", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "unmanaged", "retire", "agent-mode"]);
+  const knownCommands = new Set(["init", "preview", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "unmanaged", "retire"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "group", "overlay", "evidence", "doc"]);
   const boolean = new Set(["force", "keep-tmp", "reset", "dry-run", "json"]);
@@ -436,7 +385,6 @@ function parseArgs(argv) {
     finish: new Set(["repo", "keep-tmp"]),
     unmanaged: new Set(["repo", "action", "path", "dry-run"]),
     retire: new Set(["repo", "doc", "mode", "dry-run"]),
-    "agent-mode": new Set(["repo", "decision", "dry-run"]),
   }[command];
   const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], group: [], overlay: [], evidence: [], doc: [] };
   for (let i = 1; i < argv.length; i++) {
@@ -564,12 +512,8 @@ function cmdInit(args) {
     documents: docs,
     metadata: {},
   };
-  // Both fields stay absent unless they carry information: an unscoped run
-  // genuinely has no group scope, and a repository without agent documents has
-  // no agent-context mode. Absent reads exactly like a pre-3.8 manifest.
+  // An unscoped run genuinely has no group scope.
   if (scopedGroups.length) manifest.project.groups = scopedGroups;
-  const agentRecord = agentContextRecord(docs);
-  if (agentRecord) manifest.project.agent_context = agentRecord;
   let graphLock;
   try {
     graphLock = resolveGraphLock(args.repo, args.graph_provider);
@@ -672,7 +616,6 @@ function addCompactSection(args, manifest, definition, merged, flowIndex, flowRo
   const fallback = slug.replace(/[-_]/g, " ");
   const title = args.title || (fallback.charAt(0).toUpperCase() + fallback.slice(1));
   existing.push({ id: definition.id, slug, title });
-  merged.requires = [...new Set([...(merged.requires || []), ...definition.requires])].sort();
   saveManifest(args.repo, manifest);
   if (flowIndex && flowRow) {
     flowRow.status = "documented";
@@ -689,6 +632,10 @@ function cmdAdd(args) {
     });
     const catalog = loadCatalog();
     const definition = dynamicDefinition(catalog, args.type);
+    const scopedGroups = new Set(manifest.project.groups || []);
+    if (scopedGroups.size && !scopedGroups.has(definition.group)) {
+      return fail(`dynamic type ${args.type} is outside project.groups: ${[...scopedGroups].sort().join(", ")}`, 2);
+    }
     const fullDefinition = queryCatalog.loadType(definition.id);
     validateRelativePath(args.path);
     let flowIndex = null;
@@ -748,14 +695,17 @@ function catalogIdForDocument(catalog, doc) {
 
 function effectivePresentation(catalogId, audiences, override = null) {
   let detail = queryCatalog.loadType(catalogId);
-  if (override) detail = { ...detail, presentation: { ...(detail.presentation || {}), ...override } };
+  const effectiveOverride = { ...(override || {}) };
+  if ((detail.presentation || {}).related_docs === "none") delete effectiveOverride.related_docs;
+  if (Object.keys(effectiveOverride).length) {
+    detail = { ...detail, presentation: { ...(detail.presentation || {}), ...effectiveOverride } };
+  }
   const [primaryAudience, presentation] = queryCatalog.resolvePresentation(detail, audiences);
   return { primary_audience: primaryAudience, ...presentation };
 }
 
 // Send a written document back for re-grounding, clearing its audit. Shared by
-// every mechanical trigger that invalidates existing prose: contract drift,
-// presentation drift, and an approved agent-context mode conversion.
+// every mechanical trigger that invalidates existing prose.
 function demoteWritten(doc) {
   if (["generated", "needs_review", "complete"].includes(doc.status)) {
     doc.status = "in_progress";
@@ -784,10 +734,7 @@ function syncContractRevisions(catalog, docs) {
     const revision = detail.contract_revision === undefined ? null : detail.contract_revision;
     if (revision !== null && doc.contract_revision !== revision) {
       doc.contract_revision = revision;
-      if (["generated", "needs_review", "complete"].includes(doc.status)) {
-        doc.status = "in_progress";
-        doc.audit = null;
-      }
+      demoteWritten(doc);
       contractUpdated.push(doc.id);
     }
   }
@@ -873,7 +820,6 @@ function relayoutDynamicDocuments(catalog, documents, selected, oldLayout, newLa
     if (sections.filter((item) => item.id === catalogId).length >= queryCatalog.COMPACT_DYNAMIC_CAP) continue;
     const slug = sectionSlug(doc.path);
     merged.compact_members.push({ id: catalogId, slug, title: doc.title || slug });
-    merged.requires = [...new Set([...(merged.requires || []), ...(doc.requires || [])])].sort();
     folded.add(doc.id);
   }
   return [[], folded];
@@ -929,11 +875,7 @@ function cmdReconcile(args) {
   } catch (error) {
     return fail(error.message, 2);
   }
-  // A pinned "keep self-contained" answer survives reconcile: the stored mode
-  // wins over what the new selection would derive.
-  const pinned = manifest.project.agent_context || {};
-  const pinnedMode = pinned.decided_by === "user" ? pinned.mode : null;
-  const selected = selectedStaticDocuments(catalog, args.repo, newTier, profiles, newLayout, newGroups, pinnedMode);
+  const selected = selectedStaticDocuments(catalog, args.repo, newTier, profiles, newLayout, newGroups);
   if (!selected.length) return fail(emptySelectionMessage(newGroups, profiles), 2);
   const selectedIds = new Set(selected.map((doc) => doc.id));
   const [relaidOut, foldedAway] = relayoutDynamicDocuments(
@@ -988,26 +930,12 @@ function cmdReconcile(args) {
   const contractUpdated = syncContractRevisions(catalog, kept);
   const presentationUpdated = syncPresentations(catalog, kept, profiles.audiences);
   const oldTier = manifest.project.tier;
-  const oldAgentMode = deriveAgentMode(manifest.documents);
   manifest.documents = [...kept, ...added];
   manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
   manifest.project.tier = newTier;
   manifest.project.profiles = profiles;
   if (newGroups.length) manifest.project.groups = newGroups;
   else delete manifest.project.groups;
-  // Report the agent-context mode flip; never demote here. The precedent is
-  // `retire` (report, then a separate approved command applies), not
-  // `syncPresentations` -- this trigger needs a human answer, and a "keep
-  // self-contained" reply would have to undo an eager demotion.
-  const agentRecord = manifest.project.agent_context || {};
-  const newAgentMode = deriveAgentMode(manifest.documents);
-  const hasAgentDocs = manifest.documents.some((doc) => doc.group === AGENT_CONTEXT_GROUP);
-  const agentModeFlip = hasAgentDocs
-    && agentRecord.decided_by !== "user"
-    && (agentRecord.mode || oldAgentMode) !== newAgentMode;
-  if (!manifest.project.agent_context && hasAgentDocs) {
-    manifest.project.agent_context = agentContextRecord(manifest.documents);
-  }
   if (args.scale_class || args.layout || tierForcedLayout) {
     let scaleRecord;
     if (currentScale.class) {
@@ -1059,17 +987,12 @@ function cmdReconcile(args) {
   if (retire.length) countParts.push(`${retire.length} retire`);
   if (contractUpdated.length) countParts.push(`${contractUpdated.length} contract-updated`);
   if (presentationUpdated.length) countParts.push(`${presentationUpdated.length} presentation-updated`);
-  if (agentModeFlip) countParts.push("1 agent-mode");
   console.log(`  counts: ${countParts.join(", ") || "no change"}`);
   if (added.length) console.log(`  added: ${added.map((doc) => doc.id).sort().join(", ")}`);
   if (removed.length) console.log(`  removed-planned: ${removed.sort().join(", ")}`);
   if (retire.length) console.log(`  retire: ${retire.sort().join(", ")} (written, out of scope — approve the retire step to move or delete)`);
   if (contractUpdated.length) console.log(`  contract-updated: ${contractUpdated.sort().join(", ")}`);
   if (presentationUpdated.length) console.log(`  presentation-updated: ${presentationUpdated.sort().join(", ")}`);
-  if (agentModeFlip) {
-    const affected = manifest.documents.filter((doc) => doc.group === AGENT_CONTEXT_GROUP).length;
-    console.log(`  agent-mode: ${oldAgentMode} -> ${newAgentMode}; ${affected} agent-context documents affected (run \`agent-mode --decision convert|keep\` to answer)`);
-  }
   console.log(`  kept: ${kept.length} documents`);
   console.log("");
   for (const line of planLines(args.repo, manifest, path.join(args.repo, ".docforge", "flow-index.json"), true)) {
@@ -1113,6 +1036,9 @@ function cmdPresentation(args) {
   try {
     const manifest = loadManifest(manifestPath(args.repo), { unsupportedHint: MANIFEST_HINT });
     const doc = findDocument(manifest, args.id);
+    if (doc.group === AGENT_CONTEXT_GROUP && args.related_docs !== undefined && args.related_docs !== "none") {
+      return fail("agent-context documents require --related-docs none", 2);
+    }
     const catalog = loadCatalog();
     const catalogId = catalogIdForDocument(catalog, doc);
     if (catalogId === null) throw new Error(`catalog definition not found for document: ${args.id}`);
@@ -1216,50 +1142,6 @@ function cmdFinish(args) {
 // (default) or delete them, marking the manifest entry `retired` — the entry
 // itself is always preserved. A file operation: never under `--auto-accept`,
 // always an explicitly approved step after `reconcile` reports the delta.
-// Answer the agent-context mode change `reconcile` reported.
-//
-// `convert` re-grounds the agent documents against the human tree that now
-// exists: they are demoted to `in_progress` and rewritten as linked views.
-// `keep` pins the current mode with `decided_by: "user"`, which is what stops
-// reconcile asking again on every later run. Rewrites published content, so
-// never under `--auto-accept`.
-function cmdAgentMode(args) {
-  required(args, ["repo", "decision"]);
-  if (!["convert", "keep"].includes(args.decision)) return fail(`invalid decision: ${args.decision}`, 2);
-  let manifest;
-  try {
-    manifest = loadManifest(manifestPath(args.repo), { unsupportedHint: MANIFEST_HINT });
-  } catch (error) {
-    return fail(error.message, 2);
-  }
-  const agentDocs = manifest.documents.filter((doc) => doc.group === AGENT_CONTEXT_GROUP);
-  if (!agentDocs.length) return fail("no agent-context documents in this manifest", 2);
-  const current = manifest.project.agent_context || {};
-  const derived = deriveAgentMode(manifest.documents);
-  let mode; let decidedBy; const demoted = [];
-  if (args.decision === "keep") {
-    mode = current.mode || derived;
-    decidedBy = "user";
-  } else {
-    mode = derived;
-    decidedBy = "derived";
-    for (const doc of agentDocs) {
-      if (WRITTEN.has(doc.status)) { demoteWritten(doc); demoted.push(doc.id); }
-    }
-  }
-  if (args.dry_run) {
-    console.log(`agent-mode (dry run): ${current.mode || derived} -> ${mode} (${decidedBy})`);
-    if (demoted.length) console.log(`  would demote: ${demoted.sort().join(", ")}`);
-    return 0;
-  }
-  manifest.project.agent_context = { mode, decided_by: decidedBy, decided_at: nowIso() };
-  saveManifest(args.repo, manifest);
-  console.log(`agent-mode: ${mode} (${decidedBy})`);
-  if (demoted.length) console.log(`  demoted for re-grounding: ${demoted.sort().join(", ")}`);
-  else if (args.decision === "keep") console.log("  kept self-contained; reconcile will not ask again");
-  return 0;
-}
-
 function cmdRetire(args) {
   required(args, ["repo", "doc", "mode"]);
   if (!["obsolete", "delete"].includes(args.mode)) return fail(`invalid retire mode: ${args.mode}`, 2);
@@ -1476,10 +1358,6 @@ function cmdPreview(args) {
   const baseline = projected.length;
   report.layout = layout;
   report.count = baseline;
-  // Intake states the standalone consequence at the confirmation gate, so it
-  // needs the mode before any document exists.
-  const previewAgentRecord = agentContextRecord(projected);
-  report.agent_context_mode = previewAgentRecord ? previewAgentRecord.mode : null;
   const attribution = [];
   for (const [dimension, value] of selectionValues(args)) {
     if (!profiles[dimension].includes(value)) continue;
@@ -1494,7 +1372,7 @@ function cmdPreview(args) {
   // spilled past the section cap — a spilled group keeps standard-layout
   // children, which is the one case where compact stops being bounded.
   if (layout === "compact") {
-    const merged = selectedStaticDocuments(catalog, args.repo, args.tier, profiles, "compact")
+    const merged = selectedStaticDocuments(catalog, args.repo, args.tier, profiles, "compact", scopedGroups)
       .filter((doc) => (doc.compact_members || []).length);
     report.sections = merged
       .map((doc) => ({ path: doc.path, sections: doc.compact_members.length }))
@@ -1551,7 +1429,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, preview: cmdPreview, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, unmanaged: cmdUnmanaged, retire: cmdRetire, "agent-mode": cmdAgentMode }[args.command](args);
+    return { init: cmdInit, preview: cmdPreview, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, unmanaged: cmdUnmanaged, retire: cmdRetire }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

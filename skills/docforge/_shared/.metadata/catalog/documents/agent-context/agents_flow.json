@@ -1,7 +1,7 @@
 {
   "id": "agents_flow",
   "type": "agents-flow",
-  "summary": "Compact flow/term lookup grounded in declared flow evidence and linked owners",
+  "summary": "Self-contained trigger-to-effect flow lookup grounded in declared flow evidence",
   "contract_file": "content/agent-context/contracts/agents-flow.md",
   "path": "docs/agents/flow.md",
   "group": "agent-context",
@@ -19,20 +19,15 @@
   "requires": [
     "flow_graph"
   ],
-  "target_depth": "orientation",
+  "target_depth": "reference",
   "write_order": 208,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
   "template_file": "content/agent-context/templates/agents-flow.md",
   "compact_group": "agents_compact",
-  "compact_order": 7,
-  "variants": {
-    "agent_context_mode": {
-      "standalone": {
-        "contract_file": "content/agent-context/contracts/standalone/agents-lookup.md",
-        "instruction_file": "content/agent-context/agents-standalone.instruction.md",
-        "template_file": "content/agent-context/templates/standalone/agents-flow.md"
-      }
-    }
-  }
+  "compact_order": 6
 }

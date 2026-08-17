@@ -7,7 +7,7 @@ Python/JS public command with a launcher in
 ## Load this when
 
 - One document needs a mechanical pre-audit → `lint_document`.
-- The document is the `agents-kernel` special output (AGENTS.md-shaped) → `lint_agents_kernel`.
+- The document is an `agents-kernel` special output (AGENTS.md or CLAUDE.md) → `lint_agents_kernel`.
 - Previewing the exact manifest tree, materializing one document, or auditing
   the whole tree → `scaffold_docs`.
 
@@ -16,7 +16,7 @@ Python/JS public command with a launcher in
 | Script | js/py | Kind | Purpose |
 |---|---|---|---|
 | `lint_document` | both | CLI | Mechanical lint of one ordinary Docforge document |
-| `lint_agents_kernel` | both | CLI | Rubric lint of an AGENTS.md-shaped agent-kernel document |
+| `lint_agents_kernel` | both | CLI | Rubric lint of an AGENTS/CLAUDE agent-kernel document |
 | `scaffold_docs` | both | CLI | Dry-run plan, single-document materialization, or tree audit |
 
 ## Details
@@ -36,13 +36,14 @@ mechanical pre-audit, never a substitute for the independent semantic audit.
 ### `lint_agents_kernel`
 
 ```sh
-python3 runtime/cli/python/lint_agents_kernel.py --file <path> --repo <root> [--json]
+python3 runtime/cli/python/lint_agents_kernel.py --file <path> [--json]
 ```
 
-Rubric for the `agents-kernel` special output: line cap, seven numbered
-sections, title/tagline/test conventions, modal/pronoun rules, code-block
-count, provenance comment, `Working if:` closure, `@docs/agents/...` targets.
-Read-only. Exit `0` no defects, `1` defects, `2` usage error.
+Rubric for an AGENTS/CLAUDE kernel: 80-nonblank-line cap, required operating
+sections and order, a concrete command block, mandatory safety rules, one code
+block, provenance comment, and no document references. `--repo` remains
+accepted for compatibility but is not needed. Read-only. Exit `0` no defects,
+`1` defects, `2` usage error.
 
 ### `scaffold_docs`
 
@@ -62,7 +63,8 @@ python3 runtime/cli/python/scaffold_docs.py --repo <repo> --manifest <manifest> 
   documents are never overwritten.
 - `--audit` — read-only; reports missing/unexpected files, placeholders,
   provenance defects, links, README child coverage, invalid JSON, folder-only
-  indexes, and forge leakage.
+  indexes, forge leakage, and both directions of the generated agent-context
+  isolation boundary.
 
 ## Where invoked
 

@@ -21,9 +21,12 @@ inline. The checks owned by
 reachability, onboarding, location, reviewer, stranger, duplication, and host
 neutrality, plus README-specific checks: every section README links each
 selected and materialized direct child outside the agent-context group (the
-`readme child coverage` finding), no human-facing document references an
-agent-context path (the `agent-context leak` finding), and no section README
-routes readers into source files. A whole-tree discovery
+`readme child coverage` finding), every agent-context output contains zero
+documentation references, no generated non-agent document mentions an
+agent-context output (`agent-context outbound` and `agent-context leak`,
+respectively), and no section README routes readers into source files. Plain
+source/configuration paths and verified commands remain valid inside
+agent-context outputs. A whole-tree discovery
 that changes one artifact sends that artifact through its independent audit
 again ([`writing.md`](writing.md)).
 

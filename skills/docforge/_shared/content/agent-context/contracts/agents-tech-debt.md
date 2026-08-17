@@ -2,8 +2,6 @@
 
 Content contract for document type `agents-tech-debt`.
 
-Aliased with: `agents-architecture`, `agents-patterns`, `agents-testing`, `agents-conventions` (same content contract).
-
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| agents-tech-debt | token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links | duplicated human documentation or volatile symbol dumps | Reference | deep-dive |
+| agents-tech-debt | self-contained evidenced limitations and editing hazards, affected source paths, symptoms, safe handling, prohibited incidental fixes | every documentation reference, speculative debt, roadmap promises, unsupported rationale | Reference | deep-dive |

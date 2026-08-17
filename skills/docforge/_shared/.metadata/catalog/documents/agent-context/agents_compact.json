@@ -2,7 +2,7 @@
   "id": "agents_compact",
   "type": "compact-doc",
   "title": "Coding-agent views",
-  "summary": "Compact coding-agent section: retrieval views for architecture, patterns, testing, conventions, tech debt, flows, and terms in one file",
+  "summary": "Self-contained compact coding-agent reference with seven independently useful topic sections",
   "contract_file": "content/compact/contracts/agents.md",
   "path": "docs/agents.md",
   "group": "agent-context",
@@ -18,16 +18,18 @@
   },
   "instruction_file": "content/compact/instructions/agents.md",
   "requires": [],
-  "target_depth": "orientation",
+  "target_depth": "deep-dive",
   "write_order": 204,
   "nav_order": 80,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
+  "presentation": {
+    "related_docs": "none"
+  },
   "template_file": "content/compact/templates/agents.template.md",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "compact_target": "docs/agents.md",
   "compact_members": [
-    "agents_index",
     "agents_architecture",
     "agents_patterns",
     "agents_testing",
@@ -35,13 +37,5 @@
     "agents_tech_debt",
     "agents_flow",
     "agents_glossary"
-  ],
-  "variants": {
-    "agent_context_mode": {
-      "standalone": {
-        "contract_file": "content/compact/contracts/agents.standalone.md",
-        "template_file": "content/compact/templates/agents.standalone.template.md"
-      }
-    }
-  }
+  ]
 }

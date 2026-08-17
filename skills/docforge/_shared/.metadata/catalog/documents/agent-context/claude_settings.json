@@ -1,7 +1,7 @@
 {
   "id": "claude_settings",
   "type": "machine-config",
-  "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views",
+  "summary": "Self-contained safe Claude Code permissions and optional verified validation hook configuration",
   "contract_file": "content/agent-context/contracts/machine-config.md",
   "path": ".claude/settings.json",
   "group": "agent-context",
@@ -23,5 +23,9 @@
   "write_order": 203,
   "provenance_mode": "manifest",
   "audit_profile": "machine",
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
   "template_file": "content/agent-context/templates/claude-settings.json"
 }

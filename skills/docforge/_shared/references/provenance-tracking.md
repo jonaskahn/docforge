@@ -54,7 +54,7 @@ path: "docs/architecture/constraints.md"
 generated_at: "2026-07-27T09:12:44Z"
 generator:
   name: "docforge"
-  version: "2.19.0"
+  version: "2.22.0"
 tier: "diligence"
 target_depth: "deep-dive"
 git_commit: "9f1c0aa4e2b7d3915c6f0b8ad24e7c31b5a0e6d2"

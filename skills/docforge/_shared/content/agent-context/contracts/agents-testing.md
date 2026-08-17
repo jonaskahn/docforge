@@ -2,8 +2,6 @@
 
 Content contract for document type `agents-testing`.
 
-Aliased with: `agents-architecture`, `agents-patterns`, `agents-tech-debt`, `agents-conventions` (same content contract).
-
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| agents-testing | token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links | duplicated human documentation or volatile symbol dumps | Reference | deep-dive |
+| agents-testing | self-contained verified full-suite and focused commands, suite locations and naming, fixtures and mock stance, required validation matrix, success signals | every documentation reference, invented commands, unsupported coverage claims, broad testing rationale | Reference | deep-dive |

@@ -2,8 +2,6 @@
 
 Content contract for document type `agents-patterns`.
 
-Aliased with: `agents-architecture`, `agents-testing`, `agents-tech-debt`, `agents-conventions` (same content contract).
-
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| agents-patterns | token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links | duplicated human documentation or volatile symbol dumps | Reference | deep-dive |
+| agents-patterns | self-contained recurring implementation shapes, when to use them, representative source paths, complexity hotspots, safe edit constraints, applicable verified checks | every documentation reference, one-off shapes presented as conventions, inferred intent, volatile symbol dumps | Reference | deep-dive |

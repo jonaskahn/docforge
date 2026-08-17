@@ -63,7 +63,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.21.0";
+const CATALOG_VERSION = "2.22.0";
 const PRESENTATION_VALUES = {
   code: new Set(["contract-only", "task-focused"]),
   related_docs: new Set(["none", "compact", "traceability"]),
@@ -166,25 +166,6 @@ const GROUP_ALIASES = {
   agents: "agent-context", agent: "agent-context",
   "coding-agents": "agent-context", ai: "agent-context",
 };
-
-const VARIANT_FILE_KEYS = ["contract_file", "instruction_file", "template_file"];
-
-// Overlay a record's declared variants for this run's axes. Returns the record
-// unchanged when nothing applies, so an unscoped call is byte-identical to the
-// pre-variant behavior. Axes compose: a compact, standalone agent document
-// takes both overlays, layout last.
-function resolveVariants(detail, { agentContextMode = null, layout = null } = {}) {
-  const variants = detail.variants || {};
-  if (!Object.keys(variants).length) return detail;
-  let resolved = detail;
-  for (const [axis, value] of [["agent_context_mode", agentContextMode], ["layout", layout]]) {
-    const override = value ? (variants[axis] || {})[value] : null;
-    if (!override) continue;
-    if (resolved === detail) resolved = { ...detail };
-    for (const key of VARIANT_FILE_KEYS) if (override[key]) resolved[key] = override[key];
-  }
-  return resolved;
-}
 
 // Canonical group ids for user-supplied names, aliases accepted. An empty or
 // absent list means "every group" -- the filter is subtractive and is applied
@@ -364,7 +345,7 @@ function manifestCompactMembers(repo, docId) {
 // rewritten. `repo`, when given, narrows a tier-spanning group's full
 // catalog roster to what this project's manifest actually folded — see
 // manifestCompactMembers.
-function composedCompactContract(detail, repo = null, { agentMode = null, layout = null } = {}) {
+function composedCompactContract(detail, repo = null) {
   const parts = [];
   const members = [];
   const header = detail.contract_file;
@@ -377,8 +358,7 @@ function composedCompactContract(detail, repo = null, { agentMode = null, layout
   for (const entry of entries) {
     order += 1;
     const memberId = memberTypeId(entry);
-    let member = loadType(memberId);
-    if (agentMode || layout) member = resolveVariants(member, { agentContextMode: agentMode, layout });
+    const member = loadType(memberId);
     const memberContract = member.contract_file;
     const row = {
       id: memberId,
@@ -386,6 +366,7 @@ function composedCompactContract(detail, repo = null, { agentMode = null, layout
       contract: memberContract,
       instruction: member.instruction_file === undefined ? null : member.instruction_file,
       template: member.template_file,
+      requires: member.requires || [],
       target_depth: member.target_depth === undefined ? null : member.target_depth,
       model_depth: member.model_depth || {},
       dominant_form: member.dominant_form === undefined ? null : member.dominant_form,
@@ -408,14 +389,11 @@ function composedCompactContract(detail, repo = null, { agentMode = null, layout
   return [parts.join("\n\n"), members];
 }
 
-// Resolve one document's writing card. `agentMode`/`layout` select declared
-// variants. Omitted, the payload is byte-identical to the pre-variant
-// behavior, which the route-parity tests depend on.
-function route(value, audiences = [], repo = null, { agentMode = null, layout = null } = {}) {
+// Resolve one document's canonical writing card.
+function route(value, audiences = [], repo = null) {
   const docId = resolveCatalogId(value);
   const row = indexRow(docId);
-  let detail = loadType(docId);
-  if (agentMode || layout) detail = resolveVariants(detail, { agentContextMode: agentMode, layout });
+  const detail = loadType(docId);
   const record = row.record || `types/${docId}.json`;
   const modelDepth = {};
   for (const model of MODEL_DEPTH_ORDER) {
@@ -443,7 +421,7 @@ function route(value, audiences = [], repo = null, { agentMode = null, layout = 
     presentation_origin: presentationOrigin,
   };
   if (detail.compact_members && detail.compact_members.length) {
-    const [composed, members] = composedCompactContract(detail, repo, { agentMode, layout });
+    const [composed, members] = composedCompactContract(detail, repo);
     result.contract = composed;
     result.compact = {
       header_contract: detail.contract_file,
@@ -805,30 +783,6 @@ function validate() {
         errors.push(`${docId}: missing instruction ${doc.instruction_file}`);
       }
     }
-    const variants = doc.variants || {};
-    if ("agent_context_mode" in variants && doc.group !== "agent-context") {
-      errors.push(`${docId}: variants.agent_context_mode is only valid on an agent-context record`);
-    }
-    for (const [axis, byValue] of Object.entries(variants)) {
-      if (axis !== "agent_context_mode" && axis !== "layout") {
-        errors.push(`${docId}: unknown variant axis ${axis}`);
-        continue;
-      }
-      for (const [value, files] of Object.entries(byValue || {})) {
-        if (axis === "agent_context_mode" && value !== "standalone") {
-          errors.push(`${docId}: variants.agent_context_mode only overrides 'standalone'`);
-        }
-        if (axis === "layout" && value !== "compact") {
-          errors.push(`${docId}: variants.layout only overrides 'compact'`);
-        }
-        for (const [key, target] of Object.entries(files || {})) {
-          if (!VARIANT_FILE_KEYS.includes(key)) errors.push(`${docId}: unknown variant file key ${key}`);
-          else if (!fs.existsSync(path.join(SKILL_ROOT, target))) {
-            errors.push(`${docId}: missing ${axis}/${value} ${key} ${target}`);
-          }
-        }
-      }
-    }
     if (selection.mode === "static") {
       if (staticIds.has(doc.id)) errors.push(`duplicate static id: ${doc.id}`);
       if (staticPaths.has(doc.path)) errors.push(`duplicate static path: ${doc.path}`);
@@ -954,8 +908,6 @@ function parseArgs(argv) {
     else if (arg === "--validate") args.validate = true;
     else if (arg === "--category") args.category = next();
     else if (arg === "--route") args.routeId = next();
-    else if (arg === "--agent-mode") args.agentMode = next();
-    else if (arg === "--route-layout") args.routeLayout = next();
     else if (arg === "--repo") args.repo = next();
     else throw new Error(`unknown flag: ${arg}`);
   }
@@ -1045,7 +997,7 @@ function main(argv = process.argv.slice(2)) {
       return 0;
     }
     if (args.routeId) {
-      process.stdout.write(dumpJson(route(args.routeId, args.audience, args.repo || null, { agentMode: args.agentMode || null, layout: args.routeLayout || null })));
+      process.stdout.write(dumpJson(route(args.routeId, args.audience, args.repo || null)));
       return 0;
     }
   } catch (error) {
@@ -1068,7 +1020,6 @@ module.exports = {
   groups,
   groupAudiences,
   normalizeGroups,
-  resolveVariants,
   route,
   resolvePresentation,
   validate,

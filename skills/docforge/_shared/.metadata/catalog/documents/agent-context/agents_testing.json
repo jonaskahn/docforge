@@ -1,7 +1,7 @@
 {
   "id": "agents_testing",
   "type": "agents-testing",
-  "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links",
+  "summary": "Self-contained verified test commands, suite layout, selection patterns, fixtures, mocks, and success criteria",
   "contract_file": "content/agent-context/contracts/agents-testing.md",
   "path": "docs/agents/testing.md",
   "group": "agent-context",
@@ -19,20 +19,15 @@
   "requires": [
     "manifests"
   ],
-  "target_depth": "orientation",
+  "target_depth": "deep-dive",
   "write_order": 206,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
   "template_file": "content/agent-context/templates/agents-testing.md",
   "compact_group": "agents_compact",
-  "compact_order": 4,
-  "variants": {
-    "agent_context_mode": {
-      "standalone": {
-        "contract_file": "content/agent-context/contracts/standalone/agents-view.md",
-        "instruction_file": "content/agent-context/agents-standalone.instruction.md",
-        "template_file": "content/agent-context/templates/standalone/agents-testing.md"
-      }
-    }
-  }
+  "compact_order": 3
 }

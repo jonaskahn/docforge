@@ -1,7 +1,7 @@
 {
   "id": "agents_tech_debt",
   "type": "agents-tech-debt",
-  "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links",
+  "summary": "Self-contained known limitations, editing hazards, affected source paths, and safe handling constraints",
   "contract_file": "content/agent-context/contracts/agents-tech-debt.md",
   "path": "docs/agents/tech-debt.md",
   "group": "agent-context",
@@ -17,20 +17,15 @@
   },
   "instruction_file": "content/agent-context/agents-kernel.instruction.md",
   "requires": [],
-  "target_depth": "orientation",
+  "target_depth": "deep-dive",
   "write_order": 207,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
   "template_file": "content/agent-context/templates/agents-tech-debt.md",
   "compact_group": "agents_compact",
-  "compact_order": 6,
-  "variants": {
-    "agent_context_mode": {
-      "standalone": {
-        "contract_file": "content/agent-context/contracts/standalone/agents-view.md",
-        "instruction_file": "content/agent-context/agents-standalone.instruction.md",
-        "template_file": "content/agent-context/templates/standalone/agents-tech-debt.md"
-      }
-    }
-  }
+  "compact_order": 5
 }

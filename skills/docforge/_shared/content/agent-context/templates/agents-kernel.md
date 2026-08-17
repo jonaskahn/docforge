@@ -4,88 +4,48 @@
 
 <!-- docforge-provenance v{{skill_version}} | graph {{graph_hash_short}} | {{graph_analyzed_date}} | regenerate: re-run the coding-agents audience -->
 
-## 1. Commands
+## Commands
 
-**One way to run things. Don't invent alternatives.**
-
-```
-{{install command}}
-{{dev command}}
-{{test command}}
-{{lint command}}
-{{build command}}
+```sh
+{{verified install command}}
+{{verified development or run command}}
+{{verified focused test command}}
+{{verified full validation command}}
 ```
 
-The test: a fresh clone runs green after pasting the commands above.
+Omit unavailable commands. Never invent an alternative.
 
-## 2. Boundaries
+## Repository Map
 
-**Three tiers. No exceptions, no shortcuts.**
+{{One bullet per durable source or configuration path: `- \`{{path}}\`: {{responsibility and boundary}}`}}
+{{Up to five entry-point bullets: `- {{trigger or task}} starts at \`{{source path}}\`.`}}
 
-Always: {{directive from CONVENTIONS.md, or a safe default}}
-Ask first: {{directive}}
-Never: commit secrets, `.env` files, or credentials.
-Never: edit or delete applied migrations.
-Never: run destructive commands without explicit approval.
-Never: push `--force` to `main`.
-{{one or two project-specific Never lines, only if CONVENTIONS.md adds one not already covered}}
+Dependency direction: {{evidence-backed layer order and forbidden direction.}}
 
-## 3. Module Map
+## Precedence
 
-**Layers are disjoint. Don't blur them.**
+1. Preserve safety constraints and explicit approval requirements.
+2. Follow the user's task requirements.
+3. Follow the repository rules stated here.
+4. If instructions conflict or evidence is missing, stop and ask.
 
-{{one bullet per layer: `- {{layer name}} ({{node count}}) — {{one-line responsibility}}`}}
+## Boundaries
 
-The test: every file under `{{primary source dir}}/` maps to exactly one layer above.
+- Always: {{evidenced project directive.}}
+- Ask first: {{operation requiring explicit approval.}}
+- Never commit secrets, credentials, or local environment values.
+- Never disable tests, validation, or checks to force success.
+- Never run destructive commands without explicit approval.
+{{One or two additional evidenced project-specific boundaries, if present.}}
 
-## 4. Architectural Altitude
+## Conventions
 
-**{{one-line tagline naming the main layer and, if any, the backstage layer}}**
+{{Include only when non-obvious conventions are evidenced. State each as an imperative with a durable source path or repeated structural signal. Omit this heading and section when none qualify.}}
 
-{{one bullet per guided-tour entry point, max 5: `- To understand {{step}}, start at \`{{file path}}\`.`}}
+## Validation
 
-The test: open this file cold, name the top two entry points without scrolling.
+- Minimum for a focused change: `{{verified command}}`
+- Required before completion: `{{verified command}}`
+- Success means: {{observable passing result.}}
 
-## 5. Non-Obvious Conventions
-
-**Match existing shape. Don't normalise the outliers.**
-
-{{one bullet per topology-derived surprise the graph actually surfaced. Omit this whole section — heading included — if nothing surprising was found; an empty section is worse than none.}}
-
-The test: grep for the convention in two more places before assuming it holds.
-
-## 6. Absolute Rules
-
-**Read and follow. No exceptions, no workarounds.**
-
-### Safety
-- MUST NOT commit secrets, `.env` files, or credentials.
-- MUST NOT edit migrations after they have been applied.
-- MUST NOT disable tests to make them pass.
-- MUST NOT run destructive commands without explicit human approval.
-- When a hook blocks a command, stop and ask — never work around it.
-
-### While coding
-- MUST NOT add abstractions beyond what is planned.
-- MUST NOT improve or refactor adjacent unrelated code.
-- MUST state assumptions explicitly; if uncertain, ask before proceeding.
-
-{{### Project-specific — only if CONVENTIONS.md has a safety/pattern directive not already covered above. Omit heading and block entirely otherwise.}}
-
-## 7. Deeper Context
-
-**This file is the kernel. Below it, read on demand.**
-
-- @docs/agents/architecture.md — stack, quick start, layer map
-{{- @docs/agents/flow.md — flows with entry points and triggers (omit if no evidence-backed flows)}}
-- @docs/agents/patterns.md — recurring patterns and exemplars
-{{- @docs/agents/glossary.md — canonical vocabulary (omit unless domain quality is high or mixed)}}
-{{- @docs/agents/conventions.md — AI-targeted coding directives (only if CONVENTIONS.md exists)}}
-- @docs/agents/testing.md — runner, layout, mock stance
-- @docs/agents/tech-debt.md — known gotchas
-
-The test: if the answer is here, don't open `docs/agents/`.
-
----
-
-Working if: agents stop asking "where does X live?", hook denials are respected, and PRs match the conventions above without being told.
+Working if: commands are reproducible, boundaries hold, and changes pass the stated validation.

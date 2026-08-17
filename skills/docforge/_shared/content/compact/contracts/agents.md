@@ -2,18 +2,16 @@
 
 Content contract for compact document type `agents_compact`.
 
-The merged `docs/agents.md` is the compact form of the coding-agent section.
-It holds the section-level orientation (which retrieval views exist and what
-each answers) followed by the architecture, patterns, testing, tech-debt,
-flow, and term views — plus evidenced conventions when a conventions source
-exists — one `##` section per member, in reading order. Each section follows
-its member's own content contract; the composed contract for this document
-lists the members this project's manifest actually selected.
+The compact form contains exactly the selected topic members, in this order:
+architecture, patterns, testing, conditional conventions, tech debt,
+conditional flows, and conditional terms. Each section is a self-contained
+answer to its own reader question and may repeat facts needed for that answer.
+Budget each selected section to roughly 25 lines.
 
-The fixed host-contract files stay separate at their own paths and are never
-folded in here: `AGENTS.md` (the kernel), `CLAUDE.md`, `CLAUDE.local.md`, and
-`.claude/settings.json`. Link `AGENTS.md`, never restate it.
+No section refers to any documentation. Source and configuration paths and
+verified commands are allowed. Omit conventions when no conventions source is
+evidenced. Omit flows and terms when flow evidence is unavailable.
 
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| agents_compact | section introduction, at-a-glance view map, scope and boundaries, token-budgeted retrieval views with durable paths, constraints, verified commands, and owning human-doc links; links to every selected document in `docs/agents/` this file does not merge | duplicated human documentation, volatile symbol dumps, facts a member contract keeps out, restated `AGENTS.md` kernel content, direct source-file navigation | Reference | orientation |
+| agents_compact | concise purpose plus seven ordered, independently useful topic sections selected by evidence; direct facts, durable source/configuration paths, constraints, and verified commands; roughly 25 lines maximum per selected section | Markdown links, URLs, imports, documentation paths or references, reader routing, attribution language, volatile symbol dumps, sections not selected by evidence | Reference | deep-dive |

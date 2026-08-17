@@ -23,4 +23,4 @@ The root index owns tiers, capability names, profile registries, and the list of
 
 ## Boundaries
 
-142 document records across 12 groups. Category indexes are generated views; `index.json` and each record file remain authoritative. Regenerate these README.md views with `generate_indexes --write`; never edit them directly.
+141 document records across 12 groups. Category indexes are generated views; `index.json` and each record file remain authoritative. Regenerate these README.md views with `generate_indexes --write`; never edit them directly.

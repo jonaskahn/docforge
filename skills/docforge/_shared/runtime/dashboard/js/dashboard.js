@@ -37,7 +37,7 @@ const { classifySource, rawBlobHash } = require("../../common/js/evidence_hash.j
 const { AGENT_CONTEXT_GROUP } = require("../../common/js/agent_context.js");
 const { MANIFEST_CURRENT, migrate: migrateManifestMetadata } = require("../../manifest/js/migrate_metadata.js");
 
-const TOOL_VERSION = "2.19.0";
+const TOOL_VERSION = "2.22.0";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";
@@ -45,6 +45,8 @@ const BASE_URL = "/docs";
 const DOC_PREFIX = "docs/";
 const COMPACT_TYPE = "compact-doc";
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
+const INACTIVE = new Set(["skipped", "retired"]);
+const NO_HUMAN_DOCS_MESSAGE = "no human-facing documentation to render; agent-context documents are excluded from the dashboard";
 const FRONTMATTER_HEAD_BYTES = 64 * 1024;
 const ASSET_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".ico", ".bmp"];
 const ASSET_MAX_BYTES = 10 * 1024 * 1024;
@@ -123,12 +125,19 @@ function manifestProvenance(doc) {
   return !!(doc.provenance && typeof doc.provenance === "object" && pf.SUPPORTED_SCHEMA_VERSIONS.has(doc.provenance.schema));
 }
 
+function dashboardDocuments(manifest) {
+  return (manifest.documents || []).filter((doc) => doc.group !== AGENT_CONTEXT_GROUP);
+}
+
+function hasHumanFacingDocuments(manifest) {
+  return dashboardDocuments(manifest).some((doc) => !INACTIVE.has(doc.status));
+}
+
 function includedDocuments(repo, manifest) {
   const out = [];
-  for (const doc of manifest.documents || []) {
+  for (const doc of dashboardDocuments(manifest)) {
     if (!WRITTEN.has(doc.status)) continue;
     const p = doc.path || "";
-    if (p === "CLAUDE.local.md") continue; // gitignored, machine-local preferences: never a shared page
     if (!(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
     if (!p.startsWith(DOC_PREFIX) && p.includes("/")) continue;
     if (!fs.existsSync(path.join(repo, p))) continue;
@@ -167,6 +176,7 @@ function routeForDoc(doc) {
 function buildLedger(docs) {
   const ledger = { pages: [], by_path: {}, by_url: {} };
   for (const doc of docs) {
+    if (doc.group === AGENT_CONTEXT_GROUP) continue;
     const [output, url] = routeForDoc(doc);
     const page = {
       id: doc.id,
@@ -217,7 +227,7 @@ function sortedTemplateFiles(templateDir) {
 }
 
 function manifestProjection(manifest) {
-  return (manifest.documents || [])
+  return dashboardDocuments(manifest)
     .slice()
     .sort((a, b) => ((a.path || "") < (b.path || "") ? -1 : 1))
     .map((doc) => ({
@@ -233,35 +243,40 @@ function manifestProjection(manifest) {
 
 function renderSignature(repo, manifest) {
   const records = [];
-  for (const doc of manifestProjection(manifest)) {
+  const projection = manifestProjection(manifest);
+  const renderedDocs = includedDocuments(repo, manifest);
+  for (const doc of projection) {
     records.push(`doc\x00${JSON.stringify(doc, Object.keys(doc).sort())}`);
   }
+  const renderedPaths = new Set(
+    renderedDocs.filter((doc) => doc.path.startsWith(DOC_PREFIX)).map((doc) => doc.path),
+  );
+  const agentPaths = new Set(
+    (manifest.documents || []).filter((doc) => doc.group === AGENT_CONTEXT_GROUP).map((doc) => doc.path || ""),
+  );
   for (const rel of treeFiles(repo)) {
+    if (ASSET_EXTS.some((ext) => rel.endsWith(ext)) && !agentPaths.has(rel)) renderedPaths.add(rel);
+  }
+  for (const rel of [...renderedPaths].sort()) {
     records.push(`file\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
   }
-  const provenanceRoot = path.join(repo, ".docforge", store.SIDECAR_DIRNAME);
-  if (fs.existsSync(provenanceRoot) && fs.statSync(provenanceRoot).isDirectory()) {
-    const stack = [provenanceRoot];
-    const sidecarFiles = [];
-    while (stack.length) {
-      const current = stack.pop();
-      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-        const full = path.join(current, entry.name);
-        if (entry.isDirectory()) stack.push(full);
-        else if (entry.isFile()) sidecarFiles.push(full);
-      }
-    }
-    sidecarFiles.sort();
-    for (const full of sidecarFiles) {
-      const rel = path.relative(repo, full).split(path.sep).join("/");
-      records.push(`provenance\x00${rel}\x00${sha256Bytes(fs.readFileSync(full))}`);
-    }
-  }
-  for (const doc of manifestProjection(manifest)) {
+  for (const doc of renderedDocs) {
     const rel = doc.path;
-    if (!rel || rel.includes("/") || !(rel.endsWith(".md") || rel.endsWith(".mdx"))) continue;
-    const target = path.join(repo, rel);
-    if (fs.existsSync(target)) records.push(`root\x00${rel}\x00${sha256Bytes(fs.readFileSync(target))}`);
+    const entry = store.entryFor(repo, rel);
+    if (entry) {
+      const provenance = entry.provenance;
+      const metadata = {
+        description: entry.description || "",
+        id: entry.id || "",
+        path: rel,
+        provenance_schema: provenance && typeof provenance === "object" ? provenance.schema || "" : "",
+        title: entry.title || "",
+      };
+      records.push(`metadata\x00${JSON.stringify(metadata, Object.keys(metadata).sort())}`);
+    }
+    if (!rel.includes("/")) {
+      records.push(`root\x00${rel}\x00${sha256Bytes(fs.readFileSync(path.join(repo, rel)))}`);
+    }
   }
   const settings = {
     base_url: BASE_URL,
@@ -330,8 +345,8 @@ function splitFrontmatterRaw(text) {
 
 function reconcileMetadata(repo, manifest, dryRun = false) {
   const report = { reconciled: [], unchanged: [], skipped: [], errors: [] };
-  for (const doc of manifest.documents || []) {
-    if (doc.status === "skipped" || doc.status === "retired" || doc.provenance_mode === "manifest") continue;
+  for (const doc of dashboardDocuments(manifest)) {
+    if (INACTIVE.has(doc.status) || doc.provenance_mode === "manifest") continue;
     const p = doc.path || "";
     if (!p.startsWith(DOC_PREFIX) || !p.endsWith(".md")) continue;
     const target = path.join(repo, p);
@@ -539,6 +554,22 @@ function blobSha1(content) {
 }
 
 function scan(repo, manifest) {
+  const selfManaged = unmanagedPaths(manifest);
+  const kinds = ["metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan"];
+  if (!hasHumanFacingDocuments(manifest)) {
+    const counts = {};
+    for (const kind of kinds) counts[kind] = 0;
+    return {
+      problems: [],
+      counts,
+      unmanaged: [...selfManaged].sort(),
+      blocking: false,
+      no_human_docs: true,
+      message: NO_HUMAN_DOCS_MESSAGE,
+    };
+  }
+
+  const humanDocs = dashboardDocuments(manifest);
   const docs = includedDocuments(repo, manifest);
   const includedIds = new Set(docs.map((d) => d.id));
   const problems = [];
@@ -546,7 +577,7 @@ function scan(repo, manifest) {
   for (const entry of [...report.errors, ...report.skipped]) {
     problems.push({ kind: "metadata", doc: entry.doc, detail: entry.detail, blocking: includedIds.has(entry.doc) });
   }
-  for (const doc of manifest.documents || []) {
+  for (const doc of humanDocs) {
     const p = doc.path || "";
     if (!(p.endsWith(".md") || p.endsWith(".mdx"))) continue;
     if (!WRITTEN.has(doc.status)) {
@@ -557,7 +588,7 @@ function scan(repo, manifest) {
       problems.push({ kind: "missing_file", doc: doc.id || "", detail: p, blocking: false });
     }
   }
-  for (const doc of manifest.documents || []) {
+  for (const doc of humanDocs) {
     const prov = doc.provenance;
     if (!prov || typeof prov !== "object" || !pf.SUPPORTED_SCHEMA_VERSIONS.has(prov.schema)) continue;
     for (const section of prov.sections || []) {
@@ -578,7 +609,6 @@ function scan(repo, manifest) {
   const ledger = buildLedger(docs);
   ledger.assets = collectAssetMap(repo);
   const tracked = new Set((manifest.documents || []).map((d) => d.path).filter(Boolean));
-  const selfManaged = unmanagedPaths(manifest);
   for (const rel of treeFiles(repo)) {
     if (!(rel.endsWith(".md") || rel.endsWith(".mdx")) || tracked.has(rel)) continue;
     if (`/${rel}`.includes("/_archive/") || rel.startsWith("_archive/") || selfManaged.has(rel)) continue;
@@ -606,15 +636,22 @@ function scan(repo, manifest) {
   for (const detail of routePlan.problems) {
     problems.push({ kind: "route_plan", doc: "", detail, blocking: true });
   }
-  const kinds = ["metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan"];
   const counts = {};
   for (const kind of kinds) counts[kind] = problems.filter((p) => p.kind === kind).length;
-  return { problems, counts, unmanaged: [...selfManaged].sort(), blocking: problems.some((p) => p.blocking) };
+  return {
+    problems,
+    counts,
+    unmanaged: [...selfManaged].sort(),
+    blocking: problems.some((p) => p.blocking),
+    no_human_docs: false,
+    message: null,
+  };
 }
 
 function plan(repo, manifest) {
   const docs = includedDocuments(repo, manifest);
   const ledger = buildLedger(docs);
+  const noHumanDocs = !hasHumanFacingDocuments(manifest);
   const problems = [];
   const folded = {};
   for (const page of ledger.pages) {
@@ -631,29 +668,15 @@ function plan(repo, manifest) {
     byDir[dir] = byDir[dir] || [];
     byDir[dir].push(page);
   }
-  if (!ledger.pages.some((page) => page.url === BASE_URL)) {
-    // An agents-only run writes no human-facing tree, so a browsable site has
-    // nothing to show. That is a scope fact, not a defect to revise -- and
-    // forcing a docs/README.md here would make the human tree index the agent
-    // overlay, which the one-way boundary forbids. Read the manifest's scope
-    // rather than what is written yet, so the message is right from run one.
-    const selected = (manifest.documents || []).filter(
-      (doc) => doc.status !== "skipped" && doc.status !== "retired",
-    );
-    if (selected.length && selected.every((doc) => doc.group === AGENT_CONTEXT_GROUP)) {
-      problems.push(
-        "agent-context only: this repository has no human-facing documentation "
-        + "to render; agent documents are read as files, not browsed",
-      );
-    } else {
-      problems.push("no docs index: docs/README.md is not a written document");
-    }
+  if (!ledger.pages.some((page) => page.url === BASE_URL) && !noHumanDocs) {
+    problems.push("no docs index: docs/README.md is not a written document");
   }
   return {
     base_url: BASE_URL,
     pages: ledger.pages,
     folder_count: Object.keys(byDir).length,
     problems,
+    no_human_docs: noHumanDocs,
   };
 }
 
@@ -672,7 +695,7 @@ function metaTitle(folder, ledger, manifest) {
     if (page.output_path === (folder ? `${folder}/index.mdx` : "index.mdx")) return page.title;
   }
   if (folder === "") {
-    for (const doc of manifest.documents || []) {
+    for (const doc of dashboardDocuments(manifest)) {
       if (doc.id === "docs_index") return titleFor(doc);
     }
   }
@@ -1289,13 +1312,7 @@ function planOnly(args, manifest, renderSig, shellSig) {
 // pointing the user at `/docforge-revise` would be wrong -- there is nothing to
 // fix.
 function reviseAdvice(scanResult) {
-  const agentOnly = scanResult.problems.some(
-    (problem) => problem.kind === "route_plan" && problem.detail.startsWith("agent-context only:"),
-  );
-  if (agentOnly) {
-    return "nothing to render: this run wrote agent context only. Add human-facing "
-      + "areas to build a dashboard, or read the agent documents directly.";
-  }
+  if (scanResult.no_human_docs) return NO_HUMAN_DOCS_MESSAGE;
   return "you should revise again: run /docforge-revise to fix the documentation";
 }
 
@@ -1350,6 +1367,10 @@ function prepareDashboard(args, dashboard, manifest, templateDir, renderSig, she
 }
 
 async function cmdStart(args, dashboard, manifest, templateDir) {
+  if (!hasHumanFacingDocuments(manifest)) {
+    console.log(NO_HUMAN_DOCS_MESSAGE);
+    return 0;
+  }
   const shellSig = shellSignature(templateDir, args.repo, manifest);
   const renderSig = renderSignature(args.repo, manifest);
   if (args.plan_only) {
@@ -1365,6 +1386,10 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
 }
 
 async function cmdExport(args, dashboard, manifest, templateDir) {
+  if (!hasHumanFacingDocuments(manifest)) {
+    console.log(NO_HUMAN_DOCS_MESSAGE);
+    return 0;
+  }
   const shellSig = shellSignature(templateDir, args.repo, manifest);
   const prepared = prepareDashboard(args, dashboard, manifest, templateDir, renderSignature(args.repo, manifest), shellSig, false);
   const renderSig = prepared.renderSig;
@@ -1395,6 +1420,10 @@ async function cmdScan(args, manifest) {
   if (args.json) {
     console.log(dumpJson(result));
     return result.problems.length ? 1 : 0;
+  }
+  if (result.no_human_docs) {
+    console.log(NO_HUMAN_DOCS_MESSAGE);
+    return 0;
   }
   if (result.problems.length === 0) {
     console.log("scan: 0 problems; the documentation is ready to render");

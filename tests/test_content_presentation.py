@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -106,78 +107,158 @@ Retry attempt 2 failed.
 
 
 SHARED = ROOT / "skills" / "docforge" / "_shared"
-HUMAN_TREE_LINKS = (
-    "../architecture/", "../engineering/", "../reference/", "../flows/",
-    "../product/", "../operations/", "../security/",
+AGENT_CONTENT = SHARED / "content" / "agent-context"
+AGENT_TEMPLATES = AGENT_CONTENT / "templates"
+AGENT_CATALOG = SHARED / ".metadata" / "catalog" / "documents" / "agent-context"
+FORBIDDEN_TEMPLATE_REFERENCES = (
+    ("Markdown link", re.compile(r"!?\[[^\]\n]*\]\([^)\n]*\)")),
+    ("raw URL", re.compile(r"\bhttps?://")),
+    (
+        "@ import",
+        re.compile(
+            r"(?<![\w@])@((?:(?:\.{1,2}/|/)?[\w.~+-]+)(?:/[\w.~+-]+)*/?"
+            r"(?:#[\w.~:-]+)?)"
+        ),
+    ),
+    (
+        "document path",
+        re.compile(
+            r"(?<![\w@])(?:(?:\.{1,2}/|/)?(?:[\w.~+-]+/)*[\w.~+-]+\."
+            r"(?:md|mdx|markdown|rst|adoc|asciidoc)(?:#[\w.~:-]+)?|"
+            r"docs/[\w.~+/-]*)",
+            re.IGNORECASE,
+        ),
+    ),
 )
 
 
-class StandaloneAgentContentTests(unittest.TestCase):
-    """In standalone mode the agent views own their facts, because no
-    human-facing document was generated to link. A link into the human tree is
-    then both a dead link and a fact with no owner."""
+class PermanentAgentIsolationTests(unittest.TestCase):
+    def _records(self) -> list[dict]:
+        index = json.loads((AGENT_CATALOG / "index.json").read_text(encoding="utf-8"))
+        return [
+            json.loads((AGENT_CATALOG / item["path"]).read_text(encoding="utf-8"))
+            for item in index["records"]
+        ]
 
-    STANDALONE_TEMPLATES = SHARED / "content" / "agent-context" / "templates" / "standalone"
+    def _agent_documents(self, manifest: dict) -> dict[str, dict]:
+        return {
+            doc["id"]: doc
+            for doc in manifest["documents"]
+            if doc["group"] == "agent-context"
+        }
 
-    def test_standalone_templates_never_link_the_human_tree(self) -> None:
-        targets = sorted(self.STANDALONE_TEMPLATES.glob("*.md"))
-        self.assertTrue(targets, "standalone templates must exist")
-        for target in targets:
-            with self.subTest(template=target.name):
+    def test_every_generated_agent_template_is_reference_free(self) -> None:
+        records = self._records()
+        template_files = {record["template_file"] for record in records}
+
+        self.assertIn("content/agent-context/templates/agents-kernel.md", template_files)
+        self.assertIn("content/compact/templates/agents.template.md", template_files)
+        self.assertIn("content/agent-context/templates/claude-local-md.md", template_files)
+        self.assertIn("content/agent-context/templates/claude-settings.json", template_files)
+        self.assertTrue(
+            any(path.endswith("agents-architecture.md") for path in template_files),
+            "topic templates were not included",
+        )
+        self.assertNotIn("README.md", {Path(path).name for path in template_files})
+
+        for relative in sorted(template_files):
+            target = SHARED / relative
+            with self.subTest(template=relative):
+                self.assertTrue(target.is_file(), f"missing generated-output template: {relative}")
                 body = target.read_text(encoding="utf-8")
-                for prefix in HUMAN_TREE_LINKS:
-                    self.assertNotIn(f"]({prefix}", body)
+                for kind, pattern in FORBIDDEN_TEMPLATE_REFERENCES:
+                    self.assertIsNone(pattern.search(body), f"{relative} contains a forbidden {kind}")
 
-    def test_linked_templates_still_link_their_owners(self) -> None:
-        """The linked mode is unchanged; standalone is additive."""
-        linked = SHARED / "content" / "agent-context" / "templates"
-        architecture = (linked / "agents-architecture.md").read_text(encoding="utf-8")
-        self.assertIn("](../architecture/high-level.md)", architecture)
-        testing = (linked / "agents-testing.md").read_text(encoding="utf-8")
-        self.assertIn("](../engineering/testing.md)", testing)
+    def test_catalog_records_are_permanently_isolated(self) -> None:
+        for record in self._records():
+            with self.subTest(document=record["id"]):
+                self.assertEqual(record["presentation"]["related_docs"], "none")
+                self.assertNotEqual(record["selection"]["mode"], "standalone")
+                self.assertFalse([key for key in record if "variant" in key], record)
+                self.assertNotIn("/standalone/", record["template_file"])
+                self.assertNotIn("standalone", record["instruction_file"])
+                self.assertTrue((SHARED / record["template_file"]).is_file())
+                self.assertTrue((SHARED / record["instruction_file"]).is_file())
 
-    def test_standalone_instruction_replaces_the_linking_rule(self) -> None:
-        instruction = (
-            SHARED / "content" / "agent-context" / "agents-standalone.instruction.md"
-        ).read_text(encoding="utf-8")
-        self.assertIn("Own the fact, do not route to it", instruction)
-        self.assertIn("Agent-sufficient, not a human documentation set", instruction)
-        # The depth ceiling is what keeps standalone from becoming a second
-        # human documentation set.
-        for excluded in ("rationale", "business context", "operational procedure"):
-            self.assertIn(excluded, instruction)
+        standalone = AGENT_TEMPLATES / "standalone"
+        standalone_outputs = (
+            [
+                path
+                for path in standalone.rglob("*")
+                if path.is_file() and path.name.casefold() != "readme.md"
+            ]
+            if standalone.exists()
+            else []
+        )
+        self.assertEqual(standalone_outputs, [], "standalone generated templates still exist")
+        self.assertFalse((AGENT_CONTENT / "agents-standalone.instruction.md").exists())
 
-    def test_standalone_run_selects_standalone_templates_and_contracts(self) -> None:
+    def test_agent_only_and_mixed_runs_share_canonical_agent_inputs(self) -> None:
+        catalog = {record["id"]: record for record in self._records()}
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
-                repo = Path(tmp)
-                result = initialize(
-                    runtime, repo, "spine",
-                    audiences=("coding-agents",), layout="standard", groups=("agents",),
+                root = Path(tmp)
+                agent_only_repo = root / "agent-only"
+                mixed_repo = root / "mixed"
+                agent_only_repo.mkdir()
+                mixed_repo.mkdir()
+
+                agent_only_result = initialize(
+                    runtime,
+                    agent_only_repo,
+                    "spine",
+                    audiences=("coding-agents",),
+                    layout="standard",
+                    groups=("agents",),
                 )
-                self.assertEqual(result.returncode, 0, result.stderr)
-                manifest = load_manifest(repo)
-                self.assertEqual(manifest["project"]["agent_context"]["mode"], "standalone")
-                by_id = {doc["id"]: doc for doc in manifest["documents"]}
-                for doc_id in ("agents_architecture", "agents_testing", "agents_flow"):
-                    self.assertIn("/standalone/", by_id[doc_id]["scaffold_template"], doc_id)
-                    self.assertEqual(
-                        by_id[doc_id]["instruction_file"],
-                        "content/agent-context/agents-standalone.instruction.md",
-                    )
-                # agents_patterns already owns its content in either mode, so it
-                # keeps its own template and only swaps contract + instruction.
-                self.assertNotIn("/standalone/", by_id["agents_patterns"]["scaffold_template"])
+                mixed_result = initialize(
+                    runtime,
+                    mixed_repo,
+                    "spine",
+                    audiences=("coding-agents",),
+                    layout="standard",
+                )
+                self.assertEqual(agent_only_result.returncode, 0, agent_only_result.stderr)
+                self.assertEqual(mixed_result.returncode, 0, mixed_result.stderr)
 
-    def test_linked_run_is_untouched_by_the_variant_machinery(self) -> None:
-        for runtime in ("py", "js"):
-            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
-                repo = Path(tmp)
-                initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="standard")
-                manifest = load_manifest(repo)
-                self.assertEqual(manifest["project"]["agent_context"]["mode"], "linked")
-                for doc in manifest["documents"]:
-                    self.assertNotIn("/standalone/", doc["scaffold_template"], doc["id"])
+                agent_only = load_manifest(agent_only_repo)
+                mixed = load_manifest(mixed_repo)
+                self.assertNotIn("agent_context", agent_only["project"])
+                self.assertNotIn("agent_context", mixed["project"])
+
+                agent_only_docs = self._agent_documents(agent_only)
+                mixed_docs = self._agent_documents(mixed)
+                self.assertTrue(agent_only_docs)
+                self.assertEqual(agent_only_docs.keys(), mixed_docs.keys())
+                self.assertFalse(
+                    [doc for doc in agent_only["documents"] if doc["group"] != "agent-context"],
+                    "agent-only fixture unexpectedly contains human documentation",
+                )
+                self.assertTrue(
+                    [doc for doc in mixed["documents"] if doc["group"] != "agent-context"],
+                    "mixed fixture must contain human documentation",
+                )
+
+                for doc_id, agent_only_doc in agent_only_docs.items():
+                    with self.subTest(runtime=runtime, document=doc_id):
+                        mixed_doc = mixed_docs[doc_id]
+                        expected = catalog[doc_id]
+                        agent_only_pointer = (
+                            agent_only_doc["scaffold_template"],
+                            agent_only_doc["instruction_file"],
+                        )
+                        mixed_pointer = (
+                            mixed_doc["scaffold_template"],
+                            mixed_doc["instruction_file"],
+                        )
+                        self.assertEqual(agent_only_pointer, mixed_pointer)
+                        self.assertEqual(
+                            agent_only_pointer,
+                            (expected["template_file"], expected["instruction_file"]),
+                        )
+                        self.assertEqual(agent_only_doc["presentation"]["related_docs"], "none")
+                        self.assertEqual(mixed_doc["presentation"]["related_docs"], "none")
+                        self.assertNotIn("standalone", " ".join(agent_only_pointer))
 
 
 if __name__ == "__main__":

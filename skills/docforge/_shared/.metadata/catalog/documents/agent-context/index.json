@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.21.0",
+  "version": "2.22.0",
   "category": "agent-context",
   "purpose": "Agent-facing context: AGENTS.md and coding-agent views.",
   "source": "../../index.json",
@@ -8,67 +8,62 @@
     {
       "id": "agents_kernel",
       "path": "agents_kernel.json",
-      "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
+      "summary": "Concise self-contained operating kernel with verified commands, repository map, precedence, boundaries, and validation"
     },
     {
       "id": "claude_shim",
       "path": "claude_shim.json",
-      "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
+      "summary": "Concise self-contained operating kernel with verified commands, repository map, precedence, boundaries, and validation"
     },
     {
       "id": "claude_local",
       "path": "claude_local.json",
-      "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
+      "summary": "Self-contained local preference extension with commit and secret-handling boundaries"
     },
     {
       "id": "claude_settings",
       "path": "claude_settings.json",
-      "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views"
+      "summary": "Self-contained safe Claude Code permissions and optional verified validation hook configuration"
     },
     {
       "id": "agents_compact",
       "path": "agents_compact.json",
-      "summary": "Compact coding-agent section: retrieval views for architecture, patterns, testing, conventions, tech debt, flows, and terms in one file"
-    },
-    {
-      "id": "agents_index",
-      "path": "agents_index.json",
-      "summary": "Coding-agent views overview: what these views cover and the reader question each agent view answers"
+      "summary": "Self-contained compact coding-agent reference with seven independently useful topic sections"
     },
     {
       "id": "agents_architecture",
       "path": "agents_architecture.json",
-      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+      "summary": "Self-contained component map with durable source paths, entry points, dependency direction, and boundaries"
     },
     {
       "id": "agents_patterns",
       "path": "agents_patterns.json",
-      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+      "summary": "Self-contained recurring implementation shapes, representative source paths, hotspots, and validation commands"
     },
     {
       "id": "agents_testing",
       "path": "agents_testing.json",
-      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+      "summary": "Self-contained verified test commands, suite layout, selection patterns, fixtures, mocks, and success criteria"
     },
     {
       "id": "agents_conventions",
       "path": "agents_conventions.json",
-      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+      "summary": "Self-contained repository-specific safety, naming, structural, and workflow rules"
     },
     {
       "id": "agents_tech_debt",
       "path": "agents_tech_debt.json",
-      "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links"
+      "summary": "Self-contained known limitations, editing hazards, affected source paths, and safe handling constraints"
     },
     {
       "id": "agents_flow",
       "path": "agents_flow.json",
-      "summary": "Compact flow/term lookup grounded in declared flow evidence and linked owners"
+      "summary": "Self-contained trigger-to-effect flow lookup grounded in declared flow evidence"
     },
     {
       "id": "agents_glossary",
       "path": "agents_glossary.json",
-      "summary": "Compact flow/term lookup grounded in declared flow evidence and linked owners"
+      "summary": "Self-contained definitions for evidenced domain and flow terms with their code context"
     }
   ]
 }

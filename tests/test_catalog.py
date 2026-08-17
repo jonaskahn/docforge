@@ -24,10 +24,7 @@ class CatalogRecordTests(unittest.TestCase):
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]
-        # 137, +5 for the compact groups that make the compact tree bounded:
-        # flows_compact, decisions_compact, concepts_compact, ba_compact,
-        # po_compact.
-        self.assertEqual(len(document_types), 142)
+        self.assertEqual(len(document_types), 141)
         ids = [entry["id"] for entry in document_types]
         self.assertEqual(len(ids), len(set(ids)), "duplicate document ids in index.json")
 
@@ -50,7 +47,6 @@ class CatalogRecordTests(unittest.TestCase):
             "docs/reference/README.md",
             "docs/security/README.md",
             "docs/contributing/README.md",
-            "docs/agents/README.md",
             "docs-portfolio/README.md",
             "docs-portfolio/decisions/README.md",
             "docs-portfolio/epics/README.md",
@@ -59,6 +55,10 @@ class CatalogRecordTests(unittest.TestCase):
             entry["path"] for entry in self.index["document_types"] if entry["path"] in readme_paths
         }
         self.assertEqual(matched, readme_paths, "declared README paths must all be cataloged")
+        self.assertNotIn(
+            "docs/agents/README.md",
+            {entry["path"] for entry in self.index["document_types"]},
+        )
         for entry in self.index["document_types"]:
             if entry["path"] not in readme_paths:
                 continue
@@ -212,19 +212,21 @@ class CatalogRecordTests(unittest.TestCase):
             missing.append(record["id"])
         self.assertEqual(missing, [], "records that would stay standalone in a compact tree")
 
-    def test_agents_compact_registered_and_within_member_cap(self) -> None:
+    def test_agents_compact_has_exactly_seven_topic_members_and_no_router(self) -> None:
         row = next(r for r in self.index["document_types"] if r["id"] == "agents_compact")
         self.assertEqual(row["path"], "docs/agents.md")
         record = json.loads((CATALOG_DIR / row["record"]).read_text(encoding="utf-8"))
         self.assertEqual(record["type"], "compact-doc")
         self.assertEqual(record["compact_target"], "docs/agents.md")
-        self.assertLessEqual(len(record["compact_members"]), 8)
+        expected = [
+            "agents_architecture", "agents_patterns", "agents_testing",
+            "agents_conventions", "agents_tech_debt", "agents_flow",
+            "agents_glossary",
+        ]
+        self.assertEqual(record["compact_members"], expected)
+        self.assertEqual(len(record["compact_members"]), 7)
         members = set(record["compact_members"])
-        for expected in (
-            "agents_index", "agents_architecture", "agents_patterns", "agents_testing",
-            "agents_conventions", "agents_tech_debt", "agents_flow", "agents_glossary",
-        ):
-            self.assertIn(expected, members)
+        self.assertFalse(any(r["id"] == "agents_index" for r in self.index["document_types"]))
         # Fixed host-contract files are never part of the fold.
         for excluded in ("agents_kernel", "claude_shim", "claude_local", "claude_settings"):
             self.assertNotIn(excluded, members)
@@ -232,6 +234,34 @@ class CatalogRecordTests(unittest.TestCase):
             member_row = next(r for r in self.index["document_types"] if r["id"] == member_id)
             member = json.loads((CATALOG_DIR / member_row["record"]).read_text(encoding="utf-8"))
             self.assertEqual(member.get("compact_group"), "agents_compact")
+
+    def test_catalog_contains_no_variants(self) -> None:
+        found = []
+
+        def visit(value: object, location: str) -> None:
+            if isinstance(value, dict):
+                if "variants" in value:
+                    found.append(location)
+                for key, child in value.items():
+                    visit(child, f"{location}.{key}")
+            elif isinstance(value, list):
+                for index, child in enumerate(value):
+                    visit(child, f"{location}[{index}]")
+
+        for path in CATALOG_DIR.rglob("*.json"):
+            visit(json.loads(path.read_text(encoding="utf-8")), path.relative_to(CATALOG_DIR).as_posix())
+        self.assertEqual(found, [], "catalog variants must not be reintroduced")
+
+    def test_every_agent_record_disables_related_document_routing(self) -> None:
+        agent_records = []
+        for row in self.index["document_types"]:
+            record = json.loads((CATALOG_DIR / row["record"]).read_text(encoding="utf-8"))
+            if record["group"] != "agent-context":
+                continue
+            agent_records.append(record["id"])
+            with self.subTest(id=record["id"]):
+                self.assertEqual(record.get("presentation", {}).get("related_docs"), "none")
+        self.assertTrue(agent_records)
 
     def test_portfolio_is_standard_only_no_compact_group_remains(self) -> None:
         """Portfolio's value is per-member separation; folding the collection

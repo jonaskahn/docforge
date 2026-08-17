@@ -1,18 +1,19 @@
-# Architecture (agent view)
-
-<!-- Brief stub — do not restate architecture/high-level.md or low-level.md. See
-     audience-coding-agents.md's governing rule: less work, not more. -->
+# Architecture
 
 {{One sentence: the stack — primary languages/frameworks.}}
 
-## Quick start
+## Components
 
-```
-{{install and dev commands, from the manifests}}
-```
+| Source path | Responsibility | Depends on | Must not depend on |
+|---|---|---|---|
+| `{{durable path}}` | {{one-line responsibility}} | {{lower-level component or external boundary}} | {{forbidden dependency}} |
 
-## Layer map
+## Entry points
 
-{{one bullet per layer, name + one-line responsibility — a compressed index, not a rewrite}}
+{{One bullet per material trigger: `- {{trigger}} enters at \`{{source path}}\` and hands off to {{component}}.`}}
 
-For the actual system map, boundaries, and rationale, see [architecture/high-level.md](../architecture/high-level.md) and [architecture/low-level.md](../architecture/low-level.md).
+## Invariants
+
+- Dependency direction: {{evidence-backed direction.}}
+- Data boundary: {{where state enters, changes, and leaves.}}
+- Change constraint: {{material rule an edit must preserve.}}

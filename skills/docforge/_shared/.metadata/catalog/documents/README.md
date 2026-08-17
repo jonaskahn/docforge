@@ -21,7 +21,7 @@ Choose the subject area below, then use its generated group index to identify a 
 - contributing — Contribution guidelines and root-level contributor docs. (4 documents, flat)
 - records — Architecture decision records. (3 documents, flat)
 - [portfolio/](portfolio/index.json) — Cross-repository portfolio layer for multi-repo diligence. (11 documents)
-- [agent-context/](agent-context/index.json) — Agent-facing context: AGENTS.md and coding-agent views. (13 documents)
+- [agent-context/](agent-context/index.json) — Agent-facing context: AGENTS.md and coding-agent views. (12 documents)
 
 ## Boundaries
 

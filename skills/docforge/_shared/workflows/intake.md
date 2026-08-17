@@ -238,11 +238,11 @@ wait for the user's explicit confirmation before reconciling the manifest.
    - **Everything** (recommended) — the full tree for the chosen tier and
      audiences.
    - **Agent context only** — `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`,
-     `.claude/settings.json`, and the `docs/agents/` views (or `docs/agents.md`
-     in compact). No human-facing documentation is written, and the agent
-     documents are written **self-contained** — they carry the facts themselves
-     instead of linking documents that do not exist. Human documentation can be
-     added later; that run asks whether to convert them into linked views.
+     `.claude/settings.json`, and seven topic views under `docs/agents/` (or one
+     seven-section `docs/agents.md` in compact). No human-facing documentation
+     is written. Every agent-context output is self-contained and contains zero
+     documentation references, regardless of whether human documentation exists
+     now or is added later.
    - **Pick areas…** — a multi-select of the twelve catalog groups.
 
    Render the twelve options from `query_catalog.{py,js} --groups`, using each
@@ -268,12 +268,6 @@ wait for the user's explicit confirmation before reconciling the manifest.
      areas and audiences together select nothing, `preview` reports `0`; ask
      the user to add the unlocking audience or widen the areas. `init` fails
      independently rather than writing an empty manifest.
-   - **Disclose the standalone consequence** whenever the confirmed scope's
-     `agent_context_mode` is `standalone` — from the same `preview` payload, so
-     intake never re-derives it. The confirmation summary carries: `Agent
-     context: standalone — the agent documents will own their facts instead of
-     linking human documents. Adding human documentation later will ask whether
-     to convert them.`
 
    The confirmation summary gains one line: `Areas: agent-context only (1 of
    12)`, or `Areas: all`.

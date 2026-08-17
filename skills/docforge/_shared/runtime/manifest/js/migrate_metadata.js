@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-/* Migrate Docforge manifest metadata to 3.5 / provenance 2.0.
+/* Migrate Docforge manifest metadata to 3.9 / provenance 2.0.
  *
  * Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
  * manifest 3.2 / provenance 2.0 (seeding each document's
@@ -28,8 +28,8 @@ const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const { computeScale, layoutFor } = require("../../common/js/scale.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 
-const MANIFEST_CURRENT = "3.8";
-const MANIFEST_IN_PLACE = ["3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
+const MANIFEST_CURRENT = "3.9";
+const MANIFEST_IN_PLACE = ["3.9", "3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
 const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
@@ -467,18 +467,80 @@ function constrainScaleLayout(project) {
   return true;
 }
 
+// Drop mode state and pin retained agent documents to catalog metadata. A
+// written agents_index is left untouched so reconcile can nominate it for the
+// normal explicit retirement workflow without changing its body.
+function migrateAgentContext39(manifest) {
+  let changed = false;
+  const project = isPlainObject(manifest.project) ? manifest.project : null;
+  if (project && Object.prototype.hasOwnProperty.call(project, "agent_context")) {
+    delete project.agent_context;
+    changed = true;
+  }
+
+  const docs = manifest.documents;
+  if (!Array.isArray(docs)) return changed;
+
+  for (const doc of docs) {
+    if (Array.isArray(doc.compact_members)) {
+      const retained = doc.compact_members.filter((member) => (
+        (member && typeof member === "object" ? member.id : member) !== "agents_index"
+      ));
+      if (retained.length !== doc.compact_members.length) {
+        doc.compact_members = retained;
+        changed = true;
+      }
+    }
+  }
+
+  const agentDocs = docs.filter(
+    (doc) => doc.group === "agent-context" && doc.id !== "agents_index",
+  );
+  if (!agentDocs.length) return changed;
+
+  const maps = loadCatalogMaps();
+  const audiences = project && isPlainObject(project.profiles)
+    ? project.profiles.audiences || []
+    : [];
+  for (const doc of agentDocs) {
+    const definition = matchDefinition(
+      maps,
+      String(doc.id || ""),
+      doc.type,
+      String(doc.path || ""),
+    );
+    if (!definition) continue;
+    const [primaryAudience, presentation] = queryCatalog.resolvePresentation(definition, audiences);
+    const canonical = {
+      scaffold_template: definition.template_file,
+      instruction_file: definition.instruction_file === undefined ? null : definition.instruction_file,
+      requires: [...(definition.requires || [])],
+      presentation: { primary_audience: primaryAudience, ...presentation },
+    };
+    for (const [field, value] of Object.entries(canonical)) {
+      if (JSON.stringify(doc[field]) !== JSON.stringify(value)) {
+        doc[field] = value;
+        changed = true;
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(doc, "presentation_override")) {
+      delete doc.presentation_override;
+      changed = true;
+    }
+    if (WRITTEN.has(doc.status)) {
+      doc.status = "in_progress";
+      doc.audit = null;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
   let changed = false;
   let upgradedVersion = false;
-  if (
-    manifest.version === "3.6" ||
-    manifest.version === "3.5" ||
-    manifest.version === "3.4" ||
-    manifest.version === "3.3" ||
-    manifest.version === "3.2" ||
-    manifest.version === "3.1" ||
-    manifest.version === "3.0"
-  ) {
+  const sourceVersion = manifest.version;
+  if (MANIFEST_IN_PLACE.includes(sourceVersion) && sourceVersion !== MANIFEST_CURRENT) {
     manifest.version = MANIFEST_CURRENT;
     changed = true;
     upgradedVersion = true;
@@ -512,6 +574,7 @@ function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
   if (isPlainObject(manifest.project) && constrainScaleLayout(manifest.project)) {
     changed = true;
   }
+  if (upgradedVersion && migrateAgentContext39(manifest)) changed = true;
   // Schema 3.7 added two measurement signals. Refresh them on any upgrade —
   // signals are measurements; class/layout/decided_by (possible user
   // decisions) are never re-derived.
@@ -571,16 +634,34 @@ function migrate(repo, manifestPath, dryRun) {
   }
   const manifest = loadManifest(manifestPath, MANIFEST_LOAD);
   const reports = [];
+  const retirementCandidates = (manifest.documents || [])
+    .filter((doc) => (
+      raw.version !== MANIFEST_CURRENT
+      && doc.id === "agents_index"
+      && WRITTEN.has(doc.status)
+    ))
+    .map((doc) => String(doc.id));
   const requireComplete = {};
   for (const doc of manifest.documents || []) {
     if (typeof doc.id === "string") requireComplete[doc.id] = WRITTEN.has(doc.status);
   }
   const objectChanged = migrateManifestObject(manifest, repo, false);
+  const relativeManifest = path.relative(repo, manifestPath);
+  const manifestLabel = (
+    relativeManifest
+    && relativeManifest !== ".."
+    && !relativeManifest.startsWith(`..${path.sep}`)
+  )
+    ? relativeManifest.split(path.sep).join("/")
+    : manifestPath;
+  const candidateDetail = retirementCandidates.length
+    ? `; retained as retirement candidate without touching its body: ${retirementCandidates.sort().join(", ")}`
+    : "";
   reports.push({
-    doc: manifestPath,
+    doc: manifestLabel,
     action: objectChanged ? "migrate" : "skip",
     detail: objectChanged
-      ? `manifest version -> ${MANIFEST_CURRENT}; provenance objects normalized`
+      ? `manifest version -> ${MANIFEST_CURRENT}; provenance objects normalized${candidateDetail}`
       : `manifest already ${manifest.version}`,
   });
   for (const doc of manifest.documents || []) {

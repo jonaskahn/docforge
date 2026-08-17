@@ -18,7 +18,7 @@ SCHEMA_VERSION = "2.1"
 SUPPORTED_SCHEMA_VERSIONS = frozenset({"2.0", "2.1"})
 LEGACY_SCHEMA = "1.0"
 GENERATOR_NAME = "docforge"
-GENERATOR_VERSION = "2.21.0"
+GENERATOR_VERSION = "2.22.0"
 PROVENANCE_FIELDS = {
     "schema", "doc_id", "path", "generated_at", "generator", "tier",
     "target_depth", "graph", "sections",

@@ -1,4 +1,4 @@
-"""lint_agents_kernel: rubric checks, template guard, Python/Node parity."""
+"""lint_agents_kernel: canonical contract, defects, and runtime parity."""
 
 from __future__ import annotations
 
@@ -7,277 +7,306 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import initialize, load_manifest, run
+from _support import ROOT, initialize, load_manifest, run
+
 
 GOLDEN = """\
 # Demo Repo
 
-A demo service with one framework and one test runner.
+A TypeScript service with an HTTP API, domain layer, and PostgreSQL store.
 
-<!-- docforge-provenance v2.19.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->
+<!-- docforge-provenance v2.22.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->
 
-## 1. Commands
+## Commands
 
-**One way to run things. Don't invent alternatives.**
-
-```
-npm install
+```sh
+npm ci
 npm run dev
-npm test
+npm test -- --runInBand
 npm run lint
 npm run build
 ```
 
-The test: a fresh clone runs green after pasting the commands above.
+## Repository Map
 
-## 2. Boundaries
+- `src/api`: HTTP routes and request validation.
+- `src/core`: Domain rules and application services.
+- `src/store`: Persistence adapters and migrations.
+- Requests enter through `src/api/routes.ts` and hand off to `src/core/services.ts`.
 
-**Three tiers. No exceptions, no shortcuts.**
+Dependency direction: `src/api` may depend on `src/core`; `src/core` must not depend on `src/api`.
 
-Always: run `npm test` before opening a pull request.
-Ask first: before deleting a shared branch.
-Never: commit secrets, `.env` files, or credentials.
-Never: edit or delete applied migrations.
-Never: run destructive commands without explicit approval.
-Never: push `--force` to `main`.
-Never: assume a flaky test is unrelated to your change.
+## Precedence
 
-## 3. Module Map
+1. Preserve safety constraints and explicit approval requirements.
+2. Follow the user's task requirements.
+3. Follow the repository rules stated here.
+4. If instructions conflict or evidence is missing, stop and ask.
 
-**Layers are disjoint. Don't blur them.**
+## Boundaries
 
-- api (12) — HTTP surface and request validation
-- core (48) — domain logic and services
-- store (9) — persistence and migrations
+- Always run the focused test for the changed area.
+- Ask first before deleting a shared branch or applied migration.
+- Never commit secrets, credentials, or local environment values.
+- Never disable tests, validation, or checks to force success.
+- Never run destructive commands without explicit approval.
 
-The test: every file under `src/` maps to exactly one layer above.
+## Conventions
 
-## 4. Architectural Altitude
+- Keep request parsing in `src/api` and domain decisions in `src/core`.
+- Use the existing store adapter boundary for persistence changes.
 
-**A layer map, not a code tour.**
+## Validation
 
-- To understand a request, start at `src/api/routes.ts`.
-- To understand a rule, start at `src/core/services.ts`.
+- Minimum for a focused change: `npm test -- --runInBand`
+- Required before completion: `npm run lint && npm test && npm run build`
+- Success means every command exits zero without skipped checks.
 
-The test: open this file cold, name the top two entry points without scrolling.
-
-## 5. Non-Obvious Conventions
-
-**Match existing shape. Don't normalise the outliers.**
-
-- Never import `src/core/` from `src/api/`; keep the one-way data flow.
-- No `asyncio.sleep` in request paths; use the scheduler module.
-
-The test: grep for the convention in two more places before assuming it holds.
-
-## 6. Absolute Rules
-
-**Read and follow. No exceptions, no workarounds.**
-
-### Safety
-- MUST NOT commit secrets, `.env` files, or credentials.
-- MUST NOT edit migrations after they have been applied.
-- MUST NOT disable tests to make them pass.
-- MUST NOT run destructive commands without explicit human approval.
-- When a hook blocks a command, stop and ask — never work around it.
-
-### While coding
-- MUST NOT add abstractions beyond what is planned.
-- MUST NOT improve or refactor adjacent unrelated code.
-- MUST state assumptions explicitly; if uncertain, ask before proceeding.
-
-## 7. Deeper Context
-
-**This file is the kernel, not the full picture.**
-
-- @docs/agents/architecture.md — stack, quick start, layer map
-- @docs/agents/patterns.md — recurring patterns and exemplars
-- @docs/agents/testing.md — runner, layout, mock stance
-- @docs/agents/tech-debt.md — known gotchas
-
-The test: if the answer is here, don't open `docs/agents/`.
-
----
-
-Working if: agents stop asking "where does X live?", hook denials are respected, and PRs match the conventions above without being told.
+Working if: commands are reproducible, boundaries hold, and validation passes.
 """
 
 
 class AgentsKernelLintTests(unittest.TestCase):
-    def _repo(self, tmp: str) -> Path:
-        repo = Path(tmp)
-        for name in ("architecture", "patterns", "testing", "tech-debt"):
-            target = repo / "docs" / "agents" / f"{name}.md"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(f"# {name}\n", encoding="utf-8")
-        return repo
-
-    def _lint(self, repo: Path, text: str):
+    def _lint(self, repo: Path, text: str) -> list[tuple[int, str]]:
         target = repo / "AGENTS.md"
         target.write_text(text, encoding="utf-8")
         results = []
         for runtime in ("py", "js"):
             result = run(
-                runtime, "lint_agents_kernel",
-                "--file", str(target), "--repo", str(repo), "--json",
+                runtime,
+                "lint_agents_kernel",
+                "--file",
+                str(target),
+                "--repo",
+                str(repo),
+                "--json",
             )
             results.append((result.returncode, result.stdout))
         return results
 
-    def test_golden_realized_kernel_lints_clean(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = self._repo(tmp)
-            results = self._lint(repo, GOLDEN)
-            for returncode, stdout in results:
-                self.assertEqual(returncode, 0, stdout)
-                self.assertEqual(json.loads(stdout)["defects"], [])
-            self.assertEqual(results[0], results[1])
+    def _payload(self, repo: Path, text: str) -> tuple[int, dict]:
+        results = self._lint(repo, text)
+        self.assertEqual(results[0], results[1], "Python and Node lint results differ")
+        return results[0][0], json.loads(results[0][1])
 
-    def test_title_shape_defects(self) -> None:
-        dirty = GOLDEN.replace("## 1. Commands", "## 1. Commands?").replace(
-            "## 2. Boundaries", "## 2. Deep dive",
+    def test_golden_canonical_kernel_lints_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            returncode, payload = self._payload(Path(tmp), GOLDEN)
+        self.assertEqual(returncode, 0, payload)
+        self.assertEqual(payload["defects"], [])
+        self.assertEqual(payload["warnings"], [])
+
+    def test_required_headings_and_order_are_enforced(self) -> None:
+        cases = {
+            "missing": (
+                GOLDEN.replace("## Repository Map", "## Modules"),
+                "missing-section",
+            ),
+            "out-of-order": (
+                GOLDEN.replace(
+                    "## Repository Map\n",
+                    "## Precedence\n\nRepository rules follow the safety hierarchy.\n\n## Repository Map\n",
+                ).replace(
+                    "## Precedence\n\n1. Preserve safety constraints and explicit approval requirements.\n"
+                    "2. Follow the user's task requirements.\n"
+                    "3. Follow the repository rules stated here.\n"
+                    "4. If instructions conflict or evidence is missing, stop and ask.\n\n",
+                    "",
+                ),
+                "section-order",
+            ),
+        }
+        for name, (dirty, expected_kind) in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                returncode, payload = self._payload(Path(tmp), dirty)
+                self.assertEqual(returncode, 1, payload)
+                self.assertIn(expected_kind, {item["kind"] for item in payload["defects"]})
+
+    def test_commands_and_safety_boundaries_are_enforced(self) -> None:
+        command_block = """```sh
+npm ci
+npm run dev
+npm test -- --runInBand
+npm run lint
+npm run build
+```"""
+        cases = {
+            "commands": (
+                GOLDEN.replace(command_block, "Run the verified project commands."),
+                {"missing-command-block"},
+            ),
+            "safety": (
+                GOLDEN.replace(
+                    "- Never commit secrets, credentials, or local environment values.\n"
+                    "- Never disable tests, validation, or checks to force success.\n"
+                    "- Never run destructive commands without explicit approval.",
+                    "- Keep changes focused.\n"
+                    "- Preserve existing behavior.\n"
+                    "- Report unexpected failures.",
+                ),
+                {"missing-safety-rule"},
+            ),
+        }
+        for name, (dirty, expected_kinds) in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                returncode, payload = self._payload(Path(tmp), dirty)
+                self.assertEqual(returncode, 1, payload)
+                kinds = {item["kind"] for item in payload["defects"]}
+                self.assertTrue(expected_kinds.issubset(kinds), payload)
+                if name == "safety":
+                    details = {item["detail"] for item in payload["defects"]}
+                    self.assertTrue(any("secrets" in detail for detail in details))
+                    self.assertTrue(any("validation" in detail for detail in details))
+                    self.assertTrue(any("destructive commands" in detail for detail in details))
+
+    def test_forbidden_references_are_detected_in_prose_fences_and_comments(self) -> None:
+        provenance = "<!-- docforge-provenance v2.22.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->"
+        cases = {
+            "markdown-link": (
+                GOLDEN.replace(
+                    "Working if:",
+                    "[Policy](POLICY.md)\n\nWorking if:",
+                ),
+                "doc-reference",
+                "markdown-link: POLICY.md",
+            ),
+            "raw-url-in-comment": (
+                GOLDEN.replace(
+                    provenance,
+                    provenance + "\n<!-- https://example.com/project-policy -->",
+                ),
+                "bare-url",
+                "https://example.com/project-policy",
+            ),
+            "at-import-in-fence": (
+                GOLDEN.replace("npm ci\n", "npm ci\n@docs/agents/testing.md\n"),
+                "doc-reference",
+                "at-import: @docs/agents/testing.md",
+            ),
+            "bare-markdown-path-in-comment": (
+                GOLDEN.replace(
+                    provenance,
+                    provenance + "\n<!-- Consult POLICY.md before release. -->",
+                ),
+                "doc-reference",
+                "bare-path: POLICY.md",
+            ),
+            "bare-docs-path-in-fence": (
+                GOLDEN.replace("npm ci\n", "npm ci\ndocs/agents/\n"),
+                "doc-reference",
+                "bare-path: docs/agents/",
+            ),
+        }
+        for name, (dirty, expected_kind, expected_detail) in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                returncode, payload = self._payload(Path(tmp), dirty)
+                self.assertEqual(returncode, 1, payload)
+                matches = [
+                    item
+                    for item in payload["defects"]
+                    if item["kind"] == expected_kind and expected_detail in item["detail"]
+                ]
+                self.assertTrue(matches, payload)
+
+    def test_nonblank_line_budget_is_enforced(self) -> None:
+        nonblank = sum(bool(line.strip()) for line in GOLDEN.splitlines())
+        padding = "\n".join(
+            f"Additional evidenced rule {number}."
+            for number in range(1, 82 - nonblank)
         )
+        dirty = GOLDEN.rstrip() + "\n" + padding + "\n"
+        self.assertEqual(sum(bool(line.strip()) for line in dirty.splitlines()), 81)
+
         with tempfile.TemporaryDirectory() as tmp:
-            repo = self._repo(tmp)
-            results = self._lint(repo, dirty)
-            kinds = {
-                item["kind"]
-                for _returncode, stdout in results
-                for item in json.loads(stdout)["defects"]
-            }
-            self.assertIn("title-shape", kinds)
-            self.assertEqual(results[0][0], results[1][0])
-            self.assertEqual(results[0][1], results[1][1])
-
-    def test_tagline_length_defect(self) -> None:
-        dirty = GOLDEN.replace(
-            "**One way to run things. Don't invent alternatives.**",
-            "**One and only one canonical way to run things, and never any invented alternative.**",
-        )
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = self._repo(tmp)
-            results = self._lint(repo, dirty)
-            for returncode, stdout in results:
-                self.assertEqual(returncode, 1, stdout)
-                kinds = {item["kind"] for item in json.loads(stdout)["defects"]}
-                self.assertIn("tagline-length", kinds)
-            self.assertEqual(results[0], results[1])
-
-    def test_weak_tagline_warning(self) -> None:
-        dirty = GOLDEN.replace("**A layer map, not a code tour.**", "**A layer map for a new reader.**")
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = self._repo(tmp)
-            results = self._lint(repo, dirty)
-            for returncode, stdout in results:
-                self.assertEqual(returncode, 0, stdout)
-                kinds = {item["kind"] for item in json.loads(stdout)["warnings"]}
-                self.assertIn("weak-tagline", kinds)
-            self.assertEqual(results[0], results[1])
-
-    def test_low_negation_ratio_warning(self) -> None:
-        dirty = GOLDEN.replace(
-            "- Never import `src/core/` from `src/api/`; keep the one-way data flow.\n",
-            "- Imports always flow in one direction.\n",
-        ).replace(
-            "- No `asyncio.sleep` in request paths; use the scheduler module.",
-            "- Scheduling always uses the scheduler module.",
-        )
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = self._repo(tmp)
-            results = self._lint(repo, dirty)
-            for returncode, stdout in results:
-                self.assertEqual(returncode, 0, stdout)
-                kinds = {item["kind"] for item in json.loads(stdout)["warnings"]}
-                self.assertIn("low-negation-ratio", kinds)
-            self.assertEqual(results[0], results[1])
-
-    def test_bullet_length_warning(self) -> None:
-        dirty = GOLDEN.replace(
-            "- MUST NOT commit secrets, `.env` files, or credentials.",
-            "- MUST NOT commit secrets.",
-        )
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = self._repo(tmp)
-            results = self._lint(repo, dirty)
-            for returncode, stdout in results:
-                self.assertEqual(returncode, 0, stdout)
-                kinds = {item["kind"] for item in json.loads(stdout)["warnings"]}
-                self.assertIn("bullet-length", kinds)
-            self.assertEqual(results[0], results[1])
+            returncode, payload = self._payload(Path(tmp), dirty)
+        self.assertEqual(returncode, 1, payload)
+        line_cap = [item for item in payload["defects"] if item["kind"] == "line-cap"]
+        self.assertEqual(len(line_cap), 1, payload)
+        self.assertIn("81 nonblank lines, cap is 80", line_cap[0]["detail"])
 
 
-class AgentsKernelCompactVariantTests(unittest.TestCase):
-    """`agents_kernel` declares no `compact_group`, so `AGENTS.md` is written in
-    every layout — but compact materializes only `docs/agents.md`. The standard
-    template's `@docs/agents/*.md` fan-out therefore produced `dangling-at-ref`
-    defects on a kernel written faithfully from its own template. The fix is a
-    layout variant, not a linter exception: the disk check is correct."""
-
+class AgentsKernelCanonicalTemplateTests(unittest.TestCase):
     TEMPLATES = (
-        Path(__file__).resolve().parents[1]
-        / "skills" / "docforge" / "_shared" / "content" / "agent-context" / "templates"
+        ROOT / "skills" / "docforge" / "_shared" / "content" / "agent-context" / "templates"
     )
+    CATALOG = (
+        ROOT
+        / "skills"
+        / "docforge"
+        / "_shared"
+        / ".metadata"
+        / "catalog"
+        / "documents"
+        / "agent-context"
+    )
+    KERNEL_TEMPLATE = "content/agent-context/templates/agents-kernel.md"
 
-    def _section_seven(self, text: str) -> str:
-        start = text.index("## 7. Deeper Context")
-        return text[start:text.index("---", start)]
+    def _record(self, name: str) -> dict:
+        return json.loads((self.CATALOG / f"{name}.json").read_text(encoding="utf-8"))
 
-    def test_compact_kernel_references_only_the_merged_file(self) -> None:
-        compact = (self.TEMPLATES / "agents-kernel.compact.md").read_text(encoding="utf-8")
-        section = self._section_seven(compact)
-        self.assertIn("@docs/agents.md", section)
-        self.assertNotIn("@docs/agents/", section)
-        # `@` imports resolve a path; an anchored path is not a file, so the
-        # compact-anchor rule that applies to indexes cannot apply here.
-        self.assertNotIn("@docs/agents.md#", section)
-
-    def test_kernel_templates_differ_only_in_section_seven(self) -> None:
-        """The variant duplicates a ~90-line template for one section. This is
-        the guard that keeps the other 80 lines from drifting apart."""
-        standard = (self.TEMPLATES / "agents-kernel.md").read_text(encoding="utf-8")
-        compact = (self.TEMPLATES / "agents-kernel.compact.md").read_text(encoding="utf-8")
-        self.assertNotEqual(self._section_seven(standard), self._section_seven(compact))
+    def test_canonical_template_has_contract_headings_and_budget(self) -> None:
+        template = (self.TEMPLATES / "agents-kernel.md").read_text(encoding="utf-8")
+        headings = [line.removeprefix("## ") for line in template.splitlines() if line.startswith("## ")]
         self.assertEqual(
-            standard.replace(self._section_seven(standard), ""),
-            compact.replace(self._section_seven(compact), ""),
+            headings,
+            ["Commands", "Repository Map", "Precedence", "Boundaries", "Conventions", "Validation"],
         )
+        self.assertLessEqual(sum(bool(line.strip()) for line in template.splitlines()), 80)
 
-    def test_compact_layout_selects_the_variant_template(self) -> None:
+    def test_only_one_kernel_template_exists_and_catalog_has_no_variants(self) -> None:
+        templates = sorted(path.name for path in self.TEMPLATES.glob("agents-kernel*.md"))
+        self.assertEqual(templates, ["agents-kernel.md"])
+        self.assertFalse((self.TEMPLATES / "agents-kernel.compact.md").exists())
+        for record_name in ("agents_kernel", "claude_shim"):
+            record = self._record(record_name)
+            self.assertFalse(
+                [key for key in record if "variant" in key],
+                f"{record_name} still declares template variants",
+            )
+
+    def test_claude_record_is_the_same_full_kernel_profile(self) -> None:
+        agents = self._record("agents_kernel")
+        claude = self._record("claude_shim")
+        self.assertEqual(agents["path"], "AGENTS.md")
+        self.assertEqual(claude["path"], "CLAUDE.md")
+        for field in (
+            "type",
+            "summary",
+            "contract_file",
+            "instruction_file",
+            "requires",
+            "target_depth",
+            "provenance_mode",
+            "audit_profile",
+            "presentation",
+            "template_file",
+        ):
+            with self.subTest(field=field):
+                self.assertEqual(claude[field], agents[field])
+
+    def test_standard_and_compact_manifests_choose_the_same_kernel_template(self) -> None:
         for runtime in ("py", "js"):
-            for layout, expected in (
-                ("standard", "content/agent-context/templates/agents-kernel.md"),
-                ("compact", "content/agent-context/templates/agents-kernel.compact.md"),
-            ):
+            selected = []
+            for layout in ("standard", "compact"):
                 with self.subTest(runtime=runtime, layout=layout), tempfile.TemporaryDirectory() as tmp:
                     repo = Path(tmp)
                     result = initialize(
-                        runtime, repo, "spine", audiences=("coding-agents",), layout=layout,
+                        runtime,
+                        repo,
+                        "spine",
+                        audiences=("coding-agents",),
+                        layout=layout,
                     )
                     self.assertEqual(result.returncode, 0, result.stderr)
-                    kernel = next(
-                        doc for doc in load_manifest(repo)["documents"]
-                        if doc["id"] == "agents_kernel"
-                    )
-                    self.assertEqual(kernel["scaffold_template"], expected)
-
-    def test_compact_kernel_scaffold_lints_without_dangling_refs(self) -> None:
-        """The regression proof: the standard template fails this."""
-        for runtime in ("py", "js"):
-            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
-                repo = Path(tmp)
-                initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="compact")
-                for doc_id in ("agents_kernel", "agents_compact"):
-                    run(
-                        runtime, "scaffold_docs",
-                        "--repo", str(repo),
-                        "--manifest", str(repo / ".docforge" / "manifest.json"),
-                        "--document", doc_id,
-                    )
-                lint = run(
-                    runtime, "lint_agents_kernel",
-                    "--file", str(repo / "AGENTS.md"), "--repo", str(repo),
-                )
-                self.assertNotIn("dangling-at-ref", lint.stdout + lint.stderr)
+                    by_id = {doc["id"]: doc for doc in load_manifest(repo)["documents"]}
+                    pointers = []
+                    for doc_id in ("agents_kernel", "claude_shim"):
+                        doc = by_id[doc_id]
+                        self.assertEqual(doc["scaffold_template"], self.KERNEL_TEMPLATE)
+                        self.assertFalse([key for key in doc if "variant" in key], doc)
+                        pointers.append(doc["scaffold_template"])
+                    selected.append(tuple(pointers))
+            self.assertEqual(selected[0], selected[1])
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate Docforge manifest metadata to 3.5 / provenance 2.0.
+"""Migrate Docforge manifest metadata to 3.9 / provenance 2.0.
 
 Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
 manifest 3.2 / provenance 2.0 (seeding each document's catalog-owned
@@ -10,7 +10,7 @@ schema 1.0 and schema-less
 legacy frontmatter, including pre-schema `doc` / `graph_snapshot` shapes,
 while preserving section evidence), and re-registers any older legacy
 manifest — 1.1 (`project_context` / `document_groups`), 2.0 (flat
-`documents` with overlay profiles), or any other pre-3.0 shape — as 3.5:
+`documents` with overlay profiles), or any other pre-3.0 shape — as 3.9:
 written documents are adopted as `generated` with provenance 2.0, bodies
 preserved, and plan entries kept. When a document cannot be converted to
 complete provenance 2.0 (missing or unparseable frontmatter, conversion
@@ -45,8 +45,8 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 
-MANIFEST_CURRENT = "3.8"
-MANIFEST_IN_PLACE = ("3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
+MANIFEST_CURRENT = "3.9"
+MANIFEST_IN_PLACE = ("3.9", "3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
@@ -515,6 +515,82 @@ def constrain_scale_layout(project: dict) -> bool:
     return True
 
 
+def migrate_agent_context_3_9(manifest: dict) -> bool:
+    """Drop mode state and pin retained agent documents to catalog metadata.
+
+    `agents_index` is deliberately excluded from canonicalization and demotion:
+    when it has written content, keeping its manifest entry and status is what
+    lets the normal reconcile/retire workflow treat it as a retirement
+    candidate without touching its body.
+    """
+    from runtime.catalog.python import query_catalog
+
+    changed = False
+    project = manifest.get("project")
+    if isinstance(project, dict) and "agent_context" in project:
+        project.pop("agent_context")
+        changed = True
+
+    docs = manifest.get("documents")
+    if not isinstance(docs, list):
+        return changed
+
+    for doc in docs:
+        members = doc.get("compact_members")
+        if isinstance(members, list):
+            retained = [
+                member for member in members
+                if (member.get("id") if isinstance(member, dict) else member) != "agents_index"
+            ]
+            if retained != members:
+                doc["compact_members"] = retained
+                changed = True
+
+    agent_docs = [
+        doc for doc in docs
+        if doc.get("group") == "agent-context" and doc.get("id") != "agents_index"
+    ]
+    if not agent_docs:
+        return changed
+
+    by_id, by_type, by_path = load_catalog_maps()
+    audiences = (
+        project.get("profiles", {}).get("audiences", [])
+        if isinstance(project, dict)
+        else []
+    )
+    for doc in agent_docs:
+        definition = match_definition(
+            by_id,
+            by_type,
+            by_path,
+            str(doc.get("id") or ""),
+            doc.get("type"),
+            str(doc.get("path") or ""),
+        )
+        if definition is None:
+            continue
+        canonical = {
+            "scaffold_template": definition["template_file"],
+            "instruction_file": definition.get("instruction_file"),
+            "requires": list(definition.get("requires", [])),
+        }
+        primary, presentation, _ = query_catalog.resolve_presentation(definition, audiences)
+        canonical["presentation"] = {"primary_audience": primary, **presentation}
+        for field, value in canonical.items():
+            if doc.get(field) != value:
+                doc[field] = value
+                changed = True
+        if "presentation_override" in doc:
+            doc.pop("presentation_override")
+            changed = True
+        if doc.get("status") in WRITTEN:
+            doc["status"] = "in_progress"
+            doc["audit"] = None
+            changed = True
+    return changed
+
+
 def migrate_manifest_object(
     manifest: dict,
     repo: Path,
@@ -523,7 +599,8 @@ def migrate_manifest_object(
 ) -> bool:
     changed = False
     upgraded_version = False
-    if manifest.get("version") in {"3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"}:
+    source_version = manifest.get("version")
+    if source_version in set(MANIFEST_IN_PLACE) - {MANIFEST_CURRENT}:
         manifest["version"] = MANIFEST_CURRENT
         changed = True
         upgraded_version = True
@@ -540,6 +617,8 @@ def migrate_manifest_object(
         project["scale"] = backfill_project_scale(repo, project.get("tier", "diligence"))
         changed = True
     if isinstance(project, dict) and constrain_scale_layout(project):
+        changed = True
+    if upgraded_version and migrate_agent_context_3_9(manifest):
         changed = True
     # Schema 3.7 added two measurement signals. Refresh them on any upgrade —
     # signals are measurements; class/layout/decided_by (possible user
@@ -590,6 +669,13 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
         return migrate_legacy(repo, manifest_path, data, dry_run)
     manifest = load_manifest(manifest_path, **MANIFEST_LOAD)
     reports: list[dict] = []
+    retirement_candidates = [
+        str(doc.get("id"))
+        for doc in manifest.get("documents", [])
+        if version != MANIFEST_CURRENT
+        and doc.get("id") == "agents_index"
+        and doc.get("status") in WRITTEN
+    ]
     # Snapshot written status before any demotion so file conversion can still
     # require complete provenance 2.0 for previously published documents.
     require_complete = {
@@ -603,10 +689,19 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
     except ValueError:
         manifest_label = str(manifest_path)
     if object_changed:
+        candidate_detail = ""
+        if retirement_candidates:
+            candidate_detail = (
+                "; retained as retirement candidate without touching its body: "
+                + ", ".join(sorted(retirement_candidates))
+            )
         reports.append({
             "doc": manifest_label,
             "action": "migrate",
-            "detail": f"manifest version -> {MANIFEST_CURRENT}; provenance objects normalized",
+            "detail": (
+                f"manifest version -> {MANIFEST_CURRENT}; provenance objects normalized"
+                f"{candidate_detail}"
+            ),
         })
     else:
         reports.append({

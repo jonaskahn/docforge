@@ -88,7 +88,8 @@ def plan_entries(
             "flow_name": None,
             "is_flow": False,
         })
-    if flow_index_path is not None and flow_index_path.is_file():
+    include_synthetic_flows = not scoped or "flows" in scoped
+    if include_synthetic_flows and flow_index_path is not None and flow_index_path.is_file():
         try:
             index = json.loads(flow_index_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
@@ -142,7 +143,7 @@ def plan_lines(
         values = ", ".join(profiles.get(dimension, [])) or "none"
         lines.append(f"  {dimension}: {values}")
     lines.append("")
-    entries = plan_entries(repo, manifest, flow_index_path, revise)
+    entries = plan_entries(repo, manifest, flow_index_path, revise, groups=groups)
     manifest_entries = [entry for entry in entries if not entry["is_flow"]]
     for entry in manifest_entries:
         lines.append(f"{entry['id']:<28}  {entry['path']}")

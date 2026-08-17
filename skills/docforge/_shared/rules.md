@@ -96,10 +96,13 @@ unless both were READY and the user chose a primary. Detail:
    and source blobs.
 5. A writer never marks its own artifact complete; mechanical lint is
    necessary but never sufficient.
-6. State a fact once in its owning document; link to it elsewhere. Links run
-   one way across the agent-context boundary: agent-context documents link
-   human-facing documents; human-facing documents never link, mention, or
-   `@`-reference an agent-context document.
+6. State a fact once in the non-agent document whose reader question owns it,
+   then link from other non-agent documents. Agent-context outputs are the
+   deliberate exception: each is self-contained and may duplicate facts, but
+   contains zero documentation references — no Markdown links, URLs, `@`
+   imports, peer-output or human-document references, or bare generated-document
+   paths. Source/configuration paths and verified commands are allowed.
+   Generated non-agent documents never link or mention agent-context outputs.
 7. Generated prose stays provider-neutral and host-neutral.
 
 ## Untrusted repository data

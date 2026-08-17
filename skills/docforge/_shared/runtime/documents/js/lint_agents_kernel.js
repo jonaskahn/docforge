@@ -1,257 +1,339 @@
 #!/usr/bin/env node
 "use strict";
-/* lint_agents_kernel.js — mechanical rubric check for the coding-agents audience.
+/** Mechanical rubric check for generated AGENTS.md and CLAUDE.md kernels.
  *
- * Runs the format-specific checks runtime/cli/js/lint_document.js has no concept of: the
- * 100-line cap, the 7-numbered-section shape, the tagline/test-sentence convention,
- * and dangling `@docs/agents/...` references. Run alongside lint_document.js, which
- * still covers this file's generic checks (scaffold markers, empty headings, dead
- * `[](...)` links, unlinked mentions) — this script never replaces it.
- *
- * Checks, for the single AGENTS.md-shaped file given:
- *   * line count <= 100                                         (defect; 85-100 is a
- *                                                                  non-fatal warning)
- *   * line 1 is a level-1 heading, line 2 is non-heading prose   (defect)
- *   * every "## " heading matches "## <n>. <Title>"              (defect)
- *   * every section title is 1-4 words, Title Case, and ends
- *     with no "?"                                                 (defect)
- *   * no "### " heading outside section 6 (Absolute Rules)       (defect)
- *   * a bold "**tagline**" as the first non-blank line of every
- *     section                                                    (defect)
- *   * every tagline is 5-12 words                                 (defect)
- *   * a "The test: ... ." line in every section except 2
- *     (Boundaries) and 6 (Absolute Rules)                        (defect)
- *   * no bare MUST/NEVER/ALWAYS outside section 6                (defect)
- *   * at most one fenced code block                              (defect)
- *   * no " you "/" we "/" I " in prose                            (defect)
- *   * last non-blank line starts with "Working if:"              (defect)
- *   * no bare http(s):// URL outside an HTML comment              (defect)
- *   * a provenance HTML comment in the first 10 lines            (defect)
- *   * every "@docs/agents/..." reference resolves to a file on
- *     disk, relative to --repo                                   (defect)
- *   * every tagline carries a negation word ("No", "Not",
- *     "Never", ...)                                               (warning)
- *   * guidance sections (2, 5, 6) have at least half of their
- *     "- " bullets starting with a negation/guard word            (warning)
- *   * guidance bullets are 6-14 words                             (warning)
- *
- * Usage:
- *   node lint_agents_kernel.js --file AGENTS.md --repo .
- *   node lint_agents_kernel.js --file AGENTS.md --repo . --json
- *
- * Exit code 0 if no defects, 1 if any defect, 2 on a usage/IO error. Node.js built-ins only.
+ * The kernel must stay concise and self-contained: required operating
+ * sections, verified commands, hard safety boundaries, and no documentation
+ * references. Run this in place of the generic document linter for an
+ * `agents-kernel` output.
  */
 
 const fs = require("fs");
 const path = require("path");
 
 const HEADING_RE = /^(#{1,6})\s+(.*\S)\s*$/;
-const H2_NUMBERED_RE = /^## (\d+)\. [A-Z]/;
-const H2_TITLE_RE = /^## \d+\.\s+(.*\S)\s*$/;
-const TAGLINE_RE = /^\*\*.+\*\*$/;
-const TEST_LINE_RE = /^The test: .+\.$/;
-const BARE_MODAL_RE = /(?<![\w-])(MUST|NEVER|ALWAYS)(?![\w-])/;
-const FENCE_RE = /^```/;
+const H2_RE = /^##\s+(.+?)\s*#*\s*$/;
+const FENCE_MARKER_RE = /^\s*(`{3,}|~{3,})/;
 const BARE_URL_RE = /https?:\/\//;
-const AT_REF_RE = /@([\w./-]+\.md)/g;
-const WEAK_PRONOUN_RE = / (you|we|I) /;
+const RAW_URL_TOKEN_RE = /\bhttps?:\/\/[^\s<>)\]"']+/g;
+const MARKDOWN_LINK_RE = /!?\[([^\]\r\n]*)\]\(([^)\r\n]*)\)/g;
+const AT_IMPORT_RE = /(?<![\w@])@((?:(?:\.{1,2}\/|\/)?[\w.~+-]+)(?:\/[\w.~+-]+)*\/?(?:#[\w.~:-]+)?)/g;
+const DOC_PATH_RE = /(?<![\w@])((?:(?:\.{1,2}\/|\/)?(?:[\w.~+-]+\/)*[\w.~+-]+\.(?:md|mdx|markdown|rst|adoc|asciidoc)(?:#[\w.~:-]+)?|docs\/[\w.~+/-]*))(?![\w./-])/gi;
+const DOCUMENT_SUFFIXES = new Set([".md", ".mdx", ".markdown", ".rst", ".adoc", ".asciidoc"]);
+const REQUIRED_SECTIONS = ["Commands", "Repository map", "Precedence", "Boundaries", "Validation"];
+const SECTION_ORDER = ["Commands", "Repository map", "Precedence", "Boundaries", "Conventions", "Validation"];
+const MAX_NONBLANK_LINES = 80;
+const LINE_WARNING_AT = 68;
+const GUARD_RE = /\b(?:never|must not|do not|without)\b/i;
+const SECRET_RE = /(?:\b(?:secret|credential)\w*\b|\.env\b)/i;
+const VALIDATION_ACTION_RE = /\b(?:disable|skip|bypass|remove)\w*\b/i;
+const VALIDATION_TARGET_RE = /\b(?:test|validation|check)\w*\b/i;
+const DESTRUCTIVE_RE = /\bdestructive\b/i;
+const APPROVAL_RE = /\b(?:approval|permission|ask)\w*\b/i;
 
-const EXEMPT_SECTIONS = ["2", "6"]; // Boundaries, Absolute Rules — no "The test:" line required
-const GUIDANCE_SECTIONS = ["2", "5", "6"]; // Boundaries, Non-Obvious Conventions, Absolute Rules
-const NEGATION_WORDS = ["no", "not", "don't", "never", "unless", "without", "except", "instead"];
-const GUARD_SINGLE_WORDS = new Set(["no", "don't", "never", "if", "unless", "without", "avoid"]);
-const GUARD_PAIR_WORDS = new Set(["must not", "do not"]);
-const MIN_TITLE_WORDS = 1, MAX_TITLE_WORDS = 4;
-const MIN_TAGLINE_WORDS = 5, MAX_TAGLINE_WORDS = 12;
-const MIN_BULLET_WORDS = 6, MAX_BULLET_WORDS = 14;
-const MIN_GUARD_RATIO = 0.5;
-
-function wordCount(text) {
-  let count = 0;
-  for (const token of text.split(/\s+/)) {
-    if (/[A-Za-z0-9]/.test(token)) count++;
-  }
-  return count;
+function cleanReference(raw) {
+  return raw.trim().replace(/^[`"'<>]+|[`"'<>]+$/g, "").replace(/[.,;:!?]+$/g, "");
 }
 
-function isGuardBullet(bullet) {
-  const tokens = bullet.split(/\s+/).filter(Boolean);
-  if (!tokens.length) return false;
-  const first = tokens[0].replace(/^[:;,.-]+|[:;,.-]+$/g, "").toLowerCase();
-  if (GUARD_SINGLE_WORDS.has(first)) return true;
-  if (tokens.length > 1) {
-    const pair = first + " " + tokens[1].replace(/^[:;,.-]+|[:;,.-]+$/g, "").toLowerCase();
-    return GUARD_PAIR_WORDS.has(pair);
-  }
-  return false;
+function linkTarget(raw) {
+  const value = raw.trim();
+  if (value.startsWith("<") && value.includes(">")) return value.slice(1, value.indexOf(">"));
+  return value ? value.split(/\s+/, 1)[0] : "";
 }
 
-function checkAgentsKernel(filePath, repoDir) {
+function looksLikeDocumentReference(raw) {
+  const value = cleanReference(raw).split("#", 1)[0].split("?", 1)[0].replace(/\/$/, "");
+  return value.startsWith("docs/") || DOCUMENT_SUFFIXES.has(path.posix.extname(value).toLowerCase());
+}
+
+function maskSpans(line, spans) {
+  const chars = line.split("");
+  for (const [start, end] of spans) {
+    for (let index = start; index < end; index += 1) chars[index] = " ";
+  }
+  return chars.join("");
+}
+
+function fenceBlocks(lines) {
+  const blocks = [];
+  const protectedLines = new Set();
+  let current = null;
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    if (current) {
+      protectedLines.add(index);
+      const trimmed = line.trim();
+      if (
+        trimmed.length >= current.marker.length
+        && [...trimmed].every((character) => character === current.marker[0])
+      ) {
+        current.end = index;
+        current = null;
+      }
+      continue;
+    }
+    const match = line.match(FENCE_MARKER_RE);
+    if (match) {
+      current = { start: index, end: null, marker: match[1] };
+      blocks.push(current);
+      protectedLines.add(index);
+    }
+  }
+  return [blocks, protectedLines];
+}
+
+function sectionsFor(lines, protectedLines, end) {
+  const headings = [];
+  for (let index = 0; index < end; index++) {
+    if (protectedLines.has(index)) continue;
+    const match = lines[index].match(H2_RE);
+    if (match) headings.push([index, match[1].trim()]);
+  }
+  return headings.map(([index, title], position) => ({
+    title,
+    line: index + 1,
+    start: index + 1,
+    end: position + 1 < headings.length ? headings[position + 1][0] : end,
+  }));
+}
+
+function canonicalTitle(title) {
+  return SECTION_ORDER.find((candidate) => candidate.toLowerCase() === title.toLowerCase()) || null;
+}
+
+function sectionFor(sections, title) {
+  return sections.find((item) => item.title.toLowerCase() === title.toLowerCase()) || null;
+}
+
+function documentReferenceDefects(lines) {
+  const defects = [];
+  for (let index = 0; index < lines.length; index++) {
+    const number = index + 1;
+    const line = lines[index];
+    const linkSpans = [];
+    MARKDOWN_LINK_RE.lastIndex = 0;
+    let match;
+    while ((match = MARKDOWN_LINK_RE.exec(line)) !== null) {
+      defects.push({
+        kind: "doc-reference",
+        line: number,
+        detail: `markdown-link: ${linkTarget(match[2]) || "<empty>"}`,
+      });
+      linkSpans.push([match.index, match.index + match[0].length]);
+    }
+    let working = maskSpans(line, linkSpans);
+
+    RAW_URL_TOKEN_RE.lastIndex = 0;
+    const urlSpans = [...working.matchAll(RAW_URL_TOKEN_RE)]
+      .map((item) => [item.index, item.index + item[0].length]);
+    working = maskSpans(working, urlSpans);
+
+    const importSpans = [];
+    AT_IMPORT_RE.lastIndex = 0;
+    while ((match = AT_IMPORT_RE.exec(working)) !== null) {
+      const target = match[1];
+      if (looksLikeDocumentReference(target)) {
+        defects.push({
+          kind: "doc-reference",
+          line: number,
+          detail: `at-import: @${cleanReference(target)}`,
+        });
+        importSpans.push([match.index, match.index + match[0].length]);
+      }
+    }
+    working = maskSpans(working, importSpans);
+
+    DOC_PATH_RE.lastIndex = 0;
+    while ((match = DOC_PATH_RE.exec(working)) !== null) {
+      defects.push({
+        kind: "doc-reference",
+        line: number,
+        detail: `bare-path: ${cleanReference(match[1])}`,
+      });
+    }
+  }
+  return defects;
+}
+
+function requiredSectionDefects(sections) {
+  const defects = [];
+  for (const title of REQUIRED_SECTIONS) {
+    const matches = sections.filter((item) => item.title.toLowerCase() === title.toLowerCase());
+    if (!matches.length) {
+      defects.push({
+        kind: "missing-section",
+        line: 0,
+        detail: `missing required section: ${title}`,
+      });
+    }
+    for (const duplicate of matches.slice(1)) {
+      defects.push({ kind: "duplicate-section", line: duplicate.line, detail: title });
+    }
+  }
+
+  const ordered = sections
+    .map((item) => [item, canonicalTitle(item.title)])
+    .filter(([_item, canonical]) => canonical !== null);
+  const positions = ordered.map(([_item, canonical]) => SECTION_ORDER.indexOf(canonical));
+  for (let index = 1; index < positions.length; index++) {
+    if (positions[index] < positions[index - 1]) {
+      defects.push({
+        kind: "section-order",
+        line: ordered[index][0].line,
+        detail: `expected: ${SECTION_ORDER.join(", ")}`,
+      });
+      break;
+    }
+  }
+  return defects;
+}
+
+function commandDefects(lines, sections, blocks) {
+  const commands = sectionFor(sections, "Commands");
+  if (!commands) return [];
+  const commandBlocks = blocks.filter(
+    (block) => commands.start <= block.start && block.start < commands.end,
+  );
+  if (!commandBlocks.length) {
+    return [{
+      kind: "missing-command-block",
+      line: commands.line,
+      detail: "Commands must contain a fenced block",
+    }];
+  }
+  const block = commandBlocks[0];
+  if (block.end === null) return [];
+  const commandsInBlock = lines.slice(block.start + 1, block.end)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#") && !line.includes("{{") && !line.includes("TODO("));
+  if (commandsInBlock.length) return [];
+  return [{
+    kind: "empty-command-block",
+    line: block.start + 1,
+    detail: "Commands must contain at least one concrete command",
+  }];
+}
+
+function safetyDefects(lines, sections) {
+  const boundaries = sectionFor(sections, "Boundaries");
+  if (!boundaries) return [];
+  const body = lines.slice(boundaries.start, boundaries.end);
+  const checks = {
+    secrets: body.some((line) => GUARD_RE.test(line) && SECRET_RE.test(line)),
+    validation: body.some(
+      (line) => GUARD_RE.test(line) && VALIDATION_ACTION_RE.test(line) && VALIDATION_TARGET_RE.test(line),
+    ),
+    "destructive commands": body.some((line) => DESTRUCTIVE_RE.test(line) && APPROVAL_RE.test(line)),
+  };
+  return Object.entries(checks)
+    .filter(([_name, present]) => !present)
+    .map(([name]) => ({
+      kind: "missing-safety-rule",
+      line: boundaries.line,
+      detail: `Boundaries must cover ${name}`,
+    }));
+}
+
+function checkAgentsKernel(filePath, repoDir = null) {
+  // Retained for API compatibility. References are never resolved against disk
+  // now that every document reference is a defect.
+  void repoDir;
   const text = fs.readFileSync(filePath, "utf8");
   const lines = text.split("\n");
-
-  let n = lines.length;
-  while (n > 0 && !lines[n - 1].trim()) n--; // trailing blank lines don't count toward the cap
+  let contentEnd = lines.length;
+  while (contentEnd > 0 && !lines[contentEnd - 1].trim()) contentEnd--;
 
   const defects = [];
   const warnings = [];
-
-  if (n > 100) {
-    defects.push({ kind: "line-cap", line: n, detail: `${n} lines, cap is 100` });
-  } else if (n >= 85) {
-    warnings.push({ kind: "line-cap-warning", line: n, detail: `${n} lines, approaching the 100-line cap` });
+  const nonblankLines = lines.slice(0, contentEnd)
+    .map((line, index) => line.trim() ? index + 1 : null)
+    .filter((line) => line !== null);
+  const nonblankCount = nonblankLines.length;
+  if (nonblankCount > MAX_NONBLANK_LINES) {
+    defects.push({
+      kind: "line-cap",
+      line: nonblankLines[MAX_NONBLANK_LINES],
+      detail: `${nonblankCount} nonblank lines, cap is ${MAX_NONBLANK_LINES}`,
+    });
+  } else if (nonblankCount >= LINE_WARNING_AT) {
+    warnings.push({
+      kind: "line-cap-warning",
+      line: nonblankLines[nonblankLines.length - 1],
+      detail: `${nonblankCount} nonblank lines, approaching the ${MAX_NONBLANK_LINES}-line cap`,
+    });
   }
 
   if (!lines.length || !lines[0].startsWith("# ")) {
     defects.push({ kind: "opening-shape", line: 1, detail: "line 1 must be a level-1 heading" });
   }
 
-  const heads = [];
-  for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(HEADING_RE);
-    if (m) heads.push({ index: i, match: m });
-  }
-  const h2s = heads.filter((h) => h.match[1] === "##");
-
-  const firstH2 = h2s.length ? h2s[0].index : n;
+  const [blocks, protectedLines] = fenceBlocks(lines.slice(0, contentEnd));
+  const sections = sectionsFor(lines, protectedLines, contentEnd);
+  const firstH2 = sections.length ? sections[0].line - 1 : contentEnd;
   const preamble = lines.slice(1, firstH2);
-  if (!preamble.some((l) => l.trim() && !HEADING_RE.test(l))) {
-    defects.push({ kind: "opening-shape", line: 2, detail: "no description prose between the title and the first section" });
+  if (!preamble.some(
+    (line) => line.trim() && !HEADING_RE.test(line) && !line.trimStart().startsWith("<!--"),
+  )) {
+    defects.push({
+      kind: "opening-shape",
+      line: 2,
+      detail: "no description prose between the title and first section",
+    });
   }
 
-  // locate section 6 (Absolute Rules)'s line range so its exemptions apply only inside it
-  let section6Range = [n, n];
-  for (let idx = 0; idx < h2s.length; idx++) {
-    const i = h2s[idx].index;
-    const numbered = lines[i].match(H2_NUMBERED_RE);
-    if (numbered && numbered[1] === "6") {
-      const end = idx + 1 < h2s.length ? h2s[idx + 1].index : n;
-      section6Range = [i, end];
-    }
-  }
-  const inSection6 = (i) => section6Range[0] <= i && i < section6Range[1];
+  defects.push(...requiredSectionDefects(sections));
+  defects.push(...commandDefects(lines, sections, blocks));
+  defects.push(...safetyDefects(lines, sections));
 
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i];
-    if (l.startsWith("## ") && !H2_NUMBERED_RE.test(l)) {
-      defects.push({ kind: "heading-shape", line: i + 1, detail: l.trim() });
-    }
-    if (l.startsWith("### ") && !inSection6(i)) {
-      defects.push({ kind: "stray-h3", line: i + 1, detail: l.trim() });
-    }
-    if (BARE_MODAL_RE.test(l) && !inSection6(i) && !l.trimStart().startsWith("#")) {
-      defects.push({ kind: "bare-modal-outside-rules", line: i + 1, detail: l.trim() });
-    }
-    if (WEAK_PRONOUN_RE.test(l)) {
-      defects.push({ kind: "weak-pronoun", line: i + 1, detail: l.trim() });
-    }
-    if (BARE_URL_RE.test(l) && !l.includes("<!--")) {
-      defects.push({ kind: "bare-url", line: i + 1, detail: l.trim() });
+  if (blocks.length > 1) {
+    defects.push({
+      kind: "too-many-code-blocks",
+      line: blocks[1].start + 1,
+      detail: `${blocks.length} fenced blocks, max 1`,
+    });
+  }
+  for (const block of blocks) {
+    if (block.end === null) {
+      defects.push({
+        kind: "unclosed-code-block",
+        line: block.start + 1,
+        detail: "fenced block is not closed",
+      });
     }
   }
 
-  for (let idx = 0; idx < h2s.length; idx++) {
-    const i = h2s[idx].index;
-    const numbered = lines[i].match(H2_NUMBERED_RE);
-    const secNo = numbered ? numbered[1] : null;
-    const end = idx + 1 < h2s.length ? h2s[idx + 1].index : n;
-    const body = lines.slice(i + 1, end);
-    const firstNonblank = body.find((l) => l.trim()) || "";
+  if (!lines.slice(0, 10).some((line) => line.includes("<!--"))) {
+    defects.push({
+      kind: "missing-provenance",
+      line: 0,
+      detail: "no HTML-comment provenance in first 10 lines",
+    });
+  }
 
-    const titleM = lines[i].match(H2_TITLE_RE);
-    if (numbered && titleM) {
-      const title = titleM[1];
-      const words = wordCount(title);
-      if (words < MIN_TITLE_WORDS || words > MAX_TITLE_WORDS) {
-        defects.push({ kind: "title-shape", line: i + 1, detail: `${words} words, want ${MIN_TITLE_WORDS}-${MAX_TITLE_WORDS}: ${lines[i].trim()}` });
-      }
-      if (title.trimEnd().endsWith("?")) {
-        defects.push({ kind: "title-shape", line: i + 1, detail: `title ends in '?': ${lines[i].trim()}` });
-      }
-      if (title.split(/\s+/).some((w) => /[A-Za-z0-9]/.test(w) && /[A-Za-z]/.test(w[0]) && w[0] !== w[0].toUpperCase())) {
-        defects.push({ kind: "title-shape", line: i + 1, detail: `not Title Case: ${lines[i].trim()}` });
-      }
-    }
-
-    const first = firstNonblank.trim();
-    if (!TAGLINE_RE.test(first)) {
-      defects.push({ kind: "missing-tagline", line: i + 1, detail: lines[i].trim() });
-    } else {
-      const tagline = first.slice(2, -2).trim();
-      const words = wordCount(tagline);
-      if (words < MIN_TAGLINE_WORDS || words > MAX_TAGLINE_WORDS) {
-        defects.push({ kind: "tagline-length", line: i + 1, detail: `${words} words, want ${MIN_TAGLINE_WORDS}-${MAX_TAGLINE_WORDS}: ${first}` });
-      }
-      const low = tagline.toLowerCase();
-      if (!NEGATION_WORDS.some((w) => new RegExp(`\\b${w}\\b`).test(low))) {
-        warnings.push({ kind: "weak-tagline", line: i + 1, detail: `no negation word: ${first}` });
-      }
-    }
-
-    if (GUIDANCE_SECTIONS.includes(secNo)) {
-      const bullets = [];
-      for (let bi = 0; bi < body.length; bi++) {
-        if (body[bi].trimStart().startsWith("- ")) {
-          bullets.push({ line: i + 2 + bi, text: body[bi].trimStart().slice(2).trim() });
-        }
-      }
-      if (bullets.length) {
-        const guards = bullets.filter((b) => isGuardBullet(b.text)).length;
-        if (guards / bullets.length < MIN_GUARD_RATIO) {
-          warnings.push({ kind: "low-negation-ratio", line: i + 1, detail: `section ${secNo}: ${guards}/${bullets.length} bullets start with a negation/guard` });
-        }
-        for (const b of bullets) {
-          const words = wordCount(b.text);
-          if (words < MIN_BULLET_WORDS || words > MAX_BULLET_WORDS) {
-            warnings.push({ kind: "bullet-length", line: b.line, detail: `${words} words, want ${MIN_BULLET_WORDS}-${MAX_BULLET_WORDS}: ${b.text}` });
-          }
-        }
-      }
-    }
-
-    if (!EXEMPT_SECTIONS.includes(secNo)) {
-      if (!body.some((l) => TEST_LINE_RE.test(l.trim()))) {
-        defects.push({ kind: "missing-test-line", line: i + 1, detail: lines[i].trim() });
-      }
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    MARKDOWN_LINK_RE.lastIndex = 0;
+    const withoutLinks = maskSpans(
+      line,
+      [...line.matchAll(MARKDOWN_LINK_RE)]
+        .map((match) => [match.index, match.index + match[0].length]),
+    );
+    if (BARE_URL_RE.test(withoutLinks)) {
+      defects.push({ kind: "bare-url", line: index + 1, detail: line.trim() });
     }
   }
 
-  const fenceCount = Math.floor(lines.filter((l) => FENCE_RE.test(l.trim())).length / 2);
-  if (fenceCount > 1) {
-    defects.push({ kind: "too-many-code-blocks", line: 0, detail: `${fenceCount} fenced blocks, max 1` });
-  }
-
-  if (!lines.slice(0, 10).some((l) => l.includes("<!--"))) {
-    defects.push({ kind: "missing-provenance", line: 0, detail: "no HTML-comment provenance in first 10 lines" });
-  }
-
-  const stripped = lines.slice(0, n).filter((l) => l.trim());
-  if (!stripped.length || !stripped[stripped.length - 1].startsWith("Working if:")) {
-    defects.push({ kind: "missing-working-if", line: n, detail: "last line must start with 'Working if:'" });
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    AT_REF_RE.lastIndex = 0;
-    let m;
-    while ((m = AT_REF_RE.exec(lines[i])) !== null) {
-      const target = m[1];
-      const resolved = path.resolve(repoDir, target);
-      if (!fs.existsSync(resolved)) {
-        defects.push({ kind: "dangling-at-ref", line: i + 1, detail: `@${target}` });
-      }
-    }
-  }
-
+  defects.push(...documentReferenceDefects(lines));
   return { file: filePath, defects, warnings };
 }
 
 function parseArgs(argv) {
   const args = { file: null, repo: ".", json: false };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "--file") args.file = argv[++i];
-    else if (a === "--repo") args.repo = argv[++i];
-    else if (a === "--json") args.json = true;
+  for (let index = 0; index < argv.length; index++) {
+    const value = argv[index];
+    if (value === "--file") args.file = argv[++index];
+    else if (value === "--repo") args.repo = argv[++index];
+    else if (value === "--json") args.json = true;
   }
   return args;
 }
@@ -264,22 +346,24 @@ function main() {
   }
 
   const result = checkAgentsKernel(args.file, args.repo);
-
   if (args.json) {
     console.log(JSON.stringify(result, null, 2));
   } else {
     if (!result.defects.length) console.log(`CLEAN    ${result.file}`);
-    for (const d of result.defects) {
-      const loc = d.line ? `:${d.line}` : "";
-      console.log(`DEFECT   ${result.file}${loc}  ${d.kind}: ${d.detail}`);
+    for (const defect of result.defects) {
+      const location = defect.line ? `:${defect.line}` : "";
+      console.log(`DEFECT   ${result.file}${location}  ${defect.kind}: ${defect.detail}`);
     }
-    for (const w of result.warnings) {
-      const loc = w.line ? `:${w.line}` : "";
-      console.log(`WARNING  ${result.file}${loc}  ${w.kind}: ${w.detail}`);
+    for (const warning of result.warnings) {
+      const location = warning.line ? `:${warning.line}` : "";
+      console.log(`WARNING  ${result.file}${location}  ${warning.kind}: ${warning.detail}`);
     }
   }
-
   return result.defects.length ? 1 : 0;
 }
 
-process.exit(main());
+module.exports = { checkAgentsKernel, main };
+
+if (require.main === module) {
+  process.exitCode = main();
+}

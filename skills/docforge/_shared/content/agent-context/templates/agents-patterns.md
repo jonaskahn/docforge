@@ -1,16 +1,17 @@
 # Patterns
 
-<!-- The one docs/agents/ file with real, non-stub content — this has no other home
-     in the human-facing tree. -->
+## Recurring shapes
+
+| Pattern | Use when | Representative source path | Required shape |
+|---|---|---|---|
+| {{name}} | {{evidenced condition}} | `{{durable path}}` | {{concise implementation rule}} |
 
 ## Complexity hotspots
 
-{{table or bullet list: file/module path, why it's a hotspot (size, branching, churn)}}
+| Source path | Why it is sensitive | Safe edit constraint |
+|---|---|---|
+| `{{durable path}}` | {{branching, coupling, churn, or boundary role}} | {{constraint}} |
 
-## Function exemplars
+## Validation
 
-{{per layer, one or two representative functions/files worth reading before writing similar code — path, one-line reason}}
-
-## Recurring imports
-
-{{table: import/module, where it's used, the pattern it signals}}
+{{One bullet per applicable verified command and the pattern behavior it checks.}}

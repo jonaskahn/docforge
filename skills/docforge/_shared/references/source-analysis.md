@@ -56,7 +56,7 @@ evidence card. A ready index that is never queried does not ground a plan.
 | portfolio | child-repository discovery, member manifests, each member’s graph evidence |
 | Business Analyst | native/provisional flows, source-confirmed rules, tests, connected requirement evidence |
 | Product Owner | reachable capabilities, release history, instrumentation, stakeholder evidence |
-| coding-agent context | entry points, representative paths, tests, constraints, hotspots, owning human documents |
+| coding-agent context | entry points, representative paths, tests, constraints, hotspots |
 
 Treat graph output as evidence to synthesize, not prose to paste. If evidence
 cannot establish an external value, use one typed token. If evidence should

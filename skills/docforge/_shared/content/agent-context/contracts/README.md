@@ -4,16 +4,16 @@ Content contract files owned by the `agent-context` group.
 
 ## Contents
 
-- `agents-architecture.md` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [agents-architecture.md](agents-architecture.md)
-- `agents-conventions.md` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [agents-conventions.md](agents-conventions.md)
-- `agents-flow.md` — Compact flow/term lookup grounded in declared flow evidence and linked owners → [agents-flow.md](agents-flow.md)
-- `agents-glossary.md` — Compact flow/term lookup grounded in declared flow evidence and linked owners → [agents-glossary.md](agents-glossary.md)
-- `agents-kernel.md` — Compact entry points, verified commands, precedence, safe links to owning agent views → [agents-kernel.md](agents-kernel.md)
-- `agents-patterns.md` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [agents-patterns.md](agents-patterns.md)
-- `agents-tech-debt.md` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [agents-tech-debt.md](agents-tech-debt.md)
-- `agents-testing.md` — Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links → [agents-testing.md](agents-testing.md)
-- `fixed-shim.md` — Compact entry points, verified commands, precedence, safe links to owning agent views → [fixed-shim.md](fixed-shim.md)
-- `machine-config.md` — Compact entry points, verified commands, precedence, safe links to owning agent views → [machine-config.md](machine-config.md)
+- `agents-architecture.md` — Self-contained component map and dependency boundaries → [agents-architecture.md](agents-architecture.md)
+- `agents-conventions.md` — Self-contained evidenced repository directives → [agents-conventions.md](agents-conventions.md)
+- `agents-flow.md` — Self-contained trigger-to-effect flow lookup → [agents-flow.md](agents-flow.md)
+- `agents-glossary.md` — Self-contained domain and flow definitions → [agents-glossary.md](agents-glossary.md)
+- `agents-kernel.md` — Concise self-contained operating kernel → [agents-kernel.md](agents-kernel.md)
+- `agents-patterns.md` — Self-contained recurring shapes and safe edit constraints → [agents-patterns.md](agents-patterns.md)
+- `agents-tech-debt.md` — Self-contained limitations and editing hazards → [agents-tech-debt.md](agents-tech-debt.md)
+- `agents-testing.md` — Self-contained verified test and validation behavior → [agents-testing.md](agents-testing.md)
+- `fixed-shim.md` — Self-contained local-preference boundary → [fixed-shim.md](fixed-shim.md)
+- `machine-config.md` — Self-contained safe machine settings → [machine-config.md](machine-config.md)
 
 ## Boundaries
 

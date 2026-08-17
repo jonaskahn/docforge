@@ -8,8 +8,8 @@
 - [`references/graph/`](references/graph/README.md): provider dispatch and
   selection.
 - [`references/document-composition.md`](references/document-composition.md):
-  topic ownership, no-duplication, and the one-way agent-context reference
-  boundary.
+  topic ownership, normal-document no-duplication, and permanent agent-context
+  isolation.
 - [`references/provenance-tracking.md`](references/provenance-tracking.md):
   metadata format and staleness.
 - [`references/evidence-presentation.md`](references/evidence-presentation.md):
@@ -72,5 +72,5 @@ invocation to exactly one file.
 
 - **Dual Field Naming**: Catalog records own `template_file` (specifying the source template path under `content/`), while materialized project manifests carry `scaffold_template` (copied from `template_file` during manifest scaffolding to maintain legacy manifest compatibility).
 - **Two Special-File Sets**: The runtime maintains two distinct special-file sets defined in [`runtime/common/python/special_files`](runtime/common/python/special_files.py):
-  - `SPECIAL_DOC_SOURCES` (`{"agents-kernel.md", "claude-md.md", "claude-local-md.md"}`): template source filenames scanned during metadata validation (`validate_metadata`).
-  - `SPECIAL_DOC_OUTPUTS` (`{"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}`): materialized output doc filenames that bypass standard linting and scaffolding constraints (`scaffold_docs`, `lint_document`, `migrate_metadata`). `AGENTS.md` is not unlinted for that: it is covered by the dedicated `lint_agents_kernel` rubric check in place of `lint_document`. The fixed shims (`CLAUDE.md`, `CLAUDE.local.md`) are emitted literally and need no rubric lint.
+  - `SPECIAL_DOC_SOURCES` (`{"agents-kernel.md", "claude-local-md.md"}`): template source filenames scanned during metadata validation (`validate_metadata`). The one kernel source is shared by both full root-kernel outputs.
+  - `SPECIAL_DOC_OUTPUTS` (`{"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}`): materialized output doc filenames that bypass standard linting and scaffolding constraints (`scaffold_docs`, `lint_document`, `migrate_metadata`). `AGENTS.md` and `CLAUDE.md` each pass the dedicated `lint_agents_kernel` rubric in place of `lint_document`; `CLAUDE.local.md` is the literal local-preference extension and needs no kernel rubric.

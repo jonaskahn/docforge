@@ -10,7 +10,11 @@ import sys
 from pathlib import Path, PurePosixPath
 
 from runtime.common.python._util import ensure_docforge_gitignore, fail, load_manifest, unmanaged_paths
-from runtime.common.python.agent_context import AGENT_CONTEXT_GROUP, agent_context_leaks
+from runtime.common.python.agent_context import (
+    AGENT_CONTEXT_GROUP,
+    agent_context_leaks,
+    agent_context_outbound_findings,
+)
 from runtime.common.python.plan import plan_entries
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.provenance_frontmatter import (
@@ -62,17 +66,16 @@ def active_documents(manifest: dict) -> list[dict]:
 
 
 def routable_children(doc: dict, manifest: dict) -> list[dict]:
-    """Children a routing document may enumerate.
+    """Children a router may enumerate; agent outputs are never routing rows.
 
-    Agent-context documents see everything; nothing else sees agent-context.
-    The reference boundary is one-way by construction, so `docs/README.md`
-    never lists `docs/agents/README.md` while `docs/agents/README.md` still
-    lists its own children. Entries without a group predate the field and are
-    treated as human-facing, which is the safe direction."""
-    children = active_documents(manifest)
-    if doc.get("group") == AGENT_CONTEXT_GROUP:
-        return children
-    return [child for child in children if child.get("group") != AGENT_CONTEXT_GROUP]
+    This keeps human indexes isolated and prevents a legacy agent index from
+    enumerating peer agent outputs. Entries without a group predate the field
+    and remain human-facing."""
+    return [
+        child
+        for child in active_documents(manifest)
+        if child.get("group") != AGENT_CONTEXT_GROUP
+    ]
 
 
 def preview(manifest: dict, repo: Path, revise: bool = False, groups: list[str] | None = None) -> int:
@@ -461,6 +464,7 @@ def audit(repo: Path, manifest: dict) -> int:
         "broken links": [],
         "readme child coverage": [],
         "agent-context leak": [],
+        "agent-context outbound": [],
         "invalid json": [],
         "folder-only promotion": [],
         "forge leakage": [],
@@ -483,6 +487,14 @@ def audit(repo: Path, manifest: dict) -> int:
             findings["missing"].append(doc["path"])
             continue
         text = target.read_text(encoding="utf-8", errors="replace")
+        findings["agent-context leak"].extend(
+            f"{doc['path']}:{finding['line']} [{finding['kind']}] -> {finding['target']}"
+            for finding in agent_context_leaks(doc, manifest, text)
+        )
+        findings["agent-context outbound"].extend(
+            f"{doc['path']}:{finding['line']} [{finding['kind']}] -> {finding['target']}"
+            for finding in agent_context_outbound_findings(doc, manifest, text)
+        )
         if doc["type"] == "machine-config":
             try:
                 json.loads(text)
@@ -519,10 +531,6 @@ def audit(repo: Path, manifest: dict) -> int:
         findings["readme child coverage"].extend(
             f"{doc['path']}: missing link to {item}"
             for item in readme_child_coverage(repo, doc, manifest, text)
-        )
-        findings["agent-context leak"].extend(
-            f"{doc['path']}:{leak['line']} -> {leak['target']}"
-            for leak in agent_context_leaks(doc, manifest, text)
         )
     for prefix in ("docs/flows/", "docs/architecture/concepts/"):
         folders = {

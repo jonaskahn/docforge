@@ -11,9 +11,8 @@ repository is, who the documentation is for, and how it is organized.}}
 {{One or two sentences describing the overall documentation shape: product
 understanding, architecture, engineering practice, operations, reference, and
 security each live in their own section; audience-specific views exist for
-Business Analysts and Product Owners when selected. Never mention the
-coding-agent views here, or the files that route them; this tree reads as
-though they do not exist.}}
+Business Analysts and Product Owners when selected. Describe only selected,
+materialized reader sections and the questions they answer.}}
 
 ## Start here
 

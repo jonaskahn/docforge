@@ -1,8 +1,8 @@
 {
   "id": "claude_shim",
-  "type": "fixed-shim",
-  "summary": "Compact entry points, verified commands, precedence, safe links to owning agent views",
-  "contract_file": "content/agent-context/contracts/fixed-shim.md",
+  "type": "agents-kernel",
+  "summary": "Concise self-contained operating kernel with verified commands, repository map, precedence, boundaries, and validation",
+  "contract_file": "content/agent-context/contracts/agents-kernel.md",
   "path": "CLAUDE.md",
   "group": "agent-context",
   "selection": {
@@ -16,10 +16,17 @@
     "condition": null
   },
   "instruction_file": "content/agent-context/agents-kernel.instruction.md",
-  "requires": [],
-  "target_depth": "router",
+  "requires": [
+    "code_graph",
+    "manifests"
+  ],
+  "target_depth": "orientation",
   "write_order": 201,
   "provenance_mode": "manifest",
-  "audit_profile": "shim",
-  "template_file": "content/agent-context/templates/claude-md.md"
+  "audit_profile": "agents-kernel",
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
+  "template_file": "content/agent-context/templates/agents-kernel.md"
 }

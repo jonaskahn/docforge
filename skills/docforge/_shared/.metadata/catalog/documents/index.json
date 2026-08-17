@@ -1,5 +1,5 @@
 {
-  "version": "2.21.0",
+  "version": "2.22.0",
   "source": "../index.json",
   "groups": [
     {
@@ -141,7 +141,7 @@
       "id": "agent-context",
       "kind": "folder",
       "index": "agent-context/index.json",
-      "count": 13
+      "count": 12
     }
   ]
 }

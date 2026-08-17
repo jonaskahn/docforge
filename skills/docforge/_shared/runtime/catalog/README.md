@@ -45,6 +45,11 @@ group's header contract plus each `compact_members` member contract as a named
 `##` section, in member order, with the member list mirrored under `compact`.
 Standard routes keep `contract` as a plain file path.
 
+Agent-context records have one stable route with no content variants. Every
+record fixes `presentation.related_docs` to `none`; the two root-kernel records
+resolve the same contract, instruction, template, and audit profile. The compact
+agent record composes only the seven topic members.
+
 ### `detect_profiles`
 
 Read-only recommendations of shape/platform/framework/concern candidates from

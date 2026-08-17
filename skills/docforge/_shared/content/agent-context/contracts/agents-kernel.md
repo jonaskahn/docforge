@@ -2,8 +2,6 @@
 
 Content contract for document type `agents-kernel`.
 
-Aliased with: `fixed-shim`, `machine-config` (same content contract).
-
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| agents-kernel | compact entry points, verified commands, precedence, safe links to owning agent views | broad narrative, invented settings, or overwritten user configuration | Orientation | router |
+| agents-kernel | concise self-contained project purpose and stack, verified commands, durable repository map and entry points, precedence, hard boundaries, evidenced conventions, validation expectations | every documentation reference, deeper-context routing, broad rationale, invented commands or settings, volatile symbol dumps | Orientation | orientation |

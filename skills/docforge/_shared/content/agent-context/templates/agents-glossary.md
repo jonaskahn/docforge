@@ -1,8 +1,7 @@
-# Glossary (agent view)
+# Glossary
 
-<!-- Brief stub — a linking view only. Never redefine a term; reference/glossary.md
-     is the single spine. -->
+| Term | Definition | Code context | Important distinction or constraint |
+|---|---|---|---|
+| {{term}} | {{concise evidence-backed definition}} | `{{module or configuration path}}` | {{what it is not, alias behavior, or valid-state constraint}} |
 
-| Term | Definition |
-|---|---|
-| {{term}} | see [reference/glossary.md#{{anchor}}](../reference/glossary.md#{{anchor}}) |
+Include only project-specific domain and flow terms evidenced by the repository.

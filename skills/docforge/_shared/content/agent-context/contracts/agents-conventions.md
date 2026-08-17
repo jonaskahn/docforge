@@ -2,8 +2,6 @@
 
 Content contract for document type `agents-conventions`.
 
-Aliased with: `agents-architecture`, `agents-patterns`, `agents-testing`, `agents-tech-debt` (same content contract).
-
 | Type | Must present | Keep out | Primary mode | Depth |
 |---|---|---|---|---|
-| agents-conventions | token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links | duplicated human documentation or volatile symbol dumps | Reference | deep-dive |
+| agents-conventions | self-contained evidenced safety, naming, structural, and workflow directives with practical consequences | every documentation reference, verbatim source-policy copies, preferences inferred from isolated examples | Reference | deep-dive |

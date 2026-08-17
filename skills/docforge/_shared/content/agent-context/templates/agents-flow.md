@@ -1,7 +1,8 @@
-# Flows (agent view)
+# Flows
 
-<!-- Brief stub — entry points and triggers only. Full steps live in docs/flows/,
-      sourced from repository evidence. Gated the same as docs/flows/ — see
-     runtime/cli/python/precheck_graph.py --need flow. -->
+| Flow | Trigger | Entry source path | Durable sequence | Result | Failure behavior |
+|---|---|---|---|---|---|
+| {{name}} | {{event or request}} | `{{path}}` | {{three to six component steps}} | {{terminal effect}} | {{evidenced containment or surfaced error}} |
 
-{{one bullet per domain: `- {{domain}}: entry at {{trigger/route}} → [flows/{{flow}}.md](../flows/{{flow}}.md)`}}
+Include only flows present in declared flow evidence. Preserve asynchronous and
+transaction boundaries when they affect safe changes.

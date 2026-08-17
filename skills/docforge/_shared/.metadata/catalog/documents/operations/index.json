@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.21.0",
+  "version": "2.22.0",
   "category": "operations",
   "purpose": "Deployment, observability, and operational runbooks.",
   "source": "../../index.json",

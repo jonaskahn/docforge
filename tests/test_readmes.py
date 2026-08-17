@@ -283,10 +283,9 @@ class ReadmeFlowIndexTests(unittest.TestCase):
                 self.assertEqual(payload["contract_revision"], "2.19.0")
 
 
-class AgentContextRoutingTests(unittest.TestCase):
-    """The reference boundary is one-way: agent-context documents may link
-    human-facing documents, and no human-facing index enumerates an
-    agent-context child. See references/document-composition.md."""
+class AgentContextIsolationTests(unittest.TestCase):
+    """Human and agent outputs are isolated: human indexes and documents never
+    reference active agent outputs, while agent outputs are self-contained."""
 
     def _scaffold(self, runtime: str, repo: Path, doc_id: str) -> str:
         result = run(
@@ -300,8 +299,9 @@ class AgentContextRoutingTests(unittest.TestCase):
         return (repo / doc["path"]).read_text(encoding="utf-8")
 
     def test_docs_index_never_enumerates_agent_children_in_either_layout(self) -> None:
+        bodies = {}
         for runtime in ("py", "js"):
-            for layout, forbidden in (("standard", "agents/README.md"), ("compact", "agents.md")):
+            for layout in ("standard", "compact"):
                 with self.subTest(runtime=runtime, layout=layout), tempfile.TemporaryDirectory() as tmp:
                     repo = Path(tmp)
                     result = initialize(
@@ -309,15 +309,25 @@ class AgentContextRoutingTests(unittest.TestCase):
                         audiences=("coding-agents",), layout=layout,
                     )
                     self.assertEqual(result.returncode, 0, result.stderr)
-                    paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
+                    manifest = load_manifest(repo)
+                    paths = {doc["path"] for doc in manifest["documents"]}
                     self.assertIn("AGENTS.md", paths, "fixture must actually select agent docs")
                     body = self._scaffold(runtime, repo, "docs_index")
-                    self.assertNotIn(forbidden, body)
+                    agent_doc_links = {
+                        doc["path"].removeprefix("docs/")
+                        for doc in manifest["documents"]
+                        if doc.get("group") == "agent-context"
+                        and doc["path"].startswith("docs/")
+                    }
+                    for link in agent_doc_links:
+                        self.assertNotIn(f"]({link})", body)
                     self.assertNotIn("docs/agents", body)
+                    bodies[(runtime, layout)] = normalized(body, [repo])
+        for layout in ("standard", "compact"):
+            self.assertEqual(bodies[("py", layout)], bodies[("js", layout)], layout)
 
-    def test_agent_index_still_enumerates_its_own_children(self) -> None:
-        """The filter is relative to the referencing document, not global --
-        docs/agents/README.md must keep routing the views beneath it."""
+    def test_agents_index_is_not_selected_or_scaffoldable(self) -> None:
+        observed = {}
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
@@ -326,20 +336,51 @@ class AgentContextRoutingTests(unittest.TestCase):
                     audiences=("coding-agents",), layout="standard",
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
-                body = self._scaffold(runtime, repo, "agents_index")
-                self.assertIn("](architecture.md)", body)
-                self.assertIn("](patterns.md)", body)
+                manifest = load_manifest(repo)
+                ids = {doc["id"] for doc in manifest["documents"]}
+                paths = {doc["path"] for doc in manifest["documents"]}
+                self.assertNotIn("agents_index", ids)
+                self.assertNotIn("docs/agents/README.md", paths)
+
+                topic = run(
+                    runtime, "scaffold_docs",
+                    "--repo", str(repo),
+                    "--manifest", str(repo / ".docforge" / "manifest.json"),
+                    "--document", "agents_architecture",
+                )
+                self.assertEqual(topic.returncode, 0, topic.stderr)
+                self.assertFalse((repo / "docs" / "agents" / "README.md").exists())
+
+                missing = run(
+                    runtime, "scaffold_docs",
+                    "--repo", str(repo),
+                    "--manifest", str(repo / ".docforge" / "manifest.json"),
+                    "--document", "agents_index",
+                )
+                combined = missing.stdout + missing.stderr
+                self.assertEqual(missing.returncode, 2, combined)
+                self.assertIn("document id not found or skipped: agents_index", combined)
+                observed[runtime] = {
+                    "agent_ids": sorted(
+                        doc["id"] for doc in manifest["documents"]
+                        if doc.get("group") == "agent-context"
+                    ),
+                    "returncode": missing.returncode,
+                    "not_found": "document id not found or skipped: agents_index" in combined,
+                }
+        self.assertEqual(observed["py"], observed["js"])
 
     def _materialize(self, runtime: str, repo: Path) -> None:
         for doc in load_manifest(repo)["documents"]:
-            run(
+            result = run(
                 runtime, "scaffold_docs",
                 "--repo", str(repo),
                 "--manifest", str(repo / ".docforge" / "manifest.json"),
                 "--document", doc["id"],
             )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def _leaks(self, runtime: str, repo: Path) -> list[str]:
+    def _findings(self, runtime: str, repo: Path, label: str) -> list[str]:
         audit = run(
             runtime, "scaffold_docs",
             "--repo", str(repo),
@@ -348,8 +389,9 @@ class AgentContextRoutingTests(unittest.TestCase):
         )
         combined = audit.stdout + audit.stderr
         found, collecting = [], False
+        heading = label.upper()
         for line in combined.splitlines():
-            if line.startswith("AGENT-CONTEXT LEAK"):
+            if line.startswith(f"{heading} ("):
                 collecting = True
                 continue
             if collecting:
@@ -358,17 +400,29 @@ class AgentContextRoutingTests(unittest.TestCase):
                 found.append(line.strip())
         return found
 
-    def test_scaffolded_tree_is_free_of_agent_context_leaks(self) -> None:
+    def _leaks(self, runtime: str, repo: Path) -> list[str]:
+        return self._findings(runtime, repo, "agent-context leak")
+
+    def _outbound(self, runtime: str, repo: Path) -> list[str]:
+        return self._findings(runtime, repo, "agent-context outbound")
+
+    def test_scaffolded_tree_is_free_of_agent_context_boundary_findings(self) -> None:
+        observed = {}
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
                 initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="standard")
                 self._materialize(runtime, repo)
-                self.assertEqual(self._leaks(runtime, repo), [])
+                observed[runtime] = {
+                    "leaks": self._leaks(runtime, repo),
+                    "outbound": self._outbound(runtime, repo),
+                }
+                self.assertEqual(observed[runtime], {"leaks": [], "outbound": []})
+        self.assertEqual(observed["py"], observed["js"])
 
     def test_human_document_referencing_agent_context_is_a_finding(self) -> None:
-        """Links, `@`-refs, and bare mentions all count; the same strings inside
-        a fence do not, because a quoted filename is not a reference."""
+        """Links, imports, and bare mentions count even in fences and comments."""
+        observed = {}
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
@@ -377,23 +431,47 @@ class AgentContextRoutingTests(unittest.TestCase):
                 index = repo / "docs" / "README.md"
                 index.write_text(
                     index.read_text(encoding="utf-8")
-                    + "\nSee [views](agents/README.md), then @AGENTS.md.\n"
-                    + "\n```sh\ncat AGENTS.md\n```\n",
+                    + "\nSee [architecture](agents/architecture.md), then @AGENTS.md\n"
+                    + "\n```sh\ncat AGENTS.md\n```\n"
+                    + "<!-- docs/agents/testing.md -->\n",
                     encoding="utf-8",
                 )
                 leaks = self._leaks(runtime, repo)
-                self.assertTrue(any("AGENTS.md" in item for item in leaks), leaks)
-                self.assertTrue(any("docs/agents/README.md" in item for item in leaks), leaks)
-                # The fenced `cat AGENTS.md` sits on its own line; every finding
-                # must point at the prose line instead.
+                details = {re.sub(r"^[^:]+:\d+ ", "", item) for item in leaks}
+                self.assertEqual(
+                    details,
+                    {
+                        "[markdown-link] -> docs/agents/architecture.md",
+                        "[at-import] -> AGENTS.md",
+                        "[agent-output-path] -> AGENTS.md",
+                        "[agent-output-path] -> docs/agents/testing.md",
+                    },
+                )
                 fenced_line = next(
                     number
                     for number, line in enumerate(index.read_text(encoding="utf-8").splitlines(), 1)
                     if line.strip() == "cat AGENTS.md"
                 )
-                self.assertFalse([item for item in leaks if f":{fenced_line} " in item], leaks)
+                self.assertTrue(
+                    any(
+                        f":{fenced_line} [agent-output-path] -> AGENTS.md" in item
+                        for item in leaks
+                    ),
+                    leaks,
+                )
+                observed[runtime] = leaks
+        self.assertEqual(observed["py"], observed["js"])
 
-    def test_agent_documents_may_reference_human_documents_freely(self) -> None:
+    def test_agent_document_outbound_references_are_findings(self) -> None:
+        expected = {
+            "[markdown-link] -> ../architecture/high-level.md",
+            "[agent-output-path] -> docs/agents/testing.md",
+            "[raw-url] -> https://example.com/guide",
+            "[at-import] -> docs/product/overview.md",
+            "[managed-document-path] -> docs/architecture/high-level.md",
+            "[managed-document-path] -> docs/product/overview.md",
+        }
+        observed = {}
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
@@ -402,10 +480,44 @@ class AgentContextRoutingTests(unittest.TestCase):
                 view = repo / "docs" / "agents" / "architecture.md"
                 view.write_text(
                     view.read_text(encoding="utf-8")
-                    + "\nSee [high level](../architecture/high-level.md) and @AGENTS.md.\n",
+                    + "\n[Human architecture](../architecture/high-level.md)\n"
+                    + "Peer output: docs/agents/testing.md\n"
+                    + "External reference: https://example.com/guide\n"
+                    + "@../product/overview.md\n"
+                    + "```text\n"
+                    + "docs/architecture/high-level.md\n"
+                    + "```\n"
+                    + "<!-- docs/product/overview.md -->\n",
                     encoding="utf-8",
                 )
-                self.assertEqual(self._leaks(runtime, repo), [])
+                outbound = self._outbound(runtime, repo)
+                details = {re.sub(r"^[^:]+:\d+ ", "", item) for item in outbound}
+                self.assertEqual(details, expected)
+                self.assertEqual(len(outbound), len(expected))
+                observed[runtime] = outbound
+        self.assertEqual(observed["py"], observed["js"])
+
+    def test_agent_source_config_paths_and_commands_are_not_outbound_findings(self) -> None:
+        observed = {}
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                initialize(runtime, repo, "spine", audiences=("coding-agents",), layout="standard")
+                self._materialize(runtime, repo)
+                view = repo / "docs" / "agents" / "architecture.md"
+                view.write_text(
+                    view.read_text(encoding="utf-8")
+                    + "\nSources: src/runtime/parser.py, config/docforge.yaml, pyproject.toml.\n"
+                    + "```sh\n"
+                    + "python3 -m unittest tests.test_parser\n"
+                    + "node scripts/check.js --config config/docforge.json\n"
+                    + "```\n"
+                    + "<!-- source config: config/strict.yaml -->\n",
+                    encoding="utf-8",
+                )
+                observed[runtime] = self._outbound(runtime, repo)
+                self.assertEqual(observed[runtime], [])
+        self.assertEqual(observed["py"], observed["js"])
 
     def test_repository_without_the_agent_audience_can_never_leak(self) -> None:
         """Targets come from the manifest, so a repo that owns `agents/` or
@@ -423,10 +535,10 @@ class AgentContextRoutingTests(unittest.TestCase):
                 )
                 self.assertEqual(self._leaks(runtime, repo), [])
 
-    def test_whole_tree_gate_never_demands_an_agent_row_in_a_human_index(self) -> None:
-        """readme_child_coverage and child_rows read the same filtered list, so
-        the auto-generated table can never disagree with the audit that checks
-        it."""
+    def test_standard_agent_folder_is_routerless_and_readme_reachability_exempt(self) -> None:
+        """Standard topic files intentionally have no README router above them,
+        so ordinary README child coverage must not report them as unreachable."""
+        observed = {}
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
@@ -435,21 +547,21 @@ class AgentContextRoutingTests(unittest.TestCase):
                     audiences=("coding-agents",), layout="standard",
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
-                run(
-                    runtime, "scaffold_docs",
-                    "--repo", str(repo),
-                    "--manifest", str(repo / ".docforge" / "manifest.json"),
-                )
-                audit = run(
-                    runtime, "scaffold_docs",
-                    "--repo", str(repo),
-                    "--manifest", str(repo / ".docforge" / "manifest.json"),
-                    "--audit",
-                )
-                combined = audit.stdout + audit.stderr
-                for line in combined.splitlines():
-                    if "readme child coverage" in line or "docs/README.md" in line:
-                        self.assertNotIn("agents", line, combined)
+                self._materialize(runtime, repo)
+                manifest = load_manifest(repo)
+                topic_paths = {
+                    doc["path"] for doc in manifest["documents"]
+                    if doc.get("group") == "agent-context"
+                    and doc["path"].startswith("docs/agents/")
+                }
+                self.assertTrue(topic_paths)
+                self.assertTrue(all((repo / path).is_file() for path in topic_paths))
+                self.assertFalse((repo / "docs" / "agents" / "README.md").exists())
+                coverage = self._findings(runtime, repo, "readme child coverage")
+                agent_findings = [item for item in coverage if "docs/agents" in item]
+                self.assertEqual(agent_findings, [], coverage)
+                observed[runtime] = agent_findings
+        self.assertEqual(observed["py"], observed["js"])
 
 
 if __name__ == "__main__":

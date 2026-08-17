@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{stop_hook_command — lint && test if both exist, whichever one exists alone, or omit the whole hooks block if neither does}}"
+            "command": "{{verified lint and test command; omit the hooks block when no command is evidenced}}"
           }
         ]
       }

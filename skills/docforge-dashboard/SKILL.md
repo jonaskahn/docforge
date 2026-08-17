@@ -86,6 +86,12 @@ background dev server). See
 [`../docforge/_shared/workflows/dashboard.md`](../docforge/_shared/workflows/dashboard.md)
 for the full lifecycle and isolation rules.
 
+Dashboard scope is manifest-group based. Records in `agent-context` never
+become pages, navigation, link targets, or signature inputs. If the manifest
+has no active human-facing documents, `scan`, `start`, and `export` report that
+clean state and return before dashboard generation, npm, export, or server work;
+it is not a `/docforge-revise` condition.
+
 ## Preflight gates
 
 `start` runs three preflight checks before it opens the dashboard; the full
@@ -95,7 +101,7 @@ which this entrypoint's load order already pulls in.
 
 - **Legacy manifest** — a pre-3.0 `.docforge/manifest.json` (1.1
   `project_context` / `document_groups`, 2.0 flat `documents`, or any other
-  legacy shape) is auto-migrated to 3.8 automatically, never a stop-and-ask
+  legacy shape) is auto-migrated to 3.9 automatically, never a stop-and-ask
   gate: `migrate_metadata` (**any** legacy version, re-registered) is
   idempotent and only ever touches the manifest, the `.docforge/provenance/`
   sidecars, and document frontmatter, never bodies. The migration is always printed, never silent. `--plan-only`
@@ -107,13 +113,15 @@ which this entrypoint's load order already pulls in.
   and recommend `/docforge-revise`, each tagged blocking or advisory. A
   blocking finding (broken links, route-plan problems, or metadata errors on
   an included document) stops `start` before any build is attempted;
-  advisory-only findings (or a clean scan) still let the dashboard render.
+  advisory-only findings (or a clean scan with human-facing documents) still
+  let the dashboard render. A clean no-human-documents result stops instead,
+  without route-plan errors or revise advice.
 - **Build failure** — a failed `start` is **not** opened and no previous build
   is presented as current; revise first, then re-run once the whole-tree gate
   passes.
 
-`--auto-accept` never suppresses the scan or build-failure findings above —
-the recommendation to revise is never silent.
+`--auto-accept` never suppresses applicable scan or build-failure findings —
+the recommendation to revise is never silent when a real finding exists.
 
 ## Untrusted data
 

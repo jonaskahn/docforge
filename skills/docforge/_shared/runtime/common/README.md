@@ -30,7 +30,7 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | Script | Purpose | Read-only? |
 |---|---|---|
 | `_util` | JSON/error/manifest helpers, `.docforge/.gitignore` and `tmp/`/`scratch/` cleanup | mixes — mutates `.docforge` state |
-| `agent_context` | Manifest-derived agent-context paths and the one-way reference boundary check | yes |
+| `agent_context` | Manifest-derived inbound and outbound agent-context isolation checks | yes |
 | `evidence_hash` | Raw/normalized/range-scoped blob hashing and fresh/cosmetic/stale classification | yes |
 | `evidence_locators` | Validate `path#Lx-Ly @ <git-blob>` locators against files and provenance | yes |
 | `illustration_metrics` | Enforce per-illustration Mermaid/ASCII complexity bounds per target depth | yes |

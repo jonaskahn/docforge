@@ -1,7 +1,7 @@
 {
   "id": "agents_patterns",
   "type": "agents-patterns",
-  "summary": "Token-budgeted retrieval view, durable paths, constraints, verified commands, owning human-doc links",
+  "summary": "Self-contained recurring implementation shapes, representative source paths, hotspots, and validation commands",
   "contract_file": "content/agent-context/contracts/agents-patterns.md",
   "path": "docs/agents/patterns.md",
   "group": "agent-context",
@@ -23,15 +23,11 @@
   "write_order": 205,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
+  "contract_revision": "2.22.0",
+  "presentation": {
+    "related_docs": "none"
+  },
   "template_file": "content/agent-context/templates/agents-patterns.md",
   "compact_group": "agents_compact",
-  "compact_order": 3,
-  "variants": {
-    "agent_context_mode": {
-      "standalone": {
-        "contract_file": "content/agent-context/contracts/standalone/agents-view.md",
-        "instruction_file": "content/agent-context/agents-standalone.instruction.md"
-      }
-    }
-  }
+  "compact_order": 2
 }

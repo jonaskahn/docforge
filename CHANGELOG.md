@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.22.0
+
+- **Agent documentation is permanently isolated.** The conditional
+  linked/standalone model from 2.20 is removed. Every agent-context output now
+  owns a concise, evidence-backed copy of the facts its reader question needs;
+  duplication is intentional, and generated agent documents contain no links,
+  imports, URLs, or references to any other documentation. Generated human
+  documentation remains unable to reference agent outputs.
+  - `project.agent_context`, catalog variants, route-time variant flags, and
+    `manage_manifest agent-mode` are gone. Manifest 3.9 migrates every retained
+    agent document to the canonical contract and demotes previously written
+    copies for re-grounding.
+  - `docs/agents/README.md` is no longer generated. Standard layout writes
+    independent topic files; compact layout writes one independent aggregate.
+  - `CLAUDE.md` is a complete kernel generated from the same contract as
+    `AGENTS.md`, not an `@AGENTS.md` shim.
+  - Audits enforce both sides of the boundary, including references in fences
+    and comments. Agent pages are excluded from dashboard pages, navigation,
+    projections, and signatures; an agent-only tree is a clean no-render state.
+  - Group-scoped generation remains. Dynamic additions, compact previews, and
+    scoped plans now consistently respect `project.groups`.
+
 ## 2.21.0
 
 - **One deterministic cartridge root, and an explicit untrusted-data

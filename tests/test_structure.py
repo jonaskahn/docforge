@@ -23,6 +23,11 @@ AGENT_PLACEHOLDER = re.compile(r"\$\{CLAUDE_(?:PLUGIN_ROOT|SKILL_DIR)\}")
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
 
+def compact_whitespace(text: str) -> str:
+    """Normalize prose wrapping without discarding meaningful punctuation."""
+    return " ".join(text.split())
+
+
 class CatalogFormAllowlistTests(unittest.TestCase):
     def test_dominant_form_allowlist_matches_across_schema_python_js(self) -> None:
         """The dominant_form allowlist is intentionally duplicated in three
@@ -181,45 +186,147 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("only candidate — confirm it or add your own", intake)
         self.assertIn('keeps the "these are weak candidates" framing', intake)
 
-    def test_one_way_agent_context_boundary_is_stated_everywhere_it_binds(self) -> None:
-        """Agent-context documents link human documents; human documents never
-        link back. The rule binds in five places -- the safety boundary, the
-        ownership reference, the acceptance bar, the tree layout, and the index
-        instruction -- and each states it once for its own audience."""
-        rules = (SHARED_ROOT / "rules.md").read_text(encoding="utf-8")
-        self.assertIn("Links run\n   one way across the agent-context boundary", rules)
+    def test_permanent_agent_context_isolation_is_stated_everywhere_it_binds(self) -> None:
+        """Agent outputs stand alone permanently, may deliberately duplicate
+        facts, and never participate in generated-document navigation."""
+        rules = compact_whitespace((SHARED_ROOT / "rules.md").read_text(encoding="utf-8"))
+        self.assertIn(
+            "Agent-context outputs are the deliberate exception: each is self-contained "
+            "and may duplicate facts, but contains zero documentation references",
+            rules,
+        )
+        self.assertIn(
+            "Generated non-agent documents never link or mention agent-context outputs.",
+            rules,
+        )
 
-        composition = (SHARED_ROOT / "references" / "document-composition.md").read_text(encoding="utf-8")
-        self.assertIn("**References across this boundary run one way.**", composition)
-        for path in ("docs/agents/", "AGENTS.md", "CLAUDE.local.md", ".claude/settings.json"):
-            self.assertIn(path, composition)
+        composition = compact_whitespace(
+            (SHARED_ROOT / "references" / "document-composition.md").read_text(encoding="utf-8")
+        )
+        self.assertIn(
+            "Every generated agent-context output directly contains the facts needed for "
+            "its own reader question. It may duplicate a fact from another output or from "
+            "human-facing documentation when that duplication makes the output independently useful.",
+            composition,
+        )
+        self.assertIn("The boundary is zero-reference isolation in both directions.", composition)
+        self.assertIn("Agent-context outputs are exempt from this no-duplication rule", composition)
+        self.assertIn(
+            "Agent-context compact sections retain their explicit duplication exception and "
+            "zero-reference isolation.",
+            composition,
+        )
 
-        quality = (SHARED_ROOT / "references" / "quality-bar.md").read_text(encoding="utf-8")
+        quality = compact_whitespace(
+            (SHARED_ROOT / "references" / "quality-bar.md").read_text(encoding="utf-8")
+        )
+        self.assertIn("agent-context outputs contain no documentation references of any kind", quality)
+        self.assertIn(
+            "The two root kernels are complete self-contained duplicates rather than a redirect chain.",
+            quality,
+        )
+        self.assertIn("Self-contained agent-context duplication is allowed.", quality)
+        self.assertIn("`agent-context outbound`", quality)
         self.assertIn("`agent-context leak`", quality)
-        self.assertIn("every human-facing reader document is reachable", quality)
-        self.assertIn("outside the agent-context\n  group", quality)
 
-        docs_tree = (SHARED_ROOT / "references" / "docs-tree.md").read_text(encoding="utf-8")
-        self.assertIn("Three routing rules follow", docs_tree)
-        self.assertIn("A human-facing index never lists an agent-context child", docs_tree)
+        profile = compact_whitespace(
+            (SHARED_ROOT / "references" / "profiles" / "audience-coding-agents.md").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertIn(
+            "Every generated output is permanently self-contained and independently useful "
+            "for its own reader question.",
+            profile,
+        )
+        self.assertIn(
+            "The profile may repeat evidence-backed facts across outputs to preserve that property.",
+            profile,
+        )
+        self.assertIn("## Permanent isolation", profile)
 
-        index_instruction = (SHARED_ROOT / "content" / "shared" / "folder-index.instruction.md").read_text(encoding="utf-8")
-        self.assertIn("and are not agent-context", index_instruction)
+        intake = compact_whitespace(
+            (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        )
+        self.assertIn(
+            "Every agent-context output is self-contained and contains zero documentation references, "
+            "regardless of whether human documentation exists now or is added later.",
+            intake,
+        )
 
-        validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
-        self.assertIn("`agent-context leak` finding", validation)
+        revision = compact_whitespace(
+            (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        )
+        self.assertIn(
+            "Agent-context isolation never changes with scope. Outputs remain self-contained and "
+            "zero-reference whether revised alone, alongside human-facing documentation, or after "
+            "the selected area set changes.",
+            revision,
+        )
+        self.assertIn("without a conversion prompt", revision)
+
+        validation = compact_whitespace(
+            (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
+        )
+        self.assertIn("every agent-context output contains zero documentation references", validation)
+        self.assertIn(
+            "no generated non-agent document mentions an agent-context output",
+            validation,
+        )
+        self.assertIn("`agent-context outbound` and `agent-context leak`", validation)
+
+        docs_tree = compact_whitespace(
+            (SHARED_ROOT / "references" / "docs-tree.md").read_text(encoding="utf-8")
+        )
+        self.assertIn(
+            "Every agent-context output is self-contained and sits outside generated documentation "
+            "navigation: no generated document links or refers to it, and it contains no documentation "
+            "reference itself.",
+            docs_tree,
+        )
+        index_instruction = compact_whitespace(
+            (SHARED_ROOT / "content" / "shared" / "folder-index.instruction.md").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertIn(
+            "Agent-context outputs are permanently isolated and must never be linked or mentioned "
+            "by a generated non-agent document.",
+            index_instruction,
+        )
+
+        for text in (rules, composition, quality, profile, intake, revision, validation):
+            for obsolete in (
+                "agent_context_mode",
+                "agent-context mode",
+                "agent-mode",
+                "project.agent_context.mode",
+            ):
+                self.assertNotIn(obsolete, text)
+            self.assertNotRegex(
+                text,
+                r"(?i)(?:[`*]{1,2})?(?:linked|standalone)(?:[`*]{1,2})?\s+"
+                r"(?:agent-context\s+)?mode\b",
+            )
 
     def test_coding_agent_profile_documents_compact_layout_and_requires_semantics(self) -> None:
-        """Compact folds the eight views into docs/agents.md while the four
-        host-contract paths keep their own locations; and `requires` gates
+        """Compact folds seven topic views into docs/agents.md while four fixed
+        host outputs keep their own locations; and `requires` gates
         evidence, not selection, so a capability-less view is selected and then
         skipped rather than never appearing."""
         profile = (SHARED_ROOT / "references" / "profiles" / "audience-coding-agents.md").read_text(encoding="utf-8")
-        self.assertIn("Compact layout", profile)
-        self.assertIn("docs/agents.md", profile)
-        self.assertIn("never fold", profile)
-        self.assertIn("gates **evidence, not selection**", profile)
-        self.assertIn("## One-way references", profile)
+        prose = compact_whitespace(profile)
+        self.assertIn("Compact layout combines the seven topic views into one file.", prose)
+        self.assertIn("The tooling-owned root and local configuration outputs never fold:", prose)
+        compact_start = profile.index("Compact layout combines the seven topic views")
+        compact_end = profile.index("`CLAUDE.local.md` is added", compact_start)
+        compact_layout = profile[compact_start:compact_end]
+        for path in ("AGENTS.md", "CLAUDE.md", "CLAUDE.local.md", ".claude/settings.json"):
+            self.assertIn(path, compact_layout)
+        self.assertIn("docs/agents.md", compact_layout)
+        self.assertIn("The compact form presents those same seven topics in that order.", prose)
+        self.assertIn("`requires` gates evidence, not selection.", prose)
+        self.assertIn("## Permanent isolation", profile)
 
     def test_intake_asks_documentation_areas_in_turn_one(self) -> None:
         """Areas decide which branches exist at all and change what Tier and
@@ -235,21 +342,39 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Never add an audience silently", intake)
         self.assertIn("Tier is reported as a fact when it is not a control", intake)
         self.assertIn("Never reach the confirmation summary with an empty projection", intake)
-        self.assertIn("Disclose the standalone consequence", intake)
+        prose = compact_whitespace(intake)
+        self.assertIn(
+            "No human-facing documentation is written. Every agent-context output is self-contained "
+            "and contains zero documentation references, regardless of whether human documentation "
+            "exists now or is added later.",
+            prose,
+        )
+        self.assertNotIn("standalone consequence", prose.lower())
         self.assertIn("query_catalog.{py,js} --groups", intake)
 
     def test_revise_area_is_a_work_filter_not_a_scope_change(self) -> None:
         """Passing `--group` to reconcile for an `<area>` revise would nominate
         the entire rest of the written tree for retirement."""
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        prose = compact_whitespace(revision)
         self.assertIn("### Area scope is not group scope", revision)
-        self.assertIn("**`/docforge-revise <area>` never passes `--group`**", revision)
-        self.assertIn("persistent scope", revision)
-        self.assertIn("transient work filter", revision)
+        self.assertIn("`/docforge-revise <area>` never passes `--group`", prose)
+        self.assertIn("`project.groups` is a **persistent scope**", prose)
+        self.assertIn("`<area>` is a **transient work filter**", prose)
         # `flow` is the pipeline keyword, never a group name.
-        self.assertIn("`flow` and `flows` are\n**reserved**", revision)
-        self.assertIn("### Agent-context mode change", revision)
-        self.assertIn("not** content-preserving", revision)
+        self.assertIn("`flow` and `flows` are **reserved**", prose)
+        self.assertIn("### Agent-context revision", revision)
+        self.assertIn("Agent-context isolation never changes with scope.", prose)
+        self.assertIn("Outputs remain self-contained and zero-reference", prose)
+        self.assertIn("without a conversion prompt", prose)
+        self.assertIn(
+            "Standard and compact layout switches remain content-preserving under the normal "
+            "split/merge mechanics.",
+            prose,
+        )
+        self.assertNotIn("### Agent-context mode change", revision)
+        for obsolete in ("agent_context_mode", "agent-mode", "--decision convert"):
+            self.assertNotIn(obsolete, revision)
 
     def test_compact_excludes_portfolio_across_instruction_files(self) -> None:
         """Compact covers Spine and Diligence only; a Portfolio root is always
@@ -600,12 +725,32 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("`scan` exits `1`", workflow)
         self.assertIn("never a summary that hides a finding", workflow)
         thin = (ROOT / "skills" / "docforge-dashboard" / "SKILL.md").read_text(encoding="utf-8")
+        thin_prose = compact_whitespace(thin)
         # Thin entrypoint summarizes the scan gate and points at the workflow owner.
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**Scan**", thin)
         self.assertIn("`/docforge-revise`", thin)
-        self.assertIn("blocking or advisory", thin)
-        self.assertIn("still let the dashboard render", thin)
+        self.assertIn("blocking or advisory", thin_prose)
+        self.assertIn(
+            "advisory-only findings (or a clean scan with human-facing documents) still let the "
+            "dashboard render.",
+            thin_prose,
+        )
+        self.assertIn(
+            "A clean no-human-documents result stops instead, without route-plan errors or revise advice.",
+            thin_prose,
+        )
+        self.assertIn(
+            "If the manifest has no active human-facing documents, `scan`, `start`, and `export` "
+            "report that clean state and return before dashboard generation, npm, export, or server "
+            "work; it is not a `/docforge-revise` condition.",
+            thin_prose,
+        )
+        self.assertIn("stops `start` before any build is attempted", thin_prose)
+        self.assertIn(
+            "the recommendation to revise is never silent when a real finding exists.",
+            thin_prose,
+        )
         help_text = (SHARED_ROOT / "help.md").read_text(encoding="utf-8")
         self.assertIn("`scan` (read-only diagnostics", help_text)
 
@@ -631,7 +776,7 @@ class SkillContentTests(unittest.TestCase):
         # wording lives in workflows/dashboard.md (asserted above).
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**Legacy manifest**", thin)
-        self.assertIn("auto-migrated to 3.8 automatically, never a stop-and-ask", thin)
+        self.assertIn("auto-migrated to 3.9 automatically, never a stop-and-ask", thin)
         self.assertIn("never migrate", thin)
         self.assertNotIn("three-option gate", thin)
         self.assertNotIn("Legacy manifest gate (v1.1)", thin)
@@ -919,6 +1064,34 @@ class RuntimeReadmeTests(unittest.TestCase):
                         stem, readme,
                         f"{name}/README.md does not document {lang}/{stem}",
                     )
+
+    def test_removed_agent_context_modes_are_not_public_cli_tokens(self) -> None:
+        """The retired mode transition cannot reappear in validation's public
+        contract or either runtime's advertised CLI."""
+        for path in (
+            SHARED_ROOT / "runtime" / "validation" / "python" / "validate_metadata.py",
+            SHARED_ROOT / "runtime" / "validation" / "js" / "validate_metadata.js",
+        ):
+            source = path.read_text(encoding="utf-8")
+            match = re.search(r"PUBLIC_CONTRACTS\s*=\s*\{(.*?)\n\};?\n", source, re.DOTALL)
+            self.assertIsNotNone(match, f"PUBLIC_CONTRACTS not found in {path.name}")
+            contracts = match.group(1)
+            self.assertIn('"--mode"', contracts, "generic audit/retire mode remains public")
+            self.assertNotIn('"agent-mode"', contracts)
+            self.assertNotIn('"--decision"', contracts)
+
+        for runtime in ("py", "js"):
+            result = run(runtime, "manage_manifest", "--help")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            public_help = result.stdout + result.stderr
+            self.assertNotIn("agent-mode", public_help)
+            self.assertNotIn("--decision", public_help)
+
+        manifest_readme = (SHARED_ROOT / "runtime" / "manifest" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("agent-mode", manifest_readme)
+        self.assertNotIn("--decision", manifest_readme)
 
     def test_validate_metadata_passes_cleanly_on_both_runtimes(self) -> None:
         """The repository's own release/registry self-checks (catalog and
