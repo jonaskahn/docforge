@@ -22,7 +22,7 @@
   "audit_profile": "router",
   "template_file": "content/shared/section-readme.template.md",
   "title": "Architecture concepts",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "compact_group": "concepts_compact",
   "compact_order": 51
 }

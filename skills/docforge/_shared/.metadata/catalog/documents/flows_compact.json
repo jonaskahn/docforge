@@ -23,7 +23,7 @@
   "provenance_mode": "sections",
   "audit_profile": "flow",
   "template_file": "content/compact/templates/flows.template.md",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "compact_target": "docs/flows.md",
   "compact_members": [
     "flows_index",

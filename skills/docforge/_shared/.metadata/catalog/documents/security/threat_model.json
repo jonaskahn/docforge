@@ -24,7 +24,7 @@
     "stride": "full-element",
     "mermaid": "annotated"
   },
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "template_file": "content/security/templates/threat-model.md",
   "compact_group": "security_compact",
   "compact_order": 2

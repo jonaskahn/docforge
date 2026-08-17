@@ -22,7 +22,7 @@
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "template_file": "content/compact/templates/concepts.template.md",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "compact_target": "docs/concepts.md",
   "compact_members": [
     "concepts_index",

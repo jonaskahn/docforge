@@ -22,7 +22,7 @@
   "provenance_mode": "sections",
   "audit_profile": "decision",
   "template_file": "content/compact/templates/decisions.template.md",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "compact_target": "docs/decisions.md",
   "compact_members": [
     "decisions_index",

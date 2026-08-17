@@ -25,7 +25,7 @@
   "audit_profile": "router",
   "template_file": "content/product/templates/po-readme.md",
   "title": "Product Owner documentation",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "compact_group": "po_compact",
   "compact_order": 11
 }

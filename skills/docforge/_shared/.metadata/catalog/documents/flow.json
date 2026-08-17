@@ -24,7 +24,7 @@
   "provenance_mode": "sections",
   "audit_profile": "flow",
   "dominant_form": "sequenceDiagram",
-  "contract_revision": "2.20.0",
+  "contract_revision": "2.22.0",
   "template_file": "content/flows/flow.template.md",
   "compact_group": "flows_compact",
   "compact_order": 52

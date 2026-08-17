@@ -24,7 +24,7 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "template_file": "content/compact/templates/reference.template.md",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "compact_target": "docs/reference.md",
   "compact_members": [
     "reference_index",

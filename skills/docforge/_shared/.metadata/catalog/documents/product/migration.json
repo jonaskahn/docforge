@@ -24,7 +24,7 @@
   "write_order": 43,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "template_file": "content/product/templates/migration.md",
   "compact_group": "product_compact",
   "compact_order": 52

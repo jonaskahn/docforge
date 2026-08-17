@@ -21,7 +21,7 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
-  "schema_min": "2.19.0",
+  "schema_min": "2.22.0",
   "template_file": "content/reference/templates/tech-stack.md",
   "compact_group": "reference_compact",
   "compact_order": 4

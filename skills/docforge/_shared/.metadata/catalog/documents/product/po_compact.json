@@ -24,7 +24,7 @@
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "template_file": "content/compact/templates/product-owner.template.md",
-  "contract_revision": "2.19.0",
+  "contract_revision": "2.22.0",
   "compact_target": "docs/product-owner.md",
   "compact_members": [
     "po_index",
