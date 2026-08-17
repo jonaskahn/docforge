@@ -22,6 +22,8 @@ they exist to be imported, not executed.
 - Naming special outputs that bypass normal provenance → `special_files`.
 - Classifying project scale (`small` / `medium` / `large`) and suggesting a
   layout → `scale`.
+- Upgrading a 1.1 flow index to 1.2 (shared by `flow_index` and
+  `migrate_metadata`) → `flow_index_schema`.
 
 ## Scripts
 
@@ -40,6 +42,7 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | `provenance_frontmatter` | Restricted-YAML provenance codec: parse, v1→v2 migration, hashing; `emit_yaml` remains only to build pre-migration test fixtures | yes |
 | `provenance_store` | Folder-mirrored JSON sidecar store: sidecar-first reads, entry writes, inline-to-sidecar moves | mixes — writes `.docforge/provenance/` and strips migrated frontmatter |
 | `special_files` | Constants: special output names and their template sources | yes |
+| `flow_index_schema` | Flow-index schema versioning and the additive 1.1→1.2 upgrade, shared by the flows runtime and metadata migration | yes |
 | `scale` | Three-way project scale classification from the existing inventory walk + confirmed profile count; suggests `compact`/`standard` layout | yes |
 
 ## Details
@@ -86,6 +89,9 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 - `special_files` — `SPECIAL_DOC_OUTPUTS` (AGENTS.md, CLAUDE.md,
   CLAUDE.local.md) and `SPECIAL_DOC_SOURCES` (agents-kernel.md, claude-md.md,
   claude-local-md.md).
+- `flow_index_schema` — `FLOW_INDEX_VERSION` / `SUPPORTED_FLOW_INDEX_VERSIONS`,
+  `upgrade_index(index)`: version bump plus the `summary.written` count,
+  additive only; raises on unsupported versions.
 - `scale` — `compute_scale(repo, files=None, detections=None, dependencies=None)` /
   `computeScale(repo, files, detections, dependencies)` returning
   `{class, suggested_layout, signals}`; thresholds are tunable constants
@@ -114,14 +120,15 @@ consumers:
   `provenance_store`, `evidence_locators`, `illustration_metrics`,
   `markdown_fences`, `agent_context`.
 - `manifest/` — `_util`, `plan`, `provenance_frontmatter`, `provenance_store`,
-  `evidence_hash`.
+  `evidence_hash`, `flow_index_schema` (migration merges the flow ledger).
 - `validation/` — `_util`, `provenance_frontmatter`, `special_files`.
 - `catalog/` — `manifest_deps` (via `detect_profiles`), `scale` (via
   `detect_profiles --emit-gate-pack`, lazily to avoid the import cycle).
 - `portfolio/` — `manifest_deps` (via `discover_child_repos`).
 - `dashboard/` — `_util`, `provenance_frontmatter`, `provenance_store`,
   `evidence_hash`.
-- `flows/` — `_util`, `provenance_frontmatter`, `provenance_store`.
+- `flows/` — `_util`, `provenance_frontmatter`, `provenance_store`,
+  `flow_index_schema` (index writes and upgrades).
 - `graph/` — `_util` (via `graph_storage`).
 
 ## Boundaries

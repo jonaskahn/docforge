@@ -154,8 +154,9 @@ When a dimension is re-asked because it has a delta or a requested change:
 - **Scale / layout:** re-derive scale from the same detect run.
   Detection disagrees → show `Current: <class> / <layout>`.
   `decided_by: "detected"` → offer `Change to <detected class/layout>`
-  as a recommended change. `decided_by: "user"` → state the drift as a
-  fact, offer the change without recommendation. A user decision is
+  as a recommended change. `decided_by: "user"` or `"migration"` →
+  state the drift as a fact, offer the change without recommendation. A
+  user or migration decision is
   never silently re-derived; no change → manifest values stand unchanged
   ([`revision.md`](revision.md) "Applying the answers to the manifest").
   Layout belongs to Turn 1 and is the first control in that pack.
@@ -216,8 +217,9 @@ and wait for explicit confirmation before reconciling the manifest.
      roughly 8 files at Spine, 15 at Diligence; a confirmed shape or
      more flows adds sections, not files.
    - **Standard** — one file per subject; tree grows with every
-     confirmed profile and discovered flow. The only layout Portfolio
-     supports.
+     confirmed profile. Flow documents are confirmed at the write-start
+     flow gate, not at intake: their count is not part of this turn's
+     math. The only layout Portfolio supports.
 
    **Compact excludes Portfolio.** Compact cannot hold Portfolio — see
    [`../references/docs-tree.md`](../references/docs-tree.md) "Compact
@@ -493,6 +495,22 @@ Lines:
 
    `Projected tree size: 15 documents (compact) / 34 (standard)`
 
+   **Flow documents are never inside this projection.** They are dynamic
+   and confirmed at the write-start flow gate
+   ([`planning.md`](planning.md) "Flow gate (write-start)"), not at
+   intake. State that on the summary itself, using the brief's flow
+   breadth when the discovery pass already saw a flow index or a native
+   flow source:
+
+   `Flow documents: pending write-start selection — 3 candidates at discovery (main deep-dives capped at 15).`
+
+   or, when no flow evidence existed at intake:
+
+   `Flow documents: not yet counted — harvested and confirmed at the write-start flow gate.`
+
+   The corrected count arrives at the gate's structure update, never
+   silently.
+
 2. **Ablation.** Name any single selection responsible for **25% or
    more** of the projected documents, using `preview`'s ablation count —
    how many documents disappear if that value is dropped. Reader pick
@@ -526,6 +544,9 @@ Summary rules:
   platform, a framework, or most concerns often add zero documents and
   only shift narrative emphasis, while one audience can carry a third of
   the tree — and the user cannot see that from the question pack alone.
+  Flow documents are excluded from ablation math: they are not selected
+  yet, and their cost is reported by the flow gate's own selection
+  prompt.
 - Display one confirmation summary containing: action, confirmed layout,
   confirmed target readers, tier, every selected profile dimension,
   every selected audience, selected graph provider and its code/flow

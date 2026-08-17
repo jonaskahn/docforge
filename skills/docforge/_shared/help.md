@@ -13,9 +13,9 @@ equivalent Python/Node tools.
 
 | Parameter | Meaning |
 |---|---|
-| *(none)* | Interactive intake → plan → write, then validate and (unless skipped) auto-serve the dashboard |
+| *(none)* | Interactive intake → plan → write, then validate and (unless skipped) auto-serve the dashboard. Flow documents are confirmed at the write-start flow gate (mandatory user selection — never auto-accepted), not at intake |
 | `--plan-only` | Analyze and show the plan / dry-run tree; do not write or re-ground document bodies |
-| `--auto-accept` | Display plans/trees/results, then continue without routine conversational pauses (never waives side-effect gates: provider install, graph build, manifest init, file archive/delete) |
+| `--auto-accept` | Display plans/trees/results, then continue without routine conversational pauses (never waives side-effect gates: provider install, graph build, manifest init, file archive/delete, or the flow selection gate) |
 | `--no-dashboard` | Skip the automatic dashboard build/serve at run completion — suppresses both the forced serve and, in compact layout, the dashboard offer; render later with `/docforge-dashboard` |
 | `--help` | Show this reference and stop |
 
@@ -34,9 +34,9 @@ metadata only (no scope question, no writing).
 | Parameter | Meaning |
 |---|---|
 | *(none)* | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (dry-run preview first, apply only when needed); no scope question, no detection, no writing, no dashboard |
-| `flow` | Full flow pipeline (harvest, rank, organization, provisional derivation) |
+| `flow` | Full flow pipeline — flow mode question (re-analyze vs reuse) → harvest → organize → analyze → **mandatory flow selection gate** (add/remove/update, never auto-accepted) → write → summary write-back |
 | `<area>` | Scoped revise of one catalog group — `root`, `product`, `architecture`, `engineering`, `operations`, `reference`, `security`, `contributing`, `records`, `portfolio`, `agent-context`, plus aliases (`arch`, `ops`, `ref`, `sec`, `adr`, `agents`, …), listed by `query_catalog --groups`. An unknown area is an error, never a full-tree fallback. `flow`/`flows` is reserved for the flow pipeline and is not an area. |
-| `all` | Full-tree revise |
+| `all` | Full-tree revise, including the flow mode question and the flow selection gate |
 | `--plan-only` | Revise analysis only (migrate, staleness, detect/catalog, dry-run tree); no body writes |
 | `--auto-accept` | Same as `/docforge` — display, then continue without routine pauses; side-effect gates stay |
 | `--no-dashboard` | Skip the automatic dashboard build/serve at run completion — suppresses both the forced serve and, in compact layout, the dashboard offer |

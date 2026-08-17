@@ -72,7 +72,11 @@ read-only inventory, not a replacement for GitNexus's richer MCP responses.
   representative call paths.
 - Flow index: enumerate Routes and Processes, group Processes by
   `entryPointId`, preserve terminal/community reach, and rank one candidate
-  per entry. Add manifest documents only for main rows; a Process node is not
+  per entry. Materialize the deterministic interchange at
+  `.docforge/tmp/gitnexus-flows.json` (`{routes, processes, communities}`
+  shape in [`flow-derivation.md`](flow-derivation.md)) — `flow_index
+  harvest` / `revise` discover it automatically, there is no CLI flag. Add
+  manifest documents only for main rows; a Process node is not
   automatically a business flow.
 - BA views: translate process steps into business language and confirm every
   decision rule in source.

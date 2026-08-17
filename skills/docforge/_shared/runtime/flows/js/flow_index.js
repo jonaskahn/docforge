@@ -3,13 +3,17 @@
 /** Harvest, rank, revise, organize, and render Docforge's repository flow index.
  *
  * Understand Anything JSON is read directly. GitNexus is consumed through a
- * small JSON export produced by its MCP/cypher interface, keeping this tool
- * Node-stdlib-only and equivalent to its Python peer.
+ * deterministic interchange JSON the agent materializes at
+ * `.docforge/tmp/gitnexus-flows.json` (from the GitNexus MCP or the offline
+ * lbug reader — never a CLI flag). CodeGraph-only repositories seed derived
+ * candidates through `import --analysis` from the agent's flow analysis.
  *
- *   node flow_index.js harvest --repo <repo> [--gitnexus-export <json>]
- *   node flow_index.js revise --repo <repo> [--gitnexus-export <json>]
+ *   node flow_index.js harvest --repo <repo>
+ *   node flow_index.js revise --repo <repo>
  *   node flow_index.js organize emit --repo <repo>
  *   node flow_index.js organize apply --repo <repo> --organization <json>
+ *   node flow_index.js update --repo <repo> --id <flow-id> [--priority main|deferred] [--status placeholder|skipped] [--summary <text>] [--written]
+ *   node flow_index.js import --repo <repo> --analysis <flow-analysis.json> [--main-limit <n>]
  *   node flow_index.js render --repo <repo>
  */
 
@@ -21,12 +25,18 @@ const { fail, readJson } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { ensureTmpDirGitignored } = require("../../graph/js/graph_storage.js");
+const {
+  FLOW_INDEX_VERSION: INDEX_VERSION,
+  SUPPORTED_FLOW_INDEX_VERSIONS: SUPPORTED_INDEX_VERSIONS,
+  upgradeIndex,
+} = require("../../common/js/flow_index_schema.js");
 
 const INDEX_REL = path.join(".docforge", "flow-index.json");
 const TMP_REL = path.join(".docforge", "tmp");
 const ORG_PACK_REL = path.join(TMP_REL, "flow-organization-pack.json");
+const GITNEXUS_FLOWS_REL = path.join(TMP_REL, "gitnexus-flows.json");
+const DERIVED_FLOW_GRAPH_REL = path.join(TMP_REL, "flow-graph.json");
 const UA_DIRS = [".ua", ".understand-anything"];
-const INDEX_VERSION = "1.1";
 const BARE_VERBS = new Set([
   "get", "save", "create", "update", "delete", "execute", "init", "count",
   "publish", "verify", "connect", "archive", "resend", "authorize", "send",
@@ -292,6 +302,10 @@ function foldRow(current, row) {
   current.reach.boundaries = Math.max(current.reach.boundaries, row.reach.boundaries);
   current.reach.churn = Math.max(current.reach.churn || 0, row.reach.churn || 0);
   current.area = uniqueArea(current.area, row.area);
+  if (row.summary && !current.summary) {
+    current.summary = row.summary;
+    current.written_at = row.written_at;
+  }
 }
 function mergeRows(rows) {
   const merged = new Map();
@@ -430,6 +444,7 @@ function priorByKey(existing) {
 }
 function applyReviseStatuses(rows, prior) {
   const orgKeys = ["display_name", "family", "doc_role", "composed_into", "doc_path"];
+  const carryKeys = ["summary", "written_at"];
   for (const row of rows) {
     const previous = prior.get(rowKey(row));
     if (!previous) {
@@ -459,6 +474,9 @@ function applyReviseStatuses(rows, prior) {
         row[key] = previous[key];
       }
     }
+    for (const key of carryKeys) {
+      if (key in previous && previous[key] != null) row[key] = previous[key];
+    }
     applyOrgDefaults(row);
     if (row.doc_role === "member" || row.doc_role === "index_only") {
       row.doc_path = null;
@@ -480,6 +498,7 @@ function summaryFor(rows) {
     deferred: rows.filter((row) => rowPriority(row) === "deferred").length,
     placeholder: rows.filter((row) => row.status === "placeholder").length,
     documented: rows.filter((row) => row.status === "documented").length,
+    written: rows.filter((row) => row.status === "documented" && Boolean(row.summary)).length,
     skipped: rows.filter((row) => row.status === "skipped").length,
     confirmed: rows.filter((row) => row.confidence === "confirmed").length,
   };
@@ -673,9 +692,10 @@ function markdown(index, tier = "spine", repo = null) {
     "operating paths and own deep-dive documents; **deferred** rows are",
     "evidenced but not yet documented; **placeholder** rows are candidates",
     "awaiting confirmation; **documented** rows point at their flow document;",
-    "**skipped** rows were examined and set aside. `Confidence` states how much",
-    "evidence backs the candidate; `Reach` is steps / boundaries / changes.",
-    "",
+      "**skipped** rows were examined and set aside. `Confidence` states how much",
+      "evidence backs the candidate; `Reach` is steps / boundaries / changes.",
+      "Written deep-dives carry a one-paragraph summary in `Flow summaries`.",
+      "",
   ];
   const flows = (index.flows || []).filter((row) => row && typeof row === "object");
   const families = new Map();
@@ -723,14 +743,32 @@ function markdown(index, tier = "spine", repo = null) {
     if (families.size) lines.push("## Ungrouped", "");
     appendTable(ungrouped);
   }
+  const documentedWithSummary = flows.filter((row) => row.status === "documented" && row.summary);
+  if (documentedWithSummary.length) {
+    lines.push("## Flow summaries", "");
+    for (const row of documentedWithSummary) {
+      const name = String(row.display_name || row.name).replace(/\|/g, "\\|");
+      const written = row.written_at || "";
+      const suffix = written ? ` — reviewed ${written}` : "";
+      lines.push(`### ${name}${suffix}`, "", String(row.summary), "");
+    }
+  }
   lines.push(`_Generated ${generated}; source of truth: \`.docforge/flow-index.json\`._`, "");
   const body = lines.join("\n");
   return renderDoc(repo, "docs/flows/README.md", provenance, "Flows", body);
 }
+function findGitnexusInterchange(repo) {
+  // The deterministic GitNexus interchange, materialized by the agent from the
+  // GitNexus MCP or the offline lbug reader — discovered automatically, never
+  // passed as a flag.
+  const target = path.join(repo, GITNEXUS_FLOWS_REL);
+  if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return null;
+  return target;
+}
 function collectCandidates(args) {
   const rows = [];
   const sources = [];
-  let gitnexusExport = null;
+  let gitnexusInterchange = null;
   const domain = findUa(args.repo, "domain-graph.json");
   const knowledge = findUa(args.repo, "knowledge-graph.json");
   if (domain) {
@@ -741,12 +779,12 @@ function collectCandidates(args) {
     rows.push(...harvestUaKnowledge(knowledge));
     sources.push(path.relative(args.repo, knowledge).split(path.sep).join("/"));
   }
-  if (args.gitnexus_export) {
-    gitnexusExport = args.gitnexus_export;
-    rows.push(...harvestGitnexus(gitnexusExport));
-    sources.push(gitnexusExport);
+  gitnexusInterchange = findGitnexusInterchange(args.repo);
+  if (gitnexusInterchange) {
+    rows.push(...harvestGitnexus(gitnexusInterchange));
+    sources.push(path.relative(args.repo, gitnexusInterchange).split(path.sep).join("/"));
   }
-  return [rows, sources, gitnexusExport];
+  return [rows, sources, gitnexusInterchange];
 }
 function maybeWriteCommunities(repo, exportPath) {
   if (!exportPath) return null;
@@ -757,7 +795,7 @@ function maybeWriteCommunities(repo, exportPath) {
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  if (!["harvest", "revise", "render", "organize"].includes(command)) {
+  if (!["harvest", "revise", "render", "organize", "update", "import"].includes(command)) {
     throw new Error(`unknown command: ${command}`);
   }
   let index = 1;
@@ -775,21 +813,34 @@ function parseArgs(argv) {
   if (command === "render") allowed = new Set(["repo", "output"]);
   else if (command === "organize" && organizeCommand === "emit") allowed = new Set(["repo", "output"]);
   else if (command === "organize" && organizeCommand === "apply") allowed = new Set(["repo", "organization"]);
-  else allowed = new Set(["repo", "gitnexus-export", "main-limit"]);
+  else if (command === "update") allowed = new Set(["repo", "id", "priority", "status", "summary", "written"]);
+  else if (command === "import") allowed = new Set(["repo", "analysis", "main-limit"]);
+  else allowed = new Set(["repo", "main-limit"]);
   const args = { command, organize_command: organizeCommand, main_limit: 15 };
   for (; index < argv.length; index++) {
     const token = argv[index];
     if (!token.startsWith("--")) throw new Error(`unexpected argument: ${token}`);
     const raw = token.slice(2);
     if (!allowed.has(raw)) throw new Error(`unknown option: ${token}`);
+    if (raw === "written") {
+      const key = raw.replace(/-/g, "_");
+      args[key] = true;
+      continue;
+    }
     if (index + 1 >= argv.length || argv[index + 1].startsWith("--")) throw new Error(`option requires a value: ${token}`);
     const key = raw.replace(/-/g, "_");
     args[key] = argv[++index];
   }
-  if (command === "harvest" || command === "revise") {
+  if (command === "harvest" || command === "revise" || command === "import") {
     args.main_limit = Number(args.main_limit);
     if (!Number.isInteger(args.main_limit)) throw new Error("--main-limit must be an integer");
   }
+  if (command === "update") {
+    if (!args.id) throw new Error("--id is required for update");
+    if (args.priority && !["main", "deferred"].includes(args.priority)) throw new Error("--priority must be main|deferred");
+    if (args.status && !["main", "deferred", "placeholder", "skipped"].includes(args.status)) throw new Error("--status must be main|deferred|placeholder|skipped");
+  }
+  if (command === "import" && !args.analysis) throw new Error("--analysis is required for import");
   if (command === "organize" && organizeCommand === "apply" && !args.organization) {
     throw new Error("--organization is required for organize apply");
   }
@@ -797,16 +848,18 @@ function parseArgs(argv) {
 }
 function usage() {
   console.log([
-    "usage: flow_index.js harvest|revise --repo <path> [--gitnexus-export <json>] [--main-limit <n>]",
+    "usage: flow_index.js harvest|revise --repo <path> [--main-limit <n>]",
     "       flow_index.js render --repo <path> [--output <path>]",
     "       flow_index.js organize emit --repo <path> [--output <path>]",
     "       flow_index.js organize apply --repo <path> --organization <json>",
+    "       flow_index.js update --repo <path> --id <flow-id> [--priority main|deferred] [--status main|deferred|placeholder|skipped] [--summary <text>] [--written]",
+    "       flow_index.js import --repo <path> --analysis <flow-analysis.json> [--main-limit <n>]",
   ].join("\n"));
 }
 function cmdHarvest(args) {
-  const [rows, sources, gitnexusExport] = collectCandidates(args);
-  if (!rows.length) return fail("no flow candidates found; provide UA graphs or --gitnexus-export from the GitNexus MCP", 2);
-  maybeWriteCommunities(args.repo, gitnexusExport);
+  const [rows, sources, gitnexusInterchange] = collectCandidates(args);
+  if (!rows.length) return fail("no flow candidates found; provide UA graphs, a GitNexus .docforge/tmp/gitnexus-flows.json interchange, or use flow_index import --analysis for derived candidates", 2);
+  maybeWriteCommunities(args.repo, gitnexusInterchange);
   const finalRows = finalize(rows, args.main_limit, args.repo);
   const target = writeIndex(args.repo, finalRows, sources);
   const summary = summaryFor(finalRows);
@@ -814,10 +867,11 @@ function cmdHarvest(args) {
   return 0;
 }
 function cmdRevise(args) {
-  const [rows, sources, gitnexusExport] = collectCandidates(args);
-  if (!rows.length) return fail("no flow candidates found; provide UA graphs or --gitnexus-export from the GitNexus MCP", 2);
-  const communitiesPath = maybeWriteCommunities(args.repo, gitnexusExport);
-  const existing = loadExistingIndex(args.repo);
+  const [rows, sources, gitnexusInterchange] = collectCandidates(args);
+  if (!rows.length) return fail("no flow candidates found; provide UA graphs, a GitNexus .docforge/tmp/gitnexus-flows.json interchange, or use flow_index import --analysis for derived candidates", 2);
+  const communitiesPath = maybeWriteCommunities(args.repo, gitnexusInterchange);
+  let existing = loadExistingIndex(args.repo);
+  if (existing) existing = upgradeIndex(existing);
   const prior = priorByKey(existing);
   if (existing && existing.sources) {
     for (const source of existing.sources) {
@@ -1097,6 +1151,113 @@ function cmdOrganizeApply(args) {
   }, null, 2));
   return 0;
 }
+function applyRowUpdate(row, priority, status) {
+  // Apply selection fields, then normalize role/path against them.
+  if (priority) row.priority = priority;
+  if (status) row.status = status;
+  if (row.doc_role === "member") {
+    row.doc_path = null;
+    return;
+  }
+  if (row.status === "documented") {
+    if (row.priority === "main" && !row.doc_path) {
+      row.doc_path = defaultDocPath(row.slug, row.family);
+    }
+    return;
+  }
+  if (row.status === "skipped" || row.priority === "deferred") {
+    row.doc_role = "index_only";
+    row.doc_path = null;
+    return;
+  }
+  if (row.priority === "main") {
+    row.doc_role = "standalone";
+    if (!row.doc_path) row.doc_path = defaultDocPath(row.slug, row.family);
+  }
+}
+function cmdUpdate(args) {
+  const index = upgradeIndex(readJson(path.join(args.repo, INDEX_REL)));
+  const rows = (index.flows || []).filter((row) => row && typeof row === "object");
+  const row = rows.find((item) => item.id === args.id);
+  if (!row) return fail(`unknown flow id: ${args.id}`, 2);
+  if ((args.summary != null || args.written) && row.status !== "documented") {
+    return fail(`flow ${args.id} is not documented; summary write-back requires status 'documented'`, 2);
+  }
+  applyRowUpdate(row, args.priority || null, args.status || null);
+  if (args.summary != null) {
+    row.summary = args.summary;
+    row.written_at = nowIso();
+  } else if (args.written) {
+    row.written_at = nowIso();
+  }
+  index.generated_at = nowIso();
+  index.summary = summaryFor(rows);
+  const target = path.join(args.repo, INDEX_REL);
+  fs.writeFileSync(target, JSON.stringify(index, null, 2) + "\n");
+  console.log(`Updated ${target} — ${row.id} [priority=${row.priority}, status=${row.status}, summary=${row.summary ? "yes" : "no"}]`);
+  return 0;
+}
+function analysisRows(analysis, source) {
+  // Map derived flow-analysis entries onto flow-index candidate rows.
+  const rows = [];
+  for (const item of analysis.flows || []) {
+    if (!item || typeof item !== "object") continue;
+    const name = String(item.name || "").trim();
+    if (!name) continue;
+    const steps = (item.steps || []).filter((step) => step && typeof step === "object");
+    const first = steps[0] || {};
+    const filePath = first.path;
+    const signature = String(item.entryPoint || name);
+    rows.push(candidate({
+      name,
+      kind: inferKind(name, filePath),
+      signature,
+      filePath,
+      symbol: name,
+      area: item.domain,
+      evidence: { provider: "codegraph", artifact: source, nodeId: name },
+      steps: steps.length,
+    }));
+  }
+  return rows;
+}
+function cmdImport(args) {
+  // Seed derived candidates into the index (CodeGraph-only / no native flow
+  // source), merging with existing rows and preserving their state.
+  let analysis;
+  try {
+    analysis = readJson(args.analysis);
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  if (!analysis || typeof analysis !== "object" || !Array.isArray(analysis.flows) || !analysis.flows.length) {
+    return fail("analysis must be a JSON object with a non-empty 'flows' list", 2);
+  }
+  const rows = analysisRows(analysis, String(args.analysis));
+  if (!rows.length) return fail("no usable flow rows in the analysis", 2);
+  let existing = loadExistingIndex(args.repo);
+  if (existing) existing = upgradeIndex(existing);
+  const existingRows = existing
+    ? (existing.flows || []).filter((row) => row && typeof row === "object")
+    : [];
+  const sources = existing ? [...(existing.sources || [])] : [];
+  const sourceLabel = DERIVED_FLOW_GRAPH_REL.split(path.sep).join("/");
+  if (!sources.includes(sourceLabel)) sources.push(sourceLabel);
+  const derived = finalize(rows, args.main_limit, args.repo);
+  const prior = priorByKey(existing);
+  const merged = applyReviseStatuses(derived, prior);
+  const mergedKeys = new Set(merged.map((row) => rowKey(row)));
+  for (const row of existingRows) {
+    if (!mergedKeys.has(rowKey(row))) {
+      merged.push(row);
+      applyOrgDefaults(row);
+    }
+  }
+  const target = writeIndex(args.repo, merged, sources);
+  const summary = summaryFor(merged);
+  console.log(`Imported ${rows.length} derived candidate(s) into ${target} — ${summary.total} total rows (${summary.main} main, ${summary.deferred} deferred).`);
+  return 0;
+}
 function cmdRender(args) {
   const index = readJson(path.join(args.repo, INDEX_REL));
   for (const row of index.flows || []) {
@@ -1130,6 +1291,8 @@ function main() {
     }
     if (args.command === "harvest") return cmdHarvest(args);
     if (args.command === "revise") return cmdRevise(args);
+    if (args.command === "update") return cmdUpdate(args);
+    if (args.command === "import") return cmdImport(args);
     if (args.command === "organize") {
       if (args.organize_command === "emit") return cmdOrganizeEmit(args);
       return cmdOrganizeApply(args);

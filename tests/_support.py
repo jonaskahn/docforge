@@ -59,6 +59,8 @@ def write_flow_index(
     *,
     status: str = "main",
     priority: str | None = None,
+    summary: str | None = None,
+    written_at: str | None = None,
 ) -> None:
     target = repo / ".docforge" / "flow-index.json"
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -82,8 +84,11 @@ def write_flow_index(
         "priority": resolved_priority,
         "status": status,
     }
+    if summary is not None:
+        flow["summary"] = summary
+        flow["written_at"] = written_at or "2026-07-29T00:00:00+00:00"
     target.write_text(json.dumps({
-        "version": "1.1",
+        "version": "1.2",
         "generated_at": "2026-07-29T00:00:00+00:00",
         "project": "fixture",
         "sources": ["fixture"],
@@ -94,11 +99,22 @@ def write_flow_index(
             "deferred": int(resolved_priority == "deferred"),
             "placeholder": int(status == "placeholder"),
             "documented": int(status == "documented"),
+            "written": int(status == "documented" and summary is not None),
             "skipped": int(status == "skipped"),
             "confirmed": 0,
         },
         "flows": [flow],
     }, indent=2) + "\n", encoding="utf-8")
+
+
+def write_gitnexus_interchange(repo: Path, payload: dict) -> Path:
+    """Materialize the auto-discovered GitNexus interchange inside the repo —
+    the same deterministic {routes, processes, communities} JSON the agent
+    produces from the GitNexus MCP or the offline lbug reader."""
+    target = repo / ".docforge" / "tmp" / "gitnexus-flows.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return target
 
 
 def initialize(

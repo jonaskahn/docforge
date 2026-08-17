@@ -20,7 +20,8 @@
             "class": {"enum": ["small", "medium", "large"]},
             "layout": {"enum": ["compact", "standard"]},
             "detected_class": {"enum": ["small", "medium", "large"]},
-            "decided_by": {"enum": ["detected", "user", "tier-constraint"]},
+            "detected_layout": {"enum": ["compact", "standard"]},
+            "decided_by": {"enum": ["detected", "user", "tier-constraint", "migration"]},
             "decided_at": {"type": "string"},
             "signals": {
               "type": "object",

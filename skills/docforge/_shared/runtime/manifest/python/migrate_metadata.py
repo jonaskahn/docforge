@@ -476,25 +476,63 @@ def seed_descriptions(
 
 
 def backfill_project_scale(repo: Path, tier: str = "diligence") -> dict:
-    """Detected-only scale record for backfill. A present `project.scale` is
-    never overwritten — this function is only called when the field is absent.
+    """Scale record for a legacy manifest with no scale field.
 
-    `tier` keeps the backfill from handing a portfolio manifest the compact
-    layout a small collection root would otherwise detect."""
+    Legacy repositories were written before layout existed, at standard
+    paths — migration must never silently fold them to compact, so the
+    backfilled layout is always `standard` with `decided_by: "migration"`.
+    The `class` still comes from live detection, and `detected_layout`
+    records what detection would have said so a later revise can show the
+    drift. A present `project.scale` is never overwritten."""
     detected = scale.compute_scale(repo)
-    layout, decided_by = scale.layout_for(
-        tier, detected["suggested_layout"], explicit=False
-    )
     record = {
         "class": detected["class"],
-        "layout": layout,
-        "decided_by": decided_by,
+        "layout": "standard",
+        "decided_by": "migration",
         "decided_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "signals": detected["signals"],
     }
-    if decided_by == "tier-constraint":
-        record["detected_class"] = detected["class"]
+    if detected["suggested_layout"] != "standard":
+        record["detected_layout"] = detected["suggested_layout"]
     return record
+
+
+def migrate_flow_index(repo: Path, dry_run: bool) -> dict | None:
+    """Upgrade a 1.1 flow index to 1.2 as part of metadata migration.
+
+    One bare revise leaves every metadata artifact at the newest schema —
+    manifest, provenance sidecars, and now the flow ledger. The upgrade is
+    the same additive merge `flow_index` performs on load (version bump plus
+    the `summary.written` count); an absent, unparseable, or already-current
+    index is skipped silently."""
+    from runtime.common.python.flow_index_schema import (
+        FLOW_INDEX_VERSION,
+        SUPPORTED_FLOW_INDEX_VERSIONS,
+        upgrade_index,
+    )
+
+    path = repo / ".docforge" / "flow-index.json"
+    if not path.is_file():
+        return None
+    try:
+        index = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(index, dict):
+        return None
+    version = str(index.get("version") or "1.1")
+    if version == FLOW_INDEX_VERSION:
+        return None
+    if version not in SUPPORTED_FLOW_INDEX_VERSIONS:
+        return None
+    if not dry_run:
+        upgrade_index(index)
+        path.write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return {
+        "doc": ".docforge/flow-index.json",
+        "action": "migrate",
+        "detail": f"flow index version -> {FLOW_INDEX_VERSION}",
+    }
 
 
 def constrain_scale_layout(project: dict) -> bool:
@@ -725,6 +763,9 @@ def migrate(repo: Path, manifest_path: Path, dry_run: bool) -> tuple[list[dict],
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
+    flow_index_report = migrate_flow_index(repo, dry_run)
+    if flow_index_report is not None:
+        reports.append(flow_index_report)
     changed = any(
         item["action"] in {"migrate", "regenerate", "failed"} for item in reports
     )
@@ -1272,6 +1313,9 @@ def migrate_legacy(
             ),
         },
     )
+    flow_index_report = migrate_flow_index(repo, dry_run)
+    if flow_index_report is not None:
+        reports.append(flow_index_report)
     return reports, bool(adopted or kept_planned or failed)
 
 

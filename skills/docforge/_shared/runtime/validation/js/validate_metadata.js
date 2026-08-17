@@ -21,7 +21,7 @@ const PUBLIC_CONTRACTS = {
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
   hash_evidence: ["--repo", "--path", "--range", "--json"],
-  flow_index: ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
+  flow_index: ["harvest", "revise", "update", "import", "render", "organize", "emit", "apply", "--repo", "--main-limit", "--output", "--organization", "--id", "--priority", "--status", "--summary", "--written", "--analysis"],
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
   query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo", "--group", "--groups"],
   generate_indexes: ["--write", "--check"],
@@ -108,12 +108,19 @@ function validate() {
       errors.push("provenance sidecar schema must require version 1.0");
     }
   }
-  if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.1") {
-    errors.push("flow index schema must require version 1.1");
+  if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.2") {
+    errors.push("flow index schema must require version 1.2");
   }
   const flowItem = ((((flowIndexSchema.properties || {}).flows || {}).items || {}).properties) || {};
   for (const field of ["display_name", "family", "doc_role", "composed_into", "doc_path"]) {
     if (!(field in flowItem)) errors.push(`flow index schema must define flow.${field}`);
+  }
+  for (const field of ["summary", "written_at"]) {
+    if (!(field in flowItem)) errors.push(`flow index schema must define flow.${field}`);
+    const flowRequired = (((((flowIndexSchema.properties || {}).flows || {}).items || {}).required)) || [];
+    if (flowRequired.includes(field)) {
+      errors.push(`flow index schema field flow.${field} must be optional`);
+    }
   }
   const docRoles = ((flowItem.doc_role || {}).enum) || [];
   if (docRoles.length !== 3 || !["standalone", "member", "index_only"].every((item) => docRoles.includes(item))) {

@@ -180,10 +180,17 @@ guidance, and a glossary. Conditional conventions documents appear only when a
 conventions source exists.
 
 `docs/flows/README.md` exists at Spine as the rendered complete candidate
-matrix backed by `.docforge/flow-index.json`. Revise flow creates stub
-`docs/flows/{slug}.md` files for every harvested candidate. Diligence adds
-full deep-dive flow documents only for main-priority rows; deferred-priority
-stubs remain discoverable in the matrix until promoted.
+matrix backed by `.docforge/flow-index.json`. Diligence adds full deep-dive
+flow documents only for user-selected main-priority rows — the selection
+is a **mandatory gate at write start** (harvest → organize → analyze →
+prompt → apply), never auto-accepted, never decided at intake; see the
+write-start flow gate in [`../workflows/planning.md`](../workflows/planning.md)
+and the selection/write-back mechanics in
+[`graph/flow-derivation.md`](graph/flow-derivation.md). Revise flow creates
+stub `docs/flows/{slug}.md` files for main-priority standalone placeholders.
+Deferred-priority candidates remain discoverable as matrix rows until
+promoted. Written flow documents carry a one-paragraph `summary` in the
+index (schema 1.2), rendered in the matrix's `Flow summaries` section.
 
 In compact layout the matrix and the deep dives share one file, `docs/flows.md`
 — the matrix is its `## Flow candidate matrix` section and each deep dive is a

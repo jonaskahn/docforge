@@ -50,7 +50,7 @@ one session engine first; see
 
 | Flag | Effect |
 |---|---|
-| *(none)* | Interactive intake, asked in two turns (Turn 1: goal + documentation layout; Turn 2: tier, profiles, audience, graph source, execution mode) → [`./_shared/workflows/intake.md`](./_shared/workflows/intake.md) |
+| *(none)* | Interactive intake, asked in two turns (Turn 1: goal + documentation layout; Turn 2: tier, profiles, audience, graph source, execution mode) → [`./_shared/workflows/intake.md`](./_shared/workflows/intake.md). Flow documents are confirmed later, at the **write-start flow gate** — a mandatory user selection `--auto-accept` never waives |
 | `--plan-only` | See [`./_shared/flags.md`](./_shared/flags.md) |
 | `--auto-accept` | See [`./_shared/flags.md`](./_shared/flags.md) |
 | `--no-dashboard` | Skip the automatic dashboard build/serve at run completion (see [`./_shared/flags.md`](./_shared/flags.md)) |

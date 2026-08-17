@@ -186,7 +186,13 @@ source: CodeGraph".
 
 Before choosing flow documents, harvest the complete
 `.docforge/flow-index.json` through `flow_index.{py,js}` (see
-[`../../runtime/flows/README.md`](../../runtime/flows/README.md)). GitNexus
+[`../../runtime/flows/README.md`](../../runtime/flows/README.md)). There
+are no provider flags: Understand Anything graphs are read in place,
+GitNexus flows arrive as the auto-discovered
+`.docforge/tmp/gitnexus-flows.json` interchange the agent materializes
+from the MCP or the lbug reader, and a code graph without native flows
+feeds derived candidates through `derive_flow_graph prepare` + agent
+analysis + `flow_index import --analysis`. GitNexus
 Process nodes are grouped by `entryPointId`; they are candidate path
 evidence, not one document each. Understand Anything native flow nodes are
 confirmed entries, then its knowledge graph is scanned for additional

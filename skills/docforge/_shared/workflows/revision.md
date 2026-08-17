@@ -77,9 +77,13 @@ falls in scope:
     - `decided_by: "detected"` + detection disagrees (repo grew past a
       threshold, or gained dependency / flow breadth) → surface the drift
       in the confirmation summary as a recommended change.
-    - `decided_by: "user"` → report the drift as a fact, change nothing
-      unless the user explicitly asks. A user decision is never silently
-      re-derived.
+    - `decided_by: "user"` or `"migration"` → report the drift as a fact,
+      change nothing
+      unless the user explicitly asks. A user or migration decision is
+      never silently
+      re-derived. (`migration` marks a legacy manifest whose layout was
+      defaulted to `standard` by metadata migration; `detected_layout`
+      records what detection would have said.)
     - Confirmed change → `manage_manifest.{py,js} reconcile
       --scale-class` / `--layout`. Class-only changes are a plain record
       update; layout changes flow through the annotated tree and
@@ -161,6 +165,28 @@ or execution mode; open Turn 2 only after Turn 1 is answered.
 
 **Scope** (Turn 1) — `flow`, `<area>`, or `all` (pre-checked from
 invocation; asked only for natural-language revise requests, never for a bare `/docforge-revise`).
+
+**Flow mode** (Turn 1, single-select, only when the scope is `flow` or
+`all` — or a natural-language revise that touches flows; `<area>` revise
+never re-harvests and never asks):
+
+- **Re-analyze flows** — full re-harvest from the provider plus a fresh
+  deep analysis of every candidate. Recommended when the repository moved
+  materially since the last flow pass.
+- **Reuse existing flow analysis** — re-harvest only to catch **missing**
+  candidates; stored summaries, organization, and analyses are reused for
+  everything already indexed. Missing candidates are explicitly analyzed
+  before the selection prompt.
+
+The answer governs steps 2–4 of `/docforge-revise flow` below. A reply
+that leaves it unanswered → one flow-mode-only follow-up. **Never**
+proceed with a silently assumed mode.
+
+**Flow selection is a mandatory gate — `--auto-accept` never waives
+it.** The add/remove/update selection prompt (step 4 below) is always
+shown and always awaited, exactly like the intake confirmation: which
+flows become documents is a scope decision, and the user must choose to
+go. Only the execution-mode pauses around the gate honor the flag.
 
 [`intake.md`](intake.md) "Scope intake" owns the exact per-dimension rule —
 which of Scope, Tier, Profiles, Output audience, and Execution mode get
@@ -311,7 +337,7 @@ will happen:
 - `merge` — standard → compact layout: N component files become one
   merged file.
 
-Main-priority flows are listed under a `Flows:` section mapping each flow
+Selected flows (main-priority after the selection gate) are listed under a `Flows:` section mapping each flow
 to its document path (`docs/flows/<slug>.md`) with the same action
 annotation. Compact layout: the path is the merged file's anchor instead
 (`docs/flows.md#<slug>`), and a flow over `COMPACT_DYNAMIC_CAP` is listed
@@ -367,7 +393,7 @@ different thing, hence a different destination.
 | Invocation | Behavior |
 |---|---|
 | `/docforge-revise` | **Metadata-only migration**: upgrade the manifest to current schema/version via `migrate_metadata.{py,js}`. No scope question, no detection, no writing, no dashboard (see below) |
-| `/docforge-revise all` / `/docforge-revise <area>` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars; see [`validation.md`](validation.md) "Manifest and provenance"), then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. Manifest has no audiences → run the full audience multi-select. |
+| `/docforge-revise all` / `/docforge-revise <area>` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars; see [`validation.md`](validation.md) "Manifest and provenance"), then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. Manifest has no audiences → run the full audience multi-select. `all` additionally asks the flow mode question and runs the flow selection gate (`/docforge-revise flow` steps 2–9, in scope with everything else); `<area>` never does. |
 | `/docforge-revise flow` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars), then the full flow pipeline (see below) |
 
 ### Bare `/docforge-revise` — metadata-only migration
@@ -383,7 +409,11 @@ detection or rediscovery, writes no documents, never starts the dashboard.
    moving each section-provenance document's inline
    frontmatter into the folder sidecar
    (`.docforge/provenance/<folder>.json`) and stripping it from the
-   markdown, so generated files become pure content; the `--dry-run`
+   markdown, so generated files become pure content; upgrade a 1.1
+   `.docforge/flow-index.json` to 1.2; backfill an absent scale record
+   with `layout: standard`, `decided_by: "migration"` (plus
+   `detected_layout` when detection disagrees — a legacy tree is never
+   silently folded to compact). The `--dry-run`
    preview lists the moves before anything is written. The full version
    list, seeded defaults, and legacy re-registration mechanics live in
    `validation.md`, never here.
@@ -402,7 +432,7 @@ up-to-date manifest is a clean no-op (scripts and README:
 | Flag | Effect on revise |
 |---|---|
 | `--plan-only` | Run migrate, staleness sync, detect/catalog, suitable-missing-audiences prompt, and show the structure update / dry-run tree; stop before writing or re-grounding document bodies |
-| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, root `README.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](../flags.md)) |
+| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, root `README.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](../flags.md)). **Never waives the flow selection gate** — the user must still choose which flows to add, remove, or update (see `/docforge-revise flow`) |
 
 Flags combine with a scope argument, e.g.
 `/docforge-revise flow --plan-only`.
@@ -473,46 +503,90 @@ below. It is not a blob-only pass. New flow connections force re-ground
 of existing flow docs and big-picture surfaces even when their cited
 `git_blob` values are still `FRESH`.
 
+The **flow mode question** (`Re-analyze flows` / `Reuse existing flow
+analysis`) is answered in Turn 1 — see "Questions revise asks". The
+**flow selection gate** (step 4) is mandatory: `--auto-accept` never
+waives it, the user must choose to proceed. Only the execution-mode
+pauses around the gate honor the flag.
+
 1. **Always** run `migrate_metadata.{py,js}` first (schema + provenance
    sidecars), then precheck `--need flow` (`precheck_graph.{py,js}`, see
    [`../runtime/graph/README.md`](../runtime/graph/README.md)).
-2. Run the read-only harvest, rank, organization, and
-   provisional-derivation stages inline in a temporary/provisional
-   workspace. Use the advisory result to show the structure update and
-   honor the execution-mode tree checkpoint before changing the
-   repository.
-3. After that checkpoint, run `flow_index.{py,js} revise` to re-harvest
-   candidates (with community-label and near-candidate dedup), upsert
-   every row into `.docforge/flow-index.json` (schema 1.1), set
-   non-documented/non-skipped rows to `placeholder`, create stub
-   markdown **only for main-priority standalone** placeholders, prune
-   orphan deferred / member / index-only scaffolds, and emit compact
-   `.docforge/tmp/communities.md` when a GitNexus export is present.
-   When this harvest (or later step 8) introduces missing / new
-   flow-related docs, run the suitable-missing-audiences prompt (step
-   3a) before writing — e.g. Coding agents when `agents_flow` or other
-   agent-context flow docs are newly selected. (`flow_index` scripts and
-   README: [`../runtime/flows/README.md`](../runtime/flows/README.md))
-4. Run `flow_index.{py,js} organize emit`, have the agent write
-   `.docforge/tmp/flow-organization.json` (descriptive names, families,
-   composition), and `flow_index.{py,js} organize apply` before deep-dive
-   analysis.
-5. Build an analysis pack from main-priority **standalone** flow-index
-   rows, the compact communities summary, and (when no native flow
-   graph) `derive_flow_graph.{py,js} prepare` context; the agent/LLM
-   analyzes those standalone mains only into
-   `.docforge/tmp/flow-analysis.json`, then runs
-   `derive_flow_graph.{py,js} write` when a provisional graph is
-   required. (`derive_flow_graph` scripts and README:
-   [`../runtime/flows/README.md`](../runtime/flows/README.md)). The main
-   agent renders and writes the committed flow index only after the
-   execution-mode tree checkpoint, preserving Review and `--auto-accept`
-   behavior. Full derivation reasoning:
-   [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md).
-6. For each main-priority standalone flow (NOTICE first; pause in review
-   mode, or continue under `--auto-accept`):
+2. **Harvest per the flow-mode answer**, in a temporary/provisional
+   workspace first so the selection prompt is grounded before the
+   repository changes. No provider flags: harvest/revise read Understand
+   Anything graphs in place and the auto-discovered GitNexus interchange
+   `.docforge/tmp/gitnexus-flows.json`; when the code graph has no native
+   flow evidence (CodeGraph-only), derived candidates come from
+   `derive_flow_graph.{py,js} prepare` + agent analysis +
+   `flow_index.{py,js} import --analysis`
+   ([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+   "Derived candidates"):
+   - **Re-analyze** — `flow_index.{py,js} harvest` (full re-harvest,
+     community-label and near-candidate dedup); every existing row's
+     analysis is superseded.
+   - **Reuse** — `flow_index.{py,js} revise` on a provisional copy:
+     re-harvest catches **missing** candidates only; existing rows keep
+     their stored status, priority, organization, `summary`, and
+     `written_at`. Missing candidates get an explicit analysis in
+     step 3 before the prompt.
+3. **Organize and analyze.** Run `flow_index.{py,js} organize emit`,
+   have the agent write `.docforge/tmp/flow-organization.json`
+   (descriptive names, families, composition), and `flow_index.{py,js}
+   organize apply` — naming settles before the prompt. Then:
+   - **Re-analyze** — full deep analysis pack for main-priority
+     **standalone** rows from the compact communities summary and (when
+     no native flow graph) `derive_flow_graph.{py,js} prepare` context;
+     the agent/LLM analyzes those standalone mains only into
+     `.docforge/tmp/flow-analysis.json`, then runs
+     `derive_flow_graph.{py,js} write` when a provisional graph is
+     required.
+   - **Reuse** — deep analysis only for **missing** candidates and for
+     rows the user promotes from deferred during the prompt; everything
+     else reuses its stored analysis. Deferred rows always get
+     summary-level context, never a deep pack.
+   (`derive_flow_graph` scripts and README:
+   [`../runtime/flows/README.md`](../runtime/flows/README.md). Full
+   derivation reasoning:
+   [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md).)
+4. **Selection prompt — mandatory gate.** Every candidate listed with a
+   per-row action:
+   - **add** — missing or newly promoted candidates (explicitly analyzed
+     first);
+   - **remove** — currently selected rows the user drops;
+   - **update** — existing flow documents whose `check_staleness` reports
+     blocking STALE sections (re-ground), plus any row whose
+     composition / connections changed;
+   - unchanged rows are baseline facts, never re-asked.
+   Main standalone pre-selected; deferred unchecked but promotable;
+   budget = `--main-limit` (default 15) deep-dives, over budget requires
+   explicit confirmation ("N over budget"). Wait for explicit
+   confirmation — always, including under `--auto-accept`. The user
+   must choose to go.
+5. **Apply the confirmed selection mechanically.**
+   - Per changed row: `flow_index.{py,js} update --id <flow-id>`
+     (promote → `--priority main --status placeholder`; demote →
+     `--priority deferred`; decline → `--status skipped`).
+   - `flow_index.{py,js} revise` into the real `.docforge/flow-index.json`
+     (schema 1.2): upsert every row, preserve documented/skipped state,
+     set other rows to `placeholder`, create stub markdown **only for
+     main-priority standalone** placeholders, prune orphan scaffolds,
+     emit compact `.docforge/tmp/communities.md` when a GitNexus
+     interchange is present.
+   - `manage_manifest.{py,js} add --type flow` for each newly selected
+     standalone. When this (or step 9) introduces missing / new
+     flow-related docs, run the suitable-missing-audiences prompt (step
+     3a) before writing — e.g. Coding agents when `agents_flow` or other
+     agent-context flow docs are newly selected. (`flow_index` scripts and
+     README: [`../runtime/flows/README.md`](../runtime/flows/README.md))
+   - Show the annotated plan tree / structure update and honor the
+     execution-mode checkpoint before writing.
+6. **Write the selected flows in `write_order`** (NOTICE first: the
+   `flow_index revise` run already printed the eligible main-priority
+   standalone rows; the selection gate above decided which of them get
+   written):
    - **New** main standalone → full write via [`writing.md`](writing.md).
-   - **Existing** documented flow → re-ground for harvest /
+   - **Updated** documented flow → re-ground for harvest /
      organization / connection changes; use
      `check_staleness.{py,js} --document` (see
      [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) to
@@ -522,15 +596,25 @@ of existing flow docs and big-picture surfaces even when their cited
      neighbors changed, even if blobs are `FRESH`. Enforce current
      template conformance (step 1b): an old flow-document shape is
      rewritten to the current `flow` template, never preserved.
-7. Refresh the big picture: render `docs/flows/README.md`, and update
+   - Parallel spawn per
+     [`../references/parallel-execution.md`](../references/parallel-execution.md):
+     a writer edits only its own flow document; the index and the
+     manifest stay orchestrator-serial.
+7. **Write-back** — after each selected flow document passes mechanical
+   lint and its independent audit, record the outcome once:
+   `flow_index.{py,js} update --repo <repo> --id <flow-id> --summary
+   "<one-paragraph outcome>" --written`.
+8. Refresh the big picture: render `docs/flows/README.md` (the matrix's
+   `Flow summaries` section now carries the write-backs), and update
    any selected overview / index docs whose flow counts or links changed
    (for example `system-overview` when selected).
-8. Add any other missing flow-related dynamic documents required by the
+9. Add any other missing flow-related dynamic documents required by the
    current catalog selection and write them in `write_order`.
 
 Distinct from `/docforge-revise <area>`, which does not re-harvest the
-flow index but still applies the revise meaning (staleness, missing docs,
-big picture, connections) inside that area.
+flow index, never asks the flow mode question, and still applies the
+revise meaning (staleness, missing docs, big picture, connections)
+inside that area.
 
 ## Completion
 

@@ -88,17 +88,22 @@ Upgrades manifest 3.8 / 3.7 / 3.6 / 3.5 / 3.4 / 3.3 (or 3.2 / 3.1 / 3.0 / proven
 seeding each document's catalog-owned `description` from the catalog
 `summary`, the project's `provenance_storage` (default `json`), the project's
 `unmanaged_docs` list (default empty), and the project's `scale` record
-(`decided_by: "detected"` from live detection when absent; present records are
+(a legacy manifest with **no** scale record is backfilled with the detected
+`class`, `layout: standard`, `decided_by: "migration"`, and
+`detected_layout` when detection disagrees — never a silent compact fold;
+present records are
 never overwritten — their measurement `signals` are refreshed on upgrade with
 the 3.7 `declared_dependencies` and `flow_candidates` fields) — and
 re-registers older
 shapes; adopts legacy written documents, scaffolds incomplete provenance,
 clears failed audits, demotes incomplete written documents to `in_progress`.
-The same run moves any pre-migration document's inline frontmatter into the
-folder sidecars (`.docforge/provenance/<folder>.json`) and strips it from the
-markdown. `--dry-run` is read-only; `--report` changes output format
-**without** making the run read-only. Exit `1` on missing documents or
-failed conversion.
+The same run upgrades a 1.1 `.docforge/flow-index.json` to 1.2 (additive:
+version plus the `summary.written` count; absent/unparseable indexes are
+skipped silently) and moves any pre-migration document's inline frontmatter
+into the folder sidecars (`.docforge/provenance/<folder>.json`) and strips
+it from the markdown. `--dry-run` is read-only; `--report` changes output
+format **without** making the run read-only. Exit `1` on missing documents
+or failed conversion.
 
 ## Where invoked
 
@@ -113,4 +118,4 @@ failed conversion.
 
 Consumes `common/` libraries (`_util`, `plan`, `provenance_frontmatter`,
 `evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.9) and
-flow-index schema (1.1) are enforced by `validation/validate_metadata`.
+flow-index schema (1.2) are enforced by `validation/validate_metadata`.

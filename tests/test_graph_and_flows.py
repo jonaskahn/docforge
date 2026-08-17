@@ -7,7 +7,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import initialize, load_manifest, normalized, run, write_flow_index
+from _support import (
+    initialize,
+    load_manifest,
+    normalized,
+    run,
+    write_flow_index,
+    write_gitnexus_interchange,
+)
 from runtime.graph.python.graph_source_registry import SOURCES as GRAPH_SOURCES
 
 
@@ -129,7 +136,6 @@ class FlowIndexTests(unittest.TestCase):
     def test_flow_index_groups_processes_and_matches_runtime_peers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            export = root / "gitnexus-export.json"
             processes = []
             for entry in range(10):
                 for terminal in range(3):
@@ -142,23 +148,23 @@ class FlowIndexTests(unittest.TestCase):
                         "entryPointId": f"Function:src/handlers/Entry{entry}.py:Entry{entry}",
                         "terminalId": f"Function:src/services/Terminal.py:Terminal{terminal}",
                     })
-            export.write_text(json.dumps({
+            interchange = {
                 "routes": [],
                 "processes": processes,
                 "communities": [
                     {"id": "comm-a", "heuristicLabel": "API"},
                     {"id": "comm-b", "heuristicLabel": "Services"},
                 ],
-            }), encoding="utf-8")
+            }
 
             indexes = []
             for runtime in ("py", "js"):
                 repo = root / runtime
                 repo.mkdir()
+                write_gitnexus_interchange(repo, interchange)
                 result = run(
                     runtime, "flow_index", "harvest",
                     "--repo", str(repo),
-                    "--gitnexus-export", str(export),
                     "--main-limit", "3",
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -172,18 +178,20 @@ class FlowIndexTests(unittest.TestCase):
                 matrix = (repo / "docs/flows/README.md").read_text()
                 self.assertIn("| deferred |", matrix)
                 indexes.append(index["flows"])
+            for rows in indexes:
+                for row in rows:
+                    for evidence in row["evidence"]:
+                        evidence["artifact"] = Path(evidence["artifact"]).name
             self.assertEqual(indexes[0], indexes[1])
 
-            easy_export = root / "easy-export.json"
-            easy_export.write_text(json.dumps({
+            easy_repo = root / "easy"
+            easy_repo.mkdir()
+            write_gitnexus_interchange(easy_repo, {
                 "routes": [],
                 "processes": [processes[0]],
                 "communities": [],
-            }), encoding="utf-8")
-            easy_repo = root / "easy"
-            easy_repo.mkdir()
-            result = run("py", "flow_index", "harvest", "--repo", str(easy_repo),
-                         "--gitnexus-export", str(easy_export))
+            })
+            result = run("py", "flow_index", "harvest", "--repo", str(easy_repo))
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 json.loads((easy_repo / ".docforge/flow-index.json").read_text())["summary"]["total"],
@@ -245,8 +253,7 @@ class FlowIndexTests(unittest.TestCase):
     def test_flow_index_dedups_community_labels_and_near_candidates(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            export = root / "export.json"
-            export.write_text(json.dumps({
+            interchange = {
                 "routes": [],
                 "processes": [
                     {
@@ -272,17 +279,17 @@ class FlowIndexTests(unittest.TestCase):
                     {"id": "comm_search_b", "heuristicLabel": "Search"},
                     {"id": "comm_jobs", "heuristicLabel": "Jobs"},
                 ],
-            }), encoding="utf-8")
+            }
 
             for runtime in ("py", "js"):
                 repo = root / runtime
                 repo.mkdir()
+                write_gitnexus_interchange(repo, interchange)
                 # Force identical display names so path+name near-key collides.
                 # Symbols differ, so exact filePath::symbol keys stay distinct first.
                 result = run(
                     runtime, "flow_index", "harvest",
                     "--repo", str(repo),
-                    "--gitnexus-export", str(export),
                     "--main-limit", "5",
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -311,8 +318,7 @@ class FlowIndexTests(unittest.TestCase):
                 self.assertEqual(three_id_row["reach"]["boundaries"], 2)
 
             # Near-duplicate merge: same path + same slugify(name), different symbols.
-            merge_export = root / "merge-export.json"
-            merge_export.write_text(json.dumps({
+            merge_interchange = {
                 "routes": [
                     {
                         "id": "route-1",
@@ -331,14 +337,14 @@ class FlowIndexTests(unittest.TestCase):
                 ],
                 "processes": [],
                 "communities": [],
-            }), encoding="utf-8")
+            }
             for runtime in ("py", "js"):
                 repo = root / f"merge-{runtime}"
                 repo.mkdir()
+                write_gitnexus_interchange(repo, merge_interchange)
                 result = run(
                     runtime, "flow_index", "harvest",
                     "--repo", str(repo),
-                    "--gitnexus-export", str(merge_export),
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
                 index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
@@ -348,7 +354,6 @@ class FlowIndexTests(unittest.TestCase):
     def test_flow_index_revise_merges_stubs_and_notices_across_runtimes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            export = root / "export.json"
             processes = [
                 {
                     "id": f"proc-{index}",
@@ -360,22 +365,22 @@ class FlowIndexTests(unittest.TestCase):
                 }
                 for index in range(5)
             ]
-            export.write_text(json.dumps({
+            interchange = {
                 "routes": [],
                 "processes": processes,
                 "communities": [
                     {"id": "comm-a", "heuristicLabel": "API"},
                     {"id": "comm-b", "heuristicLabel": "Services"},
                 ],
-            }), encoding="utf-8")
+            }
 
             for runtime in ("py", "js"):
                 repo = root / runtime
                 repo.mkdir()
+                write_gitnexus_interchange(repo, interchange)
                 harvest = run(
                     runtime, "flow_index", "harvest",
                     "--repo", str(repo),
-                    "--gitnexus-export", str(export),
                     "--main-limit", "2",
                 )
                 self.assertEqual(harvest.returncode, 0, harvest.stderr)
@@ -399,7 +404,6 @@ class FlowIndexTests(unittest.TestCase):
                 revise = run(
                     runtime, "flow_index", "revise",
                     "--repo", str(repo),
-                    "--gitnexus-export", str(export),
                     "--main-limit", "2",
                 )
                 self.assertEqual(revise.returncode, 0, revise.stderr)
@@ -435,7 +439,7 @@ class FlowIndexTests(unittest.TestCase):
                     elif row.get("priority") == "deferred" or row.get("doc_role") == "index_only":
                         self.assertFalse(stub.is_file(), stub)
                 self.assertEqual(stub_count, 1)
-                self.assertEqual(revised["version"], "1.1")
+                self.assertEqual(revised["version"], "1.2")
 
                 render = run(runtime, "flow_index", "render", "--repo", str(repo))
                 self.assertEqual(render.returncode, 0, render.stderr)
@@ -448,8 +452,7 @@ class FlowIndexTests(unittest.TestCase):
     def test_flow_index_vague_slugs_and_organize_across_runtimes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            export = root / "export.json"
-            export.write_text(json.dumps({
+            interchange = {
                 "routes": [],
                 "processes": [
                     {
@@ -481,20 +484,20 @@ class FlowIndexTests(unittest.TestCase):
                     {"id": "comm-a", "heuristicLabel": "API"},
                     {"id": "comm-b", "heuristicLabel": "Mail"},
                 ],
-            }), encoding="utf-8")
+            }
 
             for runtime in ("py", "js"):
                 repo = root / runtime
                 repo.mkdir()
+                write_gitnexus_interchange(repo, interchange)
                 harvest = run(
                     runtime, "flow_index", "harvest",
                     "--repo", str(repo),
-                    "--gitnexus-export", str(export),
                     "--main-limit", "2",
                 )
                 self.assertEqual(harvest.returncode, 0, harvest.stderr)
                 index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(index["version"], "1.1")
+                self.assertEqual(index["version"], "1.2")
                 slugs = {row["slug"] for row in index["flows"]}
                 self.assertIn("highlight-save", slugs)
                 self.assertIn("content-save", slugs)
@@ -510,7 +513,6 @@ class FlowIndexTests(unittest.TestCase):
                 revise = run(
                     runtime, "flow_index", "revise",
                     "--repo", str(repo),
-                    "--gitnexus-export", str(export),
                     "--main-limit", "2",
                 )
                 self.assertEqual(revise.returncode, 0, revise.stderr)
@@ -577,6 +579,213 @@ class FlowIndexTests(unittest.TestCase):
                 self.assertIn("# Flows", matrix)
                 self.assertIn("## email", matrix)
                 self.assertIn("scheduled-reports.md", matrix)
+
+    def test_flow_index_update_selection_and_summary_writeback_across_runtimes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            interchange = {
+                "routes": [],
+                "processes": [
+                    {
+                        "id": "proc-a",
+                        "entryPointId": "Function:src/api/orders.js:listOrders",
+                        "terminalId": "Function:src/db.js:query",
+                        "processType": "cross_community",
+                        "stepCount": 4,
+                        "communities": ["comm-a", "comm-b"],
+                    },
+                    {
+                        "id": "proc-b",
+                        "entryPointId": "Function:src/jobs/cleanup.js:runCleanup",
+                        "terminalId": "Function:src/db.js:purge",
+                        "processType": "cross_community",
+                        "stepCount": 3,
+                        "communities": ["comm-a", "comm-b"],
+                    },
+                ],
+                "communities": [
+                    {"id": "comm-a", "heuristicLabel": "API"},
+                    {"id": "comm-b", "heuristicLabel": "DB"},
+                ],
+            }
+
+            for runtime in ("py", "js"):
+                repo = root / runtime
+                repo.mkdir()
+                self.assertEqual(initialize("py", repo, "diligence").returncode, 0)
+                write_gitnexus_interchange(repo, interchange)
+                harvest = run(
+                    runtime, "flow_index", "harvest",
+                    "--repo", str(repo),
+                    "--main-limit", "1",
+                )
+                self.assertEqual(harvest.returncode, 0, harvest.stderr)
+                index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(index["version"], "1.2")
+                self.assertEqual(index["summary"]["written"], 0)
+                main_row = next(row for row in index["flows"] if row["priority"] == "main")
+                deferred_row = next(row for row in index["flows"] if row["priority"] == "deferred")
+
+                # 1.1 index upgrades additively on the next write path (revise).
+                index["version"] = "1.1"
+                (repo / ".docforge/flow-index.json").write_text(
+                    json.dumps(index, indent=2) + "\n", encoding="utf-8"
+                )
+                revised = run(
+                    runtime, "flow_index", "revise",
+                    "--repo", str(repo),
+                    "--main-limit", "1",
+                )
+                self.assertEqual(revised.returncode, 0, revised.stderr)
+                upgraded = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(upgraded["version"], "1.2")
+                self.assertIn("written", upgraded["summary"])
+
+                # Promote the deferred row through the selection gate.
+                promoted = run(
+                    runtime, "flow_index", "update",
+                    "--repo", str(repo),
+                    "--id", deferred_row["id"],
+                    "--priority", "main",
+                    "--status", "placeholder",
+                )
+                self.assertEqual(promoted.returncode, 0, promoted.stderr)
+                promoted_index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                promoted_row = next(row for row in promoted_index["flows"] if row["id"] == deferred_row["id"])
+                self.assertEqual(promoted_row["priority"], "main")
+                self.assertEqual(promoted_row["status"], "placeholder")
+                self.assertEqual(promoted_row["doc_role"], "standalone")
+                self.assertTrue(str(promoted_row["doc_path"]).startswith("docs/flows/"))
+
+                # Decline the original main row.
+                declined = run(
+                    runtime, "flow_index", "update",
+                    "--repo", str(repo),
+                    "--id", main_row["id"],
+                    "--status", "skipped",
+                )
+                self.assertEqual(declined.returncode, 0, declined.stderr)
+                declined_index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                declined_row = next(row for row in declined_index["flows"] if row["id"] == main_row["id"])
+                self.assertEqual(declined_row["status"], "skipped")
+                self.assertEqual(declined_row["doc_role"], "index_only")
+                self.assertIsNone(declined_row["doc_path"])
+
+                # Summary write-back is refused before the row is documented.
+                refused = run(
+                    runtime, "flow_index", "update",
+                    "--repo", str(repo),
+                    "--id", promoted_row["id"],
+                    "--summary", "Too early.",
+                )
+                self.assertEqual(refused.returncode, 2)
+                self.assertIn("summary write-back requires status 'documented'", refused.stderr)
+
+                # Document it (the manage_manifest add path), then write back.
+                accepted = run(
+                    "py", "manage_manifest", "add", "--repo", str(repo),
+                    "--type", "flow", "--id", promoted_row["id"],
+                    "--path", str(promoted_row["doc_path"]),
+                )
+                self.assertEqual(accepted.returncode, 0, accepted.stderr)
+                written = run(
+                    runtime, "flow_index", "update",
+                    "--repo", str(repo),
+                    "--id", promoted_row["id"],
+                    "--summary", "Lists orders for the storefront.",
+                    "--written",
+                )
+                self.assertEqual(written.returncode, 0, written.stderr)
+                stamped = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                stamped_row = next(row for row in stamped["flows"] if row["id"] == promoted_row["id"])
+                self.assertEqual(stamped_row["summary"], "Lists orders for the storefront.")
+                self.assertTrue(stamped_row["written_at"])
+                self.assertEqual(stamped["summary"]["written"], 1)
+
+                # The rendered matrix carries the summary section.
+                render = run(runtime, "flow_index", "render", "--repo", str(repo))
+                self.assertEqual(render.returncode, 0, render.stderr)
+                matrix = (repo / "docs/flows/README.md").read_text(encoding="utf-8")
+                self.assertIn("## Flow summaries", matrix)
+                self.assertIn("Lists orders for the storefront.", matrix)
+
+    def test_flow_index_import_seeds_derived_candidates_across_runtimes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            analysis = {
+                "flows": [
+                    {
+                        "name": "Order intake",
+                        "domain": "Orders",
+                        "entryPoint": "POST /orders",
+                        "steps": [
+                            {"order": 1, "name": "Validate", "path": "src/api/orders.py"},
+                            {"order": 2, "name": "Save", "path": "src/db.py"},
+                        ],
+                    },
+                    {
+                        "name": "Cleanup job",
+                        "entryPoint": "runCleanup",
+                        "steps": [{"order": 1, "name": "Purge", "path": "src/jobs/cleanup.py"}],
+                    },
+                ]
+            }
+            analysis_path = root / "flow-analysis.json"
+            analysis_path.write_text(json.dumps(analysis), encoding="utf-8")
+
+            for runtime in ("py", "js"):
+                repo = root / runtime
+                repo.mkdir()
+
+                # No index yet: import seeds a fresh 1.2 index.
+                imported = run(
+                    runtime, "flow_index", "import",
+                    "--repo", str(repo),
+                    "--analysis", str(analysis_path),
+                    "--main-limit", "1",
+                )
+                self.assertEqual(imported.returncode, 0, imported.stderr)
+                index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(index["version"], "1.2")
+                self.assertEqual(index["summary"]["total"], 2)
+                self.assertEqual(index["summary"]["main"], 1)
+                self.assertEqual(index["summary"]["deferred"], 1)
+                self.assertIn(".docforge/tmp/flow-graph.json", index["sources"])
+                main_row = next(row for row in index["flows"] if row["priority"] == "main")
+                deferred_row = next(row for row in index["flows"] if row["priority"] == "deferred")
+                self.assertEqual(main_row["status"], "placeholder")
+                self.assertEqual(main_row["doc_role"], "standalone")
+                self.assertTrue(str(main_row["doc_path"]).startswith("docs/flows/"))
+                self.assertEqual(main_row["confidence"], "candidate")
+                self.assertEqual(deferred_row["doc_role"], "index_only")
+                self.assertIsNone(deferred_row["doc_path"])
+
+                # Existing documented row survives a later import unchanged.
+                write_flow_index(repo, status="documented",
+                                 summary="Charges the card and records the order.")
+                reimported = run(
+                    runtime, "flow_index", "import",
+                    "--repo", str(repo),
+                    "--analysis", str(analysis_path),
+                    "--main-limit", "1",
+                )
+                self.assertEqual(reimported.returncode, 0, reimported.stderr)
+                merged = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
+                checkout = next(row for row in merged["flows"] if row["id"] == "flow-checkout")
+                self.assertEqual(checkout["status"], "documented")
+                self.assertEqual(checkout["summary"], "Charges the card and records the order.")
+                self.assertEqual(merged["summary"]["written"], 1)
+
+            # Invalid analysis input is rejected.
+            bad = root / "bad-analysis.json"
+            bad.write_text(json.dumps({"flows": []}), encoding="utf-8")
+            rejected = run(
+                "py", "flow_index", "import",
+                "--repo", str(root / "py"),
+                "--analysis", str(bad),
+            )
+            self.assertEqual(rejected.returncode, 2)
+            self.assertIn("non-empty 'flows' list", rejected.stderr)
 
     def test_manage_manifest_only_adds_main_indexed_flows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

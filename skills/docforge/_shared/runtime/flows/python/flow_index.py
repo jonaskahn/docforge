@@ -2,13 +2,17 @@
 """Harvest, rank, revise, organize, and render Docforge's repository flow index.
 
 Understand Anything JSON is read directly. GitNexus is consumed through a
-small JSON export produced by its MCP/cypher interface, keeping this tool
-standard-library-only and equivalent to its Node peer.
+deterministic interchange JSON the agent materializes at
+`.docforge/tmp/gitnexus-flows.json` (from the GitNexus MCP or the offline lbug
+reader — never a CLI flag). CodeGraph-only repositories seed derived
+candidates through `import --analysis` from the agent's flow analysis.
 
-  python flow_index.py harvest --repo <repo> [--gitnexus-export <json>]
-  python flow_index.py revise --repo <repo> [--gitnexus-export <json>]
+  python flow_index.py harvest --repo <repo>
+  python flow_index.py revise --repo <repo>
   python flow_index.py organize emit --repo <repo>
   python flow_index.py organize apply --repo <repo> --organization <json>
+  python flow_index.py update --repo <repo> --id <flow-id> [--priority main|deferred] [--status placeholder|skipped] [--summary <text>] [--written]
+  python flow_index.py import --repo <repo> --analysis <flow-analysis.json> [--main-limit N]
   python flow_index.py render --repo <repo>
 """
 
@@ -26,12 +30,18 @@ from pathlib import Path
 from runtime.common.python._util import fail, read_json
 from runtime.common.python import provenance_store as store
 from runtime.common.python.provenance_frontmatter import scaffold_provenance
+from runtime.common.python.flow_index_schema import (
+    FLOW_INDEX_VERSION as INDEX_VERSION,
+    SUPPORTED_FLOW_INDEX_VERSIONS as SUPPORTED_INDEX_VERSIONS,
+    upgrade_index,
+)
 
 INDEX_REL = Path(".docforge/flow-index.json")
 TMP_REL = Path(".docforge/tmp")
 ORG_PACK_REL = TMP_REL / "flow-organization-pack.json"
+GITNEXUS_FLOWS_REL = TMP_REL / "gitnexus-flows.json"
+DERIVED_FLOW_GRAPH_REL = TMP_REL / "flow-graph.json"
 UA_DIRS = (".ua", ".understand-anything")
-INDEX_VERSION = "1.1"
 BARE_VERBS = frozenset({
     "get", "save", "create", "update", "delete", "execute", "init", "count",
     "publish", "verify", "connect", "archive", "resend", "authorize", "send",
@@ -394,6 +404,9 @@ def fold_row(current: dict, row: dict) -> None:
         current["reach"].get("churn", 0), row["reach"].get("churn", 0)
     )
     current["area"] = unique_area(current.get("area"), row.get("area"))
+    if row.get("summary") and not current.get("summary"):
+        current["summary"] = row["summary"]
+        current["written_at"] = row.get("written_at")
 
 
 def merge_rows(rows: list[dict]) -> list[dict]:
@@ -565,6 +578,7 @@ def prior_by_key(existing: dict | None) -> dict[str, dict]:
 def apply_revise_statuses(rows: list[dict], prior: dict[str, dict]) -> list[dict]:
     """Preserve documented/skipped and organization fields; mark else placeholder."""
     org_keys = ("display_name", "family", "doc_role", "composed_into", "doc_path")
+    carry_keys = ("summary", "written_at")
     for row in rows:
         previous = prior.get(row_key(row))
         if previous is None:
@@ -588,6 +602,9 @@ def apply_revise_statuses(rows: list[dict], prior: dict[str, dict]) -> list[dict
             if key in previous and previous[key] is not None:
                 row[key] = previous[key]
             elif key in previous and key in {"family", "composed_into", "doc_path"}:
+                row[key] = previous[key]
+        for key in carry_keys:
+            if key in previous and previous[key] is not None:
                 row[key] = previous[key]
         apply_org_defaults(row)
         # Members / index_only never keep a stub path.
@@ -613,6 +630,10 @@ def summary_for(rows: list[dict]) -> dict:
         "deferred": sum(row_priority(row) == "deferred" for row in rows),
         "placeholder": sum(row["status"] == "placeholder" for row in rows),
         "documented": sum(row["status"] == "documented" for row in rows),
+        "written": sum(
+            row["status"] == "documented" and bool(row.get("summary"))
+            for row in rows
+        ),
         "skipped": sum(row["status"] == "skipped" for row in rows),
         "confirmed": sum(row["confidence"] == "confirmed" for row in rows),
     }
@@ -839,6 +860,7 @@ def markdown(index: dict, tier: str, repo: Path) -> str:
         "awaiting confirmation; **documented** rows point at their flow document;",
         "**skipped** rows were examined and set aside. `Confidence` states how much",
         "evidence backs the candidate; `Reach` is steps / boundaries / changes.",
+        "Written deep-dives carry a one-paragraph summary in `Flow summaries`.",
         "",
     ]
 
@@ -886,6 +908,18 @@ def markdown(index: dict, tier: str, repo: Path) -> str:
             lines += ["## Ungrouped", ""]
         append_table(ungrouped)
 
+    documented_with_summary = [
+        row for row in flows
+        if row.get("status") == "documented" and row.get("summary")
+    ]
+    if documented_with_summary:
+        lines += ["## Flow summaries", ""]
+        for row in documented_with_summary:
+            name = (row.get("display_name") or row["name"]).replace("|", "\\|")
+            written = row.get("written_at") or ""
+            suffix = f" — reviewed {written}" if written else ""
+            lines += [f"### {name}{suffix}", "", str(row["summary"]), ""]
+
     lines += [
         f"_Generated {generated}; source of truth: `.docforge/flow-index.json`._",
         "",
@@ -894,10 +928,18 @@ def markdown(index: dict, tier: str, repo: Path) -> str:
     return _render_doc(repo, "docs/flows/README.md", provenance, "Flows", body)
 
 
+def find_gitnexus_interchange(repo: Path) -> Path | None:
+    """The deterministic GitNexus interchange, materialized by the agent from
+    the GitNexus MCP or the offline lbug reader — discovered automatically,
+    never passed as a flag."""
+    path = repo / GITNEXUS_FLOWS_REL
+    return path if path.is_file() else None
+
+
 def collect_candidates(args: argparse.Namespace) -> tuple[list[dict], list[str], Path | None]:
     rows: list[dict] = []
     sources: list[str] = []
-    gitnexus_export: Path | None = None
+    gitnexus_interchange: Path | None = None
     domain = find_ua(args.repo, "domain-graph.json")
     knowledge = find_ua(args.repo, "knowledge-graph.json")
     if domain:
@@ -906,11 +948,11 @@ def collect_candidates(args: argparse.Namespace) -> tuple[list[dict], list[str],
     if knowledge:
         rows.extend(harvest_ua_knowledge(knowledge))
         sources.append(str(knowledge.relative_to(args.repo)))
-    if args.gitnexus_export:
-        gitnexus_export = args.gitnexus_export
-        rows.extend(harvest_gitnexus(gitnexus_export))
-        sources.append(str(gitnexus_export))
-    return rows, sources, gitnexus_export
+    gitnexus_interchange = find_gitnexus_interchange(args.repo)
+    if gitnexus_interchange is not None:
+        rows.extend(harvest_gitnexus(gitnexus_interchange))
+        sources.append(str(gitnexus_interchange.relative_to(args.repo)))
+    return rows, sources, gitnexus_interchange
 
 
 def maybe_write_communities(repo: Path, export: Path | None) -> Path | None:
@@ -923,16 +965,17 @@ def maybe_write_communities(repo: Path, export: Path | None) -> Path | None:
 
 def cmd_harvest(args: argparse.Namespace) -> int:
     try:
-        rows, sources, gitnexus_export = collect_candidates(args)
+        rows, sources, gitnexus_interchange = collect_candidates(args)
     except ValueError as error:
         return fail(str(error), 2)
     if not rows:
         return fail(
-            "no flow candidates found; provide UA graphs or --gitnexus-export "
-            "from the GitNexus MCP",
+            "no flow candidates found; provide UA graphs, a GitNexus "
+            ".docforge/tmp/gitnexus-flows.json interchange, or use "
+            "flow_index import --analysis for derived candidates",
             2,
         )
-    maybe_write_communities(args.repo, gitnexus_export)
+    maybe_write_communities(args.repo, gitnexus_interchange)
     rows = finalize(rows, args.main_limit, args.repo)
     target = write_index(args.repo, rows, sources)
     summary = summary_for(rows)
@@ -945,17 +988,20 @@ def cmd_harvest(args: argparse.Namespace) -> int:
 
 def cmd_revise(args: argparse.Namespace) -> int:
     try:
-        rows, sources, gitnexus_export = collect_candidates(args)
+        rows, sources, gitnexus_interchange = collect_candidates(args)
     except ValueError as error:
         return fail(str(error), 2)
     if not rows:
         return fail(
-            "no flow candidates found; provide UA graphs or --gitnexus-export "
-            "from the GitNexus MCP",
+            "no flow candidates found; provide UA graphs, a GitNexus "
+            ".docforge/tmp/gitnexus-flows.json interchange, or use "
+            "flow_index import --analysis for derived candidates",
             2,
         )
-    communities_path = maybe_write_communities(args.repo, gitnexus_export)
+    communities_path = maybe_write_communities(args.repo, gitnexus_interchange)
     existing = load_existing_index(args.repo)
+    if existing is not None:
+        existing = upgrade_index(existing)
     prior = prior_by_key(existing)
     if existing and existing.get("sources"):
         for source in existing["sources"]:
@@ -1267,6 +1313,128 @@ def cmd_organize_apply(args: argparse.Namespace) -> int:
     return 0
 
 
+def apply_row_update(row: dict, priority: str | None, status: str | None) -> None:
+    """Apply selection fields, then normalize role/path against them."""
+    if priority:
+        row["priority"] = priority
+    if status:
+        row["status"] = status
+    if row.get("doc_role") == "member":
+        row["doc_path"] = None
+        return
+    if row["status"] == "documented":
+        if row["priority"] == "main" and not row.get("doc_path"):
+            row["doc_path"] = default_doc_path(row["slug"], row.get("family"))
+        return
+    if row["status"] == "skipped" or row["priority"] == "deferred":
+        row["doc_role"] = "index_only"
+        row["doc_path"] = None
+        return
+    if row["priority"] == "main":
+        row["doc_role"] = "standalone"
+        if not row.get("doc_path"):
+            row["doc_path"] = default_doc_path(row["slug"], row.get("family"))
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    try:
+        index = read_json(args.repo / INDEX_REL)
+    except ValueError as error:
+        return fail(str(error), 2)
+    index = upgrade_index(index)
+    rows = [row for row in index.get("flows", []) if isinstance(row, dict)]
+    row = next((item for item in rows if item.get("id") == args.id), None)
+    if row is None:
+        return fail(f"unknown flow id: {args.id}", 2)
+    if (args.summary is not None or args.written) and row.get("status") != "documented":
+        return fail(
+            f"flow {args.id} is not documented; summary write-back requires status 'documented'",
+            2,
+        )
+    apply_row_update(row, args.priority, args.status)
+    if args.summary is not None:
+        row["summary"] = args.summary
+        row["written_at"] = now_iso()
+    elif args.written:
+        row["written_at"] = now_iso()
+    index["generated_at"] = now_iso()
+    index["summary"] = summary_for(rows)
+    target = args.repo / INDEX_REL
+    target.write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(
+        f"Updated {target} — {row['id']} "
+        f"[priority={row.get('priority')}, status={row['status']}, "
+        f"summary={'yes' if row.get('summary') else 'no'}]"
+    )
+    return 0
+
+
+def analysis_rows(analysis: dict, source: str) -> list[dict]:
+    """Map derived flow-analysis entries onto flow-index candidate rows."""
+    rows: list[dict] = []
+    for item in analysis.get("flows") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        steps = [step for step in (item.get("steps") or []) if isinstance(step, dict)]
+        first = steps[0] if steps else {}
+        file_path = first.get("path")
+        signature = str(item.get("entryPoint") or name)
+        rows.append(candidate(
+            name=name,
+            kind=infer_kind(name, file_path),
+            signature=signature,
+            file_path=file_path,
+            symbol=name,
+            area=item.get("domain"),
+            evidence={"provider": "codegraph", "artifact": source, "nodeId": name},
+            steps=len(steps),
+        ))
+    return rows
+
+
+def cmd_import(args: argparse.Namespace) -> int:
+    """Seed derived candidates into the index (CodeGraph-only / no native
+    flow source), merging with existing rows and preserving their state."""
+    try:
+        analysis = read_json(args.analysis)
+    except ValueError as error:
+        return fail(str(error), 2)
+    if not isinstance(analysis, dict) or not analysis.get("flows"):
+        return fail("analysis must be a JSON object with a non-empty 'flows' list", 2)
+    rows = analysis_rows(analysis, str(args.analysis))
+    if not rows:
+        return fail("no usable flow rows in the analysis", 2)
+    existing = load_existing_index(args.repo)
+    if existing is not None:
+        existing = upgrade_index(existing)
+    existing_rows = [
+        row for row in existing.get("flows", []) if isinstance(row, dict)
+    ] if existing is not None else []
+    sources = list(existing["sources"]) if existing is not None else []
+    source_label = str(DERIVED_FLOW_GRAPH_REL)
+    if source_label not in sources:
+        sources.append(source_label)
+    derived = finalize(rows, args.main_limit, args.repo)
+    prior = prior_by_key(existing)
+    merged = apply_revise_statuses(derived, prior)
+    merged_keys = {row_key(row) for row in merged}
+    for row in existing_rows:
+        if row_key(row) not in merged_keys:
+            merged.append(row)
+            apply_org_defaults(row)
+    target = write_index(args.repo, merged, sources)
+    summary = summary_for(merged)
+    print(
+        f"Imported {len(rows)} derived candidate(s) into {target} — "
+        f"{summary['total']} total rows "
+        f"({summary['main']} main, {summary['deferred']} deferred)."
+    )
+    return 0
+
+
 def cmd_render(args: argparse.Namespace) -> int:
     try:
         index = read_json(args.repo / INDEX_REL)
@@ -1295,7 +1463,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     def add_harvest_flags(command: argparse.ArgumentParser) -> None:
         command.add_argument("--repo", required=True, type=Path)
-        command.add_argument("--gitnexus-export", type=Path)
         command.add_argument("--main-limit", type=int, default=15)
 
     harvest = sub.add_parser("harvest")
@@ -1308,6 +1475,21 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--repo", required=True, type=Path)
     render.add_argument("--output", type=Path)
     render.set_defaults(func=cmd_render)
+
+    update = sub.add_parser("update")
+    update.add_argument("--repo", required=True, type=Path)
+    update.add_argument("--id", required=True)
+    update.add_argument("--priority", choices=["main", "deferred"])
+    update.add_argument("--status", choices=["main", "deferred", "placeholder", "skipped"])
+    update.add_argument("--summary")
+    update.add_argument("--written", action="store_true")
+    update.set_defaults(func=cmd_update)
+
+    import_cmd = sub.add_parser("import")
+    import_cmd.add_argument("--repo", required=True, type=Path)
+    import_cmd.add_argument("--analysis", required=True, type=Path)
+    import_cmd.add_argument("--main-limit", type=int, default=15)
+    import_cmd.set_defaults(func=cmd_import)
 
     organize = sub.add_parser("organize")
     organize_sub = organize.add_subparsers(dest="organize_command", required=True)

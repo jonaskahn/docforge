@@ -59,10 +59,17 @@ version-agnostic and idempotent. It also seeds each document's
 catalog-owned `description` from the catalog `summary`, normalizes
 `provenance_storage` to `json` (moving any surviving inline frontmatter
 into the sidecars), the project's `unmanaged_docs` list (empty by default),
-and the project's `scale` record (`decided_by: "detected"` from live
-detection when absent; a present record is never overwritten — its
+and the project's `scale` record. A legacy manifest with **no** scale
+record is backfilled with the detected `class`, `layout: standard`, and
+`decided_by: "migration"` (plus `detected_layout` when detection would have
+said `compact`) — a legacy tree written at standard paths is never
+silently folded to compact. A present record is never overwritten — its
 measurement `signals` are refreshed on upgrade with the 3.7 dependency and
-flow fields, while `class`, `layout`, and `decided_by` stand). A legacy
+flow fields, while `class`, `layout`, and `decided_by` stand. The same run
+upgrades a 1.1 `.docforge/flow-index.json` to 1.2 (additive: version plus
+the `summary.written` count), so one bare revise leaves every persistent
+record — manifest, provenance sidecars, and the flow ledger — at the
+newest schema. A legacy
 manifest of any pre-3.0 version (1.1 `project_context` / `document_groups`,
 2.0 flat `documents` with overlays, or another shape) is re-registered by
 the same command: written documents are adopted as `generated` with

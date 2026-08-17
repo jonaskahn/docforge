@@ -337,8 +337,10 @@ class ScaleRecordTests(unittest.TestCase):
                         self.assertEqual(reloaded["version"], MANIFEST_VERSION)
                         scale = reloaded["project"]["scale"]
                         self.assertEqual(scale["class"], "small")
-                        self.assertEqual(scale["layout"], "compact")
-                        self.assertEqual(scale["decided_by"], "detected")
+                        # Legacy backfill never silently folds to compact.
+                        self.assertEqual(scale["layout"], "standard")
+                        self.assertEqual(scale["decided_by"], "migration")
+                        self.assertEqual(scale["detected_layout"], "compact")
                         self.assertEqual(set(scale["signals"]), SIGNAL_KEYS)
                         self.assertEqual(scale["signals"]["source_files"], 5)
 
@@ -479,9 +481,10 @@ class ScaleSchemaTests(unittest.TestCase):
         )
         self.assertEqual(scale["properties"]["class"]["enum"], ["small", "medium", "large"])
         self.assertEqual(scale["properties"]["layout"]["enum"], ["compact", "standard"])
+        self.assertEqual(scale["properties"]["detected_layout"]["enum"], ["compact", "standard"])
         self.assertEqual(
             scale["properties"]["decided_by"]["enum"],
-            ["detected", "user", "tier-constraint"],
+            ["detected", "user", "tier-constraint", "migration"],
         )
         self.assertEqual(set(scale["properties"]["signals"]["required"]), SIGNAL_KEYS)
 

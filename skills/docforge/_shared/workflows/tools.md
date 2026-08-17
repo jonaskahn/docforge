@@ -112,8 +112,15 @@ inline from the absolute cartridge root with `query_catalog --validate`,
   [`validation.md`](validation.md) "Manifest and provenance" and
   [`../runtime/manifest/README.md`](../runtime/manifest/README.md).
 - `flow_index.{py,js}`: harvest, revise (label/candidate dedup, compact
-  communities summary, placeholder stubs, main NOTICE), and render the
-  flow matrix; GitNexus input uses deterministic MCP-export JSON.
+  communities summary, placeholder stubs, main NOTICE), update (the
+  mechanical apply step for the write-start selection gate: promote /
+  demote / skip; and the post-audit summary write-back on documented
+  rows), import (derived candidates from agent flow analysis when the
+  code graph has no native flows), and render the
+  flow matrix (schema 1.2; a 1.1 index upgrades additively on load).
+  No provider flags: UA graphs are read in place and GitNexus flows
+  arrive as the auto-discovered `.docforge/tmp/gitnexus-flows.json`
+  interchange.
 - `validate_metadata.{py,js}`: registry/schema/path/version/peer
   validation, including generated-router drift (`generate_indexes
   --check`).

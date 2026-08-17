@@ -111,11 +111,10 @@ flow documents, decisions, runbooks, datasets, concepts, migrations, backlog
 traceability, and portfolio decisions are dynamic and must be added after
 discovery. Harvest every evidenced flow candidate into
 `.docforge/flow-index.json` during analysis; after the plan gate, render it
-as `docs/flows/README.md` when that document reaches its write turn. On
-revise flow, upsert all candidates as `placeholder` with stubs, update
-existing documented flows, and add dynamic deep-dive flow documents only
-for main-priority rows (with a user NOTICE — see
-[`revision.md`](revision.md)). Never seed an example artifact to stand in
+as `docs/flows/README.md` when that document reaches its write turn. Which
+harvested candidates become deep-dive flow documents is not settled here —
+that is the write-start selection gate below, a mandatory user decision even
+under `--auto-accept`. Never seed an example artifact to stand in
 for discovery.
 
 ## Initialize and preview
@@ -288,6 +287,82 @@ This presentation is the plan gate; a bare list of filenames is
 insufficient. Confirm it unless `--auto-accept` is present. Under
 `--auto-accept`, display the same plan and continue. `--plan-only` stops
 after the full presentation and does not create placeholder documents.
+
+## Flow gate (write-start)
+
+The flow selection gate is a write-start step, not an intake question. It
+fires for `diligence` and `portfolio` tiers after the plan gate is
+confirmed and before the first document is materialized. Spine has no flow
+deep-dives: the harvest still ran during repository inspection, but
+`docs/flows/README.md` renders the candidate matrix only — no gate, no
+selection prompt.
+
+**Mandatory gate — `--auto-accept` never waives it.** Which flows become
+documents is a scope decision like profiles or audiences, not a routine
+pause. The selection prompt in step 5 is always shown and always awaited,
+exactly like the intake confirmation and the root-README three-way choice.
+There is no auto-accept path that silently selects flows; under
+`--auto-accept` only the structure-update pause in step 6 is skipped, the
+selection itself never is.
+
+1. **Precheck** — `precheck_graph.{py,js} --repo <repo> --need flow`
+   ([`../runtime/graph/README.md`](../runtime/graph/README.md)). Native
+   flow graph first; CodeGraph-only → Docforge-derived (provisional), as
+   the plan's capability schedule already stated.
+2. **Harvest or import** — `flow_index.{py,js} harvest --repo <repo>
+   [--main-limit N]` writes `.docforge/flow-index.json` (schema 1.2) with
+   evidence-ranked `main` / `deferred` priorities. No provider flags: it
+   reads Understand Anything graphs in place and the auto-discovered
+   GitNexus interchange `.docforge/tmp/gitnexus-flows.json`. When the
+   selected code graph has no native flow evidence (CodeGraph-only),
+   derive instead: `derive_flow_graph.{py,js} prepare`, the agent/LLM
+   analysis into `.docforge/tmp/flow-analysis.json`, then
+   `flow_index.{py,js} import --repo <repo> --analysis
+   .docforge/tmp/flow-analysis.json` — derived `candidate` rows seeded
+   into the same index, so the gate works for every provider
+   ([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+   "Derived candidates").
+3. **Organize** — `flow_index.{py,js} organize emit`, the agent writes
+   `.docforge/tmp/flow-organization.json` (descriptive names, families,
+   composition), then `organize apply`. Naming and grouping are settled
+   before the prompt — the user never chooses among bare symbols.
+4. **Analyze** — main-priority **standalone** rows get the full deep
+   analysis pack: `derive_flow_graph.{py,js} prepare` context when no
+   native flow graph exists, the agent/LLM analysis into
+   `.docforge/tmp/flow-analysis.json`, then `derive_flow_graph write` when
+   a provisional graph is required. (For a CodeGraph-only run this is the
+   same analysis step 2's import branch consumed.) Deferred rows get
+   summary-level
+   context only — display name, trigger, entry ref, reach, one-line
+   evidence — enough to decide promotion, cheap to discard. Full
+   derivation reasoning:
+   [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md).
+5. **Selection prompt** — every candidate listed; **main standalone
+   pre-selected**, deferred unchecked but promotable. Per row: display
+   name, family, entry, reach (steps/boundaries/churn), confidence,
+   one-line evidence. The main budget is `--main-limit` (default 15)
+   deep-dives; selecting more requires explicit confirmation (state "N
+   over budget"). The user may promote, demote, or skip any row. Wait for
+   explicit confirmation — always, including under `--auto-accept`.
+6. **Apply** — mechanically, per row, `flow_index.{py,js} update --repo
+   <repo> --id <flow-id>`: promoted → `--priority main --status
+   placeholder`; demoted → `--priority deferred`; declined → `--status
+   skipped`. Then `manage_manifest.{py,js} add --type flow --id … --path
+   …` for every selected standalone. Show a **structure update** — added
+   paths and the refreshed exact document count (this is the corrected
+   projection; the intake estimate excluded flow documents on purpose) —
+   and honor the execution mode for the pause, never skipping the tree
+   itself.
+7. **Write** — flow documents follow `write_order`;
+   [`../references/parallel-execution.md`](../references/parallel-execution.md)
+   applies: a spawned writer edits only its own flow document; the flow
+   index and the manifest stay orchestrator-serial.
+8. **Write-back** — after a flow document passes mechanical lint and its
+   independent audit, the orchestrator records the outcome once:
+   `flow_index.{py,js} update --repo <repo> --id <flow-id> --summary
+   "<one-paragraph outcome>" --written`. The command refuses a row whose
+   status is not `documented`. `flow_index render` then shows these
+   summaries in the matrix's `Flow summaries` section.
 
 Immediately before materializing each document, show the current structure
 summary (or "tree unchanged since the displayed checkpoint") and a compact

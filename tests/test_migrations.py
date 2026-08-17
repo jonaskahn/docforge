@@ -528,5 +528,106 @@ class Manifest39MigrationParityTests(unittest.TestCase):
         self.assertEqual(snapshots[0], snapshots[1])
 
 
+    def test_metadata_migration_merges_flow_index_and_backfills_standard_layout(self) -> None:
+        """A bare metadata migration leaves every artifact at the newest
+        schema: manifest 3.9, and the flow ledger 1.2. A legacy manifest with
+        no scale record gets layout `standard` with `decided_by: "migration"`
+        (never a silent compact fold), recording what detection would have
+        said in `detected_layout`."""
+        snapshots = []
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                with self.subTest(runtime=runtime):
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    result = initialize(runtime, repo, "spine", layout="standard")
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    manifest_path = repo / ".docforge" / "manifest.json"
+                    manifest = load_manifest(repo)
+                    manifest["version"] = "3.6"
+                    manifest["project"].pop("scale", None)
+                    manifest["documents"] = []
+                    manifest_path.write_text(
+                        json.dumps(manifest, indent=2) + "\n", encoding="utf-8",
+                    )
+
+                    flow_index_path = repo / ".docforge" / "flow-index.json"
+                    flow_index_body = {
+                        "version": "1.1",
+                        "generated_at": "2026-07-29T00:00:00+00:00",
+                        "project": "fixture",
+                        "sources": ["fixture"],
+                        "providers": ["gitnexus"],
+                        "summary": {
+                            "total": 1, "main": 1, "deferred": 0, "placeholder": 0,
+                            "documented": 1, "skipped": 0, "confirmed": 0,
+                        },
+                        "flows": [{
+                            "id": "flow-checkout", "name": "Checkout", "display_name": "Checkout",
+                            "slug": "checkout", "family": None, "doc_role": "standalone",
+                            "composed_into": None, "doc_path": "docs/flows/checkout.md",
+                            "entry_ref": {
+                                "kind": "http", "signature": "POST /checkout",
+                                "filePath": "src/checkout.py", "symbol": "checkout",
+                            },
+                            "area": "Checkout",
+                            "evidence": [{"provider": "gitnexus", "artifact": "fixture", "nodeId": "x"}],
+                            "confidence": "candidate",
+                            "reach": {"steps": 3, "boundaries": 1, "churn": 0},
+                            "rank": 500, "priority": "main", "status": "documented",
+                            "summary": "Charges the card and records the order.",
+                            "written_at": "2026-07-29T00:00:00+00:00",
+                        }],
+                    }
+                    flow_index_path.write_text(
+                        json.dumps(flow_index_body, indent=2) + "\n", encoding="utf-8",
+                    )
+
+                    # Dry run plans the flow-index upgrade without writing it.
+                    dry = run(runtime, "migrate_metadata", "--repo", str(repo), "--dry-run")
+                    self.assertEqual(dry.returncode, 0, dry.stderr)
+                    dry_report = json.loads(dry.stdout)
+                    dry_docs = {item["doc"].split(f"{repo}/")[-1] for item in dry_report["results"]}
+                    self.assertIn(".docforge/flow-index.json", dry_docs)
+                    self.assertEqual(
+                        json.loads(flow_index_path.read_text(encoding="utf-8"))["version"],
+                        "1.1",
+                        "dry-run must not mutate the flow index",
+                    )
+
+                    migrated = run(runtime, "migrate_metadata", "--repo", str(repo), "--report")
+                    self.assertEqual(migrated.returncode, 0, migrated.stderr + migrated.stdout)
+                    current = load_manifest(repo)
+                    self.assertEqual(current["version"], "3.9")
+                    scale = current["project"]["scale"]
+                    self.assertEqual(scale["layout"], "standard")
+                    self.assertEqual(scale["decided_by"], "migration")
+                    self.assertEqual(scale["detected_layout"], "compact")
+                    upgraded_flow = json.loads(flow_index_path.read_text(encoding="utf-8"))
+                    self.assertEqual(upgraded_flow["version"], "1.2")
+                    self.assertEqual(upgraded_flow["summary"]["written"], 1)
+                    self.assertEqual(
+                        upgraded_flow["flows"][0]["summary"],
+                        "Charges the card and records the order.",
+                    )
+
+                    # Idempotent: a second run reports no flow-index work.
+                    again = run(runtime, "migrate_metadata", "--repo", str(repo), "--report")
+                    self.assertEqual(again.returncode, 0, again.stderr)
+                    again_report = json.loads(again.stdout)
+                    again_docs = {item["doc"].split(f"{repo}/")[-1] for item in again_report["results"]}
+                    self.assertNotIn(".docforge/flow-index.json", again_docs)
+
+                    snapshots.append({
+                        "scale": {
+                            field: scale[field]
+                            for field in ("class", "layout", "decided_by", "detected_layout", "signals")
+                        },
+                        "flow_index": upgraded_flow,
+                    })
+
+        self.assertEqual(snapshots[0], snapshots[1])
+
+
 if __name__ == "__main__":
     raise SystemExit(unittest.main())

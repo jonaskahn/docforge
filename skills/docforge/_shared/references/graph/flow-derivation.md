@@ -14,20 +14,29 @@ python3 runtime/cli/python/flow_index.py harvest --repo <repo> \
 node runtime/cli/js/flow_index.js harvest --repo <repo> \
 # bun  runtime/cli/js/flow_index.js harvest --repo <repo> \
 # deno run -A runtime/cli/js/flow_index.js harvest --repo <repo> \
-  [--gitnexus-export <mcp-export.json>] [--main-limit 15]
+  [--main-limit 15]
 
 python3 runtime/cli/python/flow_index.py revise --repo <repo> \
 node runtime/cli/js/flow_index.js revise --repo <repo> \
 # bun  runtime/cli/js/flow_index.js revise --repo <repo> \
 # deno run -A runtime/cli/js/flow_index.js revise --repo <repo> \
-  [--gitnexus-export <mcp-export.json>] [--main-limit 15]
+  [--main-limit 15]
 ```
+
+There are no provider flags: harvest and revise discover whatever flow
+evidence the repository holds. Understand Anything `.ua/domain-graph.json`
+and `.ua/knowledge-graph.json` are read in place. GitNexus flows arrive as
+the auto-discovered interchange `.docforge/tmp/gitnexus-flows.json` (see
+below). A code graph without native flows contributes derived candidates
+through `flow_index import --analysis` (see "Derived candidates").
 
 The equivalent Node command uses `flow_index.js` (scripts and README:
 [`../../runtime/flows/README.md`](../../runtime/flows/README.md)). Harvest
-writes `.docforge/flow-index.json` (schema **1.1**) during repository
+writes `.docforge/flow-index.json` (schema **1.2**; a 1.1 index is upgraded
+additively on load) during repository
 discovery with `main` / `deferred` priorities. Revise re-harvests, merges
-with the existing index (preserving `documented` and `skipped`), sets other
+with the existing index (preserving `documented`, `skipped`, written
+`summary` / `written_at`), sets other
 rows to `placeholder`, creates stub markdown **only for main-priority
 standalone** placeholders, prunes orphan scaffold stubs for
 deferred/`index_only`/`member` rows, and prints a NOTICE listing main
@@ -42,8 +51,13 @@ its write turn, run `flow_index.{py,js} render --repo <repo>` to project that
 machine record into `docs/flows/README.md`. Rendering is document writing and
 never precedes the plan gate.
 
-For GitNexus, export `Route`, `Process`, and `Community` properties through
-its MCP/cypher interface. Processes are heuristic Entry-to-Terminal paths,
+For GitNexus, the agent materializes the deterministic interchange at
+`.docforge/tmp/gitnexus-flows.json` — produced through the GitNexus
+MCP/cypher interface, or the offline lbug reader
+([`graph-source-gitnexus.md`](graph-source-gitnexus.md)). Harvest discovers
+it automatically; there is no CLI flag. The interchange carries `Route`,
+`Process`, and `Community` properties. Processes are heuristic
+Entry-to-Terminal paths,
 not business flows. Group them by `entryPointId`, retain the terminal set and
 community crossing as reach evidence, and emit one candidate per entry.
 Community **IDs** stay distinct for boundary/reach math; area strings and the
@@ -68,6 +82,34 @@ candidates. They are authoritative but may be incomplete. Scan
 application/service layer membership, tour context, and entry-like
 file/symbol names. A knowledge graph containing only `contains` edges
 supplies structure, not an ordered call flow.
+
+## Derived candidates
+
+When the selected code graph has no native flow evidence (CodeGraph-only,
+or any provider without native flows), flows still come from the available
+code graph — the candidates are derived, then imported into the index so
+the write-start selection gate works for every provider:
+
+```sh
+python3 runtime/cli/python/derive_flow_graph.py prepare --repo <repo> \
+node runtime/cli/js/derive_flow_graph.js prepare --repo <repo> \
+# …then the agent/LLM analyzes main flows into .docforge/tmp/flow-analysis.json…
+python3 runtime/cli/python/flow_index.py import --repo <repo> \
+node runtime/cli/js/flow_index.js import --repo <repo> \
+# bun  runtime/cli/js/flow_index.js import --repo <repo> \
+# deno run -A runtime/cli/js/flow_index.js import --repo <repo> \
+  --analysis .docforge/tmp/flow-analysis.json [--main-limit 15]
+```
+
+`import` maps each analysis flow (`name`, `entryPoint`?, `domain`?,
+`steps[{order, name, path?}]`) onto a `candidate`-confidence row with
+`kind: internal`, evidence pointing at `.docforge/tmp/flow-graph.json`, and
+reach steps from the step count. Rows are finalized (rank / slug / main
+budget), then merged with the existing index through the same
+state-preserving merge `revise` uses — documented and skipped rows keep
+their status, summaries, and organization; new rows land as `placeholder`
+rows awaiting the selection gate. Derived evidence is provisional: confirm
+business rules against source before publishing deep-dive flow documents.
 
 Every row records a normalized `entry_ref`, evidence, confidence, reach,
 rank, `priority` (`main` or `deferred`), status (`main`, `deferred`,
@@ -134,6 +176,39 @@ updates the index; moves or refreshes stubs; and prunes orphan scaffolds.
 Human shorthand: **primary** ≈ main + standalone/parent; **secondary** ≈
 member composed into a parent, or deferred index-only. Do not invent a
 parallel priority enum.
+
+## Selection gate and write-back
+
+Which harvested candidates become deep-dive documents is a **user
+decision at write start** (fresh start: after the plan gate, before
+writing; revise flow: after the flow-mode question and analysis). The
+gate is mandatory — `--auto-accept` never waives it; the user must
+choose to proceed. See the owning workflows:
+[`../../workflows/planning.md`](../../workflows/planning.md) "Flow gate
+(write-start)" and [`../../workflows/revision.md`](../../workflows/revision.md)
+"`/docforge-revise flow`".
+
+- **Analysis depth.** Main-priority standalone rows get the full deep
+  analysis pack (steps, branches, rules, failures). Deferred rows get
+  summary-level context only — name, trigger, entry ref, reach, one-line
+  evidence — enough to decide promotion. A promoted row is deep-analyzed
+  before writing.
+- **Prompt.** Every candidate listed; main standalone pre-selected;
+  deferred promotable; budget = `--main-limit` (default 15) deep-dives,
+  exceeding it needs explicit confirmation.
+- **Apply.** Mechanically with `flow_index.{py,js} update`:
+  promote → `--priority main --status placeholder`; demote →
+  `--priority deferred`; decline → `--status skipped`. The command
+  normalizes `doc_role` / `doc_path` to match: promoted rows become
+  `standalone` with a `docs/flows/{slug}.md` path; skipped/demoted rows
+  become `index_only` with no path. Then
+  `manage_manifest.{py,js} add --type flow` for each selected standalone.
+- **Write-back.** After a flow document passes lint and its independent
+  audit, the orchestrator runs
+  `flow_index.{py,js} update --id <flow-id> --summary "<one-paragraph
+  outcome>" --written` — refused unless the row is `documented`. The
+  rendered matrix shows these summaries in its `Flow summaries` section.
+  Never run by a parallel writer; the index stays orchestrator-serial.
 
 ## Derive main-flow detail
 

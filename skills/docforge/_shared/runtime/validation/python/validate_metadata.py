@@ -31,7 +31,7 @@ PUBLIC_CONTRACTS = {
     "precheck_graph": ["--repo", "--need", "code", "flow"],
     "check_staleness": ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
     "hash_evidence": ["--repo", "--path", "--range", "--json"],
-    "flow_index": ["harvest", "revise", "render", "organize", "emit", "apply", "--repo", "--gitnexus-export", "--main-limit", "--output", "--organization"],
+    "flow_index": ["harvest", "revise", "update", "import", "render", "organize", "emit", "apply", "--repo", "--main-limit", "--output", "--organization", "--id", "--priority", "--status", "--summary", "--written", "--analysis"],
     "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
     "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo", "--group", "--groups"],
     "generate_indexes": ["--write", "--check"],
@@ -108,8 +108,8 @@ def validate() -> list[str]:
         sidecar_schema = read_json(sidecar_schema_path)
         if sidecar_schema.get("properties", {}).get("schema", {}).get("const") != "1.0":
             errors.append("provenance sidecar schema must require version 1.0")
-    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.1":
-        errors.append("flow index schema must require version 1.1")
+    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.2":
+        errors.append("flow index schema must require version 1.2")
     flow_item = (
         flow_index_schema.get("properties", {})
         .get("flows", {})
@@ -119,6 +119,11 @@ def validate() -> list[str]:
     for field in ("display_name", "family", "doc_role", "composed_into", "doc_path"):
         if field not in flow_item:
             errors.append(f"flow index schema must define flow.{field}")
+    for field in ("summary", "written_at"):
+        if field not in flow_item:
+            errors.append(f"flow index schema must define flow.{field}")
+        if field in (flow_index_schema.get("properties", {}).get("flows", {}).get("items", {}).get("required", [])):
+            errors.append(f"flow index schema field flow.{field} must be optional")
     if flow_item.get("doc_role", {}).get("enum") != ["standalone", "member", "index_only"]:
         errors.append("flow index schema doc_role must be standalone|member|index_only")
     dimensions = ["shapes", "platforms", "frameworks", "concerns", "audiences"]

@@ -21,7 +21,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { dumpJson, fail, loadManifest } = require("../../common/js/_util.js");
+const { dumpJson, fail, loadManifest, readJson } = require("../../common/js/_util.js");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
@@ -434,23 +434,55 @@ function seedDescriptions(docs, maps) {
   return seeded;
 }
 
-// Detected-only scale record for backfill. A present `project.scale` is
-// never overwritten — this function is only called when the field is absent.
+// Scale record for a legacy manifest with no scale field.
 //
-// `tier` keeps the backfill from handing a portfolio manifest the compact
-// layout a small collection root would otherwise detect.
+// Legacy repositories were written before layout existed, at standard paths
+// — migration must never silently fold them to compact, so the backfilled
+// layout is always `standard` with `decided_by: "migration"`. The `class`
+// still comes from live detection, and `detected_layout` records what
+// detection would have said so a later revise can show the drift. A present
+// `project.scale` is never overwritten.
 function backfillProjectScale(repo, tier = "diligence") {
   const detected = computeScale(repo);
-  const resolved = layoutFor(tier, detected.suggested_layout, { explicit: false });
   const record = {
     class: detected.class,
-    layout: resolved.layout,
-    decided_by: resolved.decided_by,
+    layout: "standard",
+    decided_by: "migration",
     decided_at: new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00"),
     signals: detected.signals,
   };
-  if (resolved.decided_by === "tier-constraint") record.detected_class = detected.class;
+  if (detected.suggested_layout !== "standard") record.detected_layout = detected.suggested_layout;
   return record;
+}
+
+// Upgrade a 1.1 flow index to 1.2 as part of metadata migration. One bare
+// revise leaves every metadata artifact at the newest schema — manifest,
+// provenance sidecars, and now the flow ledger. The upgrade is the same
+// additive merge `flow_index` performs on load; an absent, unparseable, or
+// already-current index is skipped silently.
+function migrateFlowIndex(repo, dryRun) {
+  const { FLOW_INDEX_VERSION, SUPPORTED_FLOW_INDEX_VERSIONS, upgradeIndex } = require("../../common/js/flow_index_schema.js");
+  const target = path.join(repo, ".docforge", "flow-index.json");
+  if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return null;
+  let index;
+  try {
+    index = readJson(target);
+  } catch {
+    return null;
+  }
+  if (!index || typeof index !== "object" || Array.isArray(index)) return null;
+  const version = String(index.version || "1.1");
+  if (version === FLOW_INDEX_VERSION) return null;
+  if (!SUPPORTED_FLOW_INDEX_VERSIONS.includes(version)) return null;
+  if (!dryRun) {
+    upgradeIndex(index);
+    fs.writeFileSync(target, JSON.stringify(index, null, 2) + "\n");
+  }
+  return {
+    doc: ".docforge/flow-index.json",
+    action: "migrate",
+    detail: `flow index version -> ${FLOW_INDEX_VERSION}`,
+  };
 }
 
 // Force a portfolio manifest off compact. Compact covers spine and diligence
@@ -674,6 +706,8 @@ function migrate(repo, manifestPath, dryRun) {
     migrateManifestObject(manifest, repo, true);
     fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   }
+  const flowIndexReport = migrateFlowIndex(repo, dryRun);
+  if (flowIndexReport) reports.push(flowIndexReport);
   return {
     reports,
     changed: reports.some((item) => (
@@ -1067,6 +1101,8 @@ function migrateLegacy(repo, manifestPath, manifest, dryRun) {
     detail: `manifest version -> ${MANIFEST_CURRENT}; re-registered from ${version} ` +
       `(${adopted} adopted, ${keptPlanned} planned/in-progress, ${skipped} skipped, ${failed} failed, ${fallback} generic)`,
   });
+  const flowIndexReport = migrateFlowIndex(repo, dryRun);
+  if (flowIndexReport) reports.push(flowIndexReport);
   return { reports, changed: Boolean(adopted || keptPlanned || failed) };
 }
 
