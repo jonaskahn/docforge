@@ -1,20 +1,19 @@
 # Environments writing craft
 
-Link every environment difference and promotion gate to deployment configuration,
-CI policy, or its operations owner. Keep configuration values in
-`reference/configuration` and record unverified parity or gate behavior as unknown.
-
-State what actually differs between environments — configuration values,
-scale, data realism, external service stubs — as a comparison table, one
-row per dimension, environments as columns; a reader should be able to spot
-every difference in one scan. State the promotion boundary as plainly:
-what must be true before a change moves from one environment to the next,
-and who owns that gate.
-
-State configuration ownership per environment — which team or system
-controls each environment's config. Keep deployment procedure out; this document
-describes what differs, [deployment.md](deployment.md) describes how to
-ship into it.
+- Link every environment difference and promotion gate to deployment
+  configuration, CI policy, or its operations owner.
+- Keep configuration values in `reference/configuration` and record
+  unverified parity or gate behavior as unknown.
+- State what actually differs between environments — configuration values,
+  scale, data realism, external service stubs — as a comparison table, one
+  row per dimension, environments as columns; a reader should be able to
+  spot every difference in one scan.
+- State the promotion boundary as plainly: what must be true before a change
+  moves from one environment to the next, and who owns that gate.
+- State configuration ownership per environment — which team or system
+  controls each environment's config.
+- Keep deployment procedure out; this document describes what differs,
+  `deployment` describes how to ship into it.
 
 ## Illustration
 

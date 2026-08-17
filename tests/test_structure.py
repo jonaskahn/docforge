@@ -586,7 +586,7 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("never builds or requires a graph spanning repositories", portfolio)
 
     def test_system_context_instruction_resolves_flow_edges_mechanically(self) -> None:
-        instruction = (SHARED_ROOT / "content" / "portfolio" / "system-context.instruction.md").read_text(
+        instruction = (SHARED_ROOT / "content" / "portfolio" / "instructions.md").read_text(
             encoding="utf-8"
         )
         self.assertIn("`flow_edges` from\n`discover_child_repos` resolves them in order", instruction)

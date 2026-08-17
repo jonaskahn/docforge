@@ -1,17 +1,18 @@
 # State-management writing craft
 
-Open with the lifecycle this document covers — the named states a unit of
-state can be in, from creation to disposal. Trace boundaries next: what
-owns each piece of state, and where read access ends and a mutation must go
-through an explicit transition instead of a direct write. Walk transitions
-in the order they actually occur, one per short paragraph, naming what
-triggers each one and what invariant it must preserve. Close with failure
-and recovery: what happens to state on a crash mid-transition, whether it is
-durable, and how a corrupted or partial state is detected and repaired.
-
-Keep this document about lifecycle and transitions, not about every field a
-piece of state happens to hold — a field inventory belongs to a reference
-document or the schema itself, linked from here.
+- Open with the lifecycle this document covers — the named states a unit of
+  state can be in, from creation to disposal.
+- Trace boundaries next: what owns each piece of state, and where read access
+  ends and a mutation must go through an explicit transition instead of a
+  direct write.
+- Walk transitions in the order they actually occur, one per short paragraph,
+  naming what triggers each one and what invariant it must preserve.
+- Close with failure and recovery: what happens to state on a crash
+  mid-transition, whether it is durable, and how a corrupted or partial
+  state is detected and repaired.
+- Keep this document about lifecycle and transitions, not every field a piece
+  of state happens to hold — a field inventory belongs to a reference
+  document or the schema itself, linked from here.
 
 ## Illustration
 

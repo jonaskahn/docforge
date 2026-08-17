@@ -1,23 +1,23 @@
 # Model-lifecycle writing craft
 
-Ground each stage in dataset, training-run, artifact, and monitoring evidence;
-name the owner of each drift response. State concise, evidenced deployment
-limitations here, link detailed evaluation to `model-card`, and mark unevidenced
-bias or drift claims as unknown.
-
-Trace the full lifecycle in order: dataset lineage, training/evaluation,
-artifact packaging, inference serving, drift monitoring, ownership. For
-dataset lineage, borrow the Datasheets for Datasets discipline (Gebru et
-al., 2018): where the data came from, what it excludes, and known biases
-or gaps. State the artifact's provenance (which
-training run produced the deployed version) so a reader can trace a
-production behavior back to a specific training configuration.
-
-State drift monitoring concretely: what signal is watched, and what
-happens when it fires — retrain, roll back, or alert-only. Name the owner
-who acts on that signal. Detailed evaluation numbers and intended-use
-boundaries belong in [model-card.md](model-card.md); this document owns
-the pipeline, not the report.
+- Ground each stage in dataset, training-run, artifact, and monitoring
+  evidence; name the owner of each drift response.
+- State concise, evidenced deployment limitations here, link detailed
+  evaluation to `model-card`, and mark unevidenced bias or drift claims as
+  unknown.
+- Trace the full lifecycle in order: dataset lineage, training/evaluation,
+  artifact packaging, inference serving, drift monitoring, ownership.
+- For dataset lineage, borrow the Datasheets for Datasets discipline (Gebru
+  et al., 2018): where the data came from, what it excludes, and known
+  biases or gaps.
+- State the artifact's provenance (which training run produced the deployed
+  version) so a reader can trace a production behavior back to a specific
+  training configuration.
+- State drift monitoring concretely: what signal is watched, and what
+  happens when it fires — retrain, roll back, or alert-only. Name the owner
+  who acts on that signal.
+- Detailed evaluation numbers and intended-use boundaries belong in
+  `model-card`; this document owns the pipeline, not the report.
 
 ## Illustration
 

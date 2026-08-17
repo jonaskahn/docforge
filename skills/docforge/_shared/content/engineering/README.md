@@ -9,7 +9,7 @@ Engineering practices: conventions, testing, and tech debt.
 ## Contents
 
 - [contracts/](contracts/README.md) — 7 contracts
-- [instructions/](instructions/README.md) — 7 instructions
+- `instructions.md` — Merged writing craft, one section per document (conventions, data-quality, publishing, release-guide, setup-guide, styling, testing-guide) → [instructions.md](instructions.md)
 - [templates/](templates/README.md) — 7 templates
 
 ## Boundaries

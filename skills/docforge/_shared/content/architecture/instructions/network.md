@@ -1,18 +1,19 @@
 # Network writing craft
 
-Name the infrastructure or network-policy source of truth for every zone crossing
-and enforcement boundary. Mark unverified topology and removal-impact claims as
-unknown rather than treating a configuration snapshot as current reality.
-
-Draw trust zones first — public, internal, restricted — before any single
-rule. For each boundary crossing, state what traffic crosses it and why,
-not every open port. Name the enforcement mechanism per boundary (security
-group, network policy, firewall rule set) so a reader knows where to go
-verify the current state.
-
-State what would happen if a boundary were removed — the concentration-risk
-question dependencies-inventory.md asks about packages, asked here about
-network segmentation.
+- Name the infrastructure or network-policy source of truth for every zone
+  crossing and enforcement boundary.
+- Mark unverified topology and removal-impact claims as unknown rather than
+  treating a configuration snapshot as current reality.
+- Draw trust zones first — public, internal, restricted — before any single
+  rule.
+- For each boundary crossing, state what traffic crosses it and why, not
+  every open port.
+- Name the enforcement mechanism per boundary (security group, network
+  policy, firewall rule set) so a reader knows where to go verify the
+  current state.
+- State what would happen if a boundary were removed — the
+  concentration-risk question `dependencies-inventory` asks about packages,
+  asked here about network segmentation.
 
 ## Illustration
 

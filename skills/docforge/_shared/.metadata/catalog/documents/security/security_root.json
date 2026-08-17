@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/security/security-policy.instruction.md",
+  "instruction_file": "content/security/instructions.md",
   "requires": [],
   "target_depth": "router",
   "write_order": 75,

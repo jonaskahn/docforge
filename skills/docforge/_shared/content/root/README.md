@@ -12,6 +12,7 @@ Root-level entrypoints: repository README, changelog, and the docs index.
 - `changelog.template.md` — Released versions, dates, user-visible changes, compatibility notes → [changelog.template.md](changelog.template.md)
 - `docs-index.contract.md` — Selected children and one-line purpose → [docs-index.contract.md](docs-index.contract.md)
 - `docs-index.template.md` — Selected children and one-line purpose → [docs-index.template.md](docs-index.template.md)
+- `instructions.md` — Merged writing craft for `changelog` and `root_readme`; one section per document → [instructions.md](instructions.md)
 - `root-readme.contract.md` — Purpose, audience, verified quick start, links to setup/architecture/limitations → [root-readme.contract.md](root-readme.contract.md)
 - `root-readme.template.md` — Purpose, audience, verified quick start, links to setup/architecture/limitations → [root-readme.template.md](root-readme.template.md)
 

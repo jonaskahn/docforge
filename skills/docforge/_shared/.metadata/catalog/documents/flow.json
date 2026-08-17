@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": "discovered_flow"
   },
-  "instruction_file": "content/flows/flows.instruction.md",
+  "instruction_file": "content/flows/instructions.md",
   "requires": [
     "flow_graph"
   ],

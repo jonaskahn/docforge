@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": "discovered_epic"
   },
-  "instruction_file": "content/portfolio/epic.instruction.md",
+  "instruction_file": "content/portfolio/instructions.md",
   "requires": [
     "git_history"
   ],

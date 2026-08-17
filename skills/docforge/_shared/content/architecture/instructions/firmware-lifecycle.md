@@ -1,19 +1,20 @@
 # Firmware-lifecycle writing craft
 
-Open with the board and peripheral inventory this firmware runs on, stated
-as the concrete hardware this document covers — not a generic embedded
-overview. Trace protocols next (what talks to what, over which bus or
-interface), then the boot and update states as an ordered lifecycle: power-on,
-initialization, normal operation, update entry, update application, rollback.
-Name memory and power behavior as constraints the lifecycle must respect
-(available flash/RAM budget, power states that gate which transitions are
-even possible), then close with failure behavior — what happens on a failed
-flash write, a brownout mid-update, or a watchdog reset, and whether the
-device fails safe, retries, or requires physical recovery.
-
-Do not reproduce a component datasheet; cite the concrete part and link to
-its datasheet instead of restating registers or timing tables that belong
-to the vendor's own document.
+- Open with the board and peripheral inventory this firmware runs on, stated
+  as the concrete hardware this document covers — not a generic embedded
+  overview.
+- Trace protocols next (what talks to what, over which bus or interface),
+  then the boot and update states as an ordered lifecycle: power-on,
+  initialization, normal operation, update entry, update application,
+  rollback.
+- Name memory and power behavior as constraints the lifecycle must respect
+  (available flash/RAM budget, power states that gate which transitions are
+  even possible), then close with failure behavior — what happens on a
+  failed flash write, a brownout mid-update, or a watchdog reset, and
+  whether the device fails safe, retries, or requires physical recovery.
+- Do not reproduce a component datasheet; cite the concrete part and link to
+  its datasheet instead of restating registers or timing tables that belong
+  to the vendor's own document.
 
 ## Illustration
 

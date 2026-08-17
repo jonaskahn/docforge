@@ -1,15 +1,16 @@
 # Platform-integration writing craft
 
-Cite adapter, callback, manifest, or entitlement evidence for every integration.
-Link permission rationale to `security/platform-permissions`; record unavailable
-platform fallback or unproven permission scope as unknown rather than assumed.
-
-One section per OS service or platform adapter integrated: what it's used
-for, the permission boundary it requires (link
-[permissions.md](permissions.md) rather than repeating), the callback
-contract, and failure/fallback behavior when the service is unavailable.
-Avoid a generic platform-API tutorial — describe this repository's actual
-usage, not the platform's documentation.
+- Cite adapter, callback, manifest, or entitlement evidence for every
+  integration.
+- Link permission rationale to `security/platform-permissions`; record
+  unavailable platform fallback or unproven permission scope as unknown
+  rather than assumed.
+- One section per OS service or platform adapter integrated: what it's used
+  for, the permission boundary it requires (link `platform-permissions`
+  rather than repeating), the callback contract, and failure/fallback
+  behavior when the service is unavailable.
+- Avoid a generic platform-API tutorial — describe this repository's actual
+  usage, not the platform's documentation.
 
 ## Illustration
 

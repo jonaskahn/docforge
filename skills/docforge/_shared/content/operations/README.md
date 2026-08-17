@@ -9,7 +9,7 @@ Deployment, observability, and operational runbooks.
 ## Contents
 
 - [contracts/](contracts/README.md) — 10 contracts
-- [instructions/](instructions/README.md) — 8 instructions
+- `instructions.md` — Merged writing craft, one section per document (application-distribution, deployment, disaster-recovery, flashing-recovery, infrastructure-apply/state, job-reliability, network-deployment, observability, runbook) → [instructions.md](instructions.md)
 - [templates/](templates/README.md) — 10 templates
 
 ## Boundaries

@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/portfolio/repo-inventory.instruction.md",
+  "instruction_file": "content/portfolio/instructions.md",
   "requires": [
     "manifests",
     "git_history"

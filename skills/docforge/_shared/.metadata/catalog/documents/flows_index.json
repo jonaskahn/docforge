@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/flows/flow-index.instruction.md",
+  "instruction_file": "content/flows/instructions.md",
   "requires": [
     "code_graph"
   ],

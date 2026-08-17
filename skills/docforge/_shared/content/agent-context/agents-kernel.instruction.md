@@ -16,30 +16,31 @@ useful.
 
 ## Evidence
 
-Use terse, imperative language. State only facts supported by the selected
-graph, manifests, source, configuration, CI, history, or explicit user input.
-Do not infer a command from a script name, a convention from one occurrence, or
-permission from tool defaults. Say that a command or rule is not evidenced
-rather than inventing it.
-
-Prefer durable module, source, and configuration paths over line numbers or
-volatile symbol inventories. A compact ASCII layer stack is acceptable only
-when bullets or a small table cannot express a dependency boundary clearly.
+- Use terse, imperative language.
+- State only facts supported by the selected graph, manifests, source,
+  configuration, CI, history, or explicit user input.
+- Do not infer a command from a script name, a convention from one
+  occurrence, or permission from tool defaults. Say that a command or rule
+  is not evidenced rather than inventing it.
+- Prefer durable module, source, and configuration paths over line numbers or
+  volatile symbol inventories. A compact ASCII layer stack is acceptable
+  only when bullets or a small table cannot express a dependency boundary
+  clearly.
 
 ## Kernels
 
-Use the same kernel template for both root kernel outputs. Each is a complete,
-concise duplicate containing project purpose and stack, verified commands, a
-durable repository map, precedence, hard boundaries, local conventions, and
-validation expectations. Omit the optional conventions section when no
-non-obvious convention is evidenced. Do not add a deeper-context section.
-
-Preserve the kernel rubric's section order: Commands, Repository Map,
-Precedence, Boundaries, optional Conventions, and Validation. The final line
-states the observable working condition.
-
-Keep each kernel within the `agents-kernel` audit-profile line budget and pass
-the dedicated kernel rubric. Front-load commands and safety boundaries.
+- Use the same kernel template for both root kernel outputs. Each is a
+  complete, concise duplicate containing project purpose and stack, verified
+  commands, a durable repository map, precedence, hard boundaries, local
+  conventions, and validation expectations.
+- Omit the optional conventions section when no non-obvious convention is
+  evidenced. Do not add a deeper-context section.
+- Preserve the kernel rubric's section order: Commands, Repository Map,
+  Precedence, Boundaries, optional Conventions, and Validation. The final
+  line states the observable working condition.
+- Keep each kernel within the `agents-kernel` audit-profile line budget and
+  pass the dedicated kernel rubric. Front-load commands and safety
+  boundaries.
 
 ## Topic views
 

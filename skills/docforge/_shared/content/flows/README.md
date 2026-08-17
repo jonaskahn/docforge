@@ -11,7 +11,8 @@ End-to-end flow documentation derived from the flow index.
 - `flow-index.contract.md` — Every evidence-backed candidate, normalized entry reference, area, confidence, reach, priority, and main/deferred/placeholder/documented/skipped status → [flow-index.contract.md](flow-index.contract.md)
 - `flow-index.template.md` — Every evidence-backed candidate, normalized entry reference, area, confidence, reach, priority, and main/deferred/placeholder/documented/skipped status → [flow-index.template.md](flow-index.template.md)
 - `flow.contract.md` — Trigger, actors, ordered steps, branches, rules, failures, outcome → [flow.contract.md](flow.contract.md)
-- `flows.instruction.md` — Trigger, actors, ordered steps, branches, rules, failures, outcome → [flows.instruction.md](flows.instruction.md)
+- `flow.template.md` — Trigger, actors, ordered steps, branches, rules, failures, outcome → [flow.template.md](flow.template.md)
+- `instructions.md` — Merged writing craft for `flows_index` and `flow`; one section per document → [instructions.md](instructions.md)
 
 ## Boundaries
 

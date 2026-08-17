@@ -1,24 +1,24 @@
 # Ai-integration writing craft
 
-State safety controls and evaluation evidence for each integration boundary, or
-record them as unknown. Cite provider configuration and call sites; link model
-quality to `model-card` or `model-lifecycle` and data classification to
-`data-handling` rather than duplicating either.
-
-Draw the model/provider boundary first: which calls leave the system,
-to which provider, and what crosses that boundary in each direction.
-State the prompt/input surface as a contract: what user or system input
-reaches the model, and what sanitization or scoping happens before it does.
-
-State output handling explicitly: is the model's output shown directly to
-a user, used to take an action, or only advisory. Give the failure and
-fallback behavior when the provider is unavailable or returns a
-low-confidence result. State the
-privacy boundary (does user data leave the system in the prompt, is it
-retained by the provider) as plainly as data-handling.md would for any
-other data flow. Never claim a model-quality property this document
-doesn't evaluate — that belongs in [model-card.md](model-card.md) when the
-model is one this repository trains or fine-tunes.
+- State safety controls and evaluation evidence for each integration boundary;
+  record missing ones as unknown.
+- Cite provider configuration and call sites; link model quality to
+  `model-card` or `model-lifecycle` and data classification to
+  `data-handling` rather than duplicating either.
+- Draw the model/provider boundary first: which calls leave the system, to
+  which provider, and what crosses that boundary in each direction.
+- State the prompt/input surface as a contract: what user or system input
+  reaches the model, and what sanitization or scoping happens before it does.
+- State output handling explicitly: shown directly to a user, used to take an
+  action, or advisory only.
+- Give failure and fallback behavior when the provider is unavailable or
+  returns a low-confidence result.
+- State the privacy boundary (does user data leave the system in the prompt,
+  is it retained by the provider) as plainly as `data-handling` would for any
+  other data flow.
+- Never claim a model-quality property this document doesn't evaluate — that
+  belongs in `model-card` when the model is one this repository trains or
+  fine-tunes.
 
 ## Illustration
 

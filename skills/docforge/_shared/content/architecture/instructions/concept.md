@@ -1,18 +1,20 @@
 # Concept writing craft
 
-One concept, one document. Open by naming the concept and the responsibility
-it owns in a single sentence — what would break, or who would be confused,
-if this concept did not exist. Trace its relationships next: what it depends
-on, what depends on it, and the boundary at which its responsibility ends and
-a neighboring concept's begins. State its invariants as things that must
-always be true, not as descriptions of current behavior — a reader should be
-able to tell the difference between "this is how it works today" and "this
-must never change without breaking a caller's assumption." Close with the
-failure boundary: what this concept guarantees will not happen, and what it
-explicitly does not protect against.
-
-Never walk the reader through the concept symbol by symbol; that tour
-belongs to the code itself, not to a document meant to outlive a refactor.
+- One concept, one document.
+- Open by naming the concept and the responsibility it owns in a single
+  sentence — what would break, or who would be confused, if this concept did
+  not exist.
+- Trace its relationships next: what it depends on, what depends on it, and
+  the boundary at which its responsibility ends and a neighboring concept's
+  begins.
+- State its invariants as things that must always be true, not as
+  descriptions of current behavior — a reader should be able to tell the
+  difference between "this is how it works today" and "this must never
+  change without breaking a caller's assumption."
+- Close with the failure boundary: what this concept guarantees will not
+  happen, and what it explicitly does not protect against.
+- Never walk the reader through the concept symbol by symbol; that tour
+  belongs to the code itself, not to a document meant to outlive a refactor.
 
 ## Illustration
 

@@ -11,6 +11,7 @@ Contracts, instructions, and templates for every catalog document, organized by 
 
 - [agent-context/](agent-context/README.md) — Agent-facing context: AGENTS.md and coding-agent views.
 - [architecture/](architecture/README.md) — System architecture: structure, boundaries, and integration surfaces.
+- [compact/](compact/instructions.md) — Compact-layout craft for the merged per-group documents (`compact/contracts/`, `compact/instructions.md`, `compact/templates/`).
 - [contributing/](contributing/README.md) — Contribution guidelines and root-level contributor docs.
 - [engineering/](engineering/README.md) — Engineering practices: conventions, testing, and tech debt.
 - [flows/](flows/README.md) — End-to-end flow documentation derived from the flow index.
@@ -89,3 +90,9 @@ must not redefine this contract.
 ## Boundaries
 
 Every content-contract, instruction, and template file referenced by `.metadata/catalog/` lives under this tree. No group duplicates a shared artifact; no artifact lives outside its owning group or `shared/`.
+
+Instruction files are either a merged `<group>/instructions.md` (one `##`
+section per document, routes listed in its preamble) or per-document files
+under `<group>/instructions/` (architecture) — both wired by exact path from
+catalog records. `shared/` instruction files stay separate: each is
+referenced by records across groups.

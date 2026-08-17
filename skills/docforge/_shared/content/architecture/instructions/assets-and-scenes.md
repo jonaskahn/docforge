@@ -1,18 +1,19 @@
 # Assets-and-scenes writing craft
 
-Open with the system's boundaries: what counts as a scene or an asset in
-this engine/project, and where the loading pipeline's responsibility starts
-and ends. Trace loading next in the order it actually happens (discovery,
-load, instantiation, teardown), then save-state (what is captured, what is
-regenerated instead of saved, and why), then platform-build differences
-(what changes per target platform — asset formats, streaming behavior,
-memory budgets). Close with failure behavior: a missing asset, a corrupted
-save, or a load timeout, and whether the game fails safe, retries, or falls
-back to a placeholder.
-
-Do not let this document drift into design-document territory — describe
-the loading and scene system as it behaves today, not the creative vision
-for what scenes should eventually contain.
+- Open with the system's boundaries: what counts as a scene or an asset in
+  this engine/project, and where the loading pipeline's responsibility starts
+  and ends.
+- Trace loading next in the order it actually happens (discovery, load,
+  instantiation, teardown), then save-state (what is captured, what is
+  regenerated instead of saved, and why), then platform-build differences
+  (what changes per target platform — asset formats, streaming behavior,
+  memory budgets).
+- Close with failure behavior: a missing asset, a corrupted save, or a load
+  timeout, and whether the game fails safe, retries, or falls back to a
+  placeholder.
+- Do not drift into design-document territory — describe the loading and
+  scene system as it behaves today, not the creative vision for what scenes
+  should eventually contain.
 
 ## Illustration
 

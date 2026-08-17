@@ -9,7 +9,7 @@ System architecture: structure, boundaries, and integration surfaces.
 ## Contents
 
 - [contracts/](contracts/README.md) — 28 contracts
-- [instructions/](instructions/README.md) — 20 instructions
+- [instructions/](instructions/README.md) — 26 instructions
 - [templates/](templates/README.md) — 27 templates
 
 ## Boundaries

@@ -10,11 +10,7 @@ Security posture, permissions, and threat model.
 
 - [contracts/](contracts/README.md) — 6 contracts
 - [templates/](templates/README.md) — 6 templates
-- `api-authentication.instruction.md` — Public surface, inputs/outputs, auth contract, limits, errors, compatibility source → [api-authentication.instruction.md](api-authentication.instruction.md)
-- `data-handling.instruction.md` — Data classes, lifecycle, access, retention, deletion → [data-handling.instruction.md](data-handling.instruction.md)
-- `platform-permissions.instruction.md` — Requested capability, trigger, user value, denial behavior, settings/recovery, manifest evidence → [platform-permissions.instruction.md](platform-permissions.instruction.md)
-- `security-policy.instruction.md` — Supported scope, reporting path, response expectations, safe harbor → [security-policy.instruction.md](security-policy.instruction.md)
-- `threat-model.instruction.md` — Assets, trust boundaries, threats, controls, accepted residual risk → [threat-model.instruction.md](threat-model.instruction.md)
+- `instructions.md` — Merged writing craft for `api-authentication`, `data-handling`, `platform-permissions`, `security-policy` (`security_root`), `threat-model`, `threat-register`; one section per document → [instructions.md](instructions.md)
 
 ## Boundaries
 

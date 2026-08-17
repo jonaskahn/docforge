@@ -1,22 +1,22 @@
 # Persistence writing craft
 
-Ground entity mappings, transaction boundaries, and atomicity claims in schema,
-migration, manifest, or code evidence. Name the owning component and mark
-unverified crash-recovery behavior as unknown; storage mechanics remain here,
-while data contract semantics stay with their reference owner.
-
-Map each entity to its storage representation — table/collection name, key
-strategy, and any denormalization that departs from the obvious mapping,
-stated with the reason. State the migration mechanism (tool, versioning
-scheme, whether migrations are reversible) as a fact, not a tutorial on the
-tool itself. State the transaction and consistency boundary explicitly:
-what operations are atomic together, and what consistency model applies
-across entities that aren't (eventual, read-your-writes, none).
-
-Close each entity or subsystem with its failure-recovery behavior — what
-happens to a write in flight during a crash — using the same
-absence-based-fact discipline architecture-low-level.md asks for
-invariants ("never partially applies a multi-entity write").
+- Ground entity mappings, transaction boundaries, and atomicity claims in
+  schema, migration, manifest, or code evidence.
+- Name the owning component and mark unverified crash-recovery behavior as
+  unknown; storage mechanics remain here, while data contract semantics stay
+  with their reference owner.
+- Map each entity to its storage representation — table/collection name, key
+  strategy, and any denormalization that departs from the obvious mapping,
+  stated with the reason.
+- State the migration mechanism (tool, versioning scheme, whether migrations
+  are reversible) as a fact, not a tutorial on the tool itself.
+- State the transaction and consistency boundary explicitly: what operations
+  are atomic together, and what consistency model applies across entities
+  that aren't (eventual, read-your-writes, none).
+- Close each entity or subsystem with its failure-recovery behavior — what
+  happens to a write in flight during a crash — using the same
+  absence-based-fact discipline `architecture-low-level` asks for invariants
+  ("never partially applies a multi-entity write").
 
 ## Illustration
 

@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/contributing/contributing-router.instruction.md",
+  "instruction_file": "content/contributing/instructions.md",
   "requires": [
     "manifests"
   ],

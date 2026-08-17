@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/reference/instructions/tech-stack.md",
+  "instruction_file": "content/reference/instructions.md",
   "requires": [
     "manifests"
   ],

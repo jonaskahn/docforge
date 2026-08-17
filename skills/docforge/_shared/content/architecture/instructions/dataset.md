@@ -1,17 +1,18 @@
 # Dataset writing craft
 
-Open with the dataset's identity: what real-world or system entity it
-represents and the guarantee it exists to provide. Name every producer and
-every consumer explicitly. State schema ownership (which document or
-schema file is the source of truth for fields, so this document links
-rather than repeats them), freshness and retention (how current the data is
-guaranteed to be and how long it is kept), and failure/recovery (what
-happens on a bad write, a missed refresh, or a consumer reading stale data).
-
-Every lineage claim must be evidenced — a table, a pipeline config, a schema
-file this document can point to. Never present a sample or a one-off
-observation as if it were a guarantee; a reference document's value is that
-every row can be trusted without re-verification.
+- Open with the dataset's identity: what real-world or system entity it
+  represents and the guarantee it exists to provide.
+- Name every producer and every consumer explicitly.
+- State schema ownership (which document or schema file is the source of
+  truth for fields, so this document links rather than repeats them),
+  freshness and retention (how current the data is guaranteed to be and how
+  long it is kept), and failure/recovery (what happens on a bad write, a
+  missed refresh, or a consumer reading stale data).
+- Evidence every lineage claim — a table, a pipeline config, a schema file
+  this document can point to.
+- Never present a sample or a one-off observation as if it were a guarantee;
+  a reference document's value is that every row can be trusted without
+  re-verification.
 
 ## Illustration
 

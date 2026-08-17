@@ -12,7 +12,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/compact/instructions/decisions.md",
+  "instruction_file": "content/compact/instructions.md",
   "requires": [
     "git_history"
   ],

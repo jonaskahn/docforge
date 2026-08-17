@@ -15,7 +15,7 @@
     },
     "condition": null
   },
-  "instruction_file": "content/product/instructions/api-versioning.md",
+  "instruction_file": "content/product/instructions.md",
   "requires": [
     "code_graph",
     "git_history"

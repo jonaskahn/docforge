@@ -9,7 +9,7 @@ Reference lookups: APIs, configuration, and glossary.
 ## Contents
 
 - [contracts/](contracts/README.md) — 18 contracts
-- [instructions/](instructions/README.md) — 13 instructions
+- `instructions.md` — Merged writing craft, one section per document (api-rate-limits, api-reference, browser-support, command-reference, compatibility, configuration, data-types, error-catalog, limitations-register, model-card, output-exit-contract, performance-budgets, platform-compatibility, resources/access, tech-stack) → [instructions.md](instructions.md)
 - [templates/](templates/README.md) — 18 templates
 
 ## Boundaries

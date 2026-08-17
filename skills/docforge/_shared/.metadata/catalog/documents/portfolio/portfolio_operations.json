@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/portfolio/security-posture.instruction.md",
+  "instruction_file": "content/portfolio/instructions.md",
   "requires": [
     "manifests"
   ],

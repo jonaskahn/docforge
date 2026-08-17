@@ -16,7 +16,7 @@
     },
     "condition": null
   },
-  "instruction_file": "content/compact/instructions/agents.md",
+  "instruction_file": "content/compact/instructions.md",
   "requires": [],
   "target_depth": "deep-dive",
   "write_order": 204,

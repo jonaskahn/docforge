@@ -1,16 +1,16 @@
 # Constraints writing craft
 
-State each hard bound as a fact with a source and a consequence: what
-imposes it (a platform limit, a regulation, a third-party contract, physics),
-and what it forces the design to do or avoid. A constraint without a
-traceable source reads as an opinion, not a bound a reviewer can verify.
-Group deliberate non-goals separately from imposed bounds — a non-goal is a
-choice this team made and could unmake; a constraint is not.
-
-This document is the one place hard, externally imposed, immovable bounds
-live. Do not let a fixable shortcut drift in here disguised as a constraint,
-and do not let a user-visible accepted limitation hide here instead of in
-`limitations-register`.
+- State each hard bound as a fact with a source and a consequence: what
+  imposes it (a platform limit, a regulation, a third-party contract,
+  physics), and what it forces the design to do or avoid. A constraint
+  without a traceable source reads as an opinion, not a bound a reviewer can
+  verify.
+- Group deliberate non-goals separately from imposed bounds — a non-goal is a
+  choice this team made and could unmake; a constraint is not.
+- This document is the one place hard, externally imposed, immovable bounds
+  live. Do not let a fixable shortcut drift in here disguised as a
+  constraint, and do not let a user-visible accepted limitation hide here
+  instead of in `limitations-register`.
 
 ## Illustration
 

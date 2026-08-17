@@ -15,7 +15,7 @@
     },
     "condition": null
   },
-  "instruction_file": "content/reference/instructions/output-exit-contract.md",
+  "instruction_file": "content/reference/instructions.md",
   "requires": [
     "code_graph",
     "manifests"

@@ -15,7 +15,7 @@
     },
     "condition": null
   },
-  "instruction_file": "content/security/api-authentication.instruction.md",
+  "instruction_file": "content/security/instructions.md",
   "requires": [
     "code_graph"
   ],

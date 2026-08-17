@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/reference/instructions/limitations-register.md",
+  "instruction_file": "content/reference/instructions.md",
   "requires": [
     "code_graph",
     "git_history"

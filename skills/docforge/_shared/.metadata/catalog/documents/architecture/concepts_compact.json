@@ -12,7 +12,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/compact/instructions/concepts.md",
+  "instruction_file": "content/compact/instructions.md",
   "requires": [
     "code_graph"
   ],

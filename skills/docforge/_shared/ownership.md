@@ -47,7 +47,10 @@
   tiers, and placement above).
 - [`workflows/revision.md`](workflows/revision.md): document retirement and
   current-template conformance enforcement.
-- `content/<group>/instructions/`: document-specific writing craft only.
+- `content/<group>/instructions.md` (merged, one section per document), or
+  `content/<group>/instructions/` where per-document files remain
+  (architecture) and `agent-context/agents-kernel.instruction.md` (single
+  shared instruction): document-specific writing craft only.
 - `content/<group>/templates/`: output scaffolds only.
 
 When a rule changes, update its owner and replace other repetitions with a

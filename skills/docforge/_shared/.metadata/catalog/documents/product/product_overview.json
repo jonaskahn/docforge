@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/product/instructions/product-overview.md",
+  "instruction_file": "content/product/instructions.md",
   "requires": [
     "code_graph"
   ],

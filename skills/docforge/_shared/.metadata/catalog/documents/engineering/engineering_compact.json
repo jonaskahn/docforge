@@ -12,7 +12,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/compact/instructions/engineering.md",
+  "instruction_file": "content/compact/instructions.md",
   "requires": [
     "manifests",
     "git_history"

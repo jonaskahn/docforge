@@ -1,33 +1,36 @@
 # Low-level architecture writing craft
 
-This is C4's Component level (Level 3) — the zoom-in on the containers named in
-high-level.md — so component boundaries here should trace back to a block named there, not
-introduce a parallel decomposition. Organize by subsystem responsibility, not directory
-traversal: a folder holding three unrelated responsibilities gets three write-ups, not one.
-
-For each subsystem, explain inputs, state transitions, outputs, failure containment, and
-adjacent dependencies in that order. Add a sequence diagram only when the reader must
-follow who calls whom across components; use prose and a record-layout fence when the point
-is the shape of data rather than call order. Skip the visual when prose alone does not force
-a reader to reconstruct a multi-step interaction. Write invariants as absence-based facts a reader cannot
-recover by reading code ("never retries a non-idempotent write"). Close each section with
-the stable file/module paths that orient implementation work.
-
-`arch_low_level` is a component zoom-in and must trace each component to a
-high-level block. `concept` is a durable subsystem topic: define its
-responsibility, relationships, invariant, and failure boundary without forcing
-a parent-component decomposition. State only dependency semantics for data;
-link persistence or datasets for their model and storage mechanics. For each
-non-obvious failure, name evidence and the symptom or escalation boundary that
-hands control to operations or another owner.
-
-At `component-evidence` depth, every material responsibility and public contract
-has complete heading-level provenance. Keep paths, ranges, and blob hashes out
-of reader-facing prose. Keep the prose at responsibility/interface level:
-no Level-4 code section, class diagram, private-symbol inventory, or directory
-walk. Each selected whitebox states why it is decomposed and the dependency
-direction it permits. The runtime scenario names its outcome and a material
-exception path; every message maps to a named component.
+- This is C4's Component level (Level 3) — the zoom-in on the containers
+  named in high-level.md — so component boundaries here trace back to a
+  block named there, never a parallel decomposition.
+- Organize by subsystem responsibility, not directory traversal: a folder
+  holding three unrelated responsibilities gets three write-ups, not one.
+- Per subsystem, explain inputs, state transitions, outputs, failure
+  containment, and adjacent dependencies in that order.
+- Add a sequence diagram only when the reader must follow who calls whom
+  across components; use prose and a record-layout fence when the point is
+  the shape of data rather than call order. Skip the visual when prose alone
+  does not force a reader to reconstruct a multi-step interaction.
+- Write invariants as absence-based facts a reader cannot recover by reading
+  code ("never retries a non-idempotent write").
+- Close each section with the stable file/module paths that orient
+  implementation work.
+- `arch_low_level` is a component zoom-in and must trace each component to a
+  high-level block. `concept` is a durable subsystem topic: define its
+  responsibility, relationships, invariant, and failure boundary without
+  forcing a parent-component decomposition.
+- State only dependency semantics for data; link persistence or datasets for
+  their model and storage mechanics.
+- For each non-obvious failure, name evidence and the symptom or escalation
+  boundary that hands control to operations or another owner.
+- At `component-evidence` depth, every material responsibility and public
+  contract has complete heading-level provenance. Keep paths, ranges, and
+  blob hashes out of reader-facing prose.
+- Keep prose at responsibility/interface level: no Level-4 code section,
+  class diagram, private-symbol inventory, or directory walk.
+- Each selected whitebox states why it is decomposed and the dependency
+  direction it permits. The runtime scenario names its outcome and a material
+  exception path; every message maps to a named component.
 
 ## Illustration
 

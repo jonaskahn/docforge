@@ -390,7 +390,7 @@ class Manifest39MigrationParityTests(unittest.TestCase):
                     )
                     self.assertEqual(
                         retained["instruction_file"],
-                        "content/compact/instructions/agents.md",
+                        "content/compact/instructions.md",
                     )
                     self.assertEqual(retained["requires"], [])
                     self.assertEqual(retained["presentation"], self.CANONICAL_PRESENTATION)

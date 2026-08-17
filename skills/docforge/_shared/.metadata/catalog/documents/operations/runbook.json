@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": "discovered_runbook"
   },
-  "instruction_file": "content/operations/instructions/runbook.md",
+  "instruction_file": "content/operations/instructions.md",
   "requires": [
     "code_graph",
     "manifests"

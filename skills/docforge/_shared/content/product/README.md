@@ -9,7 +9,7 @@ Product surface: overview, quickstart, and audience-specific product views.
 ## Contents
 
 - [contracts/](contracts/README.md) — 16 contracts
-- [instructions/](instructions/README.md) — 7 instructions
+- `instructions.md` — Merged writing craft, one section per document (accessibility, api-versioning, backlog-traceability, business-rules, content-model, feature-catalog, localization, migration, process-flows, product-overview, quickstart, release-notes, requirements-traceability, success-metrics) → [instructions.md](instructions.md)
 - [templates/](templates/README.md) — 15 templates
 
 ## Boundaries

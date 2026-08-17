@@ -10,10 +10,7 @@ Cross-repository portfolio layer for multi-repo diligence.
 
 - [contracts/](contracts/README.md) — 10 contracts
 - [templates/](templates/README.md) — 7 templates
-- `diligence-index.instruction.md` — Evidence map, gaps, confidence, follow-up → [diligence-index.instruction.md](diligence-index.instruction.md)
-- `epic.instruction.md` — Initiative outcome; member repos spanned; per repo, owning flow/feature and component touched; cross-repo sequence tying them together; open gaps → [epic.instruction.md](epic.instruction.md)
-- `security-posture.instruction.md` — Cross-repo controls, gaps, shared dependencies, operational coupling → [security-posture.instruction.md](security-posture.instruction.md)
-- `system-context.instruction.md` — Repository/system boundaries, shared services, cross-repo flows, directed dependency edges between members with coupling type and resolution confidence → [system-context.instruction.md](system-context.instruction.md)
+- `instructions.md` — Merged writing craft, one section per document (diligence-index, epic, repo-inventory, security-posture/portfolio-operations, system-context) → [instructions.md](instructions.md)
 
 ## Boundaries
 

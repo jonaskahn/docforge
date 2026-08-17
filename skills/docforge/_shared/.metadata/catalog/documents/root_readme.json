@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/root/root-readme.instruction.md",
+  "instruction_file": "content/root/instructions.md",
   "requires": [
     "code_graph",
     "manifests"

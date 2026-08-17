@@ -2521,7 +2521,7 @@ class AgentContextIsolationTests(unittest.TestCase):
         "agents_compact": (
             "docs/agents.md",
             "content/compact/templates/agents.template.md",
-            "content/compact/instructions/agents.md",
+            "content/compact/instructions.md",
         ),
     }
     COMPACT_MEMBERS = [

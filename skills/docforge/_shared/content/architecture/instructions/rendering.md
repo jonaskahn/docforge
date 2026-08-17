@@ -1,20 +1,16 @@
-# Rendering / state-management writing craft
+# Rendering writing craft
 
-Covers `web_rendering` and `web_state` — the render lifecycle and the state
-that drives it are two views of the same mechanism and read better linked
-than duplicated.
-
-For rendering: state the render lifecycle (mount, update, unmount) and
-what triggers each transition. For state: state ownership boundaries (who
-mutates what) and failure/recovery behavior on a bad state transition.
-Keep the component catalog out — that's [ui-components.md](ui-components.md).
-
-`web_rendering` owns where rendering occurs, server/client handoff when present,
-loading and error presentation, and render-boundary recovery. `web_state` owns
-mutation authority, invalid transitions, synchronization, cache invalidation,
-and recovery. State the trigger and evidence for every material transition; do
-not infer hydration, persistence, or route behavior from framework defaults.
-Link navigation, persistence, and the component catalog for facts they own.
+- State the render lifecycle (mount, update, unmount) and what triggers each
+  transition.
+- Keep the component catalog out — that's `ui-components`.
+- `web_rendering` owns where rendering occurs, server/client handoff when
+  present, loading and error presentation, and render-boundary recovery.
+- State the trigger and evidence for every material transition; do not infer
+  hydration, persistence, or route behavior from framework defaults.
+- Link navigation, persistence, and the component catalog for facts they own.
+- `web_state` (mutation authority, invalid transitions, synchronization,
+  cache invalidation, recovery) is written from its own instruction
+  (`state-management`).
 
 ## Illustration
 

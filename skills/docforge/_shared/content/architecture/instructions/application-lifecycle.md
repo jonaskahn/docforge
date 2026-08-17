@@ -1,17 +1,16 @@
 # Application-lifecycle writing craft
 
-For every state and transition, name its accountable owner and cite the platform
-declaration, lifecycle handler, manifest, or tested behavior. Treat unproven
-termination, restoration, and kill behavior as unknown; link persisted state to
-its persistence owner.
-
-Walk states in the order the platform actually defines them (launch,
-activation, background, termination), stating per state what triggers
-entry, what the app must do before leaving it, and the restoration
-behavior on relaunch. State failure boundaries per transition — what
-happens if the app is killed mid-transition — rather than only describing
-the clean path. Keep the UI component inventory out; that's
-[ui-components.md](ui-components.md).
+- For every state and transition, name its accountable owner and cite the
+  platform declaration, lifecycle handler, manifest, or tested behavior.
+- Treat unproven termination, restoration, and kill behavior as unknown; link
+  persisted state to its persistence owner.
+- Walk states in the order the platform actually defines them (launch,
+  activation, background, termination), stating per state: what triggers
+  entry, what the app must do before leaving it, and restoration behavior on
+  relaunch.
+- State failure boundaries per transition — what happens if the app is killed
+  mid-transition — rather than only the clean path.
+- Keep the UI component inventory out; that's `ui-components`.
 
 ## Illustration
 

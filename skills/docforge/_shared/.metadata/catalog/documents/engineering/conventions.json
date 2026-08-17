@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": "conventions_source"
   },
-  "instruction_file": "content/engineering/instructions/conventions.md",
+  "instruction_file": "content/engineering/instructions.md",
   "requires": [
     "manifests"
   ],

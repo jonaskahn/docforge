@@ -11,7 +11,7 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/engineering/instructions/testing-guide.md",
+  "instruction_file": "content/engineering/instructions.md",
   "requires": [
     "manifests"
   ],

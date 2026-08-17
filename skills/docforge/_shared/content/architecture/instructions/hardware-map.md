@@ -1,22 +1,18 @@
-# Hardware-map / firmware-lifecycle writing craft
+# Hardware-map writing craft
 
-Covers `hardware_map` and `firmware_lifecycle` — the board/peripheral
-inventory and the firmware states running on it are two views of the same
-system.
-
-For the hardware map: one row per board or peripheral — protocol, memory
-and power budget, and failure mode when absent or faulted. For firmware
-lifecycle: state boot and update states in order, and what happens on a
-failed update (does it roll back, brick, or retry). Avoid generic
-component-datasheet prose; describe this repository's actual configuration.
-
-The hardware map is reference-grade: identify the stable board or peripheral
-revision, interface role, unit-qualified memory and power limits, and the
-source that establishes each material value. State an unavailable revision,
-budget, or fault behavior as unknown rather than borrowing a datasheet default.
-Firmware lifecycle owns transition validation and retry, rollback, or
-non-recovery behavior; link hands-on flashing and recovery procedures to
-operations instead of duplicating them.
+- One row per board or peripheral — protocol, memory and power budget, and
+  failure mode when absent or faulted.
+- Avoid generic component-datasheet prose; describe this repository's actual
+  configuration.
+- The hardware map is reference-grade: identify the stable board or
+  peripheral revision, interface role, unit-qualified memory and power
+  limits, and the source that establishes each material value.
+- State an unavailable revision, budget, or fault behavior as unknown rather
+  than borrowing a datasheet default.
+- `firmware_lifecycle` owns transition validation and retry, rollback, or
+  non-recovery behavior — written from its own instruction
+  (`firmware-lifecycle`); link hands-on flashing and recovery procedures to
+  operations instead of duplicating them.
 
 ## Illustration
 
