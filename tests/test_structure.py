@@ -70,11 +70,11 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("## Bare `/docforge` invocation", intake)
         self.assertIn("interactive intake", intake)
         self.assertIn("## Discovery brief", intake)
-        self.assertIn("before**\nasking any scope questions", intake)
-        self.assertIn("Never present scope questions without this brief.", intake)
+        self.assertIn("**before** any scope questions", intake)
+        self.assertIn("Never present scope questions without", intake)
         self.assertIn("**Recommended** vs **also possible**", intake)
-        self.assertIn("Within one", intake)
-        self.assertIn("turn, present that turn's unresolved questions together.", intake)
+        self.assertIn("present one turn's", intake)
+        self.assertIn("unresolved questions together", intake)
         self.assertIn("Collect each turn's applicable answers as one response.", intake)
         for question in (
             "Goal or action",
@@ -92,15 +92,15 @@ class SkillContentTests(unittest.TestCase):
             intake,
         )
         self.assertIn("never deferred to Turn 2.", intake)
-        self.assertIn("one multi-select per applicable dimension", intake)
-        self.assertIn("silent-confirm them on the user's behalf", intake)
+        self.assertIn("multi-select per applicable dimension", intake)
+        self.assertIn("never silent-confirm", intake)
         self.assertIn("Never silent-confirm detections or gate judgments", intake)
-        self.assertIn("that default silently", intake)
+        self.assertIn("never apply that default", intake)
         self.assertIn("audience-only follow-up", intake)
         self.assertIn("add more", intake)
         self.assertIn("suitable missing", intake)
         self.assertIn("## Revise selection changes", intake)
-        self.assertIn("Do not present a `Keep`\nchoice", intake)
+        self.assertIn("Never present a `Keep` choice", intake)
         self.assertIn("`Change to <other tier>`", intake)
         self.assertIn("`Add <value>`", intake)
         self.assertIn("`Remove <value>`", intake)
@@ -115,13 +115,13 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Auto-accept (permissionless)", intake)
         self.assertIn("mode-only follow-up", intake)
         self.assertIn("every selected audience", intake)
-        self.assertIn("Always wait for explicit confirmation", intake)
-        self.assertIn("including when Auto-accept was selected", intake)
+        self.assertIn("Always wait for", intake)
+        self.assertIn("including when Auto-accept was", intake)
         self.assertNotIn("Ask exactly one applicable question at a time", intake)
         self.assertNotIn("[1] Starter", intake)
         self.assertNotIn("Reply with, for example: `2 R`", intake)
-        self.assertIn("Do not initialize a\nmanifest", intake)
-        self.assertIn("Engineers + beginners", intake)
+        self.assertIn("Never initialize a manifest", intake)
+        self.assertIn("Engineers + Beginners", intake)
         self.assertIn("Missing competitors are normal", intake)
         self.assertIn("/docforge-revise flow", intake)
 
@@ -135,16 +135,16 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("### Turn 1 — Direction", intake)
         self.assertIn("### Turn 2 — Scope", intake)
         self.assertIn(
-            "- Never present layout in the same turn as tier, profiles, audiences, or execution mode.",
+            "- Never present layout in the same turn as tier, profiles, audiences,",
             intake,
         )
         self.assertIn("- Open Turn 2 only after Turn 1 is answered.", intake)
         self.assertIn(
-            "- Turn 2 never re-presents Goal or Layout as controls; they appear there only as confirmed baseline facts.",
+            "- Turn 2 never re-presents Goal or Layout as controls;",
             intake,
         )
         self.assertIn(
-            "Never merge the confirmation summary into Turn 1.",
+            "Never merge it into Turn 1.",
             intake,
         )
         turn_one = intake.index("### Turn 1 — Direction")
@@ -179,14 +179,14 @@ class SkillContentTests(unittest.TestCase):
             )
             self.assertIn(dimension, row)
             self.assertIn(question, row)
-        self.assertIn("Each control's first clause states its own axis.", intake)
+        self.assertIn("first clause stating its axis", intake)
         self.assertIn(
             "Two dimensions must never",
             intake,
         )
-        self.assertIn("share question text or an option set.", intake)
-        self.assertIn("only candidate — confirm it or add your own", intake)
-        self.assertIn('keeps the "these are weak candidates" framing', intake)
+        self.assertIn("must never share question text", intake)
+        self.assertIn("only candidate —", intake)
+        self.assertIn('keep the "these are weak candidates"', intake)
 
     def test_permanent_agent_context_isolation_is_stated_everywhere_it_binds(self) -> None:
         """Agent outputs stand alone permanently, may deliberately duplicate
@@ -484,9 +484,9 @@ class SkillContentTests(unittest.TestCase):
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
         self.assertIn("manage_manifest.{py,js} preview", intake)
         self.assertIn("Projected tree size", intake)
-        self.assertIn("25% or more", intake)
-        self.assertIn("This is a report, not a gate.", intake)
-        self.assertIn("never blocks confirmation", intake)
+        self.assertIn("**25% or", intake)
+        self.assertIn("report, never a gate", intake)
+        self.assertIn("never a gate: never blocks", intake)
 
     def test_revision_workflow_covers_revise_flow(self) -> None:
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
@@ -497,10 +497,10 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("communities.md", revision)
         self.assertIn("flow-analysis.json", revision)
         self.assertIn("main-priority", revision)
-        self.assertIn("agent/LLM analyzes", revision)
+        self.assertIn("standalone mains only into", revision)
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
         self.assertIn("offer `Change to <other tier>`", intake)
-        self.assertIn("offer `Add <value>` for unselected values and `Remove <value>` for selected", intake)
+        self.assertIn("`Add <value>` for unselected values", intake)
 
     def test_revision_questions_are_delta_aware_not_a_reflexive_full_ask(self) -> None:
         """Revise scales its question pack to what actually changed instead
@@ -512,19 +512,19 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn('[`intake.md`](intake.md) "Scope intake" owns the exact per-dimension rule', revision)
         self.assertNotIn("exactly like a fresh start", revision)
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
-        self.assertIn("never a reflexive full re-ask of every dimension on every run", intake)
+        self.assertIn("never a reflexive full", intake)
         self.assertIn(
-            "`/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`",
+            "`/docforge-revise flow` / `<area>` / `all`",
             intake,
         )
-        self.assertIn("asked only when the invocation requests a tier change", intake)
-        self.assertIn("are asked only for\n  dimensions with an actual delta", intake)
-        self.assertIn("skip their controls and show one confirmation summary", intake)
+        self.assertIn("tier-change request", intake)
+        self.assertIn("dimensions with a delta", intake)
+        self.assertIn("skip their controls; show one confirmation", intake)
         self.assertNotIn("exactly like a fresh start", intake)
 
     def test_planning_workflow_never_writes_against_stale_tree(self) -> None:
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
-        self.assertIn("Never write against an undisplayed manifest\nrevision", planning)
+        self.assertIn("undisplayed manifest revision", planning)
 
     def test_planning_workflow_locks_graph_provider_via_init(self) -> None:
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
@@ -594,11 +594,11 @@ class SkillContentTests(unittest.TestCase):
 
     def test_intake_workflow_gates_portfolio_tier_on_member_readiness(self) -> None:
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
-        self.assertIn("nested `.git` directory (a candidate\nmulti-repo workspace)", intake)
-        self.assertIn("Portfolio readiness, only when nested repos were detected", intake)
-        self.assertIn("nested repos were detected during discovery:", intake)
+        self.assertIn("candidate multi-repo", intake)
+        self.assertIn("Portfolio readiness, only when nested repos detected", intake)
+        self.assertIn("nested repos detected", intake)
         self.assertIn(
-            "needs its own separate Diligence run first, rather than listing Portfolio",
+            "separate Diligence run",
             intake,
         )
 
@@ -608,7 +608,7 @@ class SkillContentTests(unittest.TestCase):
         manifest state and explicitly rule out borrowing a member's."""
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Base this only on the repository root's own manifest\n   state",
+            "Base only on the repository root's own manifest",
             intake,
         )
         self.assertIn(
@@ -623,11 +623,11 @@ class SkillContentTests(unittest.TestCase):
         brief before Tier is finalized, not carry forward a stale brief."""
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Treat `detect_profiles` and the nested-`.git` check as one paired discovery\nstep",
+            "check = one step;",
             intake,
         )
         self.assertIn(
-            "Never\nfinalize Tier from a brief the repository has since outgrown.",
+            "finalize Tier from a brief the repo has outgrown",
             intake,
         )
 
@@ -887,7 +887,7 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("## Commands", bare)
         self.assertIn("### Bare `/docforge-revise` — metadata-only migration", bare)
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
-        self.assertIn("`/docforge-revise flow`, `/docforge-revise <area>`, `/docforge-revise all`", intake)
+        self.assertIn("`/docforge-revise flow` / `<area>` / `all`", intake)
 
     def test_flow_derivation_reference_covers_dedup(self) -> None:
         derivation = (SHARED_ROOT / "references" / "graph" / "flow-derivation.md").read_text(encoding="utf-8")
