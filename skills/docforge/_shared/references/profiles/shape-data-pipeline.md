@@ -2,7 +2,10 @@
 
 **Applies when:** the repo defines scheduled jobs, DAGs, extract/transform/load stages, streaming consumers, or writes to a warehouse, lake or vector store.
 
-The distinguishing property of a data repo is that its most important interfaces are not functions but **datasets**. Consumers depend on schema, freshness and semantics — none of which appear in a code map. Two documents carry almost all the value here: the flow map and the data contracts.
+The distinguishing property of a data repo is that its most important
+interfaces are not functions but **datasets**. Consumers depend on schema,
+freshness and semantics — none of which appear in a code map. Two documents
+carry almost all the value here: the flow map and the data contracts.
 
 ## Additions to the tree
 
@@ -46,11 +49,15 @@ sentences describing the same path in prose, for renderers that show raw source.
 - **Typical volume and duration:** what normal looks like, so abnormal is visible
 ```
 
-Idempotency and failure behaviour are the sections operators actually need at three in the morning, and the ones most often omitted. State them even when the answer is unflattering — "not idempotent; a re-run duplicates rows, recover by truncating the partition first" is exactly what the runbook needs.
+Idempotency and failure behaviour are the sections operators actually need at
+three in the morning, and the ones most often omitted. State them even when
+the answer is unflattering — "not idempotent; a re-run duplicates rows,
+recover by truncating the partition first" is exactly what the runbook needs.
 
 ## `architecture/contracts/<dataset>.md`
 
-A data contract is a promise to downstream consumers. Write one per dataset that anything outside this repo reads.
+A data contract is a promise to downstream consumers. Write one per dataset
+that anything outside this repo reads.
 
 ```markdown
 # Dataset: <name>
@@ -82,15 +89,23 @@ Who reads this and what would break. Maintain it even approximately — an
 unmaintained consumer list is still better than none when planning a change.
 ```
 
-The **PII column** is not optional. Personal-data classification at the field level is what makes deletion requests, retention policy and access review tractable; retrofitting it across a mature warehouse is punishing work.
+The **PII column** is not optional. Personal-data classification at the field
+level is what makes deletion requests, retention policy and access review
+tractable; retrofitting it across a mature warehouse is punishing work.
 
 ## `engineering/data-quality.md`
 
-What is checked, where, and what happens on failure. Distinguish checks that **block publication** from checks that **warn**: consumers need to know whether a passing pipeline means clean data or merely a completed run. Cover schema validation, row-count and volume anomaly bounds, freshness, uniqueness and referential checks, and business-rule assertions.
+What is checked, where, and what happens on failure. Distinguish checks that
+**block publication** from checks that **warn**: consumers need to know
+whether a passing pipeline means clean data or merely a completed run. Cover
+schema validation, row-count and volume anomaly bounds, freshness, uniqueness
+and referential checks, and business-rule assertions.
 
 ## `reference/limitations.md` additions
 
-Data pipelines accumulate a characteristic species of caveat that is invisible in code and expensive to rediscover. Enumerate per source and per destination:
+Data pipelines accumulate a characteristic species of caveat that is
+invisible in code and expensive to rediscover. Enumerate per source and per
+destination:
 
 - Minimum versions of external systems for a given capability, with the reason.
 - Resource behaviours that surprise operators: replication slots growing without bound when a consumer stalls; storage costs of retained intermediate state.
@@ -100,4 +115,7 @@ Data pipelines accumulate a characteristic species of caveat that is invisible i
 
 ## `reference/data-types.md`
 
-A mapping table across every boundary the data crosses (source type → internal representation → destination type), with a notes column for lossy conversions. Anyone debugging a value that changed in flight starts here, and without it they start by reading transformation code.
+A mapping table across every boundary the data crosses (source type →
+internal representation → destination type), with a notes column for lossy
+conversions. Anyone debugging a value that changed in flight starts here, and
+without it they start by reading transformation code.

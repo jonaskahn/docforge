@@ -20,7 +20,7 @@ Fan out only across scopes that can be investigated independently:
 Workers must not edit repository files except under the parallel-writing
 contract: a spawned writer may materialize and edit **only its own document
 artifact** (and may scaffold no shared ancestor index — the orchestrator does
-that serially before fan-out). In particular, only the orchestrator mutates
+that serially before fan-out). Only the orchestrator mutates
 `.docforge/manifest.json`: manifest commands perform unlocked full-file
 rewrites, so concurrent writers can silently lose state. This includes the
 graph provider: a worker never calls `precheck_graph` or `set-graph` and never
@@ -33,9 +33,9 @@ Read-only discovery may run before the plan gate. No document writing starts
 until the complete tree and document cards pass that gate. Afterward, document
 writing follows `write_order`; the orchestrator writes serially or spawns
 sub-agents for independent documents in parallel, and applies every status
-transition serially in both modes. Manifest initialization,
-dynamic additions, status changes, provenance synchronization, and audit
-recording are always serial orchestrator operations.
+transition serially in both modes. Manifest initialization, dynamic
+additions, status changes, provenance synchronization, and audit recording are
+always serial orchestrator operations.
 
 ```mermaid
 flowchart TD
@@ -64,17 +64,17 @@ Each worker returns one bounded result containing:
 - proposed manifest changes, without applying them;
 - audit verdict and defects for audit work.
 
-Results must distinguish observed evidence from synthesis. A worker that cannot
-answer its question returns the gap and the retrieval step reached; it does not
-expand into an unbounded repository scan.
+Results must distinguish observed evidence from synthesis. A worker that
+cannot answer its question returns the gap and the retrieval step reached; it
+does not expand into an unbounded repository scan.
 
 ## Merge and deduplication
 
-The orchestrator normalizes and merges results before any mutation. Deduplicate
-source evidence by repository-relative path plus symbol or region, flow
-candidates by normalized `entry_ref`, child repositories by canonical root,
-and document proposals by manifest id and path. Combine corroborating evidence
-without duplicating claims.
+The orchestrator normalizes and merges results before any mutation.
+Deduplicate source evidence by repository-relative path plus symbol or
+region, flow candidates by normalized `entry_ref`, child repositories by
+canonical root, and document proposals by manifest id and path. Combine
+corroborating evidence without duplicating claims.
 
 Do not silently collapse disagreements. Prefer current direct source over
 summaries, record stale graph evidence as stale, and retain unresolved

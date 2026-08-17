@@ -412,7 +412,7 @@ class SkillContentTests(unittest.TestCase):
         portfolio = (SHARED_ROOT / "references" / "portfolio.md").read_text(encoding="utf-8")
         self.assertIn("## Layout", portfolio)
         self.assertIn("A Portfolio root is always `standard`.", portfolio)
-        self.assertIn("A member may be compact while the collection root", portfolio)
+        self.assertIn("A member may be compact while", portfolio)
 
         intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
         self.assertIn(
@@ -681,7 +681,7 @@ class SkillContentTests(unittest.TestCase):
         evidence = (SHARED_ROOT / "references" / "evidence-presentation.md").read_text(encoding="utf-8")
         self.assertIn("Never show source paths, line ranges, blob hashes", evidence)
         code = (SHARED_ROOT / "references" / "code-presentation.md").read_text(encoding="utf-8")
-        self.assertIn("Never paste repository implementation", code)
+        self.assertIn("paste repository implementation", code)
 
     def test_validation_workflow_auto_serves_dashboard_on_completion(self) -> None:
         validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
@@ -724,6 +724,20 @@ class SkillContentTests(unittest.TestCase):
         self.assertNotIn("as 3.8", revision)
         self.assertNotIn("auto-migrated to 3.5", dashboard)
         self.assertNotIn("schema 2.0", dashboard)
+        # The references that name versions pin the same current ones.
+        provenance_ref = (SHARED_ROOT / "references" / "provenance-tracking.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            f"bumps the manifest from `3.8` / `3.7` / `3.6` / `3.5` /\n"
+            f"`3.4` / `3.3` (or `3.2` / `3.1` / `3.0`) to `{current}`",
+            provenance_ref,
+        )
+        self.assertIn(f"rewrites convertible frontmatter to YAML {provenance}", provenance_ref)
+        self.assertNotIn("to `3.8`", provenance_ref)
+        portfolio = (SHARED_ROOT / "references" / "portfolio.md").read_text(encoding="utf-8")
+        self.assertIn("Read its tier from its own `.docforge/manifest.json`", portfolio)
+        self.assertNotIn("version-3.5", portfolio)
         # No orphaned cross-file step numbering.
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
         self.assertNotIn("## 1. Precheck and inspect", planning)

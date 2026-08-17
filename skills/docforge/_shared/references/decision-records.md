@@ -1,16 +1,16 @@
 # Decision records
 
-This file owns why a decision deserves a durable record, where it lives, and
-its template. Decision records capture what was considered and rejected, the
-constraint that forced a choice, and whether it is safe to revisit — the
+Owns why a decision earns a durable record, where it lives, and its
+template. A record captures what was considered and rejected, the constraint
+that forced the choice, and whether it is safe to revisit — the
 highest-value addition for onboarding and diligence, since both ask *why is
 it like this?*
 
 ## Where and how
 
 `docs/architecture/decisions/NNNN-kebab-slug.md`, numbered from 0001,
-append-only, named `decisions/` (not `adr/`, which means nothing to a
-business reader). The folder README carries the index.
+append-only, named `decisions/` (not `adr/`, which means nothing to a business
+reader). The folder README carries the index.
 
 ## Template
 
@@ -65,20 +65,22 @@ Do not write one for choices a linter enforces, choices that took under an hour,
 
 ## Backfilling
 
-Most repos start with years of undocumented decisions. Backfill five to ten load-bearing ones per repo — enough to cover the architecture a reviewer will ask about — rather than attempting completeness.
+Most repos start with years of undocumented decisions. Backfill five to ten
+load-bearing ones per repo — enough to cover the architecture a reviewer will
+ask about — rather than attempting completeness.
 
 To find them:
 
 - `git log --diff-filter=A -- <path>` on major directories: when did each subsystem appear?
 - Large merge commits and dependency-manifest changes; each significant dependency added is a decision.
-- Places where the code does something surprising or awkward. That awkwardness almost always encodes a constraint worth recording.
+- Surprising or awkward code — the awkwardness almost always encodes a constraint worth recording.
 - Ask the longest-tenured engineer which decisions get re-argued most often. Those are the highest-value records.
 
 Backfilled records must be honest about their provenance. Add a line under the status: `Reconstructed YYYY-MM-DD from commit history and discussion with <person>; the original reasoning may be incomplete.` A reviewer who catches an unmarked retrofit discounts every record in the folder.
 
 ## Status discipline
 
-Records are immutable once accepted. When a decision changes, write a new record and update the old one's status to `superseded by [NNNN]` — do not edit history. The chain of superseded records is itself evidence: it shows a team that revisits decisions deliberately rather than drifting.
+Records are immutable once accepted. When a decision changes, write a new record and update the old one's status to `superseded by [NNNN]` — do not edit history. The chain of superseded records is itself evidence of deliberate revisiting, not drift.
 
 The folder `README.md` holds the index:
 

@@ -36,12 +36,11 @@ Read manifests for commands, versions, configuration, and published surface.
 Declared dependencies also confirm and augment the frameworks and shapes
 `detect_profiles.{py,js}` proposed from the same manifests (see
 [`../runtime/catalog/README.md`](../runtime/catalog/README.md)). Reconcile
-existing
-documentation as evidence, never as unquestioned truth.
+existing documentation as evidence, never as unquestioned truth.
 
 Ask narrow capability questions. Retrieve the files and edges that answer the
 current document contract rather than requesting a generic system summary.
-Do this once for the planning inventory and again for each document’s narrower
+Do this once for the planning inventory and again for each document's narrower
 evidence card. A ready index that is never queried does not ground a plan.
 
 ## Evidence by document family
@@ -53,7 +52,7 @@ evidence card. A ready index that is never queried does not ground a plan.
 | setup/testing/configuration | manifests, CI, environment reads, commands verified locally |
 | dependencies/security/risks | manifests, code-graph edges, controls, history |
 | decisions | history and the code structure that resulted |
-| portfolio | child-repository discovery, member manifests, each member’s graph evidence |
+| portfolio | child-repository discovery, member manifests, each member's graph evidence |
 | Business Analyst | native/provisional flows, source-confirmed rules, tests, connected requirement evidence |
 | Product Owner | reachable capabilities, release history, instrumentation, stakeholder evidence |
 | coding-agent context | entry points, representative paths, tests, constraints, hotspots |

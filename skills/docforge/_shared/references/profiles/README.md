@@ -32,5 +32,6 @@ they do not select documents themselves.
 
 `engineers` and `beginners` intentionally use the default tier, depth, and
 document contracts rather than dedicated packs: their catalog entries define
-general questions but select no specialist document surface. Add a profile only
-when a distinct audience owns a stable set of documents or evidence rules.
+general questions but select no specialist document surface. Add a profile
+only when a distinct audience owns a stable set of documents or evidence
+rules.

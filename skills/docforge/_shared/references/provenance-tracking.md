@@ -25,16 +25,15 @@ provenance live in one git-tracked sidecar per docs folder,
 }
 ```
 
-The `provenance` object is the exact block described below. A document
-written before the sidecar store still carries inline frontmatter until
-something moves it: `migrate_metadata.{py,js}` moves it (dry-run preview
-first) and `check_staleness.{py,js} --sync-provenance` moves any straggler it
-meets. **Old-schema metadata is always detected explicitly** — a schema-less
-(legacy) or schema-1.0 / `tool_version` (obsolete) block, wherever it is
-found, is reported as `legacy` / `obsolete`, never treated as current, and is
-never silently moved; there is no opt-in or opt-out. Such documents must pass
-through `migrate_metadata.{py,js}` (schema conversion) before the sidecar
-move.
+A document written before the sidecar store still carries inline frontmatter
+until something moves it: `migrate_metadata.{py,js}` moves it (dry-run
+preview first) and `check_staleness.{py,js} --sync-provenance` moves any
+straggler it meets. **Old-schema metadata is always detected explicitly** —
+a schema-less (legacy) or schema-1.0 / `tool_version` (obsolete) block,
+wherever it is found, is reported as `legacy` / `obsolete`, never treated as
+current, and is never silently moved; there is no opt-in or opt-out. Such
+documents must pass through `migrate_metadata.{py,js}` (schema conversion)
+before the sidecar move.
 
 All readers (lint, staleness, audit, dashboard, plan) resolve provenance the
 same way: the sidecar entry first; a document with no entry falls back to
@@ -43,9 +42,9 @@ migration rather than treating it as current.
 
 ## The provenance object
 
-Restricted YAML provenance 2.1, the sidecar entry's `provenance` field
-(a pre-migration document instead carries this at byte one of the file, under
-a `docforge_provenance` key):
+Restricted YAML provenance 2.1, the sidecar entry's `provenance` field (a
+pre-migration document instead carries this at byte one of the file, under a
+`docforge_provenance` key):
 
 ```yaml
 schema: "2.1"
@@ -76,9 +75,10 @@ sections:
     unresolved: []
 ```
 
-The codec in `runtime/cli/python/provenance_frontmatter.py` / `runtime/cli/js/provenance_frontmatter.js` owns parsing (both the
-sidecar's plain JSON and a pre-migration document's restricted YAML); the
-sidecar store in `runtime/cli/python/provenance_store.py` /
+The codec in `runtime/cli/python/provenance_frontmatter.py` /
+`runtime/cli/js/provenance_frontmatter.js` owns parsing (both the sidecar's
+plain JSON and a pre-migration document's restricted YAML); the sidecar store
+in `runtime/cli/python/provenance_store.py` /
 `runtime/cli/js/provenance_store.js` owns reading and writing the sidecar
 itself. A pre-migration document's inline block is a deterministic YAML
 subset: 2-space indent, fixed key order, and every scalar double-quoted, with
@@ -86,22 +86,24 @@ anchors, aliases, block scalars, multi-document markers, and non-empty flow
 collections all rejected. `schema` is `2.0` or `2.1`; new writes stamp `2.1`,
 and existing `2.0` documents never need to change.
 
-`doc_id` and `path` identify the manifest entry. `generated_at` and optional
-`git_commit` identify the write activity. `generator.name` and
-`generator.version` identify the generator. Optional `content_hash` is a SHA-256 of the
-Markdown body (`sha256:<64 hex>`). Optional `review` records
-`mode`, `verdict`, and `report` from the independent audit. `tier` and
-`target_depth` carry the content contract. `graph.provider` names the selected
-provider and `graph.flow` is `native`, `derived`, or `none`. `graph_snapshot`
-is not part of provenance 2.1.
+- `doc_id` and `path` identify the manifest entry.
+- `generated_at` and optional `git_commit` identify the write activity.
+- `generator.name` and `generator.version` identify the generator.
+- Optional `content_hash` is a SHA-256 of the Markdown body (`sha256:<64 hex>`).
+- Optional `review` records `mode`, `verdict`, and `report` from the
+  independent audit.
+- `tier` and `target_depth` carry the content contract.
+- `graph.provider` names the selected provider and `graph.flow` is `native`,
+  `derived`, or `none`.
+- `graph_snapshot` is not part of provenance 2.1.
 
 Written documents also carry a **public** identity beside `provenance` in the
 sidecar entry (or above `docforge_provenance` in a pre-migration document's
-frontmatter): `id`, `title`, and `description` (a reader-facing
-one-liner of at most 160 characters). `description` is catalog-owned — seeded
-from the manifest (catalog `summary`) at init / migrate / reconcile and kept
-in sync with the manifest by the dashboard; lint rejects written documents
-without a non-empty description.
+frontmatter): `id`, `title`, and `description` (a reader-facing one-liner of
+at most 160 characters). `description` is catalog-owned — seeded from the
+manifest (catalog `summary`) at init / migrate / reconcile and kept in sync
+with the manifest by the dashboard; lint rejects written documents without a
+non-empty description.
 
 Each section `id` is a Markdown heading anchor. Its sources use repository-
 relative file paths, a Git blob hash of the working-tree bytes, and one role:
@@ -115,16 +117,16 @@ specific line span. Both exist purely so `check_staleness` can prove a raw
 blob mismatch is cosmetic rather than a real change — see "Staleness results"
 below. Stamp both with `hash_evidence.{py,js}` (see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md)), never by
-hand: unlike `git_blob`, which matches ubiquitous `git hash-object`, these two
-have no standard-tool equivalent, so an ad hoc reimplementation risks quietly
-diverging from what `check_staleness` recomputes later. Malformed values are
-treated as absent, never as a lint defect.
+hand: unlike `git_blob`, which matches ubiquitous `git hash-object`, these
+two have no standard-tool equivalent, so an ad hoc reimplementation risks
+quietly diverging from what `check_staleness` recomputes later. Malformed
+values are treated as absent, never as a lint defect.
 
 Templates and planned manifest entries use explicit string tokens such as
 `<DOC_ID>` and `<GENERATED_AT>` for values unavailable before writing. These
 tokens and an empty `sections` array are valid only while a document remains
-planned or in progress. Generated, needs-review, and complete documents require
-concrete values and at least one section.
+planned or in progress. Generated, needs-review, and complete documents
+require concrete values and at least one section.
 
 Exceptions are `AGENTS.md`, fixed shims such as `CLAUDE.md` and
 `CLAUDE.local.md`, and machine JSON configuration. Their provenance is stored
@@ -142,26 +144,23 @@ node runtime/cli/js/migrate_metadata.js --repo <repo>
 # deno run -A runtime/cli/js/migrate_metadata.js --repo <repo>
 ```
 
-The command is idempotent. It rewrites convertible frontmatter to YAML 2.0,
+The command is idempotent. It rewrites convertible frontmatter to YAML 2.1,
 preserves section evidence (inferring source `role` and adding empty
 `unresolved` when absent), migrates embedded manifest provenance objects,
 seeds each document's catalog-owned public `description` (from the catalog
-`summary`), and
-bumps the manifest from `3.6` / `3.5` / `3.4` / `3.3` (or `3.2` / `3.1` / `3.0`) to
-`3.8`.
+`summary`), and bumps the manifest from `3.8` / `3.7` / `3.6` / `3.5` /
+`3.4` / `3.3` (or `3.2` / `3.1` / `3.0`) to `3.9`.
 
 When frontmatter is missing or unparseable, conversion throws, or the result
 for a previously written document is still incomplete (scaffold tokens, empty
 `sections`, invalid `graph.flow`), migration reports `FAILED`, writes a
 best-effort provenance scaffold into the sidecar (keeping the Markdown body),
-clears the
-audit record, and sets the document status to `in_progress` so the agent can
-regenerate concrete provenance and re-ground claims. Planned documents that
-only need a scaffold are reported as `REGENERATED` without a status demotion.
-`/docforge-revise`, continuing an incomplete run, and
+clears the audit record, and sets the document status to `in_progress` so the
+agent can regenerate concrete provenance and re-ground claims. Planned
+documents that only need a scaffold are reported as `REGENERATED` without a
+status demotion. `/docforge-revise`, continuing an incomplete run, and
 `check_staleness.{py,js} --sync-provenance` invoke the same migration before
-their own
-work. Lint reports `obsolete schema` and names this command.
+their own work. Lint reports `obsolete schema` and names this command.
 
 ### Agent regeneration after `FAILED`
 
@@ -169,20 +168,20 @@ For every `FAILED` path:
 
 1. Treat the document as the next write turn (`in_progress`).
 2. Re-ground required claims from the graph and cited sources.
-3. Replace every scaffold token with concrete write metadata and heading-matched
-   `sections` with valid `git_blob` / `role` values.
+3. Replace every scaffold token with concrete write metadata and
+   heading-matched `sections` with valid `git_blob` / `role` values.
 4. Set `generated`, run mechanical lint, then an independent audit before
    `complete`.
 
-Do not leave a written document on scaffold tokens or an empty `sections` array.
+Do not leave a written document on scaffold tokens or an empty `sections`
+array.
 
 ## Manifest aggregation
 
 The manifest stores the same complete provenance object as the sidecar entry.
 `check_staleness.{py,js} --sync-provenance` reads every manifest path,
-including root
-documents, and replaces only that document's `provenance` value. It never
-silently skips malformed or missing provenance.
+including root documents, and replaces only that document's `provenance`
+value. It never silently skips malformed or missing provenance.
 
 ## Mechanical defects
 
@@ -202,8 +201,8 @@ silently skips malformed or missing provenance.
 
 Written documents also fail when any required top-level value is absent,
 tokenized, or inconsistent with the manifest. `git_blob_normalized`,
-`evidence_range`, and `range_blob` are optional per source; a malformed value
-is treated as absent rather than a defect.
+`evidence_range`, and `range_blob` are optional per source; see the malformed
+-value rule above.
 
 ## Staleness results
 

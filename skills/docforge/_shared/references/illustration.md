@@ -42,8 +42,8 @@ important rules, inputs/outputs, and common failures.
 The budget bounds a single illustration. **There is no cap on how many
 illustrations a document may carry.** Every illustration must earn its place
 under "Choose the smallest useful form" above, and that relevance test is the
-only thing that limits the count. A document needing six diagrams to answer six
-distinct reader questions should carry six.
+only thing that limits the count. A document needing six diagrams to answer
+six distinct reader questions should carry six.
 
 | Depth | Bound per illustration |
 |---|---|

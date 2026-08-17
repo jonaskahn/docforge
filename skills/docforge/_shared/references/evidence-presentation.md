@@ -1,8 +1,8 @@
 # Evidence presentation
 
 Provenance establishes that a claim is grounded. Reader-facing content explains
-the claim and routes the reader to the owning documentation. These are separate
-concerns.
+the claim and routes the reader to the owning documentation. These are
+separate concerns.
 
 ## Policy
 

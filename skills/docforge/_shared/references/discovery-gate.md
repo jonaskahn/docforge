@@ -18,9 +18,8 @@ model API.
 
 Run the gate during interactive intake when `needs_gate` is true in the pack
 from `detect_profiles.{py,js} --repo <path> --emit-gate-pack`. That is true
-when any
-detection is `candidate`, any row has `ambiguous_with`, or any cue lists two or
-more candidate profiles.
+when any detection is `candidate`, any row has `ambiguous_with`, or any cue
+lists two or more candidate profiles.
 
 Skip the gate only when every detection is strong-confirmed and the cue bag has
 no multi-candidate groups. Fail open: invalid or missing judgment leaves
@@ -34,21 +33,22 @@ profile ids are only those in `catalog_ids` or cue `candidate_profiles`.
 
 ## Judgment contract
 
-Return JSON matching `.metadata/discovery-gate-schema.json` `#/definitions/judgment`:
+Return JSON matching `.metadata/discovery-gate-schema.json`
+`#/definitions/judgment`:
 
 - `action`: `promote` | `keep` | `demote` | `drop` | `propose`
 - `propose` may lift a catalog id that appears only in cue candidates
 - Ground every decision in pack cues, dependencies, or excerpts
-- One cue may map to zero, one, or many aspects when evidence supports coexistence
-- Do not invent profile ids; do not confirm the intake summary
+- One cue may map to zero, one, or many aspects when evidence supports
+  coexistence
+- **Never** invent profile ids; **never** confirm the intake summary
 
 Apply with the `discovery_gate` library API — `discovery_gate.apply_judgment`
 (Python, `runtime/catalog/python/discovery_gate.py`) or
 `discovery_gate.applyJudgment` (Node, `runtime/catalog/js/discovery_gate.js`);
 see [`../runtime/catalog/README.md`](../runtime/catalog/README.md). Persist the
-judgment as
-`discovery_gate` beside `discovery` in the manifest when initializing after
-user confirmation.
+judgment as `discovery_gate` beside `discovery` in the manifest when
+initializing after user confirmation.
 
 ## Intake presentation
 

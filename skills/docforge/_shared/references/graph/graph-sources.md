@@ -1,10 +1,10 @@
 # Graph sources
 
 This file owns graph preparation, provider selection, native query dispatch,
-setup, and refresh policy. Docforge does not replace a provider’s index with a
-weaker directory scan. It detects and reuses the provider’s persisted graph,
-then uses the provider’s own skill, MCP server, CLI, or read-only JSON reader
-to answer narrow evidence questions.
+setup, and refresh policy. Docforge does not replace a provider's index with
+a weaker directory scan. It detects and reuses the provider's persisted
+graph, then uses the provider's own skill, MCP server, CLI, or read-only JSON
+reader to answer narrow evidence questions.
 
 Generated documents remain provider-neutral: they name repository facts and
 the capabilities used to establish them, never the command used to retrieve
@@ -50,27 +50,27 @@ agent surfaces instead of reconstructing the same query with filesystem tools:
 
 Skill invocation spelling is host-specific. On Codex, Understand Anything uses
 the installed `$understand*` skills; on slash-command hosts it uses
-`/understand*`. GitNexus skills call its MCP tools/resources according to their
-own contract.
+`/understand*`. GitNexus skills call its MCP tools/resources according to
+their own contract.
 
 ## Selection
 
 Run `precheck_graph.{py,js} --need code` (see
-[`../../runtime/graph/README.md`](../../runtime/graph/README.md)). One readable
-provider is sufficient; Docforge
-does not require or benefit from building every supported provider index.
+[`../../runtime/graph/README.md`](../../runtime/graph/README.md)). One
+readable provider is sufficient; Docforge does not require or benefit from
+building every supported provider index.
 
-- If exactly one source is ready, select it as the proposed default and report
-  only that source, its artifact, capabilities, and read mechanism.
-- If several sources are ready, present only those ready sources and ask which
+- Exactly one source ready → select it as the proposed default and report only
+  that source, its artifact, capabilities, and read mechanism.
+- Several sources ready → present only those ready sources and ask which
   should be primary.
-- If none are ready, present setup paths for the providers that could satisfy
-  the missing capability.
+- None ready → present setup paths for the providers that could satisfy the
+  missing capability.
 
-An absent provider is not a readiness gap when another source already supplies
-`code_graph`. Do not show “not detected,” “not indexed,” or “needs build” rows
-for unused competitors in the standard intake or plan. Show them only for an
-explicit compare/switch request or all-provider diagnostics.
+An absent provider is not a readiness gap when another source already
+supplies `code_graph`. Do not show "not detected," "not indexed," or "needs
+build" rows for unused competitors in the standard intake or plan. Show them
+only for an explicit compare/switch request or all-provider diagnostics.
 
 - Prefer Understand Anything when its shareable JSON or native domain/flow
   graph is the main advantage.
@@ -79,13 +79,13 @@ explicit compare/switch request or all-provider diagnostics.
 - Prefer CodeGraph when fast, current structural exploration with returned
   source and call paths is the dominant need.
 
-If several are ready, use unselected ready sources as corroboration only when
-useful. Under `--auto-accept`, select the first ready provider in registry
-order, state the choice, and continue — this is the same registry-priority
-pick `init` locks in automatically (see "Session persistence" below); under
-`--auto-accept` there is no explicit choice to thread through as
-`--graph-provider`. Never merge incompatible provider schemas into a synthetic
-“master graph.”
+If several are ready, use unselected ready sources as corroboration only
+when useful. Under `--auto-accept`, select the first ready provider in
+registry order, state the choice, and continue — this is the same
+registry-priority pick `init` locks in automatically (see "Session
+persistence" below); under `--auto-accept` there is no explicit choice to
+thread through as `--graph-provider`. Never merge incompatible provider
+schemas into a synthetic "master graph."
 
 GitNexus with a readable `.gitnexus/lbug` and indexed Process nodes supplies
 both `code_graph` and native `flow_graph`; neither Understand Anything nor
@@ -93,29 +93,29 @@ CodeGraph needs to exist for Docforge to plan and write documents. CodeGraph
 with a readable `.codegraph/codegraph.db` (and a session-wired
 `codegraph_explore`) is equally sufficient for `code_graph`; absent Understand
 Anything or GitNexus indexes must not appear in that plan. Do not invent a
-combined “Understand Anything + GitNexus” readiness claim unless both were
+combined "Understand Anything + GitNexus" readiness claim unless both were
 actually READY and the user selected a primary.
 
 ## Session persistence
 
 `manage_manifest.{py,js} init` locks the selected provider into the manifest
-automatically, as part of the same write that creates it — no separate command
-in the common path. With no `--graph-provider` flag, it auto-picks the
-highest-priority ready source in registry order (the same order
+automatically, as part of the same write that creates it — no separate
+command in the common path. With no `--graph-provider` flag, it auto-picks
+the highest-priority ready source in registry order (the same order
 `--auto-accept` already uses above); pass `--graph-provider <id>` only when
 this file's `## Selection` question above was actually asked and answered
 (several sources ready, user chose one). Either way the resolved `flow`
-(`native` / `derived` / `none`) is computed and stored alongside it — never a
-flag.
+(`native` / `derived` / `none`) is computed and stored alongside it — never
+a flag.
 
 Every later step reads the lock from `manifest["graph"]` and never re-runs
 `precheck_graph.{py,js}` or re-asks the user — including a freshly spawned
-parallel document-writer, which never goes through `## Selection` itself (see
-[`../parallel-execution.md`](../parallel-execution.md) and
-[`../../workflows/writing.md`](../../workflows/writing.md)). A manifest missing
-`graph` (written before this convention existed, or resumed from one) self-heals
-via `manage_manifest.{py,js} set-graph --repo <repo>` with no other flags —
-same automatic, registry-priority pick.
+parallel document-writer, which never goes through `## Selection` itself
+(see [`../parallel-execution.md`](../parallel-execution.md) and
+[`../../workflows/writing.md`](../../workflows/writing.md)). A manifest
+missing `graph` (written before this convention existed, or resumed from one)
+self-heals via `manage_manifest.{py,js} set-graph --repo <repo>` with no
+other flags — same automatic, registry-priority pick.
 
 Switching the locked provider mid-session requires
 `set-graph --provider <id> --force`; without `--force` it fails loudly rather
@@ -137,13 +137,12 @@ be agent-run. Side effects remain deliberately separate:
 - `--auto-accept` never supplies approval for any of these actions.
 
 After a build or refresh, rerun `precheck_graph.{py,js} --need code`. Do not
-require a
-flow graph yet unless the active manifest contains a selected document whose
-`requires` includes `flow_graph`.
+require a flow graph yet unless the active manifest contains a selected
+document whose `requires` includes `flow_graph`.
 
 ## Query before planning
 
-Use the selected provider’s native interface to collect a planning inventory:
+Use the selected provider's native interface to collect a planning inventory:
 
 1. repository/module boundaries and deployable or published units;
 2. entry points, routes, jobs, commands, and public interfaces;
@@ -151,17 +150,18 @@ Use the selected provider’s native interface to collect a planning inventory:
 4. candidate functional areas and flows;
 5. hotspots, tests, configuration reads, and operational surfaces.
 
-Then inspect manifests, current docs, and history. This evidence determines the
-tier, profiles, conditions, and dynamic entries in the manifest. The plan is
-therefore graph-grounded rather than a generic tier skeleton.
+Then inspect manifests, current docs, and history. This evidence determines
+the tier, profiles, conditions, and dynamic entries in the manifest. The plan
+is therefore graph-grounded rather than a generic tier skeleton.
 
-For each document, make another narrow provider-native query for its contract.
-Examples:
+For each document, make another narrow provider-native query for its
+contract. Examples:
 
 - architecture: boundaries, representative symbols, layer edges, and paths;
 - process/flow views: native process steps or provisional flow candidates,
   then source confirmation of decisions and failures;
-- setup/configuration: graph entry points plus manifests and environment reads;
+- setup/configuration: graph entry points plus manifests and environment
+  reads;
 - risks: high fan-in/out paths, hotspots, dependency boundaries, and history;
 - agent context: the smallest source-backed routes, patterns, tests, and
   constraints an editing agent needs.
@@ -170,31 +170,29 @@ Examples:
 
 Resolve flow data native-first. The numbered list below is a **fallback
 order**, not a readiness claim for the plan summary — report only providers
-that `precheck_graph.{py,js}` marked READY, and never echo “Understand
-Anything +
-GitNexus” when one or both are absent:
+that `precheck_graph.{py,js}` marked READY, and never echo "Understand
+Anything + GitNexus" when one or both are absent:
 
-1. use Understand Anything’s native flow graph when ready;
+1. use Understand Anything's native flow graph when ready;
 2. use GitNexus indexed processes when ready;
-3. otherwise derive `.docforge/tmp/flow-graph.json` from the selected code graph
-   through [`flow-derivation.md`](flow-derivation.md).
+3. otherwise derive `.docforge/tmp/flow-graph.json` from the selected code
+   graph through [`flow-derivation.md`](flow-derivation.md).
 
 CodeGraph is first-class for `code_graph` and an excellent derivation input,
-but it has no native `flow_graph`. When CodeGraph is the only ready code graph
-(or the selected primary has no native flow capability), the Capability
-Schedule must say **Docforge-derived (provisional)**, never “Native flow
-source: CodeGraph”.
+but it has no native `flow_graph`. When CodeGraph is the only ready code
+graph (or the selected primary has no native flow capability), the Capability
+Schedule must say **Docforge-derived (provisional)**, never "Native flow
+source: CodeGraph".
 
 Before choosing flow documents, harvest the complete
 `.docforge/flow-index.json` through `flow_index.{py,js}` (see
 [`../../runtime/flows/README.md`](../../runtime/flows/README.md)). GitNexus
-Process nodes
-are grouped by `entryPointId`; they are candidate path evidence, not one
-document each. Understand Anything native flow nodes are confirmed entries,
-then its knowledge graph is scanned for additional candidates because a domain
-graph may cover only the main flows. The rendered `docs/flows/README.md`
-matrix retains main and deferred candidates; only main entries become dynamic
-flow documents.
+Process nodes are grouped by `entryPointId`; they are candidate path
+evidence, not one document each. Understand Anything native flow nodes are
+confirmed entries, then its knowledge graph is scanned for additional
+candidates because a domain graph may cover only the main flows. The rendered
+`docs/flows/README.md` matrix retains main and deferred candidates; only main
+entries become dynamic flow documents.
 
 The derived result is explicitly provisional. Confirm business rules and
 failure behavior against source before publishing them. Containment edges do

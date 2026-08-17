@@ -29,15 +29,15 @@ BA and PO stay distinct audience-specific packs: BA owns precise business-rule
 logic and requirement traceability; PO owns feature value, sequencing, and
 release notes. Averaging them into one "business" folder serves neither. Build
 BA depth when the codebase encodes non-trivial business logic; build PO depth
-when the repo ships user-facing features with an independent release lifecycle;
-skip either (and say so) for pure infrastructure or libraries.
+when the repo ships user-facing features with an independent release
+lifecycle; skip either (and say so) for pure infrastructure or libraries.
 
 The `coding-agents` audience is orthogonal to these three classes: it answers
 which consumption modality needs a token-budgeted context, not which human
-reads. Every generated agent-context output directly contains the facts needed
-for its own reader question. It may duplicate a fact from another output or
-from human-facing documentation when that duplication makes the output
-independently useful.
+reads. Every generated agent-context output directly contains the facts
+needed for its own reader question. It may duplicate a fact from another
+output or from human-facing documentation when that duplication makes the
+output independently useful.
 
 **The boundary is zero-reference isolation in both directions.** Agent-context
 outputs contain no Markdown links, URLs, `@` imports, references to peer-agent
@@ -58,9 +58,9 @@ child-owned facts. Human audience views do not restate architecture, flow
 steps, configuration, limitations, or glossary definitions.
 
 Agent-context outputs are exempt from this no-duplication rule and from normal
-navigation. Each repeats the minimum evidence-backed facts needed to answer its
-own reader question and never substitutes a documentation reference for those
-facts.
+navigation. Each repeats the minimum evidence-backed facts needed to answer
+its own reader question and never substitutes a documentation reference for
+those facts.
 
 | Fact | Owner | Linked from |
 |---|---|---|
@@ -98,12 +98,12 @@ sharing one catalog `compact_group` become `##` sections of one merged file at
 the group's `compact_target`, ordered by `compact_order`. Every member keeps
 owning its facts; the merged file presents them as named sections with
 per-section provenance, never as a merged narrative. One non-agent fact still
-has one owner — a compact section is a member document hosted in a shared file,
-not a rewrite. Agent-context compact sections retain their explicit duplication
-exception and zero-reference isolation. Reversing the demotion (compact → standard) is atomic promotion run
-backwards: scaffold the component files, migrate each section's prose to its
-component, retire the merged file — no content lost in either direction (see
-`revision.md`).
+has one owner — a compact section is a member document hosted in a shared
+file, not a rewrite. Agent-context compact sections retain their explicit
+duplication exception and zero-reference isolation. Reversing the demotion
+(compact → standard) is atomic promotion run backwards: scaffold the
+component files, migrate each section's prose to its component, retire the
+merged file — no content lost in either direction (see `revision.md`).
 
 A group with dynamic children demotes too, and its index becomes the merged
 file's candidate matrix rather than a child map: `docs/flows.md` carries the
@@ -142,8 +142,8 @@ Write at the slowest-changing useful layer:
 - file/module paths instead of line numbers;
 - source mentions in non-agent documents rendered as human-readable links to
   the repository file, never bare `path:line` references (see
-  `host-neutrality.md`); agent-context outputs instead use plain durable source
-  or configuration paths because they cannot contain links;
+  `host-neutrality.md`); agent-context outputs instead use plain durable
+  source or configuration paths because they cannot contain links;
 - observable contracts instead of implementation trivia;
 - decision rationale in append-only records;
 - volatile values in reference documents.
@@ -152,7 +152,7 @@ A behavior-preserving refactor should not falsify prose.
 
 ## Depth brake
 
-Add depth when it changes a reader decision, implementation, diagnosis, review,
-or risk judgment. Do not create another file merely because a taxonomy slot
-could exist. Prefer the fewest documents that each hold a complete subject in a
-single primary mode.
+Add depth when it changes a reader decision, implementation, diagnosis,
+review, or risk judgment. Do not create another file merely because a taxonomy
+slot could exist. Prefer the fewest documents that each hold a complete
+subject in a single primary mode.

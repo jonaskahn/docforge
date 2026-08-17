@@ -6,8 +6,7 @@ using `.understand-anything/` keep that legacy data directory. Because the
 artifacts are JSON, Docforge can deterministically inventory them with
 `read_graph.{py,js}` (see
 [`../../runtime/graph/README.md`](../../runtime/graph/README.md)) and can also
-use the provider’s own skills for semantic
-exploration.
+use the provider's own skills for semantic exploration.
 
 ## Prepare
 
@@ -37,11 +36,11 @@ the provider's flow-extraction skill:
 ```
 
 With an existing code graph it derives flow knowledge cheaply; without
-one it can perform a lightweight scan, though Docforge’s universal code-graph
+one it can perform a lightweight scan, though Docforge's universal code-graph
 gate means the normal Docforge path already has the code graph. This
-adds business domains, flows, and ordered steps. `--auto-accept` never supplies
-approval for either graph-generation run. Optional provider auto-update hooks
-are also a separate side effect.
+adds business domains, flows, and ordered steps. `--auto-accept` never
+supplies approval for either graph-generation run. Optional provider
+auto-update hooks are also a separate side effect.
 
 ## Query
 
@@ -80,13 +79,13 @@ confirm business rules, failures, and externally visible behavior in source.
 
 - Use layers, imports, symbols, and tours to plan the architecture and agent
   views.
-- Add dynamic flow documents from actual flows in `.ua/domain-graph.json`—never from example
-  seeds.
-- Generate the BA process view, rules, and requirements links from native flow
-  evidence plus source confirmation.
-- Use PO feature and metric evidence only when code, history, instrumentation,
-  or stakeholder material supports it.
+- Add dynamic flow documents from actual flows in
+  `.ua/domain-graph.json`—never from example seeds.
+- Generate the BA process view, rules, and requirements links from native
+  flow evidence plus source confirmation.
+- Use PO feature and metric evidence only when code, history,
+  instrumentation, or stakeholder material supports it.
 
 The graph can be committed and shared by the target repository under the
-provider’s own guidance. Docforge neither moves it into `docs/` nor records it
-as generated documentation.
+provider's own guidance. Docforge neither moves it into `docs/` nor records
+it as generated documentation.

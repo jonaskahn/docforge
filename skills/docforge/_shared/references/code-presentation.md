@@ -1,17 +1,17 @@
 # Code presentation
 
-Fenced blocks are for material readers can run, copy, inspect as a contract, or
-read as a diagram. They are never containers for explanatory prose, source
+Fenced blocks hold material readers can run, copy, inspect as a contract, or
+read as a diagram. **Never** a container for explanatory prose, source
 citations, or lists of implementation locations.
 
 ## Policy
 
-- `contract-only` permits diagrams, literal output, schemas, configuration, and
-  commands that the document contract requires.
+- `contract-only` permits diagrams, literal output, schemas, configuration,
+  and commands the document contract requires.
 - `task-focused` additionally permits the smallest verified example needed to
   complete or verify the reader's task.
-- Never paste repository implementation as proof of a claim. Ground the claim
-  in provenance and explain the behavior in prose instead.
+- **Never** paste repository implementation as proof of a claim. Ground the
+  claim in provenance and explain the behavior in prose instead.
 - Introduce every fence with a sentence and use a language tag. Keep expected
   output in a separate `text docforge-role=output` fence.
 - A document contract may require a command, payload, or diagram even for an

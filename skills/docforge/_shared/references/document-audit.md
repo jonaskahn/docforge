@@ -36,25 +36,23 @@ Atomic external values may remain as typed `<UPPER_SNAKE_CASE>` tokens. A
 derivable gap may not be waived to a human.
 
 The contract in force is the stable route returned by
-`query_catalog.{py,js} --route`. Every agent-context artifact must stand alone;
-any Markdown link, URL, `@` import, peer-agent or human-document reference, or
-bare generated-document path is a `FAIL`. Plain source/configuration paths and
-verified commands are allowed. A generated non-agent artifact that mentions or
-references any agent-context output is also a `FAIL`. The whole-tree audit
-reports those directions as `agent-context outbound` and `agent-context leak`,
-respectively.
+`query_catalog.{py,js} --route`. Every agent-context artifact must stand
+alone; any Markdown link, URL, `@` import, peer-agent or human-document
+reference, or bare generated-document path is a `FAIL`. Plain
+source/configuration paths and verified commands are allowed. A generated
+non-agent artifact that mentions or references any agent-context output is
+also a `FAIL`. The whole-tree audit reports those directions as
+`agent-context outbound` and `agent-context leak`, respectively.
 
 Record the result with `manage_manifest.{py,js} audit` (see
 [`../runtime/manifest/README.md`](../runtime/manifest/README.md)). A failure
-puts the document in
-`needs_review`. `manage_manifest.{py,js} set --status complete` rejects a
-document
-without a passing `cold-pass` audit record. Mechanical lint alone
-cannot produce PASS.
+puts the document in `needs_review`. `manage_manifest.{py,js} set --status
+complete` rejects a document without a passing `cold-pass` audit record.
+Mechanical lint alone cannot produce PASS.
 
 Root-kernel outputs (`AGENTS.md` and `CLAUDE.md`, both
-`SPECIAL_DOC_OUTPUTS` members that `lint_document.{py,js}` skips) are linted by
-`lint_agents_kernel.{py,js}` instead (see
-[`../runtime/documents/README.md`](../runtime/documents/README.md)); its defects
-are mechanical failures that block `PASS`. The local-preference extension is
-emitted literally and carries no kernel rubric.
+`SPECIAL_DOC_OUTPUTS` members that `lint_document.{py,js}` skips) are linted
+by `lint_agents_kernel.{py,js}` instead (see
+[`../runtime/documents/README.md`](../runtime/documents/README.md)); its
+defects are mechanical failures that block `PASS`. The local-preference
+extension is emitted literally and carries no kernel rubric.

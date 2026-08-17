@@ -18,18 +18,20 @@ docs/operations/
 └── <shape-specific operations documents> # selected by catalog conditions
 ```
 
-Shape-specific documents cover distribution, worker reliability, infrastructure
-apply/state/disaster recovery, device flashing and recovery, or network
-deployment. Select only the documents supported by the repository shape and
-evidence; an empty operational taxonomy is not a useful deliverable.
+Shape-specific documents cover distribution, worker reliability,
+infrastructure apply/state/disaster recovery, device flashing and recovery,
+or network deployment. Select only the documents supported by the repository
+shape and evidence; an empty operational taxonomy is not a useful
+deliverable.
 
 ## Content ownership
 
 ### `README.md`
 
-Route an operator from routine delivery to observability and scenario-specific
-runbooks. State the system boundary and link to the security posture for access
-and credential constraints; do not duplicate either child document.
+Route an operator from routine delivery to observability and
+scenario-specific runbooks. State the system boundary and link to the
+security posture for access and credential constraints; do not duplicate
+either child document.
 
 ### Deployment and distribution
 
@@ -50,7 +52,12 @@ name or exception string alone.
 
 Follow the evidence loop in [`source-analysis.md`](../source-analysis.md):
 
-1. Use the selected code graph to locate deployable units, entry points, configuration reads, operational dependencies, and tests.
-2. Confirm artifacts, environments, commands, signals, and recovery behavior in configuration, automation, source, and executable verification.
-3. Use history only to explain an evidenced operational decision or incident response.
-4. Treat account roles, dashboards, on-call rotations, service objectives, and production procedures as external evidence unless recorded in the repo.
+1. Use the selected code graph to locate deployable units, entry points,
+   configuration reads, operational dependencies, and tests.
+2. Confirm artifacts, environments, commands, signals, and recovery behavior
+   in configuration, automation, source, and executable verification.
+3. Use history only to explain an evidenced operational decision or incident
+   response.
+4. Treat account roles, dashboards, on-call rotations, service objectives,
+   and production procedures as external evidence unless recorded in the
+   repo.

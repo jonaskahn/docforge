@@ -10,7 +10,7 @@ This file owns mechanical and whole-tree acceptance.
 - valid, accessible illustrations that satisfy `illustration.md` when present;
 - no dead relative links;
 - no invented claims or untyped external unknowns;
-- no links into Docforge’s internal `references/` directory;
+- no links into Docforge's internal `references/` directory;
 - one primary mode and the catalog's must-present/keep-out contract;
 - agent-context outputs contain no documentation references of any kind:
   Markdown links, URLs, `@` imports, peer-agent or human-document references,
@@ -55,6 +55,5 @@ Mechanical success does not complete a document; the independent audit in
 8. **Promotion integrity:** no flow or concept folder contains only README.
 
 `scaffold_docs.{py,js} --audit` must exit nonzero on any mechanical defect and
-zero on
-a clean tree. If a whole-tree correction changes one document, independently
-audit that document again.
+zero on a clean tree. If a whole-tree correction changes one document,
+independently audit that document again.
