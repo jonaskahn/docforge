@@ -20,7 +20,8 @@ Canonical workflow ownership: [`../ownership.md`](../ownership.md).
   scaffolding, provenance, status transitions, independent audit.
 - `/docforge-revise` (`all` | `<area>` | `flow`), or update/refresh of a
   named document → [revision.md](revision.md): shared flags,
-  single-document update/refresh, flow-index organization.
+  single-document update/refresh, the revise side of the flow pipeline,
+  retirement, template conformance.
 - Staleness, migration, the whole-tree gate, or completion criteria →
   [validation.md](validation.md).
 - The local dashboard (`dashboard.{py,js} start` / `status` / `stop`; see

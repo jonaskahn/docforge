@@ -1,8 +1,8 @@
 # Planning
 
 Owns: repository inspection, tier and profile selection, dynamic-document
-discovery, manifest initialization, the dry-run tree, and the plan
-checkpoint with document cards.
+discovery, manifest initialization, the dry-run tree, the plan checkpoint
+with document cards, and the write-start flow gate on a fresh start.
 
 ## Precheck and inspect
 
@@ -71,17 +71,11 @@ Rules:
   non-trivial repo-root `README.md` already exists → never announce
   overwrite; require an explicit migrate / skip / rewrite choice (see
   Existing-doc actions below).
-- While inventorying, also detect **unmanaged documents** — `.md` / `.mdx`
-  files under `docs/` or `docs-portfolio/` with no manifest entry and not
-  already recorded in `project.unmanaged_docs`
-  ([`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
-  documents"). List each one and ask, per file, **Keep self-managed**
-  (recommended) or **Archive** (`docs/_archive/<year>/`) — never decide
-  silently, never re-ask already-recorded paths. Apply the answers
-  mechanically with `manage_manifest.{py,js} unmanaged add` / `unmanaged
-  archive` (archive is a file move and stays separately approved, never
-  `--auto-accept`). A self-managed doc is never scaffolded over, never
-  merged, and never added to the manifest.
+- While inventorying, also detect **unmanaged documents** and run their
+  triage exactly as owned in
+  [`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
+  documents". Its results surface in the plan presentation's Existing-doc
+  actions below.
 
 ## Select scope
 
@@ -116,6 +110,28 @@ harvested candidates become deep-dive flow documents is not settled here —
 that is the write-start selection gate below, a mandatory user decision even
 under `--auto-accept`. Never seed an example artifact to stand in
 for discovery.
+
+## Planning over an existing manifest
+
+When the goal is **replace the plan** — or any new plan over a manifest
+that already exists — planning starts from the existing record, never
+from a blank slate:
+
+1. Run `migrate_metadata.{py,js}` first — unconditional and idempotent
+   (see [`validation.md`](validation.md) "Manifest and provenance"); an
+   already-current manifest reports a clean no-op.
+2. Prefer `manage_manifest.{py,js} reconcile` with the new scope
+   ([`revision.md`](revision.md) "Applying the answers to the manifest").
+   Written documents that fall out of the new selection are reported as
+   `retire` candidates — their statuses, provenance, and audit records
+   stay in the manifest; reconcile itself never deletes content.
+3. `init --force` is the blank-slate escape hatch only: it replaces the
+   manifest record entirely, so previous statuses and audit history are
+   lost and any written `docs/` files without entries become foreign
+   documents that flow through the unmanaged-doc triage. Use it only
+   when the user explicitly asks to discard the current plan record,
+   and only after explicit confirmation — never silently, never under
+   `--auto-accept`.
 
 ## Initialize and preview
 
@@ -265,8 +281,9 @@ Present a human-readable plan before writing. It must contain:
    user chose both for corroboration.
 6. **Existing-doc actions** — keep/migrate/merge/archive/delete proposals
    for ordinary paths, with destructive or moving actions still awaiting
-   separate approval, plus the **Unmanaged documents** triage from step 1
-   (per foreign file: `Keep self-managed (recommended)` / `Archive`). For
+   separate approval, plus the **Unmanaged documents** triage from the
+   inspection pass (per foreign file: `Keep self-managed (recommended)` /
+   `Archive`). For
    an existing repo-root `README.md` that is non-trivial / valuable
    (substantial user-facing content, not an empty stub), present exactly
    **migrate** / **skip** / **rewrite** and wait for confirmation before
@@ -285,8 +302,11 @@ Present a human-readable plan before writing. It must contain:
 
 This presentation is the plan gate; a bare list of filenames is
 insufficient. Confirm it unless `--auto-accept` is present. Under
-`--auto-accept`, display the same plan and continue. `--plan-only` stops
-after the full presentation and does not create placeholder documents.
+`--auto-accept`, display the same plan and continue. `--plan-only` continues
+through the flow gate below and then stops: it scaffolds no document bodies
+and re-grounds nothing, but the flow index and its main-standalone stubs are
+metadata and are written, so the final tree carries a real flow-document
+count ([`../flags.md`](../flags.md)).
 
 ## Flow gate (write-start)
 
@@ -299,77 +319,47 @@ selection prompt.
 
 **Mandatory gate — `--auto-accept` never waives it.** Which flows become
 documents is a scope decision like profiles or audiences, not a routine
-pause. The selection prompt in step 5 is always shown and always awaited,
-exactly like the intake confirmation and the root-README three-way choice.
-There is no auto-accept path that silently selects flows; under
-`--auto-accept` only the structure-update pause in step 6 is skipped, the
-selection itself never is.
+pause — the selection prompt is always shown and always awaited, exactly
+like the intake confirmation and the root-README three-way choice
+([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+"Selection gate and write-back"). Under `--auto-accept` only the pause on
+the structure update that follows the gate is skipped; the selection itself
+never is.
 
-1. **Precheck** — `precheck_graph.{py,js} --repo <repo> --need flow`
-   ([`../runtime/graph/README.md`](../runtime/graph/README.md)). Native
-   flow graph first; CodeGraph-only → Docforge-derived (provisional), as
-   the plan's capability schedule already stated.
-2. **Harvest or import** — `flow_index.{py,js} harvest --repo <repo>
-   [--main-limit N]` writes `.docforge/flow-index.json` (schema 1.2) with
-   evidence-ranked `main` / `deferred` priorities. No provider flags: it
-   reads Understand Anything graphs in place and the auto-discovered
-   GitNexus interchange `.docforge/tmp/gitnexus-flows.json`. When the
-   selected code graph has no native flow evidence (CodeGraph-only),
-   derive instead: `derive_flow_graph.{py,js} prepare`, the agent/LLM
-   analysis into `.docforge/tmp/flow-analysis.json`, then
-   `flow_index.{py,js} import --repo <repo> --analysis
-   .docforge/tmp/flow-analysis.json` — derived `candidate` rows seeded
-   into the same index, so the gate works for every provider
-   ([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
-   "Derived candidates").
-3. **Organize** — `flow_index.{py,js} organize emit`, the agent writes
-   `.docforge/tmp/flow-organization.json` (descriptive names, families,
-   composition), then `organize apply`. Naming and grouping are settled
-   before the prompt — the user never chooses among bare symbols.
-4. **Analyze** — main-priority **standalone** rows get the full deep
-   analysis pack: `derive_flow_graph.{py,js} prepare` context when no
-   native flow graph exists, the agent/LLM analysis into
-   `.docforge/tmp/flow-analysis.json`, then `derive_flow_graph write` when
-   a provisional graph is required. (For a CodeGraph-only run this is the
-   same analysis step 2's import branch consumed.) Deferred rows get
-   summary-level
-   context only — display name, trigger, entry ref, reach, one-line
-   evidence — enough to decide promotion, cheap to discard. Full
-   derivation reasoning:
-   [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md).
-5. **Selection prompt** — every candidate listed; **main standalone
-   pre-selected**, deferred unchecked but promotable. Per row: display
-   name, family, entry, reach (steps/boundaries/churn), confidence,
-   one-line evidence. The main budget is `--main-limit` (default 15)
-   deep-dives; selecting more requires explicit confirmation (state "N
-   over budget"). The user may promote, demote, or skip any row. Wait for
-   explicit confirmation — always, including under `--auto-accept`.
-6. **Apply** — mechanically, per row, `flow_index.{py,js} update --repo
-   <repo> --id <flow-id>`: promoted → `--priority main --status
-   placeholder`; demoted → `--priority deferred`; declined → `--status
-   skipped`. Then `manage_manifest.{py,js} add --type flow --id … --path
-   …` for every selected standalone. Show a **structure update** — added
-   paths and the refreshed exact document count (this is the corrected
-   projection; the intake estimate excluded flow documents on purpose) —
-   and honor the execution mode for the pause, never skipping the tree
-   itself.
-7. **Write** — flow documents follow `write_order`;
-   [`../references/parallel-execution.md`](../references/parallel-execution.md)
-   applies: a spawned writer edits only its own flow document; the flow
-   index and the manifest stay orchestrator-serial.
-8. **Write-back** — after a flow document passes mechanical lint and its
-   independent audit, the orchestrator records the outcome once:
-   `flow_index.{py,js} update --repo <repo> --id <flow-id> --summary
-   "<one-paragraph outcome>" --written`. The command refuses a row whose
-   status is not `documented`. `flow_index render` then shows these
-   summaries in the matrix's `Flow summaries` section.
+Run the canonical pipeline — precheck → harvest/import → organize →
+analyze → selection gate → apply → write → write-back → render — exactly as
+[`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+"Flow pipeline" specifies. It owns every command and flag, the analysis
+depth rule, the prompt's contents and `--main-limit` budget, and the
+`update` promote/demote/decline mapping. Do not restate them here; do not
+reference its steps by number.
 
-Immediately before materializing each document, show the current structure
-summary (or "tree unchanged since the displayed checkpoint") and a compact
-execution card: path, reader, owned topics, evidence query, links to owning
-documents, and acceptance checks. This is derived from the manifest and the
-document's route (`query_catalog.{py,js} --route <id>`), not a second plan
-file.
+Fresh start differs from revise in four places, and only these:
+
+- **Harvest writes the real index.** `flow_index.{py,js} harvest` produces
+  `.docforge/flow-index.json` directly, so Apply has no `revise` step —
+  the order is `update` per changed row, then
+  `manage_manifest.{py,js} add --type flow --id … --path …` for every
+  selected standalone.
+- **Every candidate is new.** The prompt offers promote / demote / skip,
+  not the revise flow's per-row add / remove / update actions, and there
+  are no unchanged rows to carry as baseline facts.
+- **One analysis, no reuse.** There is no stored analysis to reuse and no
+  flow-mode question. CodeGraph-only: the single agent analysis taken at
+  harvest time (`derive_flow_graph.{py,js} prepare` → agent →
+  `flow_index.{py,js} import --analysis`) **is** the deep pack; the
+  Analyze phase must not re-run it.
+- **The structure update is the corrected projection.** Its document count
+  supersedes the intake estimate, which excluded flow documents on purpose
+  ([`intake.md`](intake.md) "Confirmation summary"). Honor the execution
+  mode for the pause; never skip the tree itself.
+
+Under `--plan-only` the gate still fires — which flows become documents is a
+scope decision, and its answer is what makes the dry-run count real. The
+pipeline runs through the selection gate and the structure update, writing
+the flow index and its main-standalone stubs (metadata, not document
+bodies), then stops before the write phase.
 
 Next: for each document in `write_order`, proceed to
-[`writing.md`](writing.md).
+[`writing.md`](writing.md), which opens every document with the structure
+summary and execution card it owns.

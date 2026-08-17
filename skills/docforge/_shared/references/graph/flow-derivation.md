@@ -201,14 +201,93 @@ choose to proceed. See the owning workflows:
   `--priority deferred`; decline → `--status skipped`. The command
   normalizes `doc_role` / `doc_path` to match: promoted rows become
   `standalone` with a `docs/flows/{slug}.md` path; skipped/demoted rows
-  become `index_only` with no path. Then
-  `manage_manifest.{py,js} add --type flow` for each selected standalone.
+  become `index_only` with no path. On a revise flow,
+  `flow_index.{py,js} revise` into the real index runs **first** — a
+  row the re-harvest introduced does not exist in the real index yet,
+  and `update` fails on an unknown id; on a fresh start, `harvest`
+  already wrote the real index, so no revise step is needed. Then
+  `manage_manifest.{py,js} add --type flow` for each selected
+  standalone.
 - **Write-back.** After a flow document passes lint and its independent
   audit, the orchestrator runs
   `flow_index.{py,js} update --id <flow-id> --summary "<one-paragraph
   outcome>" --written` — refused unless the row is `documented`. The
   rendered matrix shows these summaries in its `Flow summaries` section.
   Never run by a parallel writer; the index stays orchestrator-serial.
+
+## Flow pipeline
+
+The full pipeline is identical in fresh-start planning and
+`/docforge-revise flow`; only the harvest mode and the prompt's per-row
+actions differ. Fresh start: after the plan gate, before the first
+document write. Revise: after the flow-mode question and analysis. The
+mandatory selection gate and its `update` mapping live in "Selection
+gate and write-back" above.
+
+1. **Precheck** — `precheck_graph.{py,js} --repo <repo> --need flow`.
+   Native flow graph first; CodeGraph-only → Docforge-derived
+   (provisional).
+2. **Harvest or import** — native flow evidence: `flow_index.{py,js}
+   harvest` (fresh start, re-analyze) or `revise` (reuse). No native
+   flow evidence (CodeGraph-only): `derive_flow_graph.{py,js} prepare`,
+   then the agent/LLM analyzes the bounded candidates **once** into
+   `.docforge/tmp/flow-analysis.json`, then `flow_index.{py,js} import
+   --analysis` seeds the derived rows through the same
+   state-preserving merge revise uses. This analysis is the deep pack —
+   step 4 must not re-run it.
+3. **Organize** — `organize emit`, the agent writes
+   `.docforge/tmp/flow-organization.json`, `organize apply`. Naming and
+   grouping settle before the prompt — the user never chooses among
+   bare symbols.
+4. **Analyze** — main-priority **standalone** rows get the full deep
+   pack ("Derive main-flow detail" below); run `derive_flow_graph
+   write` only when a provisional flow graph is required. Deferred rows
+   get summary-level context only. CodeGraph-only: the step-2 analysis
+   is the pack; do not analyze twice.
+5. **Selection gate** — mandatory; prompt, budget, and mapping above.
+6. **Apply** — in this exact order:
+   1. `flow_index.{py,js} revise` into the real index on a revise flow
+      (upsert every harvested row, preserve `documented` / `skipped`
+      state, set other rows to `placeholder`, create stub markdown only
+      for main-priority standalone placeholders, prune orphan
+      scaffolds). Fresh start: `harvest` already wrote the real index —
+      no revise step.
+   2. `flow_index.{py,js} update` per changed row (promote / demote /
+      decline). Never update before revise: newly harvested rows do not
+      exist in the real index yet.
+   3. `manage_manifest.{py,js} add --type flow` for each selected
+      standalone.
+   4. Show the annotated plan tree / structure update; honor the
+      execution-mode checkpoint.
+7. **Write** — flow documents in `write_order`; a spawned writer edits
+   only its own flow document, the index and the manifest stay
+   orchestrator-serial.
+8. **Write-back** — after lint + independent audit: `flow_index update
+   --id <flow-id> --summary "<one-paragraph outcome>" --written`
+   (refused unless `documented`).
+9. **Render and refresh** — `flow_index render` the matrix (its `Flow
+   summaries` section carries the write-backs); update any selected
+   overview / index docs whose flow counts or links changed.
+
+Harvest, revise, and import write **metadata only** — the flow index
+and placeholder stubs, never user content — so they run in the
+repository itself before the gate; there is no provisional copy. The
+gate still always precedes `update`, `manage_manifest add`, and every
+document write.
+
+**Fresh start vs revise:**
+
+| Step | Fresh start (planning) | `/docforge-revise flow` |
+|---|---|---|
+| Harvest | `harvest` — full; every row re-derived | Re-analyze: `harvest`; Reuse: `revise` (missing candidates only; stored status, summaries, organization reused) |
+| Analyze | Deep pack for main standalone rows | Re-analyze: full deep pack for main standalone rows; Reuse: deep pack only for missing and newly promoted rows |
+| Gate | Every candidate; main standalone pre-selected; promote / demote / skip | Per-row actions add / remove / update; unchanged rows are baseline facts |
+| Apply | update → add (harvest wrote the index) | revise → update → add |
+
+**Tier rule.** The gate fires only for `diligence` and `portfolio`. At
+`spine` the harvest still ran during repository inspection, but
+`docs/flows/README.md` renders the candidate matrix only — no gate, no
+selection prompt, no flow deep-dives.
 
 ## Derive main-flow detail
 

@@ -113,7 +113,7 @@ Intake asks its scope questions in exactly two turns.
 
 | Turn | Asks | Why it is separate |
 |---|---|---|
-| 1 — Direction | Goal or action (Scope, on revise), Documentation layout, and Target readers (fresh start only) | Layout fixes the shape of the tree that every later answer describes; the reader pick decides whether the agent-context group is generated at all |
+| 1 — Direction | Goal or action (Scope, on revise), Documentation layout, Target readers (fresh start only), and Flow mode (revise, flow-touching scopes only) | Layout fixes the shape of the tree that every later answer describes; the reader pick decides whether the agent-context group is generated at all; flow mode decides how much of the flow index is re-derived before anything is sized |
 | 2 — Scope | Tier, repository profiles, output audience, graph source, execution mode | These describe the content *inside* the tree Turn 1 fixed |
 
 Pack rules:
@@ -206,7 +206,7 @@ and wait for explicit confirmation before reconciling the manifest.
    | Manifest exists and detection drifted from `project.scale` | **Asked** as a `Change to <detected layout>` control (see Revise selection changes) |
    | Manifest exists, no drift, goal is Resume / Status / single-document update | **Not asked.** Stated as a baseline fact in the confirmation summary |
    | Goal is Portfolio, or the invocation names the `portfolio` tier | **Not asked.** `standard` is stated as a fixed consequence of the tier |
-   | `/docforge-revise all`, or any invocation that names a tier | **Not asked.** The tier-naming exception affects only the Tier control in Turn 2; layout follows the drift / requested-change rule above |
+   | `/docforge-revise all`, or any invocation that names a tier | **Not forced by the tier naming.** That exception adds a control only for Tier in Turn 2; layout still follows the drift / requested-change rule above — asked on a drift or a requested change, stated as unchanged otherwise |
 
    Options (single-select; each carries the detected evidence from the
    brief's scale line):
@@ -432,15 +432,22 @@ baseline facts at the top of the pack, never as controls.
 ### Revise: which dimensions each turn actually asks
 
 For `/docforge-revise flow` / `<area>` / `all`, or any revise that
-rediscovers docs: stop and ask before migration, detection, or writing.
-Scale each turn to what is unresolved or changed — never a reflexive full
-re-ask. Turn 1 carries Scope and Layout; Turn 2 carries the rest.
+rediscovers docs: stop and ask before any scope decision, detection, or
+writing (the idempotent `migrate_metadata` run precedes the brief — see
+[`revision.md`](revision.md) "Questions revise asks"). Scale each turn to
+what is unresolved or changed — never a reflexive full re-ask. Turn 1
+carries Scope, Layout, and Flow mode; Turn 2 carries the rest.
 
 - **Scope** (Turn 1): asked when the invocation is ambiguous.
 - **Layout** (Turn 1): asked only when scale detection disagrees with
   the manifest or the user requested a change; first control in that
   pack when asked (see Revise selection changes). No delta → state
   current layout as unchanged.
+- **Flow mode** (Turn 1): asked whenever the scope re-harvests flows —
+  `/docforge-revise flow`, `/docforge-revise all`, or a natural-language
+  revise that touches flows. `<area>` never re-harvests and never asks.
+  Single-select, never defaulted silently; option text and consequences
+  are owned by [`revision.md`](revision.md) "Questions revise asks".
 - **Execution mode** (Turn 2): always asked, unless the invocation
   supplies `--plan-only` or `--auto-accept` — these govern this run,
   never read off the manifest.
@@ -488,6 +495,13 @@ Pre-step: run `manage_manifest.{py,js} preview` with the confirmed scope
 ([`../runtime/manifest/README.md`](../runtime/manifest/README.md)).
 Read-only — writes no manifest, no directories, nothing — inside intake's
 no-side-effect boundary.
+
+For a **revise** confirmation (`/docforge-revise` with a scope, or a
+natural-language revise), skip the projection, ablation, and density
+lines below — those size a *new* scope. Show instead: the changed
+dimensions (baseline → requested change), the annotated plan tree
+([`revision.md`](revision.md) "Annotated plan tree"), and the
+unmanaged-doc triage when found; unchanged dimensions as baseline facts.
 
 Lines:
 
@@ -625,6 +639,8 @@ effects:
 - `--auto-accept`: display plans, trees, and results, then continue
   without routine conversational pauses; excluded side effects:
   [`../flags.md`](../flags.md).
+- `--no-dashboard`: skip the automatic dashboard build/serve at run
+  completion ([`validation.md`](validation.md) "Dashboard auto-serve").
 
 Structural revise uses `/docforge-revise` (never `/docforge --revise`).
 

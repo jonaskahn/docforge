@@ -32,10 +32,11 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan`, `start`, `export`, and `status` all require a manifest 3.9 (or 3.8 /
-3.7 / 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1, which
-`migrate_metadata.{py,js}` — see [`validation.md`](validation.md) "Manifest
-and provenance" — upgrades in place). For an **older legacy manifest
+`scan`, `start`, `export`, and `status` all require a manifest 3.9 (or
+any older 3.x shape, upgraded in place by `migrate_metadata.{py,js}`;
+the full version list and upgrade mechanics live in
+[`validation.md`](validation.md) "Manifest and
+provenance"). For an **older legacy manifest
 version** (1.1 `project_context` / `document_groups`, 2.0 flat `documents`
 with overlays, or any other pre-3.0 shape), behavior depends on whether the
 command writes:
@@ -109,8 +110,9 @@ PREFLIGHT -> SCAN -> METADATA RECONCILE -> SIGNATURE -> BUILD (if changed)
 
 Lifecycle steps:
 
-- **Preflight:** repository, manifest 3.9 (or 3.8 / 3.7 / 3.6 / 3.5 / 3.4 /
-  3.3 / 3.2 / 3.1), and a readable `docs/` tree. Legacy pre-3.0 (or any
+- **Preflight:** repository, a current-version manifest (older 3.x shapes
+  auto-migrate — see [`validation.md`](validation.md) "Manifest and
+  provenance"), and a readable `docs/` tree. Legacy pre-3.0 (or any
   other unsupported) version → apply the [Legacy manifest
   gate](#legacy-manifest-gate) before continuing. The session engine is
   locked (see [`workflows/tools.md`](tools.md)); run every

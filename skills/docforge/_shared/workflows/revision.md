@@ -1,8 +1,9 @@
 # Revision
 
 Owns: `/docforge-revise` (`flow` | `<area>` | `all`), its flags
-(`--plan-only`, `--auto-accept`, `--no-dashboard`), flow-index organization,
-provisional flow derivation, and single-document update / refresh.
+(`--plan-only`, `--auto-accept`, `--no-dashboard`), the revise side of the
+flow pipeline, document retirement, current-template conformance, and
+single-document update / refresh.
 
 ## What revise means
 
@@ -10,17 +11,16 @@ provisional flow derivation, and single-document update / refresh.
 touch-up. A revise run (all, area, or flow) applies every step below that
 falls in scope:
 
-1. **Update obsolete documents** — sync provenance and compare `git_blob`
-   values; re-ground blocking `PARTIAL` (`STALE` / `MISSING` / `NO_BLOB`) /
-   `UNTRACKED` sections (per-doc mechanics: Update one document below). A
-   raw-blob mismatch that is still `COSMETIC` — the source's recorded
-   `git_blob_normalized` or `range_blob` still matches — needs no
-   re-grounding.
+1. **Update obsolete documents** — sync provenance and re-ground every
+   blocking section; `COSMETIC` never blocks. Verdicts are defined in
+   [`validation.md`](validation.md) "Manifest and provenance"; per-document
+   mechanics are in Update one document below.
 1a. **Upgrade contract-drifted documents** — a document whose catalog
     `contract_revision` changed is set `in_progress` with its audit cleared
     by reconcile, even when its source provenance is `FRESH`. Re-ground the
-    affected sections (section READMEs: introduction, at-a-glance, scope,
-    start-here, child map, empty state), preserve valid prose, lint, audit,
+    affected sections (section READMEs: self-introduction, at-a-glance,
+    scope and boundaries, start-here reading paths, child map, related
+    sections, empty state), preserve valid prose, lint, audit,
     complete it. A second revise is idempotent once the current revision is
     complete.
 1b. **Enforce current template conformance** — for every in-scope written
@@ -73,21 +73,17 @@ falls in scope:
    detect run re-derives project scale from the gate pack's `scale` field
    (see step 2a).
 2a. **Re-derive scale / layout** — compare the gate pack's detected class
-    and suggested layout with `project.scale` on the manifest.
-    - `decided_by: "detected"` + detection disagrees (repo grew past a
-      threshold, or gained dependency / flow breadth) → surface the drift
-      in the confirmation summary as a recommended change.
-    - `decided_by: "user"` or `"migration"` → report the drift as a fact,
-      change nothing
-      unless the user explicitly asks. A user or migration decision is
-      never silently
-      re-derived. (`migration` marks a legacy manifest whose layout was
-      defaulted to `standard` by metadata migration; `detected_layout`
-      records what detection would have said.)
-    - Confirmed change → `manage_manifest.{py,js} reconcile
-      --scale-class` / `--layout`. Class-only changes are a plain record
-      update; layout changes flow through the annotated tree and
-      Retirement as in step 1c.
+    and suggested layout with `project.scale` per
+    [`intake.md`](intake.md) "Revise selection changes": a `detected`
+    decision that drifted → surface as a recommended change in the
+    confirmation summary; a `user` or `migration` decision → report the
+    drift as a fact, change nothing unless the user explicitly asks
+    (`migration` marks a legacy backfill to `layout: standard`;
+    `detected_layout` records what detection would have said).
+    Confirmed change → `manage_manifest.{py,js} reconcile
+    --scale-class` / `--layout`; class-only changes are a plain record
+    update, layout changes flow through the annotated tree and
+    Retirement as in step 1c.
 3. **Fill missing documents** — any selected catalog type, new
    instruction, or contract that now requires a file and has no manifest
    entry is planned and written via [`writing.md`](writing.md). New craft
@@ -109,16 +105,36 @@ falls in scope:
    recorded source blobs still match. Blob freshness proves cited source
    files are unchanged; it does not prove the document's place in the
    documentation graph is still correct.
-7. **Triage unmanaged documents** — detect foreign `.md` / `.mdx` files
-   under `docs/` or `docs-portfolio/` with no manifest entry and not
-   recorded in `project.unmanaged_docs`
-   ([`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
-   documents"). Ask per file — **Keep self-managed** (recommended) or
-   **Archive** to `docs/_archive/<year>/` — and apply mechanically with
-   `manage_manifest.{py,js} unmanaged add` / `unmanaged archive` (archive
-   is a file move: separately approved, never under `--auto-accept`).
-   Already-recorded paths are baseline facts: never re-asked, never added
-   to the plan, scaffold, or manifest.
+7. **Triage unmanaged documents** — detect foreign docs and run the triage
+   exactly as owned in
+   [`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
+   documents"; the archive move is a file operation, so it is separately
+   approved and never runs under `--auto-accept`. Already-recorded paths
+   are baseline facts: never re-asked, never added to the plan, scaffold,
+   or manifest. The proposals join this revise's confirmation summary
+   (below).
+
+**Ordering for `/docforge-revise all`:** steps 1–7 run first (migration,
+staleness sync, template enforcement, detect/catalog, missing docs,
+suitable-missing-audiences, big picture, connections, unmanaged triage),
+then the flow pipeline with its mandatory gate (below), then the
+annotated plan tree and writing. The flow gate still precedes the first
+document write — the same write-start position the gate holds on a fresh
+run.
+
+The flow pipeline and the revise steps overlap at three points; on `all`
+each is performed **once**, by the step that owns it:
+
+- the **annotated plan tree / execution-mode checkpoint** — shown once,
+  after the flow gate has settled which flows are in, so a single tree
+  covers both the catalog delta and the flow delta;
+- the **big-picture refresh** (`docs/flows/README.md` render, overview and
+  index docs whose flow counts or links changed) — folded into step 4;
+- **missing flow-related dynamic documents** — folded into step 3.
+
+The flow pipeline contributes its precheck, harvest, organize, analyze,
+gate, and writes; it does not open a second tree or a second big-picture
+pass.
 
 **Update / refresh of one named document** is the minimal exception:
 blob-first, no rediscovery, unless that document is untracked or deviates
@@ -154,13 +170,20 @@ it before moving on.
 Revise always **stops and asks first** — never proceed on silent defaults.
 A **bare** `/docforge-revise` is the one exception: metadata-only
 migration, asks nothing (see Commands below). Every other revise invocation
-presents a discovery brief and a **delta-aware** question set before
-migration, detection, or writing — never a reflexive full re-ask.
+presents a discovery brief and a **delta-aware** question set before any
+scope decision, detection, or writing — never a reflexive full re-ask.
+
+`migrate_metadata.{py,js}` is the one thing that runs before the brief: a
+mechanical, idempotent schema prerequisite ([`validation.md`](validation.md)
+"Manifest and provenance"), not a decision. The brief reports the manifest's
+own tier and profiles, so the record must be at the current schema before it
+can be read out. Nothing else — no detection, no reconcile, no scaffold, no
+write — precedes the question set.
 
 Revise uses the same two-turn split as a fresh start
-([`intake.md`](intake.md) "Turn structure"): **Turn 1** asks Scope and
-Layout, **Turn 2** asks Tier, Profiles, Output audience, and Execution
-mode. Never present layout in the same turn as tier, profiles, audiences,
+([`intake.md`](intake.md) "Turn structure"): **Turn 1** asks Scope, Layout,
+and Flow mode, **Turn 2** asks Tier, Profiles, Output audience, and
+Execution mode. Never present layout in the same turn as tier, profiles, audiences,
 or execution mode; open Turn 2 only after Turn 1 is answered.
 
 **Scope** (Turn 1) — `flow`, `<area>`, or `all` (pre-checked from
@@ -183,10 +206,12 @@ that leaves it unanswered → one flow-mode-only follow-up. **Never**
 proceed with a silently assumed mode.
 
 **Flow selection is a mandatory gate — `--auto-accept` never waives
-it.** The add/remove/update selection prompt (step 4 below) is always
+it.** The add/remove/update selection prompt is always
 shown and always awaited, exactly like the intake confirmation: which
 flows become documents is a scope decision, and the user must choose to
-go. Only the execution-mode pauses around the gate honor the flag.
+go ([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+"Selection gate and write-back"). Only the execution-mode pauses around
+the gate honor the flag.
 
 [`intake.md`](intake.md) "Scope intake" owns the exact per-dimension rule —
 which of Scope, Tier, Profiles, Output audience, and Execution mode get
@@ -393,7 +418,7 @@ different thing, hence a different destination.
 | Invocation | Behavior |
 |---|---|
 | `/docforge-revise` | **Metadata-only migration**: upgrade the manifest to current schema/version via `migrate_metadata.{py,js}`. No scope question, no detection, no writing, no dashboard (see below) |
-| `/docforge-revise all` / `/docforge-revise <area>` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars; see [`validation.md`](validation.md) "Manifest and provenance"), then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. Manifest has no audiences → run the full audience multi-select. `all` additionally asks the flow mode question and runs the flow selection gate (`/docforge-revise flow` steps 2–9, in scope with everything else); `<area>` never does. |
+| `/docforge-revise all` / `/docforge-revise <area>` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars; see [`validation.md`](validation.md) "Manifest and provenance"), then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. Manifest has no audiences → run the full audience multi-select. `all` additionally asks the flow mode question and runs the full flow pipeline from its `--need flow` precheck onward (see `/docforge-revise flow` below), in scope with everything else and with the overlaps merged per the Ordering note above; `<area>` never does. |
 | `/docforge-revise flow` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars), then the full flow pipeline (see below) |
 
 ### Bare `/docforge-revise` — metadata-only migration
@@ -429,13 +454,15 @@ up-to-date manifest is a clean no-op (scripts and README:
 
 #### Flags (same as `/docforge`)
 
+Definitions are owned by [`flags.md`](../flags.md); flags combine with a
+scope argument, e.g. `/docforge-revise flow --plan-only`. Revise-specific
+effects only:
+
 | Flag | Effect on revise |
 |---|---|
-| `--plan-only` | Run migrate, staleness sync, detect/catalog, suitable-missing-audiences prompt, and show the structure update / dry-run tree; stop before writing or re-grounding document bodies |
-| `--auto-accept` | Display plans, trees, and results, then continue without routine conversational pauses; never authorizes install, graph build/refresh, root `README.md` migration choices, file archive/deletion, or other side effects (see [`flags.md`](../flags.md)). **Never waives the flow selection gate** — the user must still choose which flows to add, remove, or update (see `/docforge-revise flow`) |
-
-Flags combine with a scope argument, e.g.
-`/docforge-revise flow --plan-only`.
+| `--plan-only` | Covers migrate, staleness sync, detect/catalog, the suitable-missing-audiences prompt, the flow gate when the scope re-harvests flows, and the structure update / dry-run tree. Stops before writing or re-grounding document bodies; the flow index and its main-standalone stubs are metadata and are still written |
+| `--auto-accept` | **Never waives the flow selection gate** — the user must still choose which flows to add, remove, or update (see `/docforge-revise flow`), and the unmanaged-doc archive and retirement moves stay separately approved |
+| `--no-dashboard` | No effect on a bare `/docforge-revise` — there is no dashboard on that path |
 
 Because migration re-registers legacy manifests the same way as the bare
 path ([`validation.md`](validation.md) "Manifest and provenance"), a
@@ -443,13 +470,13 @@ revise run over an old manifest re-grounds and audits the adopted
 documents like any other written tree (steps 1 / 1a / 1b above).
 
 The staleness sync runs `check_staleness.{py,js}` — canonical invocations
-in [`validation.md`](validation.md) "Manifest and provenance". Unless
-`--plan-only`: re-ground blocking `PARTIAL` (`STALE` / `MISSING` /
-`NO_BLOB`) sections; fully re-ground `UNTRACKED`. Re-detect and add
-missing / newly selected documents. Refresh big-picture and connection
-surfaces. Preserve verbatim only sections that are `FRESH` or `COSMETIC`
-**and** unaffected by new flows, new docs, or new connections in this
-revise.
+and verdict meanings in [`validation.md`](validation.md) "Manifest and
+provenance". Unless `--plan-only`, it drives step 1 (re-ground what is
+blocking), step 3 (add missing / newly selected documents), and steps 4–6
+(refresh big-picture and connection surfaces). Step 6 is the one that
+overrides freshness: a `FRESH` or `COSMETIC` section is preserved verbatim
+only when this revise's new flows, documents, and connections leave it
+untouched.
 
 ## Update one document
 
@@ -501,115 +528,61 @@ it.
 Natural-language **revise flow** always runs the **full** flow pipeline
 below. It is not a blob-only pass. New flow connections force re-ground
 of existing flow docs and big-picture surfaces even when their cited
-`git_blob` values are still `FRESH`.
+`git_blob` values are still `FRESH`. At `spine`, the pipeline still
+harvests but stops at the matrix render — no gate, no selection prompt
+(the tier rule in
+[`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+"Flow pipeline").
 
 The **flow mode question** (`Re-analyze flows` / `Reuse existing flow
 analysis`) is answered in Turn 1 — see "Questions revise asks". The
-**flow selection gate** (step 4) is mandatory: `--auto-accept` never
+**flow selection gate** is mandatory: `--auto-accept` never
 waives it, the user must choose to proceed. Only the execution-mode
 pauses around the gate honor the flag.
 
-1. **Always** run `migrate_metadata.{py,js}` first (schema + provenance
-   sidecars), then precheck `--need flow` (`precheck_graph.{py,js}`, see
-   [`../runtime/graph/README.md`](../runtime/graph/README.md)).
-2. **Harvest per the flow-mode answer**, in a temporary/provisional
-   workspace first so the selection prompt is grounded before the
-   repository changes. No provider flags: harvest/revise read Understand
-   Anything graphs in place and the auto-discovered GitNexus interchange
-   `.docforge/tmp/gitnexus-flows.json`; when the code graph has no native
-   flow evidence (CodeGraph-only), derived candidates come from
-   `derive_flow_graph.{py,js} prepare` + agent analysis +
-   `flow_index.{py,js} import --analysis`
-   ([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
-   "Derived candidates"):
-   - **Re-analyze** — `flow_index.{py,js} harvest` (full re-harvest,
-     community-label and near-candidate dedup); every existing row's
-     analysis is superseded.
-   - **Reuse** — `flow_index.{py,js} revise` on a provisional copy:
-     re-harvest catches **missing** candidates only; existing rows keep
-     their stored status, priority, organization, `summary`, and
-     `written_at`. Missing candidates get an explicit analysis in
-     step 3 before the prompt.
-3. **Organize and analyze.** Run `flow_index.{py,js} organize emit`,
-   have the agent write `.docforge/tmp/flow-organization.json`
-   (descriptive names, families, composition), and `flow_index.{py,js}
-   organize apply` — naming settles before the prompt. Then:
-   - **Re-analyze** — full deep analysis pack for main-priority
-     **standalone** rows from the compact communities summary and (when
-     no native flow graph) `derive_flow_graph.{py,js} prepare` context;
-     the agent/LLM analyzes those standalone mains only into
-     `.docforge/tmp/flow-analysis.json`, then runs
-     `derive_flow_graph.{py,js} write` when a provisional graph is
-     required.
-   - **Reuse** — deep analysis only for **missing** candidates and for
-     rows the user promotes from deferred during the prompt; everything
-     else reuses its stored analysis. Deferred rows always get
-     summary-level context, never a deep pack.
-   (`derive_flow_graph` scripts and README:
-   [`../runtime/flows/README.md`](../runtime/flows/README.md). Full
-   derivation reasoning:
-   [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md).)
-4. **Selection prompt — mandatory gate.** Every candidate listed with a
-   per-row action:
-   - **add** — missing or newly promoted candidates (explicitly analyzed
-     first);
-   - **remove** — currently selected rows the user drops;
-   - **update** — existing flow documents whose `check_staleness` reports
-     blocking STALE sections (re-ground), plus any row whose
-     composition / connections changed;
-   - unchanged rows are baseline facts, never re-asked.
-   Main standalone pre-selected; deferred unchecked but promotable;
-   budget = `--main-limit` (default 15) deep-dives, over budget requires
-   explicit confirmation ("N over budget"). Wait for explicit
-   confirmation — always, including under `--auto-accept`. The user
-   must choose to go.
-5. **Apply the confirmed selection mechanically.**
-   - Per changed row: `flow_index.{py,js} update --id <flow-id>`
-     (promote → `--priority main --status placeholder`; demote →
-     `--priority deferred`; decline → `--status skipped`).
-   - `flow_index.{py,js} revise` into the real `.docforge/flow-index.json`
-     (schema 1.2): upsert every row, preserve documented/skipped state,
-     set other rows to `placeholder`, create stub markdown **only for
-     main-priority standalone** placeholders, prune orphan scaffolds,
-     emit compact `.docforge/tmp/communities.md` when a GitNexus
-     interchange is present.
-   - `manage_manifest.{py,js} add --type flow` for each newly selected
-     standalone. When this (or step 9) introduces missing / new
-     flow-related docs, run the suitable-missing-audiences prompt (step
-     3a) before writing — e.g. Coding agents when `agents_flow` or other
-     agent-context flow docs are newly selected. (`flow_index` scripts and
-     README: [`../runtime/flows/README.md`](../runtime/flows/README.md))
-   - Show the annotated plan tree / structure update and honor the
-     execution-mode checkpoint before writing.
-6. **Write the selected flows in `write_order`** (NOTICE first: the
-   `flow_index revise` run already printed the eligible main-priority
-   standalone rows; the selection gate above decided which of them get
-   written):
-   - **New** main standalone → full write via [`writing.md`](writing.md).
-   - **Updated** documented flow → re-ground for harvest /
-     organization / connection changes; use
-     `check_staleness.{py,js} --document` (see
-     [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) to
-     limit source rework to blocking `PARTIAL` (`STALE` / `MISSING` /
-     `NO_BLOB`) / `UNTRACKED` sections, but still update connection,
-     composition, and cross-link sections when the flow index or
-     neighbors changed, even if blobs are `FRESH`. Enforce current
-     template conformance (step 1b): an old flow-document shape is
-     rewritten to the current `flow` template, never preserved.
-   - Parallel spawn per
-     [`../references/parallel-execution.md`](../references/parallel-execution.md):
-     a writer edits only its own flow document; the index and the
-     manifest stay orchestrator-serial.
-7. **Write-back** — after each selected flow document passes mechanical
-   lint and its independent audit, record the outcome once:
-   `flow_index.{py,js} update --repo <repo> --id <flow-id> --summary
-   "<one-paragraph outcome>" --written`.
-8. Refresh the big picture: render `docs/flows/README.md` (the matrix's
-   `Flow summaries` section now carries the write-backs), and update
-   any selected overview / index docs whose flow counts or links changed
-   (for example `system-overview` when selected).
-9. Add any other missing flow-related dynamic documents required by the
-   current catalog selection and write them in `write_order`.
+Run the canonical pipeline — precheck → harvest/import → organize →
+analyze → selection gate → apply → write → write-back → render — exactly as
+[`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+"Flow pipeline" specifies. It owns every command and flag, the analysis
+depth rule, the prompt's contents and `--main-limit` budget, and the
+`update` promote/demote/decline mapping. Do not restate them here; do not
+reference its steps by number.
+
+Revise differs from a fresh start in five places, and only these:
+
+- **Migration first.** `migrate_metadata.{py,js}` (schema + provenance
+  sidecars) runs before the pipeline's precheck, as on every revise path.
+- **The flow-mode answer selects the harvest verb.** Re-analyze →
+  `flow_index.{py,js} harvest`, a full re-harvest whose rows supersede
+  every stored analysis. Reuse → `flow_index.{py,js} revise`, which
+  catches **missing** candidates only; existing rows keep their stored
+  status, priority, organization, `summary`, and `written_at`.
+- **The same answer selects analysis breadth.** Re-analyze → the full deep
+  pack for main-priority standalone rows. Reuse → the deep pack only for
+  missing candidates and for rows promoted from deferred during the
+  prompt; everything else reuses its stored analysis. Deferred rows get
+  summary-level context either way.
+- **Per-row actions are add / remove / update**, not the fresh start's
+  promote / demote / skip: **add** for missing or newly promoted
+  candidates (analyzed first), **remove** for selected rows the user
+  drops, **update** for documented flows whose `check_staleness` reports
+  blocking sections or whose composition / connections changed. Unchanged
+  rows are baseline facts, never re-asked.
+- **Apply order is `revise` → `update` → `manage_manifest add`.** The
+  re-harvest must land in the real index before `update` touches a row —
+  `update` fails on an id the index has never seen. When the added
+  documents include flow-related types the manifest's audiences do not
+  cover, run the suitable-missing-audiences prompt (step 3a) before
+  writing — e.g. Coding agents for `agents_flow`.
+
+Writing the selected flows follows [`writing.md`](writing.md) in
+`write_order`, with one revise-specific rule: an **updated** documented flow
+limits source rework to its blocking / untracked sections
+([`validation.md`](validation.md) "Manifest and provenance") but still
+re-grounds connection, composition, and cross-link sections when the index
+or its neighbors changed, even on `FRESH` blobs — and is rewritten to the
+current `flow` template when its shape has drifted (step 1b), never
+patched in place.
 
 Distinct from `/docforge-revise <area>`, which does not re-harvest the
 flow index, never asks the flow mode question, and still applies the

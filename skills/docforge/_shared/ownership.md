@@ -60,10 +60,10 @@ link.
 
 | File | Owns |
 |---|---|
-| `workflows/intake.md` | Bare `/docforge` invocation, discovery gate, the two-turn scope-question contract (Turn 1 = goal/scope + layout, Turn 2 = tier, profiles, audience, graph source, execution mode), confirmation, graph-provider choice |
-| `workflows/planning.md` | Repository inspection, tier/profile selection, dynamic-document discovery, manifest init, dry-run tree, plan checkpoint |
+| `workflows/intake.md` | Bare `/docforge` invocation, discovery gate, the two-turn scope-question contract (Turn 1 = goal/scope + layout + target readers, plus flow mode on flow-touching revises; Turn 2 = tier, profiles, audience, graph source, execution mode), confirmation, graph-provider choice |
+| `workflows/planning.md` | Repository inspection, tier/profile selection, dynamic-document discovery, manifest init, dry-run tree, plan checkpoint, fresh-start flow gate |
 | `workflows/writing.md` | Per-document execution card, evidence, scaffolding, provenance, status transitions, independent audit; continue incomplete runs |
-| `workflows/revision.md` | `/docforge-revise` (incl. shared flags), single-document update/refresh, flow-index organization |
+| `workflows/revision.md` | `/docforge-revise` (incl. shared flags), single-document update/refresh, revise-side flow pipeline, retirement, template conformance |
 | `workflows/validation.md` | Staleness, migration, whole-tree audit, cross-document quality gate |
 | `workflows/dashboard.md` | `dashboard scan`/`start`/`status`/`stop`: diagnostics, metadata reconcile, signatures, build-if-changed, serve, open |
 | `workflows/tools.md` | Every public script: Python/Node invocation, inputs, outputs, exit codes |

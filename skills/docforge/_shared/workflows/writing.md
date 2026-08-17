@@ -71,6 +71,15 @@ concurrently with serial recording.
 
 For the next document in `write_order` (serial mode):
 
+0. Immediately before materializing it, show the current structure summary
+   (or "tree unchanged since the displayed checkpoint") and a compact
+   **execution card**: path, reader, owned topics, evidence query, links to
+   owning documents, and acceptance checks. Derive it from the manifest and
+   the document's route (`query_catalog.{py,js} --route <id>`), never from a
+   second plan file. This applies to every document — fresh start and
+   revise, flow documents and static ones alike. A parallel worker receives
+   the same card as its brief (see Parallel fan-out) rather than printing
+   its own.
 1. Check every capability in its `requires` list. On a Portfolio-collection
    root (see [`../rules.md`](../rules.md) "Code-graph precondition"), a
    `code_graph` requirement is already resolved as "no source of its own" —
