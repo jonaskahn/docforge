@@ -25,7 +25,7 @@ artifact against its group's voice the way it checks depth and mode.
 |---|---|---|
 | root, product | Lead with the outcome a reader can act on; write the first paragraph for a stranger | Bury the point behind history, structure, or feature lists |
 | architecture | "The gateway validates and routes." — active present tense, one job per sentence | "Handling and management of requests is performed by the gateway"; hedge ("generally", "mostly") |
-| flows | "**3.** The pricing service revalidates the cart." — ordered, one idea per sentence, the branch right under the step that creates it | Merge two ideas into one sentence; gather branches in a section away from their steps |
+| flows | "**3.** The pricing service revalidates the cart." — ordered, one idea per sentence, the branch right under the step that creates it. State the outcome in the opening, then the steps that reach it | Merge two ideas into one sentence; gather branches in a section away from their steps; make the reader reach the last section to learn what the flow guarantees |
 | engineering, operations | "Run `make verify` — it prints one line per failing contract." — every step ends in an observable result | Narrate what a step does without a checkable outcome |
 | reference | One row per fact; a sentence only when a table cannot carry the nuance | Connect entries with narrative glue ("Additionally", "It is worth noting") |
 | security | "Evidence establishes rate limiting at the gateway; the app layer is unverified." — hedge exactly where evidence stops | Sound the alarm ("critical vulnerability") without evidence, or stay silent about thin evidence |

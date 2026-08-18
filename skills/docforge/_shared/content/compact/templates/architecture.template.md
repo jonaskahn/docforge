@@ -2,6 +2,8 @@
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
+**In one sentence:** {{the business capability this system owns, stated before any structure}}
+
 {{Two or three sentences introducing the compact architecture section: what
 this file covers, why the architecture section exists, and who should read
 it. A reader with no prior project knowledge should understand how the system
@@ -27,13 +29,34 @@ evidence. Do not invent architecture the source does not show.}}
 
 ## Component design
 
-_Diligence and higher only — omit this section entirely at Spine._
+_Diligence and higher only — omit this section entirely at Spine. Every field
+of the `architecture-low-level` contract appears below; each repeated block
+collapses to one line per instance, and nothing nests past `##`._
 
-{{Selected whitebox decompositions under the high-level blocks above — the
-ones worth a component-level zoom, not every block. For each: responsibility,
-technology, public contract, directional relationships, and the invariant or
-failure boundary a caller must handle. Do not duplicate the high-level map;
-add depth only where it changes a reader's judgment.}}
+```text docforge-role=structure
+{{repository}}/
+├── {{source directory}}/    {{one-line responsibility}}
+└── {{test directory}}/      {{one-line responsibility}}
+```
+
+{{One sentence: what the grouping reveals about ownership or runtime boundaries.}}
+
+**Whiteboxes:** {{one line per high-level block worth a component-level zoom —
+the block, why it is decomposed, and the dependency direction it permits. Not
+every block earns one.}}
+
+**{{Component name}}** — **Responsibility:** {{what it does and the boundary it
+owns}} · **Contract:** `{{signature or protocol}}` · **Talks to:** {{component
+— active verb and protocol when evidenced}} · **Invariant:** {{what is always
+enforced or deliberately absent}} · **Failure boundary:** {{what it contains
+when it fails, and what a caller must handle}}
+
+{{Repeat the component line per component material to the decomposition above —
+not an exhaustive file listing.}}
+
+**Quality and change scenarios:** {{the evidenced load or latency ceiling this
+design holds, or the modification it absorbs cheaply. Delete this line when the
+repository evidences neither; never estimate a figure.}}
 
 ```mermaid
 sequenceDiagram

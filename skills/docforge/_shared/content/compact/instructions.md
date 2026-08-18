@@ -20,6 +20,23 @@ Writing-craft instructions for compact-layout documents. Routes:
 
 - Ground each section from the repository evidence cited in provenance — one
   provenance `sections[]` entry per `##` heading.
+- **Condense, never drop.** A folded section carries **every field** of its
+  member contract, collapsing each repeated block to **one line per instance**,
+  and never nests below `##`. The fields do not change between layouts; only
+  the number of lines each one gets. A folded flow that loses its failure
+  categories, or a folded concept that loses its invariants, has been
+  summarized rather than condensed — that is a defect, not a layout.
+- Worked examples of both halves of that rule:
+  [`flow.compact.example.md`](../shared/exemplars/flow.compact.example.md) and
+  [`architecture.compact.example.md`](../shared/exemplars/architecture.compact.example.md),
+  each paired with the standard-layout exemplar it condenses. Read them side by
+  side to see which fields survive folding — all of them.
+- **Condensing does not reorder.** Each folded section keeps its member's level
+  order per
+  [`../../references/progressive-disclosure.md`](../../references/progressive-disclosure.md):
+  the guarantee or governing statement first, then the shape, then per-item
+  detail, then the boundary. Level order is what survives condensation and
+  keeps a long merged file readable.
 - **Route to any spilled sibling.** A group that reached `COMPACT_SECTION_CAP`
   keeps its overflow at its own standard paths with no `README.md` above them —
   if this file does not link them, nothing does. Link every selected,
@@ -99,11 +116,14 @@ Diligence or higher.
 1. `## At a glance` — folder-index orientation (system mental model).
 2. `## High-level architecture` — `architecture-high-level` (structure,
    boundaries, integration surfaces).
-3. `## Component design` — `architecture-low-level` (selected whitebox
-   decompositions, component responsibility/technology/public
-   contract/directional relationships, one intra-block runtime scenario with
-   its error path). Do not repeat the high-level map; go one level deeper
-   only where the decomposition changes a reader's judgment.
+3. `## Component design` — `architecture-low-level`, carrying every field of
+   that contract at one line per instance: the layout fence, one line per
+   selected whitebox with the dependency direction it permits, one line per
+   material component (responsibility, public contract, what it talks to, its
+   invariant, its failure boundary), the evidenced quality or change scenario,
+   and one intra-block runtime scenario with its error path. Do not repeat the
+   high-level map; go one level deeper only where the decomposition changes a
+   reader's judgment.
 4. `## Constraints` — `constraints` (hard bounds with source and design
    implication; deliberate non-goals). Keep temporary shortcuts and
    user-visible limitations out — those are owned elsewhere.
@@ -206,7 +226,10 @@ Write the sections in this order:
    with a section below an anchor link to it; mark every other row
    `register only`.
 3. One `##` section per concept the manifest recorded in `compact_members`, in
-   `compact_order`. Write each from the `concept` contract at full depth.
+   `compact_order`. Write each from the `concept` contract, carrying every one
+   of its fields at one line per repeated instance, in the contract's level
+   order: what it models, the block it belongs to, its lifecycle, then its
+   invariants, relationships, and failure boundary, then where it lives.
 
 **The register is the vocabulary; the sections are the budget.** The manifest
 carries at most six concept sections
@@ -389,9 +412,12 @@ Write the sections in this order:
    with a section below an anchor link to it (`[Checkout](#checkout)`), and
    mark every other row `matrix only` in its status column.
 3. One `##` section per flow the manifest recorded in `compact_members`, in
-   `compact_order`. Write each from the `flow` contract at full deep-dive
-   depth — a folded flow is a flow document hosted in a shared file, not a
-   summary of one.
+   `compact_order`. Write each from the `flow` contract, carrying every one of
+   its fields at one line per repeated instance — a folded flow is a flow
+   document condensed into a shared file, not a summary of one. Keep the
+   contract's level order: the guarantee, then trigger and actors, then the
+   numbered happy path and its diagram, then branches, rules, failures, and
+   observability, then the outcome.
 
 **The matrix is the coverage statement; the sections are the budget.** The
 manifest carries at most six flow sections
@@ -419,7 +445,7 @@ Spilled siblings live in `docs/flows/`.
 | This document owns | Links to | Because |
 |---|---|---|
 | `## Flow candidate matrix` | `flow-index` (and `.docforge/flow-index.json`) | the machine-readable matrix this table projects, never a second source of truth |
-| Each budgeted flow section | `flow` | written from the flow contract at full deep-dive depth |
+| Each budgeted flow section | `flow` | written from the flow contract, every field carried at one line per repeated instance |
 
 ## Voice
 

@@ -72,13 +72,78 @@ step's prose, which names the actor and the action (see
 Where the pack marks a step `evidence: "source"` rather than `"graph"`, cite
 the file you read it in.
 
-Open with trigger, actors, and result in one short paragraph. Number the happy path in
-plain language, one step per action, one idea per sentence. Put branches immediately
-after the step that creates them, not gathered at the end; a branch orphaned from its
-trigger step reads as a separate flow. Add a visual once the flow passes about four steps
-or has any branch, within the central complexity budget. Split interactions that exceed
-that budget into linked sub-flows. End with failures and recovery, keeping shared
-business rules linked rather than duplicated.
+Open with what the flow produces and who depends on it, then state the guarantee
+before any mechanism. Number the happy path in plain language, one step per action,
+one idea per sentence. Put branches immediately after the step that creates them,
+not gathered at the end; a branch orphaned from its trigger step reads as a separate
+flow. Add a visual once the flow passes about four steps or has any branch, within
+the central complexity budget. Split interactions that exceed that budget into linked
+sub-flows. End with failures and recovery, keeping shared business rules linked
+rather than duplicated.
+
+A worked example of everything below is
+[`flow.standard.example.md`](../shared/exemplars/flow.standard.example.md), with
+its folded counterpart at
+[`flow.compact.example.md`](../shared/exemplars/flow.compact.example.md). Read
+them when a field's intent is unclear; they are craft references, not templates.
+
+## Level discipline
+
+This document is ordered per
+[`progressive-disclosure.md`](../../references/progressive-disclosure.md).
+
+| Level | Sections |
+|---|---|
+| L0 — answer | the opening paragraph and `**Guarantee:**` |
+| L1 — shape | `## Trigger and actors`, `## Happy path` and its diagram |
+| L2 — detail | `## Branches and rules`, `## Failure and recovery`, `## Observability` |
+| L3 — boundary | `## Outcome`, `## Why it works this way`, the `Related` footer |
+
+The guarantee appears twice on purpose — once at L0 so a reader who stops at
+the top is still correct, once in full under `## Outcome`. That is the only
+licensed repetition in the document.
+
+The happy path names steps; it never explains one. A step that needs a
+paragraph of conditions has a branch, and the branch belongs in
+`## Branches and rules` with its own sub-heading. The primary diagram is an L1
+obligation for the same reason: it carries the happy path, never annotated
+branch outcomes.
+
+Group the happy path under milestone sub-headings only once it passes about six
+steps — a milestone is a point at which the work is durably further along, not
+an arbitrary split. Below six steps, number the steps flat.
+
+## Failure categories
+
+Failure modes come in kinds, and a flow document that names only the kind it
+happened to trip over has not analyzed the flow. Walk the evidence for each of
+these and write up the ones it supports:
+
+- a decision this flow makes and rejects;
+- an external event it waits for that does not arrive as expected;
+- a response that never comes within its timeout;
+- an interruption while a step is running;
+- a cancellation that can arrive at almost any point.
+
+Delete the categories the evidence does not support; never invent one to
+complete the set. A technical retry the caller never observes is mechanism, not
+a failure mode — it belongs under **Immediate response**, never as its own
+entry. The distinction is what keeps this section about what a reader must
+handle rather than about what the framework does on its own.
+
+## Evidence-gated sections
+
+`**Data in play:**`, `**Timing and limits:**`, `## Observability`, and
+`## Why it works this way` are deleted when the repository does not evidence
+them. Deleting is the correct outcome, not a gap — an estimated timeout or a
+reconstructed rationale is worse than a shorter document. In particular:
+
+- `## Observability` names the signal and its healthy value; the runbook owns
+  what to do when the signal is bad.
+- `## Why it works this way` links the decision record when one exists and adds
+  at most one sentence naming the force it settled. Prose without a decision
+  record is allowed only for a constraint visible in the repository — a pin, a
+  documented limit, a code comment, a migration commit.
 
 ## Illustration
 

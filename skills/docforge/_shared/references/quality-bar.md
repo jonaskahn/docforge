@@ -42,7 +42,10 @@ This file owns mechanical and whole-tree acceptance.
   (vocabulary and confinement craft: [`host-neutrality.md`](host-neutrality.md)).
 
 Mechanical success does not complete a document; the independent audit in
-`document-audit.md` does.
+`document-audit.md` does. Voice and level discipline
+([`progressive-disclosure.md`](progressive-disclosure.md)) are judged there, not
+here — no script can tell an L1 section that sprouted L2 detail from one written
+at the right altitude.
 
 ## Whole-tree checks
 

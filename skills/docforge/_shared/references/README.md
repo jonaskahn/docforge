@@ -9,6 +9,7 @@ concern; workflows link here instead of repeating the rule.
 - "What does this audience or repository shape change?" → [profiles/](profiles/README.md)
 - "Where does this document go, and what is it named?" → [docs-tree.md](docs-tree.md)
 - "How deep should this document go for this audience?" → [depth-and-audience.md](depth-and-audience.md)
+- "In what order does a document reveal that detail?" → [progressive-disclosure.md](progressive-disclosure.md)
 - "What model-native rigor is required beyond reader depth?" → [model-depth-ladders.md](model-depth-ladders.md)
 - "The detection gate flagged an ambiguous cue — what now?" → [discovery-gate.md](discovery-gate.md)
 - "How do I gather evidence without reading everything?" → [source-analysis.md](source-analysis.md)

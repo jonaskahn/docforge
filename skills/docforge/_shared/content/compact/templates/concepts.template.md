@@ -30,10 +30,20 @@ row means: the concept is named and located, and is not explained here.}}
 
 ## {{Concept name}}
 
-_Repeat this section once per folded concept, in `compact_order`._
+_Repeat this section once per folded concept, in `compact_order`. Every field
+of the `concept` contract appears below; each repeated block collapses to one
+line per instance, and nothing nests past `##`._
 
-{{What this concept models in the domain, in the repository's own vocabulary.}}
+**Models:** {{what this represents in the domain, in the repository's own vocabulary, and why the codebase needs the distinction}}
 
-{{Its lifecycle and the states it moves through, its invariants — the things
-that must stay true — and how it relates to the neighbouring concepts. Ground
-each claim in cited repository evidence.}}
+**Belongs to:** {{the high-level block this concept is the deep-dive of — link it}}
+
+**Lifecycle:** {{the states it moves through, in order, and what moves it between them. "Created once, never transitions" when it has no lifecycle.}}
+
+**Invariants:** {{one line per rule that must always hold, with what enforces it. State rules, not current behavior.}}
+
+**Relates to:** {{what it depends on, what depends on it, and where a neighbouring concept takes over — link each. Never restate a neighbour's invariants.}}
+
+**Failure boundary:** {{what it guarantees will not happen, and what it explicitly does not protect against}}
+
+**Lives in:** {{the stable module or package paths that orient implementation work}}

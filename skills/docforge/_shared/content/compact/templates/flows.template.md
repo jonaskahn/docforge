@@ -31,15 +31,39 @@ means: the candidate is evidenced and known, and has not been expanded here.}}
 
 ## {{Flow name}}
 
-_Repeat this section once per folded flow, in `compact_order`._
+_Repeat this section once per folded flow, in `compact_order`. Every field of
+the `flow` contract appears below; each repeated block collapses to one line
+per instance, and nothing nests past `##`._
 
-{{Trigger and actors: what starts this flow and who participates.}}
+**Guarantee:** {{what a caller can rely on when this flow succeeds}}
+
+**Trigger:** {{event, request, or schedule — name the kind}} · **Initiated by:** {{who or what starts it}} · **Preconditions:** {{what must already hold, or "none"}}
+
+**Actors:** {{visible participants, then the ones behind the scenes}}
+
+**Data in play:** {{what it reads and what it durably writes. Delete this line when unevidenced.}}
+
+**Timing and limits:** {{evidenced timeouts, retries, batch sizes, rate limits. Delete this line rather than estimate.}}
 
 ```mermaid
 sequenceDiagram
 {{ordered interaction between the participants}}
 ```
 
-{{The ordered steps, the branches that change the outcome, the rules that
-govern them, the failure paths, and the final outcome — each grounded in
-cited repository evidence.}}
+**Happy path:**
+
+1. {{observable action}}
+2. {{observable action}}
+3. {{outcome}}
+
+{{Number the steps flat — compact never uses milestone sub-headings.}}
+
+**Branches:** {{one line per branch: the condition, what happens instead, and where it rejoins. "No branches — every trigger reaches the same outcome" when there are none. Most common first.}}
+
+**Rules:** {{one line per business rule that constrains this flow without creating a branch, linked to its owner when it governs 3+ flows, or "none beyond the branches above".}}
+
+**Failures:** {{one line per evidenced failure: its category — decision point, awaited external event, timeout, interruption during a step, or system-wide cancellation — then how it is detected, the immediate response, and the recovery. Most severe first. A retry the caller never observes is mechanism, not a failure.}}
+
+**Observability:** {{the log line, metric, or trace span that shows this ran, and its healthy value. Delete this line when unevidenced.}}
+
+**Outcome:** {{on success — the durable change; on safe failure — what stays true anyway; deferred work, or "none".}}

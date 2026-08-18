@@ -2,10 +2,17 @@
 
 _Last reviewed: {{YYYY-MM-DD}}_
 
+<!-- L0 — the answer. See ../../../references/progressive-disclosure.md. -->
+
 Component-level decomposition. Zooms into named blocks in
 [high-level.md](high-level.md). It never becomes a Level-4 code or class document.
 
+**This decomposition exists to support:** {{the decisions, reviews, or diagnoses a reader comes here to make}}
+
 ## Layout
+
+<!-- L1 — the shape. -->
+
 
 ```text docforge-role=structure
 {{repository}}/
@@ -17,6 +24,9 @@ Component-level decomposition. Zooms into named blocks in
 {{One sentence: what the grouping reveals about ownership or runtime boundaries.}}
 
 ## Selected whiteboxes
+
+<!-- L1 — still the shape: name every block worth decomposing before explaining
+any component below. -->
 
 _Repeat per high-level block worth a component-level decomposition — not every block
 named in high-level.md needs one._
@@ -43,6 +53,8 @@ only when the whitebox holds fewer than three components.}}
 
 ## Components
 
+<!-- L2 — per-item detail begins here. -->
+
 _Repeat per component inside this whitebox — the ones material to the decomposition's
 motivation above, not an exhaustive file listing._
 
@@ -64,9 +76,16 @@ motivation above, not an exhaustive file listing._
 
 ## Runtime scenario
 
-_Repeat per architecturally relevant scenario — **one to three**, chosen for
-relevance, never one per code path. Document the important, surprising, risky,
-or volatile paths and leave the routine ones out._
+_Repeat per architecturally relevant scenario — **one to three**, never one per
+code path. Document the important, surprising, risky, or volatile paths and
+leave the routine ones out._
+
+_Choose from these four areas rather than from whatever the graph surfaced
+first: (a) an important use case or feature — how do the blocks execute it;
+(b) an interaction at a critical external interface; (c) operation and
+administration — launch, start-up, shutdown; (d) an error or exception
+scenario. Keep each one schematic: every message maps to a named component
+above, and detail that belongs to a component's own write-up stays there._
 
 ### {{Architecturally relevant intra-block path}}
 
@@ -88,6 +107,16 @@ sequenceDiagram
 
 {{One or two sentences restating the order and the failure branch in prose, so
 the scenario survives without the diagram.}}
+
+## Quality and change scenarios
+
+{{The load, latency, or volume ceiling this decomposition was built to hold, and
+the modification it was shaped to absorb cheaply — each stated as a scenario:
+a stimulus, the component that responds, and the evidenced measure or the effort
+the change costs. Evidence only: a configured limit, a benchmark, a load test,
+an extension point the code actually exposes. Delete this whole section when the
+repository evidences neither a quality ceiling nor a change the design
+anticipates; never estimate a throughput figure.}}
 
 ## Data model
 
@@ -117,9 +146,13 @@ The ones worth a full deep-dive get their own folder under
 
 ## Cross-cutting concerns
 
-_Rows below are the common cross-cutting concerns; add or drop rows to match what
-this repo actually has — a row with no evidenced path is deleted, not filled with
-`unknown`._
+<!-- L3 — the boundary: where each concern is owned, not how it works. -->
+
+_Rows below are the common cross-cutting concerns. Delete a row when the concern
+does not apply to this system. When it plainly should apply but the evidence
+shows no path, write "no evidenced path found" rather than deleting the row —
+a silently missing row reads as "handled", and hedging exactly where the
+evidence stops is the honest signal. Never fill a cell with `unknown`._
 
 | Concern | Where it lives | Notes |
 |---|---|---|

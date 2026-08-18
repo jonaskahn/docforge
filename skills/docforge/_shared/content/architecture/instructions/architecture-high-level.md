@@ -27,7 +27,16 @@
 - Keep the document stable by design: a claim a routine refactor would falsify
   is written too close to the code and belongs in low-level.md.
 - Finish with links to low-level detail, decisions, and operational
-  consequences — rationale lives in decisions, not here.
+  consequences. Name the forces that shaped this shape in one short paragraph —
+  the constraint, the scale it was built for, the integration it had to live
+  with — and link the record that settled each. The argument and the rejected
+  alternatives stay in the decision record; a reader who never opens one should
+  still know *why this shape*, which is what
+  [`progressive-disclosure.md`](../../../references/progressive-disclosure.md)
+  calls the document's L3 boundary.
+- Order the document per that same reference: the capability at L0 before any
+  structure, context and containers at L1, per-edge and per-boundary detail at
+  L2, stability and rationale at L3.
 - Every relationship is directional and uses a specific active verb. Name its
   protocol or channel when evidence establishes one; otherwise say `unknown`.
   Never combine the C4 Context and Container zooms in a single diagram — they

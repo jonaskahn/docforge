@@ -11,6 +11,11 @@ Start a separate cold artifact-only pass after writing. Review only:
 - target depth;
 - its group's voice ([`voice.md`](voice.md)) — checked the same way depth and
   mode are checked, never as a heading checklist;
+- its level discipline
+  ([`progressive-disclosure.md`](progressive-disclosure.md)) — checked the same
+  way voice is: does the document state its outcome before its mechanism, is
+  every item named before any item is explained, and does an L1 section carry
+  L2 detail for one item only;
 - applicable quality checks;
 - sources cited by validated current provenance, after the mechanical gate has
   confirmed concrete metadata, source blobs, and heading-matched sections;

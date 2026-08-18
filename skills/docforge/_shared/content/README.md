@@ -29,6 +29,10 @@ Contracts, instructions, and templates for every catalog document, organized by 
 Every substantive document must:
 
 - answer the reader question implied by its type;
+- reveal that answer top-down, per
+  [`../references/progressive-disclosure.md`](../references/progressive-disclosure.md):
+  the outcome before the mechanism, every part named before any part is
+  explained;
 - record the repository evidence used by each section in provenance; render it
   according to [`../references/evidence-presentation.md`](../references/evidence-presentation.md);
 - describe current behavior, boundaries, failure modes, and adjacent systems;

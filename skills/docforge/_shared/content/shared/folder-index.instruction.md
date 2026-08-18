@@ -9,6 +9,10 @@ never carries a fact a child document owns.
 
 ## Top-down shape
 
+This is the router instance of the ordering rule owned by
+[`../../references/progressive-disclosure.md`](../../references/progressive-disclosure.md);
+that file defers to this one for routers and section READMEs.
+
 Write the README so a reader who knows nothing about this area can:
 
 1. learn what the section is, why it exists, and who should read it (intro);

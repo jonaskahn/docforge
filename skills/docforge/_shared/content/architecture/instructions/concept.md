@@ -16,16 +16,37 @@
 - Never walk the reader through the concept symbol by symbol; that tour
   belongs to the code itself, not to a document meant to outlive a refactor.
 
+## Level discipline
+
+Ordered per
+[`progressive-disclosure.md`](../../../references/progressive-disclosure.md).
+
+| Level | Sections |
+|---|---|
+| L0 — answer | the opening sentence and the block this concept belongs to |
+| L1 — shape | `## What it models`, `## Lifecycle and states` |
+| L2 — detail | `## Invariants`, `## Relationships`, `## Failure boundary` |
+| L3 — boundary | `## Where it lives` |
+
+Name every state before explaining what holds at any one of them. An invariant
+that only applies in one state is stated under `## Invariants` with the state
+named, never smuggled into the lifecycle prose.
+
 ## Illustration
 
-- **Form:** prose for a single relationship or two; a small Mermaid
-  `flowchart` only once three or more related concepts need their boundaries
-  shown together.
-- **Renders:** the concept as one node among its immediate dependencies and
-  dependents — never the concept's internal structure.
-- **Trigger:** only when relationships, not the concept itself, are hard to
-  hold in the reader's head in prose — per
-  [`illustration.md`](../../../references/illustration.md)'s deep-dive budget.
+Two conditional views; a concept document commonly earns neither, and that is a
+correct outcome rather than a gap.
+
+| View | Form | Renders | Trigger |
+|---|---|---|---|
+| Lifecycle | Mermaid `stateDiagram-v2` | the states this concept moves through and what moves it between them | three or more states with at least one non-linear transition; ordered prose below that |
+| Neighbourhood | Mermaid `flowchart` | the concept as one node among its immediate dependencies and dependents — never its internal structure | three or more related concepts whose boundaries must be seen together |
+
+Both are bounded by
+[`illustration.md`](../../../references/illustration.md)'s deep-dive budget (a
+state diagram at most 8 named states). Draw neither when prose holds the
+relationships comfortably: the trigger is the reader's difficulty, not the
+document's length.
 
 ## Connections
 
