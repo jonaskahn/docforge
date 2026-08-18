@@ -23,7 +23,7 @@
   "audit_profile": "decision",
   "dominant_form": null,
   "template_file": "content/compact/templates/decisions.template.md",
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "compact_target": "docs/decisions.md",
   "compact_members": [
     "decisions_index",

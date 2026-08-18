@@ -15,7 +15,7 @@
       "type": "string"
     },
     "version": {
-      "const": "2.23.0"
+      "const": "2.24.0"
     },
     "category": {
       "type": "string"

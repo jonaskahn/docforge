@@ -44,7 +44,7 @@ JS); `validate_metadata` imports the staleness pair.
 python3 runtime/cli/python/validate_metadata.py   # node runtime/cli/js/validate_metadata.js
 ```
 
-No options. Read-only. Checks catalog validity and version (2.23.0), generated
+No options. Read-only. Checks catalog validity and version (2.24.0), generated
 router freshness, schema versions (manifest 3.10, flow index 1.2, provenance
 2.0/2.1), profile registry shape, discovery-gate schema, template provenance,
 Python/JS launcher peer presence, public CLI contract tokens, release-version

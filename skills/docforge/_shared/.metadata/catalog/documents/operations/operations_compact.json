@@ -24,7 +24,7 @@
   "audit_profile": "standard",
   "dominant_form": null,
   "template_file": "content/compact/templates/operations.template.md",
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "compact_target": "docs/operations.md",
   "compact_members": [
     "operations_index",

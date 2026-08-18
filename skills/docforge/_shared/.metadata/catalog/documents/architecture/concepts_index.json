@@ -26,7 +26,7 @@
   "dominant_form": null,
   "template_file": "content/shared/section-readme.template.md",
   "title": "Architecture concepts",
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "compact_group": "concepts_compact",
   "compact_order": 51
 }

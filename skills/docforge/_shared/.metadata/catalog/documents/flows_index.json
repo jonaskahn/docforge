@@ -23,7 +23,7 @@
   "dominant_form": null,
   "template_file": "content/flows/flow-index.template.md",
   "title": "Flows",
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "compact_group": "flows_compact",
   "compact_order": 51
 }

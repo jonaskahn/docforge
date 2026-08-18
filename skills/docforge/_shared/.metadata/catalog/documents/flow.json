@@ -27,7 +27,7 @@
   "model_depth": {
     "mermaid": "annotated"
   },
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "template_file": "content/flows/flow.template.md",
   "compact_group": "flows_compact",
   "compact_order": 52,

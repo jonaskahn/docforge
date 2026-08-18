@@ -23,7 +23,7 @@
   "audit_profile": "architecture",
   "dominant_form": null,
   "template_file": "content/compact/templates/concepts.template.md",
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "compact_target": "docs/concepts.md",
   "compact_members": [
     "concepts_index",

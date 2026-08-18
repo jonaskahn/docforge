@@ -38,7 +38,7 @@ const { scanFences } = require("../../common/js/markdown_fences.js");
 const { AGENT_CONTEXT_GROUP } = require("../../common/js/agent_context.js");
 const { MANIFEST_CURRENT, migrate: migrateManifestMetadata } = require("../../manifest/js/migrate_metadata.js");
 
-const TOOL_VERSION = "2.23.0";
+const TOOL_VERSION = "2.24.0";
 const TEMPLATE_VERSION = "1";
 const STATE_SCHEMA = 1;
 const STATE_FILE = ".docforge-dashboard.json";

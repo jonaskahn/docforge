@@ -26,7 +26,7 @@
   "dominant_form": null,
   "template_file": "content/product/templates/po-readme.md",
   "title": "Product Owner documentation",
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "compact_group": "po_compact",
   "compact_order": 11
 }

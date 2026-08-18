@@ -25,7 +25,7 @@
   "provenance_mode": "sections",
   "audit_profile": "flow",
   "dominant_form": null,
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "template_file": "content/product/templates/process-flows.md",
   "compact_group": "ba_compact",
   "compact_order": 12

@@ -28,7 +28,7 @@
   "model_depth": {
     "stride": "interaction-risk"
   },
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "selection_evidence_required": true,
   "compact_group": "security_compact",
   "compact_order": 51

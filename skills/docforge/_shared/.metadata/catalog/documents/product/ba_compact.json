@@ -27,7 +27,7 @@
   "audit_profile": "standard",
   "dominant_form": null,
   "template_file": "content/compact/templates/business-analyst.template.md",
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "compact_target": "docs/business-analyst.md",
   "compact_members": [
     "ba_index",

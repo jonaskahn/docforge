@@ -380,7 +380,7 @@ class ReadmeFlowIndexTests(unittest.TestCase):
                 self.assertIn(".docforge/flow-index.json", [source["path"] for source in sources])
                 self.assertTrue(sources[0]["git_blob"])
                 payload = json.loads(run(runtime, "query_catalog", "--route", "flows_index").stdout)
-                self.assertEqual(payload["contract_revision"], "2.23.0")
+                self.assertEqual(payload["contract_revision"], "2.24.0")
 
 
 class AgentContextIsolationTests(unittest.TestCase):

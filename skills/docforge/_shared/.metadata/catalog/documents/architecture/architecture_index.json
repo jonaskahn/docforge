@@ -21,7 +21,7 @@
   "dominant_form": null,
   "template_file": "content/shared/section-readme.template.md",
   "title": "Architecture",
-  "contract_revision": "2.23.0",
+  "contract_revision": "2.24.0",
   "compact_group": "architecture_compact",
   "compact_order": 1
 }

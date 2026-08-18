@@ -1,5 +1,68 @@
 # Changelog
 
+## 2.24.0
+
+- **Documents reveal detail top-down.** Docforge separated depth, voice,
+  illustration, evidence, and composition into owned references, but nothing
+  owned *ordering* — so a flow document stated its guarantee in the very last
+  section, after every branch and failure. The new
+  `references/progressive-disclosure.md` fills that axis: four levels (L0
+  answer, L1 shape, L2 detail, L3 boundary), five rules, and a stop test — *a
+  reader who stops at any level boundary must be left with a partial
+  understanding, never a wrong one*. Level discipline is now an audit dimension
+  in `document-audit.md`, checked the way voice is; no script can tell an L1
+  section that sprouted L2 detail from one written at the right altitude.
+  - `content/shared/folder-index.instruction.md`'s existing `## Top-down shape`
+    is now identified as the router instance of the general rule rather than
+    the only place a reading order was defined.
+- **Flow documents answer before they explain.** The template opens with a
+  `**Guarantee:**` line — the same fact `## Outcome` states in full, hoisted so
+  a reader who stops at the top is still correct. Actors split by what the
+  initiator can actually see (`**Initiated by:**` / `**Visible participants:**`
+  / `**Behind the scenes:**`), long happy paths group under milestone
+  sub-headings, and the happy path now names steps without explaining them —
+  branch detail belongs beside its branch.
+  - **Failure modes carry a category.** A flow that names only the failure it
+    happened to trip over has not been analyzed, so the writer now walks five
+    kinds — a rejected decision, an awaited external event, a timeout, an
+    interruption mid-step, and a system-wide cancellation — and writes up the
+    ones the evidence supports. A technical retry the caller never observes is
+    mechanism, recorded under **Immediate response**, never its own entry.
+  - New evidence-gated `**Data in play:**`, `**Timing and limits:**`,
+    `## Observability`, and `## Why it works this way`. `deep-dive` depth has
+    required observability since the depth vocabulary was written; the flow
+    template never had a slot for it.
+- **Architecture scenario selection is checkable.** `## Runtime scenario` said
+  "chosen for relevance" and left the choice arbitrary; it now names the four
+  areas to choose from — an important use case, an interaction at a critical
+  external interface, operation and administration, an error scenario. New
+  evidence-gated `## Quality and change scenarios` records the ceiling a design
+  holds or the modification it absorbs cheaply.
+  - **A missing cross-cutting concern is stated, not deleted.** The rule was
+    "a row with no evidenced path is deleted" — which reads as *handled*. A
+    concern that plainly should apply and has no evidenced path now says so.
+  - `## Why it is like this` names the forces that shaped the shape instead of
+    routing away silently; the argument and rejected alternatives stay in the
+    decision record.
+- **`concept` documents match their own contract.** The type routed to the
+  generic topic-readme template, whose headings never prompted for the
+  responsibility, invariants, relationships, and failure boundaries its
+  contract requires — and its instruction described a third shape again. It now
+  has its own template, and the lifecycle content compact mode always expected
+  is in the contract rather than only in the compact file.
+- **Compact layout stops under-delivering against its contract.** The compact
+  contracts claimed each folded section was written "at full deep-dive depth"
+  while the templates handed the writer a single blob placeholder where the
+  standard template gives fifteen labelled fields. Folded sections now carry
+  **every field** of their member contract, one line per repeated instance, in
+  the member's level order — condensed, never summarized. The contracts say
+  that instead of the claim they were not keeping.
+- **Worked exemplars.** `content/shared/exemplars/` carries a filled flow and
+  architecture document in both layouts, built on one fictional service, so the
+  standard and compact forms can be read side by side to see which fields
+  survive folding. Each lints clean apart from `missing provenance`, which is
+  inherent to a file that is not a document in a docs tree.
+
 ## 2.23.0
 
 - **Source mentions become links a reader can follow.** A mention is still a
