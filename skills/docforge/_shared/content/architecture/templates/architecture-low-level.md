@@ -74,6 +74,44 @@ motivation above, not an exhaustive file listing._
   exception a caller must handle, and what happens to in-flight state on the way out}}
 - **Key paths:** `{{stable file/module path(s) that orient implementation work}}`
 
+## Module wiring
+
+<!-- L2 — per-edge detail, across whitebox boundaries: which components talk
+across whitebox boundaries, and which high-level edge each crossing realizes.
+Never a parallel decomposition of high-level.md's Relationship matrix — this
+is the downward half of the same edge. -->
+
+_Every edge in [high-level.md](high-level.md)'s Relationship matrix that
+crosses into more than one whitebox decomposed here gets a row below. A
+high-level edge realized entirely inside one whitebox — never crossing to a
+sibling whitebox at this level — has no row; it is internal to that
+whitebox's own Components diagram above._
+
+```mermaid
+%% Cross-boundary map only: every node here is a component already written up
+%% above, in a different whitebox than at least one of its neighbors. Never
+%% redraw a single whitebox's own Components diagram.
+flowchart LR
+  accTitle:Cross-boundary component wiring
+  accDescr: {{One sentence: which components in different whiteboxes talk to each other, in what direction, and over what protocol.}}
+  Origin["{{component}} ({{origin whitebox}})"] -->|"{{specific active verb · evidenced protocol}}"| Target["{{component}} ({{destination whitebox}})"]
+```
+
+{{One or two sentences: which cross-boundary path matters most and why a
+change on one side of it risks the other.}}
+
+| High-level edge (from the Relationship matrix) | Realized by | Direction | Protocol / channel |
+|---|---|---|---|
+| {{block}} → {{block}} | {{component}} → {{component}} | {{direction}} | {{evidenced protocol}} |
+
+This table is the upward link that does not leak downward: high-level states
+*that* two blocks relate; this row states *which components* realize that
+relationship and how. Only one whitebox is selected for decomposition, or
+every high-level edge stays inside a single whitebox → state that
+explicitly ("no edge crosses a whitebox boundary in this decomposition")
+and omit the diagram and table rather than drawing an empty flowchart —
+the declared view is satisfied by the stated fact, not by decoration.
+
 ## Runtime scenario
 
 _Repeat per architecturally relevant scenario — **one to three**, never one per

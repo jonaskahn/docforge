@@ -57,7 +57,12 @@ more diagrams, never into a bigger one.
 - **Trigger:** context, always. Containers, whenever more than one deployable
   block exists — which is every repository that ships more than a single
   process. The container table beside it stays: it carries technology,
-  interface, and boundary columns the diagram cannot.
+  interface, boundary, and routing columns the diagram cannot.
+- **Decomposed in column:** the container table's routing column, not a third
+  diagram — coherence (illustration.md) rules out spending another picture on
+  "where do I go to see inside this block" when a table cell answers it at
+  zero illustration cost. Name the low-level whitebox that decomposes that
+  block, or `—` when it has none.
 - **Budget:** the orientation bound applies per diagram, not per document. If
   either view exceeds it, split by business or functional area rather than
   dropping the view.

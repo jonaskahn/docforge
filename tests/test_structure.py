@@ -848,6 +848,52 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("The non-obvious is what earns the diagram", illustration)
         self.assertIn("`accTitle` / `accDescr` are specific", illustration)
 
+    def test_low_level_declares_a_module_wiring_view(self) -> None:
+        """Nothing showed component <-> component across whitebox
+        boundaries, or mapped a high-level edge to the components that
+        realize it -- the catalog document now declares that view and the
+        template carries its section plus the traceability matrix that
+        closes the level-to-level gap."""
+        catalog_path = (
+            SHARED_ROOT
+            / ".metadata"
+            / "catalog"
+            / "documents"
+            / "architecture"
+            / "arch_low_level.json"
+        )
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        views = catalog["illustration_views"]
+        module_wiring = next(v for v in views if v["section"] == "Module wiring")
+        self.assertEqual(module_wiring["form"], "flowchart")
+        self.assertIn("realizes", module_wiring["question"])
+        # dominant_form must remain among the declared forms after the edit.
+        self.assertIn(catalog["dominant_form"], {v["form"] for v in views})
+        # contract_revision is untouched: this is hydration/drift through
+        # sync_dominant_forms, not a version-bump event for the other 56
+        # document types.
+        self.assertEqual(catalog["contract_revision"], "2.24.0")
+
+        template = (
+            SHARED_ROOT / "content" / "architecture" / "templates" / "architecture-low-level.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("## Module wiring", template)
+        self.assertIn("Relationship matrix", template)
+        self.assertIn(
+            "| High-level edge (from the Relationship matrix) | Realized by | Direction | Protocol / channel |",
+            template,
+        )
+
+        high_level_template = (
+            SHARED_ROOT / "content" / "architecture" / "templates" / "architecture-high-level.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Decomposed in", high_level_template)
+
+        instruction = (
+            SHARED_ROOT / "content" / "architecture" / "instructions" / "architecture-low-level.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Module wiring", instruction)
+
     def test_source_evidence_stays_in_provenance(self) -> None:
         """Claim evidence lives in provenance; a link is navigation, not proof.
 

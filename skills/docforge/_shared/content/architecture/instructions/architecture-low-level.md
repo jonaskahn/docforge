@@ -49,7 +49,7 @@ Ordered per
 |---|---|
 | L0 — answer | the opening framing and the decisions this decomposition supports |
 | L1 — shape | `## Layout`, `## Selected whiteboxes` |
-| L2 — detail | `## Components`, `## Runtime scenario`, `## Quality and change scenarios`, `## Data model` |
+| L2 — detail | `## Components`, `## Module wiring`, `## Runtime scenario`, `## Quality and change scenarios`, `## Data model` |
 | L3 — boundary | `## Significant subsystems`, `## Cross-cutting concerns` |
 
 `## Selected whiteboxes` names every block worth decomposing before
@@ -72,14 +72,18 @@ section rather than estimate a figure.
 
 ## Illustration
 
-Four distinct views, each in its own section. Progressive disclosure, not one
+Five distinct views, each in its own section. Progressive disclosure, not one
 crowded picture — per
-[`illustration.md`](../../../references/illustration.md).
+[`illustration.md`](../../../references/illustration.md), including its
+non-redundancy and descriptiveness rules ("Make every illustration
+informative"): a specific active verb and evidenced protocol per edge, never
+a generic `calls`/`uses`/`sends`/`handles`.
 
 | View | Form | Renders | Trigger |
 |---|---|---|---|
 | Layout | ASCII `text` fence | the directory grouping and what each group owns | always |
 | Component map | Mermaid `flowchart` | the components inside one selected whitebox and the permitted dependency direction between them | per selected whitebox with three or more components |
+| Module wiring | Mermaid `flowchart` + traceability table | which components talk across whitebox boundaries, and which `high-level.md` Relationship-matrix edge each crossing realizes | always — state explicitly and omit the diagram only when every selected whitebox's edges stay internal |
 | Runtime scenario | Mermaid `sequenceDiagram` | one architecturally relevant path across components, with its outcome and a material error path | one to three scenarios, chosen for architectural relevance — never a catalogue of every call |
 | Data model | Mermaid `erDiagram` | the durable entities this decomposition touches and their relationships | when a persistent model exists; otherwise prose |
 
@@ -96,6 +100,7 @@ normal and standardized parts out.
 | This document owns | Links to | Because |
 |---|---|---|
 | Module/component responsibilities, one representative runtime scenario, data/control paths, failure boundaries | `architecture-high-level` (as parent zoom level) | every component here must trace to a block named there — no parallel decomposition |
+| Which components realize each cross-boundary high-level edge | `architecture-high-level` (Relationship matrix) | high-level names *that* two blocks relate; `## Module wiring` names *which components* realize that relationship, without high-level gaining any component-level detail |
 | A specific persisted entity or dataset touched by a component | `persistence` or `dataset` | storage mechanics are owned there; this document only names the dependency |
 | A rule this component enforces on request/response shape | `reference` (API/config) | the observable contract is owned by the reference document; this document explains the mechanism behind it |
 

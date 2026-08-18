@@ -55,9 +55,9 @@ _One row per block that matters for orientation, not every deployable unit. Tech
 cites [reference/tech-stack.md](../reference/tech-stack.md); an unproven choice is
 `unknown`, never inferred._
 
-| Block | Responsibility | Technology | External interface | Boundary it owns |
-|---|---|---|---|---|
-| {{block}} | {{active responsibility}} | {{stack or unknown}} | {{protocol/channel}} | {{trust / API / data boundary, if any}} |
+| Block | Responsibility | Technology | External interface | Boundary it owns | Decomposed in |
+|---|---|---|---|---|---|
+| {{block}} | {{active responsibility}} | {{stack or unknown}} | {{protocol/channel}} | {{trust / API / data boundary, if any}} | [low-level.md](low-level.md#{{whitebox-anchor}}) or `—` |
 
 The table carries technology, interface, and boundary per block; the diagram
 carries what a table cannot — which block talks to which, in which direction.

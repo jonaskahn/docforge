@@ -43,6 +43,12 @@
       "depth": "working"
     },
     {
+      "form": "flowchart",
+      "section": "Module wiring",
+      "question": "which components talk across whitebox boundaries, and which high-level relationship each edge realizes",
+      "depth": "working"
+    },
+    {
       "form": "sequenceDiagram",
       "section": "Runtime scenario",
       "question": "in what order do components collaborate on one architecturally relevant path"
