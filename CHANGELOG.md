@@ -1,5 +1,66 @@
 # Changelog
 
+## Unreleased
+
+- **`/docforge-revise` gained an objective, not just a scope.** Revise had one
+  axis — scope — so a stated purpose ("add more ascii/mermaid diagrams") fell
+  through to the full structural question pack: profile discovery, scale/layout
+  re-derivation, tier, the flow harvest, and per-file unmanaged-doc triage, none
+  of which the request was about. `workflows/revision.md` now recognizes a
+  **task clause** (an operation on document content, distinct from a change to
+  documented scope) and closes every one of six gates (G1–G6) it does not name.
+  A closed gate still re-opens as one scoped, in-line question when the task's
+  own evidence makes it material — never silently, and never the full pack
+  either way. Document-set selection is split honestly between what a runtime
+  finding can compute (staleness, illustration gaps, broken links, connections)
+  and what only the user's words can name (illustration beyond declared views,
+  prose/tone, template conformance) — coverage is deliberately uncapped, so
+  "add more diagrams" cannot be answered mechanically once every declared view
+  exists. Because the whole-tree audit has no scope filter and `reconcile` has
+  no `--dry-run`, a targeted revise completes on a **baseline-diffed** gate
+  (introduces no finding the baseline didn't already have) rather than exit
+  zero, and runs `reconcile` with no dimension flags so illustration-view
+  hydration never demotes a document on its first pass. `intake.md`,
+  `flags.md`, `help.md`, and `validation.md` now link to this single owner
+  instead of each restating the two-turn question pack.
+- **Fixed:** a revise's delta check treated *any* unselected detection
+  candidate — including weak-cues-only ones `intake.md` itself says must never
+  confirm a profile — as grounds to reopen a settled dimension, which is what
+  turned one "add more diagrams" request into eight weak-only profile controls.
+  A delta now requires strong evidence (or a gate-promoted candidate); weak-only
+  candidates surface as an advisory in the discovery brief instead.
+- **Fixed two stale claims in `revision.md`:** re-running `link_sources --write`
+  does not re-validate every already-expanded permalink — it only expands the
+  unexpanded authoring form and explicitly skips `https?://` links; and the
+  plan tree's `rewrite (template)` annotation (and now `update (illustration)` /
+  `update (sources)` / `update (links)` / `update (connections)`) was already an
+  agent-side overlay on `scaffold_docs`'s base tree, not CLI output.
+- **Illustrations must carry what a table cannot, and say it specifically.**
+  `references/illustration.md` covered form selection, budgets, and syntax, but
+  nothing said what makes a diagram *informative*. New rules: a diagram beside
+  a table must carry topology, direction, ordering, concurrency, or boundary
+  crossing — not the table's own rows redrawn; and every node/edge is specific
+  (role or technology on nodes, a real verb plus evidenced protocol on edges —
+  `calls`/`uses`/`sends`/`handles` no longer satisfy the rule), the non-obvious
+  earns the diagram, and `accDescr` names the actual relationships rather than
+  the diagram type. A reference change: existing documents adopt it when next
+  written or rewritten.
+- **Architecture documents now show how modules connect across whiteboxes.**
+  High-level showed block↔block, low-level showed component↔component *inside
+  one whitebox* ("Component map for this whitebox only"), and nothing showed
+  component↔component *across* whitebox boundaries or traced a high-level edge
+  down to the components that realize it. `arch_low_level` gains a `Module
+  wiring` view (a cross-boundary flowchart plus a traceability matrix mapping
+  each high-level Relationship-matrix edge to the components, direction, and
+  protocol that realize it); `arch_high_level`'s container table gains a
+  `Decomposed in` column instead of a third diagram, per illustration.md's
+  coherence principle. The changed view list is drift under
+  `sync_dominant_forms`, so this demotes only written low-level documents on
+  their next reconcile — no `contract_revision` bump, so the other 56 document
+  types are untouched — and interlocks with the targeted-illustration revise
+  above: the audit will report the missing view on every existing low-level
+  document, so the computed selector picks them up on its own.
+
 ## 2.24.0
 
 - **Documents reveal detail top-down.** Docforge separated depth, voice,
