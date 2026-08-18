@@ -8,6 +8,9 @@ OPEN_RE = re.compile(r"^\s{0,3}(?P<marker>`{3,}|~{3,})(?P<info>[^`]*)$")
 SOURCE_LINK_RE = re.compile(r"\[[^\]]+\]\((?P<target>[^)]+\.(?:c|cc|cpp|cs|go|java|js|jsx|json|mjs|properties|py|rb|rs|swift|toml|ts|tsx|xml|ya?ml)(?:#[^)]+)?)\)")
 SOURCE_LINE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./-]*\.(?:c|cc|cpp|cs|go|java|js|jsx|json|mjs|properties|py|rb|rs|swift|toml|ts|tsx|xml|ya?ml)(?:#L\d+(?:-L\d+)?|:\d+(?:-\d+)?)(?!\s*@\s*[0-9a-f]{40})\b")
 LOCATOR_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./-]*#L\d+(?:-L\d+)?\s*@\s*[0-9a-f]{40}")
+# A full markdown link wrapped in a single backtick on each side. Markdown
+# renders that as a literal code span, not a link -- the citation is dead.
+BACKTICK_WRAPPED_LINK_RE = re.compile(r"`\[[^\]]+\]\([^)]+\)`")
 SHELL_LANGUAGES = {"bash", "sh", "shell", "zsh", "fish", "powershell", "pwsh"}
 
 
@@ -74,6 +77,9 @@ def visible_presentation_defects(text: str, web_base: str | None = None) -> list
             continue
         if LOCATOR_RE.search(line):
             defects.append({"kind": "visible-source-locator", "line": number, "detail": "use provenance, not a path/range/blob citation"})
+        wrapped_match = BACKTICK_WRAPPED_LINK_RE.search(line)
+        if wrapped_match:
+            defects.append({"kind": "backtick-wrapped-link", "line": number, "detail": wrapped_match.group(0)})
         pinned: list[tuple[int, int]] = []
         for match in SOURCE_LINK_RE.finditer(line):
             target = match.group("target")

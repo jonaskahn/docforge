@@ -1,6 +1,7 @@
 'use client';
-import { use, useEffect, useId, useState } from 'react';
+import { Component, type ReactNode, use, useEffect, useId, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { Callout } from 'fumadocs-ui/components/callout';
 
 export function Mermaid({ chart }: { chart: string }) {
   const [mounted, setMounted] = useState(false);
@@ -10,7 +11,41 @@ export function Mermaid({ chart }: { chart: string }) {
 
   if (!mounted) return null;
 
-  return <MermaidContent chart={chart} />;
+  return (
+    <MermaidErrorBoundary chart={chart} key={chart}>
+      <MermaidContent chart={chart} />
+    </MermaidErrorBoundary>
+  );
+}
+
+// `mermaid.render()` needs real text layout (`getBBox`) that docforge's
+// headless validation gate cannot check -- that gate only runs
+// `mermaid.parse()` (syntax only; see the dashboard's `invalid_mermaid` scan
+// finding) since jsdom has no layout engine. A diagram can still fail here,
+// and `use()` re-throws a rejected promise during render, which only a
+// class-based error boundary can catch (no hook equivalent exists).
+type MermaidErrorBoundaryState = { error: Error | null };
+
+class MermaidErrorBoundary extends Component<{ chart: string; children: ReactNode }, MermaidErrorBoundaryState> {
+  state: MermaidErrorBoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: Error): MermaidErrorBoundaryState {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <Callout type="error" title="Diagram failed to render">
+          <p>{this.state.error.message}</p>
+          <pre>
+            <code>{this.props.chart}</code>
+          </pre>
+        </Callout>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 const cache = new Map<string, Promise<unknown>>();

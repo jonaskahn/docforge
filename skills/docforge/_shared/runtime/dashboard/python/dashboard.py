@@ -56,6 +56,7 @@ from runtime.common.python.provenance_frontmatter import (
 from runtime.common.python import provenance_store as store
 from runtime.common.python.evidence_hash import classify_source, raw_blob_hash
 from runtime.common.python.agent_context import AGENT_CONTEXT_GROUP
+from runtime.common.python.markdown_fences import scan_fences
 from runtime.manifest.python.migrate_metadata import (
     MANIFEST_CURRENT,
     migrate as migrate_manifest_metadata,
@@ -597,7 +598,68 @@ def blob_sha1(content: bytes) -> str:
     return raw_blob_hash(content)
 
 
-def scan(repo: Path, manifest: dict) -> dict:
+# Every ```mermaid fence across the included documents, as a validation task.
+# `scan_fences` already skips anything inside a nested/unrelated fence type.
+def mermaid_tasks(repo: Path, manifest: dict) -> list[dict]:
+    tasks: list[dict] = []
+    for doc in included_documents(repo, manifest):
+        text = (repo / doc["path"]).read_text(encoding="utf-8", errors="replace")
+        for fence in scan_fences(text):
+            if fence["language"] != "mermaid":
+                continue
+            chart = "\n".join(line for _, line in fence["lines"])
+            tasks.append({"doc": doc["id"], "line": fence["start"], "chart": chart})
+    return tasks
+
+
+# Real Mermaid parsing, via the dashboard instance's own `mermaid`/`jsdom`
+# (installed by `ensure_dependencies`) -- not the dependency-free static
+# checks the rest of `scan` performs. `validate_mermaid.mjs` runs from
+# inside `dashboard_dir` so those packages resolve from its own
+# `node_modules`; it is copied there by `scaffold_app`, so it may not exist
+# yet on the very first pass before a build has ever run.
+def mermaid_findings(repo: Path, manifest: dict, dashboard_dir: Path) -> dict:
+    empty = {"problems": [], "counts": {"invalid_mermaid": 0}, "blocking": False}
+    tasks = mermaid_tasks(repo, manifest)
+    if not tasks:
+        return empty
+    script = dashboard_dir / "scripts" / "validate_mermaid.mjs"
+    # Guards the case where `ensure_dependencies` ran but `mermaid` still
+    # isn't actually there -- a corrupted/interrupted install, or a fully
+    # faked one, as this repo's own tests do to stay npm-network-free. Skip
+    # rather than crash the whole build on a check we cannot actually run;
+    # the browser-side error boundary (mermaid.tsx) is the remaining net.
+    if not script.is_file() or not (dashboard_dir / "node_modules" / "mermaid").is_dir():
+        return empty
+    try:
+        result = subprocess.run(
+            ["node", str(script)],
+            input=json.dumps([{"chart": task["chart"]} for task in tasks]),
+            cwd=str(dashboard_dir),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except OSError as exc:
+        raise ValueError(f"mermaid validation failed to run: {exc}") from exc
+    if result.returncode != 0:
+        raise ValueError(f"mermaid validation failed to run: {result.stderr}")
+    try:
+        verdicts = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"mermaid validation produced invalid output: {exc}") from exc
+    problems = []
+    for task, verdict in zip(tasks, verdicts):
+        if verdict.get("ok"):
+            continue
+        problems.append({
+            "kind": "invalid_mermaid", "doc": task["doc"],
+            "detail": f"line {task['line']}: {verdict.get('error')}", "blocking": True,
+        })
+    return {"problems": problems, "counts": {"invalid_mermaid": len(problems)}, "blocking": bool(problems)}
+
+
+def scan(repo: Path, manifest: dict, dashboard_dir: Path | None = None) -> dict:
     """Read-only diagnostics over the manifest and `docs/` tree.
 
     Reports metadata problems (missing / unparseable / non-schema-2.0
@@ -612,7 +674,7 @@ def scan(repo: Path, manifest: dict) -> dict:
     finding still means the documentation should be revised, but only a
     blocking one stops `start`/`export` before attempting to render."""
     self_managed = unmanaged_paths(manifest)
-    kinds = ("metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan")
+    kinds = ("metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan", "invalid_mermaid")
     if not has_human_facing_documents(manifest):
         return {
             "problems": [],
@@ -687,6 +749,17 @@ def scan(repo: Path, manifest: dict) -> dict:
     route_plan = plan(repo, manifest)
     for detail in route_plan["problems"]:
         problems.append({"kind": "route_plan", "doc": "", "detail": detail, "blocking": True})
+    # Opportunistic: real Mermaid validation needs `mermaid`/`jsdom`, which only
+    # exist once a prior `start`/`export` has installed the dashboard's
+    # `node_modules`. `scan` stays instant and dependency-free otherwise, so a
+    # fresh repo's first `scan` never pays for or requires an npm install; a
+    # failure here (rather than a missing install) is swallowed rather than
+    # taking down the rest of scan's diagnostics.
+    if dashboard_dir is not None and (dashboard_dir / "node_modules" / "mermaid").is_dir():
+        try:
+            problems.extend(mermaid_findings(repo, manifest, dashboard_dir)["problems"])
+        except ValueError:
+            pass  # best-effort; the mandatory gate in prepare_dashboard still catches this
     counts = {kind: sum(1 for p in problems if p["kind"] == kind) for kind in kinds}
     return {
         "problems": problems,
@@ -1035,7 +1108,7 @@ def scaffold_app(dashboard: Path, template_dir: Path, repo: Path, manifest: dict
     sha = shell_signature(template_dir, repo, manifest)
     if not force and current.get("shell_sig") == sha and (dashboard / "lib" / "shared.ts").is_file():
         return False
-    for name in ("app", "components", "lib", "next.config.mjs", "tsconfig.json", "postcss.config.mjs", "package.json", ".gitignore", "README.md"):
+    for name in ("app", "components", "lib", "scripts", "next.config.mjs", "tsconfig.json", "postcss.config.mjs", "package.json", ".gitignore", "README.md"):
         source = template_dir / name
         target = dashboard / name
         if source.is_dir():
@@ -1285,10 +1358,10 @@ def _stage_build(dashboard: Path, repo: Path, manifest: dict, template_dir: Path
         raise
 
 
-def _plan_only(args: argparse.Namespace, manifest: dict, render_sig: str, shell_sig: str) -> int:
+def _plan_only(args: argparse.Namespace, manifest: dict, render_sig: str, shell_sig: str, dashboard: Path | None = None) -> int:
     metadata_report = reconcile_metadata(args.repo, manifest, dry_run=True)
     route_plan = plan(args.repo, manifest)
-    scan_result = scan(args.repo, manifest)
+    scan_result = scan(args.repo, manifest, dashboard)
     print(f"metadata (dry-run): {metadata_report['counts']['reconciled']} to reconcile, {metadata_report['counts']['unchanged']} unchanged, {metadata_report['counts']['errors']} errors")
     for page in route_plan["pages"]:
         print(f"  {page['doc_id']:<32} {page['source_path']:<48} -> {page['url']}")
@@ -1365,6 +1438,18 @@ def _prepare(args: argparse.Namespace, dashboard: Path, manifest: dict, template
     if not (dashboard / "node_modules").is_dir():
         ensure_dependencies(dashboard, args.repo)
 
+    # Real Mermaid validation: needs `mermaid`/`jsdom`, which only exist once
+    # dependencies are installed (just above), so this cannot be part of the
+    # dependency-free `scan()` call earlier in this function.
+    mermaid_result = mermaid_findings(args.repo, manifest, dashboard)
+    if mermaid_result["problems"]:
+        print(f"mermaid: {len(mermaid_result['problems'])} invalid diagram(s) found:")
+        for problem in mermaid_result["problems"]:
+            print(f"  [{problem['kind']}] (blocking) {problem['doc']}: {problem['detail']}")
+    if mermaid_result["blocking"]:
+        print("dashboard was NOT opened: invalid Mermaid diagrams found; run /docforge-revise to fix them, then `dashboard start` again")
+        raise ValueError("invalid Mermaid diagrams found; see findings above")
+
     return new_state, render_sig
 
 
@@ -1375,7 +1460,7 @@ def cmd_start(args: argparse.Namespace, dashboard: Path, manifest: dict, templat
     render_sig = render_signature(args.repo, manifest)
     shell_sig = shell_signature(template_dir, args.repo, manifest)
     if args.plan_only:
-        return _plan_only(args, manifest, render_sig, shell_sig)
+        return _plan_only(args, manifest, render_sig, shell_sig, dashboard)
     _prepare(args, dashboard, manifest, template_dir, render_sig, shell_sig, args.force)
 
     server = ensure_server(dashboard, args.port)
@@ -1413,8 +1498,8 @@ def cmd_export(args: argparse.Namespace, dashboard: Path, manifest: dict, templa
     return 0
 
 
-def cmd_scan(args: argparse.Namespace, manifest: dict) -> int:
-    result = scan(args.repo, manifest)
+def cmd_scan(args: argparse.Namespace, manifest: dict, dashboard: Path | None = None) -> int:
+    result = scan(args.repo, manifest, dashboard)
     if args.json:
         print(dump_json(result))
         return 0 if not result["problems"] else 1
@@ -1548,7 +1633,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = {}
     try:
         if args.command == "scan":
-            return cmd_scan(args, manifest)
+            return cmd_scan(args, manifest, dashboard)
         if args.command == "start":
             return cmd_start(args, dashboard, manifest, template_dir)
         if args.command == "export":

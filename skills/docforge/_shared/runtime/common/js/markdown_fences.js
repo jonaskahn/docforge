@@ -4,6 +4,9 @@ const OPEN_RE = /^\s{0,3}(`{3,}|~{3,})([^`]*)$/;
 const SOURCE_LINK_RE = /\[[^\]]+\]\(([^)]+\.(?:c|cc|cpp|cs|go|java|js|jsx|json|mjs|properties|py|rb|rs|swift|toml|ts|tsx|xml|ya?ml)(?:#[^)]+)?)\)/g;
 const SOURCE_LINE_RE = /[A-Za-z0-9][A-Za-z0-9_./-]*\.(?:c|cc|cpp|cs|go|java|js|jsx|json|mjs|properties|py|rb|rs|swift|toml|ts|tsx|xml|ya?ml)(?:#L\d+(?:-L\d+)?|:\d+(?:-\d+)?)(?!\s*@\s*[0-9a-f]{40})\b/g;
 const LOCATOR_RE = /[A-Za-z0-9][A-Za-z0-9_./-]*#L\d+(?:-L\d+)?\s*@\s*[0-9a-f]{40}/;
+// A full markdown link wrapped in a single backtick on each side. Markdown
+// renders that as a literal code span, not a link -- the citation is dead.
+const BACKTICK_WRAPPED_LINK_RE = /`\[[^\]]+\]\([^)]+\)`/;
 const SHELL_LANGUAGES = new Set(["bash", "sh", "shell", "zsh", "fish", "powershell", "pwsh"]);
 
 function inferredRole(language) {
@@ -51,6 +54,8 @@ function visiblePresentationDefects(text, webBase = null) {
   for (const [index, line] of text.split(/\r?\n/).entries()) {
     const number = index + 1; if (fencedLines.has(number)) continue;
     if (LOCATOR_RE.test(line)) defects.push({ kind: "visible-source-locator", line: number, detail: "use provenance, not a path/range/blob citation" });
+    const wrappedMatch = line.match(BACKTICK_WRAPPED_LINK_RE);
+    if (wrappedMatch) defects.push({ kind: "backtick-wrapped-link", line: number, detail: wrappedMatch[0] });
     const pinned = [];
     SOURCE_LINK_RE.lastIndex = 0; let match;
     while ((match = SOURCE_LINK_RE.exec(line)) !== null) {

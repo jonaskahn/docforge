@@ -34,6 +34,7 @@ const { dumpJson, ensureDocforgeGitignore, fail, loadManifest, readJson, unmanag
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { classifySource, rawBlobHash } = require("../../common/js/evidence_hash.js");
+const { scanFences } = require("../../common/js/markdown_fences.js");
 const { AGENT_CONTEXT_GROUP } = require("../../common/js/agent_context.js");
 const { MANIFEST_CURRENT, migrate: migrateManifestMetadata } = require("../../manifest/js/migrate_metadata.js");
 
@@ -553,9 +554,64 @@ function blobSha1(content) {
   return rawBlobHash(content);
 }
 
-function scan(repo, manifest) {
+// Every ```mermaid fence across the included documents, as a validation task.
+// `scanFences` already skips anything inside a nested/unrelated fence type.
+function mermaidTasks(repo, manifest) {
+  const tasks = [];
+  for (const doc of includedDocuments(repo, manifest)) {
+    const text = fs.readFileSync(path.join(repo, doc.path), "utf8");
+    for (const fence of scanFences(text)) {
+      if (fence.language !== "mermaid") continue;
+      tasks.push({ doc: doc.id, line: fence.start, chart: fence.lines.map(([, line]) => line).join("\n") });
+    }
+  }
+  return tasks;
+}
+
+// Real Mermaid parsing, via the dashboard instance's own `mermaid`/`jsdom`
+// (installed by `ensureDependencies`) -- not the dependency-free static
+// checks the rest of `scan` performs. `validate_mermaid.mjs` runs from
+// inside `dashboardDir` so those packages resolve from its own
+// `node_modules`; it is copied there by `scaffoldApp`, so it may not exist
+// yet on the very first pass before a build has ever run.
+function mermaidFindings(repo, manifest, dashboardDir) {
+  const empty = { problems: [], counts: { invalid_mermaid: 0 }, blocking: false };
+  const tasks = mermaidTasks(repo, manifest);
+  if (tasks.length === 0) return empty;
+  const script = path.join(dashboardDir, "scripts", "validate_mermaid.mjs");
+  // Guards the case where ensureDependencies ran but `mermaid` still isn't
+  // actually there -- a corrupted/interrupted install, or a fully faked one,
+  // as this repo's own tests do to stay npm-network-free. Skip rather than
+  // crash the whole build on a check we cannot actually run; the
+  // browser-side error boundary (mermaid.tsx) is the remaining net.
+  if (!fs.existsSync(script) || !fs.existsSync(path.join(dashboardDir, "node_modules", "mermaid"))) return empty;
+  const result = spawnSync("node", [script], {
+    input: JSON.stringify(tasks.map((task) => ({ chart: task.chart }))),
+    cwd: dashboardDir,
+    encoding: "utf8",
+    timeout: 120000,
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(`mermaid validation failed to run: ${result.error ? result.error.message : result.stderr}`);
+  }
+  let verdicts;
+  try {
+    verdicts = JSON.parse(result.stdout);
+  } catch (error) {
+    throw new Error(`mermaid validation produced invalid output: ${error.message}`);
+  }
+  const problems = [];
+  verdicts.forEach((verdict, index) => {
+    if (verdict.ok) return;
+    const task = tasks[index];
+    problems.push({ kind: "invalid_mermaid", doc: task.doc, detail: `line ${task.line}: ${verdict.error}`, blocking: true });
+  });
+  return { problems, counts: { invalid_mermaid: problems.length }, blocking: problems.length > 0 };
+}
+
+function scan(repo, manifest, dashboardDir = null) {
   const selfManaged = unmanagedPaths(manifest);
-  const kinds = ["metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan"];
+  const kinds = ["metadata", "incomplete", "missing_file", "drift", "untracked", "broken_link", "route_plan", "invalid_mermaid"];
   if (!hasHumanFacingDocuments(manifest)) {
     const counts = {};
     for (const kind of kinds) counts[kind] = 0;
@@ -635,6 +691,19 @@ function scan(repo, manifest) {
   const routePlan = plan(repo, manifest);
   for (const detail of routePlan.problems) {
     problems.push({ kind: "route_plan", doc: "", detail, blocking: true });
+  }
+  // Opportunistic: real Mermaid validation needs `mermaid`/`jsdom`, which only
+  // exist once a prior `start`/`export` has installed the dashboard's
+  // `node_modules`. `scan` stays instant and dependency-free otherwise, so a
+  // fresh repo's first `scan` never pays for or requires an npm install; a
+  // failure here (rather than a missing install) is swallowed rather than
+  // taking down the rest of scan's diagnostics.
+  if (dashboardDir && fs.existsSync(path.join(dashboardDir, "node_modules", "mermaid"))) {
+    try {
+      problems.push(...mermaidFindings(repo, manifest, dashboardDir).problems);
+    } catch {
+      // best-effort; the mandatory gate in prepareDashboard still catches this
+    }
   }
   const counts = {};
   for (const kind of kinds) counts[kind] = problems.filter((p) => p.kind === kind).length;
@@ -1032,7 +1101,7 @@ function scaffoldApp(dashboard, templateDir, repo, manifest, force = false) {
   if (!force && current.shell_sig === sha && fs.existsSync(path.join(dashboard, "lib", "shared.ts"))) {
     return false;
   }
-  for (const name of ["app", "components", "lib", "next.config.mjs", "tsconfig.json", "postcss.config.mjs", "package.json", ".gitignore", "README.md"]) {
+  for (const name of ["app", "components", "lib", "scripts", "next.config.mjs", "tsconfig.json", "postcss.config.mjs", "package.json", ".gitignore", "README.md"]) {
     const source = path.join(templateDir, name);
     const target = path.join(dashboard, name);
     if (fs.existsSync(source) && fs.statSync(source).isDirectory()) {
@@ -1303,10 +1372,10 @@ function stageBuild(dashboard, repo, manifest, templateDir, force) {
   }
 }
 
-function planOnly(args, manifest, renderSig, shellSig) {
+function planOnly(args, manifest, renderSig, shellSig, dashboard) {
   const metadataReport = reconcileMetadata(args.repo, manifest, true);
   const routePlan = plan(args.repo, manifest);
-  const scanResult = scan(args.repo, manifest);
+  const scanResult = scan(args.repo, manifest, dashboard);
   console.log(`metadata (dry-run): ${metadataReport.counts.reconciled} to reconcile, ${metadataReport.counts.unchanged} unchanged, ${metadataReport.counts.errors} errors`);
   for (const page of routePlan.pages) {
     console.log(`  ${page.doc_id.padEnd(32)} ${page.source_path.padEnd(48)} -> ${page.url}`);
@@ -1385,6 +1454,21 @@ function prepareDashboard(args, dashboard, manifest, templateDir, renderSig, she
   if (!fs.existsSync(path.join(dashboard, "node_modules"))) {
     ensureDependencies(dashboard, args.repo);
   }
+
+  // Real Mermaid validation: needs `mermaid`/`jsdom`, which only exist once
+  // dependencies are installed (just above), so this cannot be part of the
+  // dependency-free `scan()` call earlier in this function.
+  const mermaidResult = mermaidFindings(args.repo, manifest, dashboard);
+  if (mermaidResult.problems.length) {
+    console.log(`mermaid: ${mermaidResult.problems.length} invalid diagram(s) found:`);
+    for (const problem of mermaidResult.problems) {
+      console.log(`  [${problem.kind}] (blocking) ${problem.doc}: ${problem.detail}`);
+    }
+  }
+  if (mermaidResult.blocking) {
+    console.log("dashboard was NOT opened: invalid Mermaid diagrams found; run /docforge-revise to fix them, then `dashboard start` again");
+    throw new Error("invalid Mermaid diagrams found; see findings above");
+  }
   return { newState, renderSig };
 }
 
@@ -1396,7 +1480,7 @@ async function cmdStart(args, dashboard, manifest, templateDir) {
   const shellSig = shellSignature(templateDir, args.repo, manifest);
   const renderSig = renderSignature(args.repo, manifest);
   if (args.plan_only) {
-    return planOnly(args, manifest, renderSig, shellSig);
+    return planOnly(args, manifest, renderSig, shellSig, dashboard);
   }
   prepareDashboard(args, dashboard, manifest, templateDir, renderSig, shellSig, args.force);
 
@@ -1437,8 +1521,8 @@ async function cmdExport(args, dashboard, manifest, templateDir) {
   return 0;
 }
 
-async function cmdScan(args, manifest) {
-  const result = scan(args.repo, manifest);
+async function cmdScan(args, manifest, dashboard) {
+  const result = scan(args.repo, manifest, dashboard);
   if (args.json) {
     console.log(dumpJson(result));
     return result.problems.length ? 1 : 0;
@@ -1597,7 +1681,7 @@ async function main() {
   try {
     switch (args.command) {
       case "scan":
-        return await cmdScan(args, manifest);
+        return await cmdScan(args, manifest, dashboard);
       case "start":
         return await cmdStart(args, dashboard, manifest, templateDir);
       case "export":
@@ -1619,7 +1703,10 @@ module.exports = {
   renderSignature,
   shellSignature,
   plan,
+  scan,
   includedDocuments,
+  mermaidTasks,
+  mermaidFindings,
   buildLedger,
   convertBody,
   headingAnchors,

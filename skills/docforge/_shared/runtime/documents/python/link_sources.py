@@ -37,6 +37,10 @@ AUTHORING_LINK = re.compile(
     r")(?P<fragment>#L(?P<start>\d+)(?:-L?(?P<end>\d+))?)?\)"
 )
 FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+# A whole link wrapped in a single backtick on each side. Markdown renders
+# that as a code span, not a link, so the wrap is always a defect -- strip it
+# before expanding the link inside, regardless of authoring or pinned form.
+BACKTICK_WRAP = re.compile(r"`(\[[^\]]+\]\([^)]+\))`")
 # A path or `file.ext:line` as the visible text defeats the purpose: the reader
 # is owed a readable noun phrase, and the URL already carries the location.
 PATH_LABEL = re.compile(
@@ -87,6 +91,8 @@ def expand(
         if number in protected:
             out_lines.append(line)
             continue
+
+        line = BACKTICK_WRAP.sub(r"\1", line)
 
         def replace(match: re.Match) -> str:
             rel = match.group("path")

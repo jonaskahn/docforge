@@ -262,6 +262,18 @@ or to proceed anyway. Findings:
 - **route_plan** — problems in the route table itself (no written
   `docs/README.md` index, two documents mapping to the same URL); always
   **blocking**.
+- **invalid_mermaid** — a ```mermaid fence that fails real syntax validation
+  (`mermaid.parse()`, run headlessly against the installed `mermaid`/`jsdom`
+  packages — not a regex heuristic); always **blocking**, since an invalid
+  diagram crashes the rendered page. Unlike the seven findings above,
+  this one is **not** part of `scan`'s dependency-free static pass: it needs
+  the dashboard's own `node_modules` (installed by `ensure_dependencies`),
+  so `start`/`export` compute and enforce it as a distinct, later gate, right
+  after dependencies are ensured and before the build. A bare `scan` still
+  reports it *opportunistically* — only when a prior `start`/`export` already
+  installed `node_modules` — so a first-ever `scan` on a fresh checkout stays
+  instant and never triggers an install; run `start`/`export` (or a second
+  `scan` after one has) for a guaranteed check.
 
 `scan` exits `1` when anything is found — blocking or advisory — so it stays
 the read-only answer to "should I revise again?" regardless of severity;

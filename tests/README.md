@@ -37,6 +37,23 @@ parity directly.
 - `test_structure.py` — SKILL.md content and (as the refactor below lands)
   router/link integrity and size budgets.
 
+## Opt-in slow tier
+
+`test_dashboard_mermaid_slow.py` is the one exception to "dependency-free":
+it installs the dashboard template's real `mermaid`/`jsdom` via a real `npm
+install` and runs a fixed diagram corpus through the real
+`validate_mermaid.mjs`, to prove actual Mermaid syntax detection works (the
+fast suite only fakes it, to stay network-free — see
+`DashboardMermaidValidationTests` in `test_dashboard.py`). Skipped by
+default; opt in with:
+
+```sh
+DOCFORGE_RUN_SLOW_TESTS=1 python3 -m pytest tests/test_dashboard_mermaid_slow.py
+```
+
+Not wired into CI — this repo's CI has never done a real `npm install`, and
+this tier hits the real npm registry.
+
 ## Conventions
 
 - Every test uses a `tempfile.TemporaryDirectory()` fixture repo; nothing

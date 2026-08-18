@@ -82,6 +82,53 @@ class SourceLinkExpansionTests(unittest.TestCase):
                     body,
                 )
 
+    def test_backtick_wrapped_links_are_unwrapped(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                manifest = seed(repo)
+                doc = write_doc(
+                    repo,
+                    "# Doc\n\nThe reset runs at startup "
+                    "(`[the crawl-job runner](src/worker.py#L97-L104)`).\n",
+                )
+                result = run(
+                    runtime, "link_sources", "--repo", str(repo),
+                    "--manifest", str(manifest), "--commit", COMMIT, "--write",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                body = doc.read_text(encoding="utf-8")
+                self.assertIn(
+                    f"[the crawl-job runner]({BASE}/-/blob/{COMMIT}/src/worker.py#L97-104)",
+                    body,
+                )
+                self.assertNotIn(
+                    f"`[the crawl-job runner]({BASE}/-/blob/{COMMIT}/src/worker.py#L97-104)`",
+                    body,
+                )
+
+    def test_already_expanded_backtick_wrapped_links_are_unwrapped(self) -> None:
+        # A link that was already expanded to a pinned permalink in an earlier
+        # pass, but got wrapped in backticks by the writer -- e.g. a doc
+        # written before this guard existed. Revise must still heal it.
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                manifest = seed(repo)
+                pinned = f"{BASE}/-/blob/{COMMIT}/src/worker.py#L97-104"
+                doc = write_doc(
+                    repo,
+                    f"# Doc\n\nThe reset runs at startup (`[the crawl-job runner]({pinned})`).\n",
+                )
+                result = run(
+                    runtime, "link_sources", "--repo", str(repo),
+                    "--manifest", str(manifest), "--commit", COMMIT, "--write",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                body = doc.read_text(encoding="utf-8")
+                self.assertIn(f"[the crawl-job runner]({pinned})", body)
+                self.assertNotIn(f"`[the crawl-job runner]({pinned})`", body)
+
     def test_unresolvable_targets_fail_loudly_and_are_left_alone(self) -> None:
         for runtime in ("py", "js"):
             with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:

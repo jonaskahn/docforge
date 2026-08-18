@@ -151,6 +151,64 @@ def fake_npm_env() -> tuple[dict[str, str], Path]:
     return env, root
 
 
+# Like FAKE_NPM, but its fake "install" also drops a `node_modules/mermaid`
+# marker (satisfying the mandatory gate's own precondition check) and
+# overwrites the just-scaffolded `scripts/validate_mermaid.mjs` with a stub
+# that always reports every diagram it is handed as invalid -- real
+# `mermaid`/`jsdom` are never installed, so this is plumbing-only: it proves
+# the gate wires a validator's blocking verdict into an aborted `start`/
+# `export`, not that real Mermaid detection works (that needs the opt-in
+# slow tier, which runs the real template script for real).
+FAKE_NPM_BROKEN_MERMAID = """#!/usr/bin/env python3
+import http.server
+import sys
+from pathlib import Path
+
+args = sys.argv[1:]
+prefix = Path(args[args.index("--prefix") + 1])
+
+if "install" in args or "ci" in args:
+    (prefix / "node_modules").mkdir(parents=True, exist_ok=True)
+    (prefix / "node_modules" / "mermaid").mkdir(parents=True, exist_ok=True)
+    (prefix / "package-lock.json").write_text("{}", encoding="utf-8")
+    fake_validator = prefix / "scripts" / "validate_mermaid.mjs"
+    fake_validator.parent.mkdir(parents=True, exist_ok=True)
+    fake_validator.write_text(
+        "let raw = '';\\n"
+        "for await (const chunk of process.stdin) raw += chunk;\\n"
+        "const tasks = JSON.parse(raw || '[]');\\n"
+        "process.stdout.write(JSON.stringify(tasks.map("
+        "() => ({ ok: false, error: 'fixture: forced failure' }))));\\n",
+        encoding="utf-8",
+    )
+    sys.exit(0)
+
+port = int(args[args.index("-p") + 1])
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"ok")
+
+    def log_message(self, _format, *_args):
+        pass
+
+http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+"""
+
+
+def fake_npm_broken_mermaid_env() -> tuple[dict[str, str], Path]:
+    root = Path(tempfile.mkdtemp(prefix="docforge-fake-npm-broken-mermaid-"))
+    bin_dir = root / "bin"
+    bin_dir.mkdir()
+    npm = bin_dir / "npm"
+    npm.write_text(FAKE_NPM_BROKEN_MERMAID, encoding="utf-8")
+    npm.chmod(0o755)
+    env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ.get("PATH", ""))
+    return env, root
+
+
 INDEX_BODY = """# Documentation
 
 ## Introduction
@@ -273,6 +331,48 @@ def reconcile_report(runtime: str, repo: Path) -> dict:
     )
     result = subprocess.run(
         ["node", "-e", script, str(DASH_CLI_JS / "dashboard.js"), str(repo), str(manifest_path)],
+        text=True, capture_output=True, check=True,
+    )
+    return json.loads(result.stdout)
+
+
+def mermaid_tasks_report(runtime: str, repo: Path) -> list[dict]:
+    """Call `mermaid_tasks` directly in either runtime -- the npm-free way to
+    check fence extraction on its own."""
+    manifest_path = repo / ".docforge" / "manifest.json"
+    if runtime == "py":
+        from runtime.dashboard.python.dashboard import mermaid_tasks
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return mermaid_tasks(repo, manifest)
+    script = (
+        "const d=require(process.argv[1]);const fs=require('fs');"
+        "const m=JSON.parse(fs.readFileSync(process.argv[3],'utf8'));"
+        "console.log(JSON.stringify(d.mermaidTasks(process.argv[2],m)));"
+    )
+    result = subprocess.run(
+        ["node", "-e", script, str(DASH_CLI_JS / "dashboard.js"), str(repo), str(manifest_path)],
+        text=True, capture_output=True, check=True,
+    )
+    return json.loads(result.stdout)
+
+
+def mermaid_findings_report(runtime: str, repo: Path, dashboard_dir: Path) -> dict:
+    """Call `mermaid_findings` directly against a manually prepared
+    `dashboard_dir` (marker `node_modules/mermaid` + a stub validator script)
+    -- exercises the subprocess/JSON contract without a real npm install."""
+    manifest_path = repo / ".docforge" / "manifest.json"
+    if runtime == "py":
+        from runtime.dashboard.python.dashboard import mermaid_findings
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return mermaid_findings(repo, manifest, dashboard_dir)
+    script = (
+        "const d=require(process.argv[1]);const fs=require('fs');"
+        "const m=JSON.parse(fs.readFileSync(process.argv[3],'utf8'));"
+        "console.log(JSON.stringify(d.mermaidFindings(process.argv[2],m,process.argv[4])));"
+    )
+    result = subprocess.run(
+        ["node", "-e", script, str(DASH_CLI_JS / "dashboard.js"),
+         str(repo), str(manifest_path), str(dashboard_dir)],
         text=True, capture_output=True, check=True,
     )
     return json.loads(result.stdout)
@@ -1004,6 +1104,144 @@ class DashboardScanTests(unittest.TestCase):
                     self.assertIn("[untracked]", result.stdout)
                     self.assertNotIn("[untracked] (blocking)", result.stdout)
                     self.assertIn("converted 3 documents", result.stdout)
+                finally:
+                    stop_dashboard(runtime, repo)
+
+
+def prepare_fake_mermaid_dashboard(dashboard_dir: Path, valid: bool) -> None:
+    """A minimal stand-in for a real `mermaid`/`jsdom` install: a marker
+    `node_modules/mermaid` directory (satisfies the gate's own precondition
+    check) and a stub validator script that reports every task it is handed
+    as uniformly valid or invalid. Plumbing only -- see
+    FAKE_NPM_BROKEN_MERMAID's docstring for why this can't prove real
+    Mermaid detection."""
+    (dashboard_dir / "node_modules" / "mermaid").mkdir(parents=True, exist_ok=True)
+    scripts = dashboard_dir / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+    verdict = "{ ok: true, error: null }" if valid else "{ ok: false, error: 'fixture: forced failure' }"
+    (scripts / "validate_mermaid.mjs").write_text(
+        "let raw = '';\n"
+        "for await (const chunk of process.stdin) raw += chunk;\n"
+        "const tasks = JSON.parse(raw || '[]');\n"
+        f"process.stdout.write(JSON.stringify(tasks.map(() => ({verdict}))));\n",
+        encoding="utf-8",
+    )
+
+
+class DashboardMermaidValidationTests(unittest.TestCase):
+    """Plumbing coverage for the real-rendering Mermaid gate: fence
+    extraction, the validator subprocess/JSON contract, scan's opportunistic
+    inclusion, and that a blocking verdict actually aborts `start`. None of
+    this proves real Mermaid detection -- these fixtures never install real
+    `mermaid`/`jsdom` -- that is the opt-in slow tier's job."""
+
+    def test_mermaid_tasks_extracts_fences_from_included_documents(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                tasks = mermaid_tasks_report(runtime, repo)
+                self.assertEqual(len(tasks), 1)
+                self.assertEqual(tasks[0]["doc"], "architecture_constraints")
+                self.assertIn("graph TD;", tasks[0]["chart"])
+                self.assertIn("A-->B;", tasks[0]["chart"])
+                self.assertGreater(tasks[0]["line"], 0)
+
+    def test_mermaid_findings_reports_blocking_from_stub_validator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                dashboard_dir = repo / "fake-dashboard"
+                prepare_fake_mermaid_dashboard(dashboard_dir, valid=False)
+                result = mermaid_findings_report(runtime, repo, dashboard_dir)
+                self.assertTrue(result["blocking"])
+                self.assertEqual(result["counts"]["invalid_mermaid"], 1)
+                self.assertEqual(len(result["problems"]), 1)
+                problem = result["problems"][0]
+                self.assertEqual(problem["kind"], "invalid_mermaid")
+                self.assertEqual(problem["doc"], "architecture_constraints")
+                self.assertTrue(problem["blocking"])
+                self.assertIn("fixture: forced failure", problem["detail"])
+
+    def test_mermaid_findings_reports_clean_from_stub_validator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                dashboard_dir = repo / "fake-dashboard"
+                prepare_fake_mermaid_dashboard(dashboard_dir, valid=True)
+                result = mermaid_findings_report(runtime, repo, dashboard_dir)
+                self.assertFalse(result["blocking"])
+                self.assertEqual(result["problems"], [])
+
+    def test_mermaid_findings_skips_without_installed_mermaid(self) -> None:
+        # No `node_modules/mermaid` marker at all -- e.g. `ensure_dependencies`
+        # never ran, or ran against a fake/corrupted install. Skip rather than
+        # crash: this is the same precondition the mandatory gate itself
+        # relies on to stay safe under this repo's fake-npm test fixtures.
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                dashboard_dir = repo / "fake-dashboard"
+                dashboard_dir.mkdir()
+                result = mermaid_findings_report(runtime, repo, dashboard_dir)
+                self.assertFalse(result["blocking"])
+                self.assertEqual(result["problems"], [])
+
+    def test_scan_opportunistically_includes_mermaid_findings_when_installed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                dashboard_dir = repo / "fake-dashboard"
+                prepare_fake_mermaid_dashboard(dashboard_dir, valid=False)
+                result = run_dashboard(
+                    runtime, "scan", "--repo", str(repo), "--dashboard", str(dashboard_dir), "--json",
+                )
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                payload = json.loads(result.stdout)
+                kinds = {p["kind"] for p in payload["problems"]}
+                self.assertIn("invalid_mermaid", kinds)
+                self.assertTrue(payload["blocking"])
+
+    def test_scan_skips_mermaid_check_without_a_dashboard_install(self) -> None:
+        # The default path for every ordinary `scan`: no `--dashboard`
+        # override, nothing ever installed. Must stay instant and clean
+        # w.r.t. the mermaid check specifically (unrelated findings, like
+        # provenance drift from the fixture's own `src/main.ts` reference,
+        # are not this test's concern).
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                result = run_dashboard(runtime, "scan", "--repo", str(repo), "--json")
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload["counts"]["invalid_mermaid"], 0)
+                self.assertNotIn("invalid_mermaid", {p["kind"] for p in payload["problems"]})
+
+    def test_start_aborts_when_mermaid_diagrams_are_invalid(self) -> None:
+        env, _bin = fake_npm_broken_mermaid_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            for runtime in ("py", "js"):
+                repo = Path(tmp) / runtime
+                repo.mkdir()
+                seed_repo(repo)
+                try:
+                    result = run_dashboard(runtime, "start", "--repo", str(repo), "--no-open", env=env)
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertIn("mermaid: 1 invalid diagram(s) found", result.stdout)
+                    self.assertIn("[invalid_mermaid] (blocking)", result.stdout)
+                    self.assertIn("architecture_constraints", result.stdout)
+                    self.assertIn("dashboard was NOT opened: invalid Mermaid diagrams found", result.stdout)
+                    self.assertIn("invalid Mermaid diagrams found", result.stderr)
                 finally:
                     stop_dashboard(runtime, repo)
 

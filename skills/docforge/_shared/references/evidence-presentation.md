@@ -76,6 +76,12 @@ Three rules keep the result honest:
   none.
 - **Directory paths** keep a trailing `/` and stay unlinked backticked prose:
   the boundary is the point, not a file.
+- **Never wrap the finished link in backticks.** Backticks turn it into a
+  code span, not a link: write `(see [the pricing revalidation
+  path](pricing/cart.js#L88-L96))`, never `` (`[the pricing revalidation
+  path](pricing/cart.js#L88-L96)`) ``. The backtick-quoted form used
+  elsewhere in this document is this file's own notation for describing
+  syntax — never the literal thing to write into a document.
 
 Agent-context outputs are **unchanged and must stay unchanged**: bare durable
 paths, no links, no URLs, no line numbers

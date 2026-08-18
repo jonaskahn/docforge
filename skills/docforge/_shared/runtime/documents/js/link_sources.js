@@ -38,6 +38,10 @@ const AUTHORING_LINK = new RegExp(
   "g",
 );
 const FENCE = /^\s{0,3}(`{3,}|~{3,})/;
+// A whole link wrapped in a single backtick on each side. Markdown renders
+// that as a code span, not a link, so the wrap is always a defect -- strip it
+// before expanding the link inside, regardless of authoring or pinned form.
+const BACKTICK_WRAP = /`(\[[^\]]+\]\([^)]+\))`/g;
 // A path or `file.ext:line` as the visible text defeats the purpose: the reader
 // is owed a readable noun phrase, and the URL already carries the location.
 const PATH_LABEL =
@@ -83,7 +87,8 @@ function expand(text, repo, identity, commit) {
   const out = lines.map((line, index) => {
     const number = index + 1;
     if (protectedLines.has(number)) return line;
-    return line.replace(AUTHORING_LINK, (match, ...rest) => {
+    const unwrapped = line.replace(BACKTICK_WRAP, "$1");
+    return unwrapped.replace(AUTHORING_LINK, (match, ...rest) => {
       const groups = rest[rest.length - 1];
       const rel = groups.path;
       const label = groups.label;
