@@ -24,7 +24,7 @@
   "provenance_mode": "sections",
   "audit_profile": "router",
   "dominant_form": null,
-  "template_file": "content/shared/decision-index.template.md",
+  "template_file": "content/records/decision-index.template.md",
   "contract_revision": "2.23.0",
   "title": "Decision log",
   "compact_group": "decisions_compact",

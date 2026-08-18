@@ -149,7 +149,7 @@ class ReadmeScaffoldTests(unittest.TestCase):
                 "id": "decisions_index",
                 "type": "decision-index",
                 "path": "docs/architecture/decisions/README.md",
-                "scaffold_template": "content/shared/decision-index.template.md",
+                "scaffold_template": "content/records/decision-index.template.md",
             })
             (repo / ".docforge" / "manifest.json").write_text(
                 json.dumps(manifest), encoding="utf-8"

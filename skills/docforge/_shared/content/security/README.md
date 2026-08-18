@@ -8,8 +8,8 @@ Security posture, permissions, and threat model.
 
 ## Contents
 
-- [contracts/](contracts/README.md) — 6 contracts
-- [templates/](templates/README.md) — 6 templates
+- [contracts/](contracts/README.md) — 7 contracts
+- [templates/](templates/README.md) — 7 templates
 - `instructions.md` — Merged writing craft for `api-authentication`, `data-handling`, `platform-permissions`, `security-policy` (`security_root`), `threat-model`, `threat-register`; one section per document → [instructions.md](instructions.md)
 
 ## Boundaries

@@ -4,24 +4,26 @@ Scaffold template files owned by the `reference` group.
 
 ## Contents
 
-- `access.md` — Principals, scopes, grant path, review cadence for who/what can change infrastructure → [access.md](access.md)
-- `api-rate-limits.md` — Public surface, inputs/outputs, auth contract, limits, errors, compatibility source → [api-rate-limits.md](api-rate-limits.md)
-- `api-reference.md` — Public surface, inputs/outputs, auth contract, limits, errors, compatibility source → [api-reference.md](api-reference.md)
-- `browser-support.md` — Component responsibilities, composition, tokens/themes, browser matrix, degradation → [browser-support.md](browser-support.md)
-- `command-reference.md` — Commands/subcommands, arguments, configuration, examples, side effects → [command-reference.md](command-reference.md)
-- `compatibility.md` — Supported versions/platforms, tested matrix, deprecation behavior → [compatibility.md](compatibility.md)
-- `configuration.md` — Every read setting, default, scope, sensitivity, validation → [configuration.md](configuration.md)
-- `data-types.md` — Producers, transformations, contracts, checks, failure/recovery, schema ownership → [data-types.md](data-types.md)
-- `error-catalog.md` — Stable code/name, trigger, client behavior, retryability, observability → [error-catalog.md](error-catalog.md)
-- `extension-points.md` — Host contract, activation, contribution points, permissions, compatibility, sandbox, failure → [extension-points.md](extension-points.md)
-- `glossary.md` — Repository terms, precise definitions, owning document links → [glossary.md](glossary.md)
-- `limitations.md` — Known bounds, trigger, impact, workaround, source evidence → [limitations.md](limitations.md)
-- `model-card.md` — Datasets, training/evaluation, artifact lineage, inference, limitations, drift, ownership → [model-card.md](model-card.md)
-- `output-exit-contract.md` — Stdout/stderr ownership, formats, exit codes, stability, scripting behavior → [output-exit-contract.md](output-exit-contract.md)
-- `performance-budgets.md` — Evidenced CPU/GPU/memory/storage/timing limits, measurement, degradation → [performance-budgets.md](performance-budgets.md)
-- `platform-compatibility.md` — OS/device/architecture matrix, minimums, tested evidence, degradation, deprecation → [platform-compatibility.md](platform-compatibility.md)
-- `resources.md` — Plan/apply safety, external state, locking, ownership, resource inventory, drift, recovery → [resources.md](resources.md)
-- `tech-stack.md` — Detected languages/versions; runtimes/SDKs; primary frameworks per layer; datastores and messaging; build/package/dependency-management tooling; test and CI... → [tech-stack.md](tech-stack.md)
+- `access.md` → [access.md](access.md)
+- `api-rate-limits.md` → [api-rate-limits.md](api-rate-limits.md)
+- `api-reference.md` → [api-reference.md](api-reference.md)
+- `browser-support.md` → [browser-support.md](browser-support.md)
+- `command-reference.md` → [command-reference.md](command-reference.md)
+- `compatibility.md` → [compatibility.md](compatibility.md)
+- `configuration.md` → [configuration.md](configuration.md)
+- `data-types.md` → [data-types.md](data-types.md)
+- `error-catalog.md` → [error-catalog.md](error-catalog.md)
+- `extension-points.md` → [extension-points.md](extension-points.md)
+- `glossary.md` → [glossary.md](glossary.md)
+- `limitations.md` → [limitations.md](limitations.md)
+- `model-card.md` → [model-card.md](model-card.md)
+- `output-exit-contract.md` → [output-exit-contract.md](output-exit-contract.md)
+- `performance-budgets.md` → [performance-budgets.md](performance-budgets.md)
+- `platform-compatibility.md` → [platform-compatibility.md](platform-compatibility.md)
+- `resources.md` → [resources.md](resources.md)
+- `tech-stack.md` → [tech-stack.md](tech-stack.md)
+
+One-line summaries are machine-readable via `query_catalog --category reference`.
 
 ## Boundaries
 
