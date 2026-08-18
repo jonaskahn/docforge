@@ -552,7 +552,7 @@ Lines:
    paths — the one case where compact stops being bounded. The user
    hears it before confirming, not discovers it in the tree:
 
-   `docs/architecture.md reached the 14-section cap; the overflow keeps its own standard paths.`
+   `docs/architecture.md reached COMPACT_SECTION_CAP; the overflow keeps its own standard paths.`
 
 Summary rules:
 
@@ -634,17 +634,11 @@ approvals remain mandatory under `--auto-accept`
 Shared flag definitions: [`../flags.md`](../flags.md). Intake-specific
 effects:
 
-- `--plan-only`: analyze and show the plan / dry-run tree; never write
-  or re-ground document bodies. `/docforge`: precheck, analyze,
-  initialize the complete static manifest, add discovered dynamic
-  documents, display the dry-run tree (no placeholder documents).
-  `/docforge-revise`: run revise analysis and show the structure update
-  / dry-run tree.
-- `--auto-accept`: display plans, trees, and results, then continue
-  without routine conversational pauses; excluded side effects:
+- `--plan-only`: on `/docforge`, the dry-run tree shows no placeholder
+  documents; on `/docforge-revise`, the structure update / dry-run tree
+  is shown.
+- `--auto-accept` and `--no-dashboard`: no intake-specific effect beyond
   [`../flags.md`](../flags.md).
-- `--no-dashboard`: skip the automatic dashboard build/serve at run
-  completion ([`validation.md`](validation.md) "Dashboard auto-serve").
 
 Structural revise uses `/docforge-revise` (never `/docforge --revise`).
 

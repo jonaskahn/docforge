@@ -777,6 +777,18 @@ class SkillContentTests(unittest.TestCase):
         self.assertNotIn("§7", revision)
         self.assertNotIn("§8", revision)
 
+    def test_migrations_readme_names_current_catalog_version(self) -> None:
+        """The historical `split_catalog` intentionally stamps 2.19.0 (its
+        output shape predates the current catalog), but the README's "current
+        catalog requires X" warning must name the live catalog version so it
+        can never drift silently the way it did from 2.22.0 -> 2.23.0."""
+        schema = json.loads(
+            (SHARED_ROOT / ".metadata" / "catalog-schema.json").read_text(encoding="utf-8")
+        )
+        current = schema["properties"]["version"]["const"]
+        readme = (SHARED_ROOT / "runtime" / "migrations" / "README.md").read_text(encoding="utf-8")
+        self.assertIn(f"The current catalog requires\n**{current}**", readme)
+
     def test_completion_requires_dashboard_start_and_reported_url(self) -> None:
         """A run is complete only when the dashboard was started and its URL
         reported; both entrypoints carry the completion contract, not just

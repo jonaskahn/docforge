@@ -53,8 +53,7 @@ Rules:
 - Do not stop at the readiness flag. Select one ready provider per the
   provider sufficiency rule ([`../rules.md`](../rules.md), `intake.md`) and
   use its native retrieval path before planning. Provider-specific dispatch
-  lives in [`../references/graph/graph-sources.md`](../references/graph/graph-sources.md);
-  do not present missing competitors during ordinary repository analysis.
+  lives in [`../references/graph/graph-sources.md`](../references/graph/graph-sources.md).
 - Collect a graph-grounded inventory of boundaries, entry points, public
   surfaces, functional areas, candidate flows, tests, configuration,
   hotspots, and operational paths. Exact preparation and query dispatch live
@@ -143,9 +142,9 @@ When the goal is **replace the plan** — or any new plan over a manifest
 that already exists — planning starts from the existing record, never
 from a blank slate:
 
-1. Run `migrate_metadata.{py,js}` first — unconditional and idempotent
-   (see [`validation.md`](validation.md) "Manifest and provenance"); an
-   already-current manifest reports a clean no-op.
+1. Run `migrate_metadata.{py,js}` first — see [`validation.md`](validation.md)
+   "Manifest and provenance" (unconditional, idempotent; a clean no-op when
+   current).
 2. Prefer `manage_manifest.{py,js} reconcile` with the new scope
    ([`revision.md`](revision.md) "Applying the answers to the manifest").
    Written documents that fall out of the new selection are reported as
@@ -285,7 +284,7 @@ Present a human-readable plan before writing. It must contain:
    current/stale state, native or provisional flow status, and
    manifest/history evidence available. Name **only** providers that
    `precheck_graph.{py,js}` reported READY, per the provider sufficiency
-   rule ([`../rules.md`](../rules.md)); do not list absent competitors.
+   rule ([`../rules.md`](../rules.md)).
 2. **Scope decision** — chosen tier, each profile, depth, and one
    evidence-based sentence explaining why it applies.
 3. **Exact tree** — every static and discovered dynamic path from the
@@ -343,22 +342,16 @@ deep-dives: the harvest still ran during repository inspection, but
 `docs/flows/README.md` renders the candidate matrix only — no gate, no
 selection prompt.
 
-**Mandatory gate — `--auto-accept` never waives it.** Which flows become
-documents is a scope decision like profiles or audiences, not a routine
-pause — the selection prompt is always shown and always awaited, exactly
-like the intake confirmation and the root-README three-way choice
-([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
-"Selection gate and write-back"). Under `--auto-accept` only the pause on
-the structure update that follows the gate is skipped; the selection itself
-never is.
+Which flows become documents is a scope decision — **mandatory, `--auto-accept`
+never waives it** ([`../flags.md`](../flags.md)); only the pause on the
+structure update that follows the gate is skipped.
 
 Run the canonical pipeline — precheck → harvest/import → organize →
 analyze → selection gate → apply → write → write-back → render — exactly as
 [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
-"Flow pipeline" specifies. It owns every command and flag, the analysis
-depth rule, the prompt's contents and `--main-limit` budget, and the
-`update` promote/demote/decline mapping. Do not restate them here; do not
-reference its steps by number.
+"Flow pipeline" specifies (every command and flag, the analysis depth rule,
+the prompt's contents and `--main-limit` budget, the `update`
+promote/demote/decline mapping).
 
 Fresh start differs from revise in four places, and only these:
 

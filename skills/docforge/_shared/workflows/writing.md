@@ -19,9 +19,8 @@ fences.
 Trigger: the user chooses Resume in intake or asks to continue an incomplete
 documentation run.
 
-1. Always run `migrate_metadata.{py,js}` first (schema + provenance
-   sidecars; see [`validation.md`](validation.md) "Manifest and provenance"
-   — idempotent, a clean no-op when current).
+1. Run `migrate_metadata.{py,js}` first — see [`validation.md`](validation.md)
+   "Manifest and provenance" (unconditional, idempotent).
 2. Load the current-version manifest.
 3. Continue the first non-complete, non-skipped document in write order.
 4. Follow **Write one document** below for that document.
@@ -247,6 +246,13 @@ For the next document in `write_order` (serial mode):
 
 9. A passing artifact may transition to `complete`. A failed artifact
    becomes `needs_review`, then returns to `in_progress` for revision.
+10. Wire connections unconditionally. After the document reaches `complete`,
+    apply its instruction's Connections block — link every related document
+    it names that is selected and materialized — and update owning-index
+    related-document pointers. No related document exists yet → leave the
+    pointer out; the whole-tree gate's reachability and section-cohesion
+    checks are the backstop ([`validation.md`](validation.md) "Whole-tree
+    gate").
 
 Status transitions:
 

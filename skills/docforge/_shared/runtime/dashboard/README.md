@@ -24,10 +24,11 @@ The runtime consumes the shared codec/util (`runtime.common.python.*` /
 
 ## Provenance storage
 
-The build reconciles and reads document metadata per
-`project.provenance_storage`: `json` (default) sources the folder sidecars
-(`.docforge/provenance/<folder>.json`) and `markdown` sources inline
-frontmatter; the emitted site always carries full frontmatter.
+The build reconciles and reads document metadata from the folder sidecars
+(`.docforge/provenance/<folder>.json`; `project.provenance_storage` is always
+`json`). A pre-migration document still carrying inline frontmatter is read as
+a legacy fallback (reported `inline`, pending migration); the emitted site
+always carries full frontmatter.
 
 ## Where invoked
 

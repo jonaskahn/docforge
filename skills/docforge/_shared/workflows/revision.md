@@ -96,9 +96,10 @@ falls in scope:
    affected by adds or rewires (e.g. `docs/README.md`, area READMEs,
    `docs/flows/README.md`, `system-overview` when selected) so tree and
    navigation stay coherent.
-5. **Add connections** — update cross-links, flow-index composition /
+5. **Add connections** — wire cross-links, flow-index composition /
    families, and related-document pointers so new or reorganized flows and
-   docs are wired into the documentation graph, never left as orphans.
+   docs are never left as orphans; the per-document wiring is owned by
+   [`writing.md`](writing.md) "Write one document" (step 10).
 6. **Do not treat `FRESH` as a hard skip when structure changed** — if new
    flows, new documents, or new connections touch a document's role in the
    tree, re-ground the affected connection / overview sections even when
@@ -176,12 +177,12 @@ migration, asks nothing (see Commands below). Every other revise invocation
 presents a discovery brief and a **delta-aware** question set before any
 scope decision, detection, or writing — never a reflexive full re-ask.
 
-`migrate_metadata.{py,js}` is the one thing that runs before the brief: a
-mechanical, idempotent schema prerequisite ([`validation.md`](validation.md)
-"Manifest and provenance"), not a decision. The brief reports the manifest's
-own tier and profiles, so the record must be at the current schema before it
-can be read out. Nothing else — no detection, no reconcile, no scaffold, no
-write — precedes the question set.
+`migrate_metadata.{py,js}` is the one thing that runs before the brief —
+a mechanical, idempotent schema prerequisite, not a decision
+([`validation.md`](validation.md) "Manifest and provenance"). The brief
+reports the manifest's own tier and profiles, so the record must be at the
+current schema before it can be read out. Nothing else — no detection, no
+reconcile, no scaffold, no write — precedes the question set.
 
 Revise uses the same two-turn split as a fresh start
 ([`intake.md`](intake.md) "Turn structure"): **Turn 1** asks Scope, Layout,
@@ -421,8 +422,8 @@ different thing, hence a different destination.
 | Invocation | Behavior |
 |---|---|
 | `/docforge-revise` | **Metadata-only migration**: upgrade the manifest to current schema/version via `migrate_metadata.{py,js}`. No scope question, no detection, no writing, no dashboard (see below) |
-| `/docforge-revise all` / `/docforge-revise <area>` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars; see [`validation.md`](validation.md) "Manifest and provenance"), then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. Manifest has no audiences → run the full audience multi-select. `all` additionally asks the flow mode question and runs the full flow pipeline from its `--need flow` precheck onward (see `/docforge-revise flow` below), in scope with everything else and with the overlaps merged per the Ordering note above; `<area>` never does. |
-| `/docforge-revise flow` | **Always** run `migrate_metadata.{py,js}` first (schema + provenance sidecars), then the full flow pipeline (see below) |
+| `/docforge-revise all` / `/docforge-revise <area>` | Run `migrate_metadata.{py,js}` first (see [`validation.md`](validation.md) "Manifest and provenance"), then apply the revise meaning above in scope — including the suitable-missing-audiences prompt (step 3a) after detect/catalog finds missing, new, or updated docs. Manifest has no audiences → run the full audience multi-select. `all` additionally asks the flow mode question and runs the full flow pipeline from its `--need flow` precheck onward (see `/docforge-revise flow` below), in scope with everything else and with the overlaps merged per the Ordering note above; `<area>` never does. |
+| `/docforge-revise flow` | Run `migrate_metadata.{py,js}` first, then the full flow pipeline (see below) |
 
 ### Bare `/docforge-revise` — metadata-only migration
 
@@ -432,28 +433,18 @@ detection or rediscovery, writes no documents, never starts the dashboard.
 
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
-2. Migration is unconditional (see [`validation.md`](validation.md)
-   "Manifest and provenance"): upgrade any manifest below 3.10 to 3.10 / provenance 2.1 —
-   moving each section-provenance document's inline
-   frontmatter into the folder sidecar
-   (`.docforge/provenance/<folder>.json`) and stripping it from the
-   markdown, so generated files become pure content; upgrade a 1.1
-   `.docforge/flow-index.json` to 1.2; backfill an absent scale record
-   with `layout: standard`, `decided_by: "migration"` (plus
-   `detected_layout` when detection disagrees — a legacy tree is never
-   silently folded to compact). The `--dry-run`
-   preview lists the moves before anything is written. The full version
-   list, seeded defaults, and legacy re-registration mechanics live in
-   `validation.md`, never here.
+2. Migration is unconditional — upgrade to 3.10 / provenance 2.1; see
+   [`validation.md`](validation.md) "Manifest and provenance" for the full
+   version list, sidecar moves, scale-record backfill, and legacy
+   re-registration mechanics; the `--dry-run` preview lists the moves
+   before anything is written.
 3. Manifest already current → report that nothing needed migrating and
    stop; optionally point at the scoped invocations (`/docforge-revise
    all`, `<area>`, `flow`) for a structural refresh.
 
 `--plan-only` runs only step 1 and never applies; `--auto-accept` and
 `--no-dashboard` have no effect on this path (there are no pauses and no
-dashboard). `migrate_metadata.{py,js}` is idempotent — re-running over an
-up-to-date manifest is a clean no-op (scripts and README:
-[`../runtime/manifest/README.md`](../runtime/manifest/README.md)).
+dashboard).
 
 #### Flags (same as `/docforge`)
 
@@ -464,7 +455,7 @@ effects only:
 | Flag | Effect on revise |
 |---|---|
 | `--plan-only` | Covers migrate, staleness sync, detect/catalog, the suitable-missing-audiences prompt, the flow gate when the scope re-harvests flows, and the structure update / dry-run tree. Stops before writing or re-grounding document bodies; the flow index and its main-standalone stubs are metadata and are still written |
-| `--auto-accept` | **Never waives the flow selection gate** — the user must still choose which flows to add, remove, or update (see `/docforge-revise flow`), and the unmanaged-doc archive and retirement moves stay separately approved |
+| `--auto-accept` | The flow selection gate stays mandatory and the unmanaged-doc archive + retirement moves stay separately approved — see [`flags.md`](../flags.md) |
 | `--no-dashboard` | No effect on a bare `/docforge-revise` — there is no dashboard on that path |
 
 Because migration re-registers legacy manifests the same way as the bare
@@ -498,18 +489,17 @@ keep-self-managed / archive triage first
 documents") and apply it with `manage_manifest.{py,js} unmanaged`, then
 update the doc wherever it now lives.
 
-1. **Always** run `migrate_metadata.{py,js}` first (schema + provenance
-   sidecars; see [`validation.md`](validation.md) "Manifest and
-   provenance") — unconditionally, even for a single-document update. An
-   already-current manifest reports a clean no-op.
+1. Run `migrate_metadata.{py,js}` first — see [`validation.md`](validation.md)
+   "Manifest and provenance" (unconditional, even for a single-document
+   update).
 2. Scan only that document — `check_staleness.{py,js}` with
    `--document <id|path> --sync-provenance --json` (canonical
    invocations: [`validation.md`](validation.md) "Manifest and
    provenance").
-3. Branch on the result:
+3. Branch on the result (verdict meanings:
+   [`validation.md`](validation.md) "Manifest and provenance"):
    - all `FRESH` or `COSMETIC` → report that recorded sources are
-     unchanged (a `COSMETIC` source differs only in
-     whitespace/line-endings or outside the cited range). Do not rewrite
+     unchanged. Do not rewrite
      unless the user also asked for wording edits unrelated to source
      drift, the document's structure / format / content deviates from
      the current template (step 1b) — then rewrite to the template — or
@@ -551,28 +541,25 @@ below. It is not a blob-only pass. New flow connections force re-ground
 of existing flow docs and big-picture surfaces even when their cited
 `git_blob` values are still `FRESH`. At `spine`, the pipeline still
 harvests but stops at the matrix render — no gate, no selection prompt
-(the tier rule in
-[`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
 "Flow pipeline").
 
-The **flow mode question** (`Re-analyze flows` / `Reuse existing flow
-analysis`) is answered in Turn 1 — see "Questions revise asks". The
-**flow selection gate** is mandatory: `--auto-accept` never
-waives it, the user must choose to proceed. Only the execution-mode
-pauses around the gate honor the flag.
+The **flow mode question** is answered in Turn 1 — see "Questions revise
+asks". The **flow selection gate** is mandatory ([`../flags.md`](../flags.md));
+only the execution-mode pauses around the gate honor the flag.
 
 Run the canonical pipeline — precheck → harvest/import → organize →
 analyze → selection gate → apply → write → write-back → render — exactly as
 [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
-"Flow pipeline" specifies. It owns every command and flag, the analysis
-depth rule, the prompt's contents and `--main-limit` budget, and the
-`update` promote/demote/decline mapping. Do not restate them here; do not
-reference its steps by number.
+"Flow pipeline" specifies (every command and flag, the analysis depth rule,
+the prompt's contents and `--main-limit` budget, the `update`
+promote/demote/decline mapping).
 
 Revise differs from a fresh start in five places, and only these:
 
-- **Migration first.** `migrate_metadata.{py,js}` (schema + provenance
-  sidecars) runs before the pipeline's precheck, as on every revise path.
+- **Migration first.** `migrate_metadata.{py,js}` runs before the
+  pipeline's precheck, as on every revise path
+  ([`validation.md`](validation.md) "Manifest and provenance").
 - **The flow-mode answer selects the harvest verb.** Re-analyze →
   `flow_index.{py,js} harvest`, a full re-harvest whose rows supersede
   every stored analysis. Reuse → `flow_index.{py,js} revise`, which

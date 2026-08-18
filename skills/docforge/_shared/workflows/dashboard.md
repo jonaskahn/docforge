@@ -37,9 +37,9 @@ any older 3.x shape, upgraded in place by `migrate_metadata.{py,js}`;
 the full version list and upgrade mechanics live in
 [`validation.md`](validation.md) "Manifest and
 provenance"). For an **older legacy manifest
-version** (1.1 `project_context` / `document_groups`, 2.0 flat `documents`
-with overlays, or any other pre-3.0 shape), behavior depends on whether the
-command writes:
+version** (any pre-3.0 shape, listed in
+[`validation.md`](validation.md) "Manifest and provenance"), behavior depends
+on whether the command writes:
 
 - **`start` / `export`** auto-migrate it instead of stopping to ask.
   `migrate_metadata.{py,js}` is idempotent and only ever touches
@@ -339,10 +339,8 @@ root** (a path with no `/`). Root-level documents (for example `README.md`,
 `CHANGELOG.md`, `CONTRIBUTING.md`, `AGENTS.md`, `SECURITY.md`) become pages
 under `/docs/root/<slug>` so `docs/` pages can link to them and resolve.
 Root files are only included when they carry docforge provenance (2.1): in
-the folder sidecar — or inline frontmatter in `markdown` storage mode — for
-section-provenance documents, and in the manifest for
-`provenance_mode: manifest` documents such as `AGENTS.md`, sourced per
-`project.provenance_storage` (see
+the folder sidecar for section-provenance documents, and in the manifest for
+`provenance_mode: manifest` documents such as `AGENTS.md` (see
 [`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)
 "Provenance storage"). `CLAUDE.local.md` is **always excluded**: it is
 gitignored, machine-local preferences, and must never become a shared page
