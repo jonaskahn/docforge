@@ -344,7 +344,12 @@ normal split/merge mechanics.
 
 Before any writing, revise (and fresh-start planning) displays the plan
 tree with a per-document action comment, so the user sees exactly what
-will happen:
+will happen. `scaffold_docs.{py,js} --dry-run --revise` (backed by
+`plan.document_action`) produces this **base** tree from status and
+provenance alone — it has no notion of *why* a document rewrites beyond
+that. The agent overlays a reason annotation onto that base action
+before display, so `rewrite (template)` below is already an agent-side
+overlay on the CLI's base tree, not CLI output:
 
 - `add` — not planned yet, or planned with no file (will be scaffolded).
 - `update` — file exists; changed sections will be re-ground.
@@ -524,11 +529,16 @@ update the doc wherever it now lives.
    is what makes an already-written, under-illustrated document gain the
    views it owes on the next revise.
 5. **Re-expand source links** — run `link_sources.{py,js} --write` for the
-   document (see [`writing.md`](writing.md)). Re-running re-pins every link
-   to the current commit and re-validates every path and range, so a
-   reference that a refactor invalidated surfaces here instead of 404ing
-   for a reader. A document whose sources are `FRESH` still gets this: the
-   commit moved even when the file did not.
+   document (see [`writing.md`](writing.md)). This expands only the
+   **unexpanded authoring form** of a link into a permalink pinned to the
+   current commit; it explicitly skips `https?://` links. Once a document
+   is written its links are already permalinks and this pass does not
+   re-examine or re-validate them — it is not a re-validation mode. A
+   document whose sources are `FRESH` still gets this, because a newly
+   written section can still carry unexpanded authoring-form links the
+   commit move needs to pin. (A real re-validation mode for
+   already-permalinked references is a runtime gap, tracked separately —
+   not built here.)
 6. Run mechanical lint, independent audit, and manifest status updates.
 
 Graph precheck still applies when the document's `requires` list demands
