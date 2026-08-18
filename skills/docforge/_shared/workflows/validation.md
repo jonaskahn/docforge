@@ -142,6 +142,17 @@ moved or deleted by the approved retirement step; a `retired` document
 carries no whole-tree-gate coverage expectations, exactly like `skipped`),
 and the whole-tree gate above exits zero.
 
+**A targeted revise** (a revise invocation carrying a stated task clause;
+see [`revision.md`](revision.md) "Revise objective") is complete under a
+narrower rule, because the gate above has no scope filter and would
+otherwise never exit zero on a tree with any pre-existing, out-of-task
+finding: every document the task wrote is `complete`, explicitly
+`skipped`, or `retired`, **and** the whole-tree gate's post-run findings
+introduce nothing absent from a baseline run of the same gate taken
+before writing. Pre-existing findings are reported, never blocking; a
+finding this run introduced always blocks it. A structural revise (no
+task clause) keeps the exit-zero requirement above unchanged.
+
 ## Dashboard auto-serve
 
 Starting the dashboard is a **required** part of run completion, not an

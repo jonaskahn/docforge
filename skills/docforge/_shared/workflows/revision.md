@@ -8,8 +8,10 @@ single-document update / refresh.
 ## What revise means
 
 **Revise** is a structural refresh of the plan and tree, not a blob-only
-touch-up. A revise run (all, area, or flow) applies every step below that
-falls in scope:
+touch-up. A revise run (all, area, or flow) applies every step the
+invocation opens. With no stated task clause that is every step below
+that falls in scope, unchanged from today; a stated task clause narrows
+this — see [Revise objective](#revise-objective) below:
 
 1. **Update obsolete documents** — sync provenance and re-ground every
    blocking section; `COSMETIC` never blocks. Verdicts are defined in
@@ -88,10 +90,12 @@ falls in scope:
    instruction, or contract that now requires a file and has no manifest
    entry is planned and written via [`writing.md`](writing.md). New craft
    instructions that demand additional files are in scope.
-3a. **Suitable missing audiences** — when step 2 or 3 finds missing, new,
-    or updated documents, collect their catalog `selection.audiences` and
+3a. **Suitable missing audiences** — when step 2 or 3 finds newly
+    **selected** documents, collect their catalog `selection.audiences` and
     prompt via [`intake.md`](intake.md) "Output audience" before writing;
-    never silent-add audiences.
+    never silent-add audiences. A targeted revise that only updates
+    already-selected documents (Revise objective) does not fire this
+    step — G5 only opens for newly selected types.
 4. **Update the big picture** — refresh owning indexes and overview docs
    affected by adds or rewires (e.g. `docs/README.md`, area READMEs,
    `docs/flows/README.md`, `system-overview` when selected) so tree and
@@ -116,15 +120,19 @@ falls in scope:
    approved and never runs under `--auto-accept`. Already-recorded paths
    are baseline facts: never re-asked, never added to the plan, scaffold,
    or manifest. The proposals join this revise's confirmation summary
-   (below).
+   (below). **A targeted revise (Revise objective) reports only the
+   count** of untriaged foreign files — G6 in that section's gate table —
+   and does not open the per-file triage; the count is a baseline
+   finding, never blocking (see Completion below).
 
-**Ordering for `/docforge-revise all`:** steps 1–7 run first (migration,
-staleness sync, template enforcement, detect/catalog, missing docs,
-suitable-missing-audiences, big picture, connections, unmanaged triage),
-then the flow pipeline with its mandatory gate (below), then the
-annotated plan tree and writing. The flow gate still precedes the first
-document write — the same write-start position the gate holds on a fresh
-run.
+**Ordering for `/docforge-revise all`, with no task clause:** steps 1–7
+run first (migration, staleness sync, template enforcement,
+detect/catalog, missing docs, suitable-missing-audiences, big picture,
+connections, unmanaged triage), then the flow pipeline with its mandatory
+gate (below), then the annotated plan tree and writing. The flow gate
+still precedes the first document write — the same write-start position
+the gate holds on a fresh run. A task clause narrows which of steps 1–7
+run — see [Revise objective](#revise-objective).
 
 The flow pipeline and the revise steps overlap at three points; on `all`
 each is performed **once**, by the step that owns it:
@@ -169,6 +177,267 @@ The newest template decides the result. A rewritten document that still
 carries the old structure, format, or content has not been rewritten — fix
 it before moving on.
 
+## Revise objective
+
+Scope (below) answers *where* a revise works. A revise invocation may
+also carry a **task clause** — a stated purpose that answers *what work*
+— and **a task clause closes every gate it does not name.** This section
+defines task clauses, the gates they close or leave open, and the
+invariants no task clause ever waives.
+
+### Recognizing a task clause
+
+A revise request carries a task clause when it names an operation on
+**document content** and does not also name a change to the project's
+**documented scope**.
+
+| Names… | Reads as | Examples |
+|---|---|---|
+| An operation on document content | **Task clause** → targeted revise | "add more diagrams", "fix the broken links", "bring the docs to the current template", "re-ground the stale sections", "tighten the wording in architecture" |
+| A change to documented scope | **No task clause** → structural revise (unchanged from today) | A tier, a technology, layout, audiences, target readers, which flows are documented, whole document types, "re-scan", "re-detect", "revise everything" |
+
+- **Both present** → structural revise (the superset); the named task
+  runs inside it.
+- **Neither** (a bare scope argument, e.g. `/docforge-revise all`) →
+  structural, unchanged from today.
+- **Ambiguous** → ask **one** single-select in Turn 1 — *"Just `<task>`,
+  or a full structural refresh?"* — never the full question pack.
+
+Scope and a task clause **compose**; neither overrides the other:
+`/docforge-revise flow "fix the links"` is link work on flow documents
+only; `/docforge-revise architecture "add diagrams"` is illustration
+work in the architecture group only. Of the tools a selector below uses,
+only `scaffold_docs --dry-run` takes `--group`; `check_staleness` and
+`link_sources` do not — so the area filter is applied **agent-side**,
+after the selector runs tree-wide. State that filtering step explicitly
+when narrating a scoped targeted revise; unstated agent-side filtering
+is exactly where scope bugs breed.
+
+### The six gates a task clause can close
+
+| Gate | Cost to the user | Opens when |
+|---|---|---|
+| **G1 Profile discovery** — `--emit-gate-pack`, the discovery gate, the Delivers / Runs on / Built with / Behaviors controls | 4 controls + a reasoning pass | No task clause, **or** the task names project identity, **or** the user asks to re-detect |
+| **G2 Scale / layout** — re-derivation + the Layout control | 1 control | Same as G1 |
+| **G3 Tier** — the Tier control | 1 control | The invocation names a tier, **or** the task asks for more/less coverage, **or** G1 opened and found a tier-unlocking profile |
+| **G4 Flow pipeline** — flow-mode question, harvest, selection gate | 1 control + the mandatory gate | Scope is `flow`/`all` with no task clause, **or** the task changes **which** flows are documented |
+| **G5 Output audience** — the suitable-missing-audience control | 1 control | Newly **selected** documents require audiences the manifest lacks |
+| **G6 Unmanaged-document triage** — keep/archive, once per foreign `.md` | 1 control **per file** | No task clause. A targeted run reports the count only |
+
+**G4's sub-rule.** The gate opens when the task changes *which* flows are
+documented ("we have new flows", "re-analyze flows"). It stays closed
+when the task changes *how existing flow documents read* (diagrams,
+wording, template) — that is a writing change, not a selection change.
+G4 closed is not a waiver of the mandatory flow selection gate ("Flow
+selection is a mandatory gate" above) — that gate is mandatory *whenever
+the pipeline runs*, and a targeted revise never runs the pipeline, so it
+changes no flow selection and there is nothing to gate away. G4 closed
+also suppresses flow rows from the plan tree: a targeted revise never
+reaches the point where the flow index and its stubs are (re)written, so
+the tree states *"flow index not re-derived on this run"* rather than
+silently showing counts from the stored index. A targeted illustration
+revise that does touch `docs/flows/*.md` (flow types declare
+sequence-diagram views) still runs the ordinary flow-index write-back
+after that document passes its audit
+([`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
+"Selection gate and write-back") — that write-back belongs to *writing a
+flow document*, not to the pipeline, so it still runs with G4 closed.
+
+A finding that is **not** material by the re-opening table further below
+is reported, and the task finishes; widening is offered as a next step,
+never applied. Never stay quiet about either case.
+
+### Detection still runs — as an advisory, never a control
+
+Targeted mode runs `detect_profiles --json` **plain** — no
+`--emit-gate-pack`, no discovery gate (its promote/demote judgment has no
+control to feed without the gate pack). The plain `--json` branch still
+emits `detections[]` carrying `confidence` and `match_strength`, so
+detection is never skipped, only its consumer changes:
+
+- The gate pack's `scale` field (what [`intake.md`](intake.md)
+  "Discovery brief" reads for layout re-derivation) exists only on the
+  `--emit-gate-pack` branch — so skipping the gate pack closes G2
+  automatically rather than by a separate rule. The discovery brief's
+  scale line falls back to reporting the manifest's own `project.scale`
+  as a baseline fact.
+- The weak-cue peer amplification (offering `persistence` / `ai-ml` as
+  peers for a shared path noun) lives only in `--emit-gate-pack` and
+  never fires in targeted mode either.
+
+The output becomes one advisory line in the discovery brief — owned by
+[`intake.md`](intake.md) "Discovery brief", which this links to rather
+than restating:
+
+```
+Detection notes (not applied): react, kubernetes-helm show strong evidence but
+are unselected. Ask for a structural revise to act on these.
+```
+
+Use **strong evidence** (`match_strength`), never "confirmed" — detection
+and the gate only ever propose profiles — and drop "gate-promoted"
+wording in targeted mode, since that branch is unreachable without the
+gate pack.
+
+### How the document set is decided
+
+Two kinds of task clause decide the written set differently, and both
+are stated honestly rather than as one uniform mechanism:
+
+**Computed-set tasks** — a runtime finding names the documents:
+
+| Task | Selector | Verified basis |
+|---|---|---|
+| staleness | blocking `check_staleness` verdicts (`STALE`/`MISSING`/`NO_BLOB`/`UNTRACKED`) | [`validation.md`](validation.md) "Manifest and provenance" |
+| illustration *(gap-filling)* | documents missing a declared view, matched by form | `scaffold_docs --audit`'s `illustration coverage` finding |
+| internal links | `scaffold_docs --audit`'s `broken links` finding + `dashboard scan`'s `broken_link` | [`dashboard.md`](dashboard.md) |
+| connections | `section cohesion`, `readme child coverage` | [`validation.md`](validation.md) "Whole-tree gate" |
+
+**Named-set tasks** — no runtime finding can express the request, so the
+user's words name the set (an area, or specific documents). If neither a
+selector nor a name resolves it, ask one question: **which documents?**
+
+| Task | Why it cannot be computed |
+|---|---|
+| illustration *(beyond declared views)* | Coverage is **binary**: a document satisfying every declared view is not selectable, and [`../references/illustration.md`](../references/illustration.md) states there is deliberately **no cap** on illustration count — so "more" has no runtime meaning |
+| prose / wording / tone | No finding exists |
+| template conformance | Partly computable — see below |
+
+**The illustration task has two branches, and the run picks by what it
+finds:**
+
+1. **Gap-filling (mechanical).** `scaffold_docs --audit` reports missing
+   declared views → those documents, those views. Almost certainly the
+   reported case.
+2. **Beyond-declared (judgment).** The set comes from the named scope;
+   apply [`illustration.md`](../references/illustration.md)'s relevance
+   test per document — *which reader question does this answer that no
+   other view here answers?* The plan tree names the proposed view and
+   its reader question per document before writing, so the user approves
+   actual diagrams rather than a vague promise.
+
+**Template conformance is a bounded agent pass, not a selector.**
+Mechanical pre-filter = `contract_revision` drift (step 1a) +
+`lint_document --require-heading` failures against `query_catalog
+--route`. Everything else step 1b demands (section granularity,
+tables/code blocks, typed-token discipline, keep-out boundaries) is
+judgment — there is no stored template hash to detect "the template
+itself changed" (the manifest keeps `scaffold_template`, a path). Apply
+the mechanical pre-filter, then read only the pre-filtered set; that
+bounds the expensive pass instead of pretending to eliminate it.
+
+### Reconcile still runs, with no dimension flags
+
+`illustration_views` is hydrated onto manifest entries only by
+`reconcile`'s `sync_dominant_forms`
+([`../runtime/manifest/README.md`](../runtime/manifest/README.md)); so
+the illustration selector needs a `reconcile` to have run first —
+**targeted mode runs a no-flag `reconcile`.** Every omitted dimension
+flag keeps its stored value ("Applying the answers to the manifest"
+above), so first-time hydration of `illustration_views` never demotes a
+document, and any demotion that does occur reflects real catalog drift a
+document genuinely owes: a document written when it owed one diagram is
+not complete once it owes three.
+
+Two consequences:
+
+- Reconcile may add newly-applicable documents as `planned`. Those are
+  **reported, never written** — a targeted plan tree contains only
+  selector-picked or user-named documents, and nothing is written that
+  is not in the tree.
+- `reconcile` has **no `--dry-run`** (only `unmanaged` and `retire` do),
+  so this is a real manifest write. Say so in the confirmation, before
+  running it.
+
+### A targeted revise asks at most two things
+
+1. **Execution mode** — skipped when `--plan-only` / `--auto-accept` was
+   given, exactly as today.
+2. **Confirmation of the annotated plan tree** — see "Annotated plan
+   tree" above. `update (illustration)`, `update (sources)`, `update
+   (links)`, and `update (connections)` extend that tree's existing
+   agent-overlay convention for a targeted run and need no runtime
+   change.
+
+Plus, only when the set cannot be resolved, **one** "which documents?"
+question (Named-set tasks above).
+
+### The objective is echoed back and contestable
+
+A targeted revise must not become a *new* silent default. The discovery
+brief opens with the classification as a fact the user can overturn at
+the confirmation point, not a decision made for them:
+
+```
+Objective: add illustrations (targeted). Profiles, tier, layout, audiences, and
+the flow index are baseline facts on this run — ask for a full structural
+refresh to reopen them.
+```
+
+The run still stops, shows one confirmation, and waits — what narrows is
+which controls appear, and that narrowing is stated, not hidden.
+
+### When a closed gate re-opens
+
+A closed gate is not permanent: it **re-opens when the evidence makes it
+material to the task at hand**, and then it asks in line rather than
+filing a footnote the user reads after the work is done.
+
+1. **It re-opens as ONE scoped question, never the full pack.** Reopening
+   G1 asks about the one profile that matters — not all four dimensions.
+2. **It states why.** *"`kafka-streams` shows strong evidence and would
+   add two document types that declare their own diagrams — the
+   illustration work would be done against a stale document set. Include
+   it?"*
+3. **It asks; it never acts.** Declining is a valid answer that lets the
+   task proceed on the original, narrower set.
+
+| Gate | Re-opens when |
+|---|---|
+| **G1** | A strong-evidence unselected profile would **change the task's document set** — add types, or change the views/contracts of types the task touches |
+| **G2** | Layout drift would change the **target paths the task writes to** (compact↔standard moves `docs/x/README.md` ↔ `docs/x.md`) |
+| **G3** | The task asks for coverage the current tier does not include |
+| **G4** | The task names flow documents **and** the flow index has missing candidates — the task would otherwise write against a stale flow set |
+| **G5** | The task's document set includes a type whose catalog audiences the manifest lacks |
+| **G6** | A foreign file collides with the task's document set (same path, or the same topic the task is about to write) |
+
+A finding that is not material by this table is **reported, and the task
+finishes** — no silent escalation, and no silent narrowing either.
+Widening is always offered as a next step, never applied.
+
+### Precondition: a targeted revise needs a completed baseline
+
+[`validation.md`](validation.md) "Completion criteria" requires every
+selected document to be `complete` / `skipped` / `retired` before a run
+is complete, and adopted legacy documents are never `complete` until the
+revision path re-grounds, lints, and audits them. A targeted revise on a
+never-completed tree touches only the handful of documents the task
+names and leaves the rest incomplete — and the base plan tree
+(`plan.document_action`) annotates every one of those `rewrite`, so the
+tree the user confirms would be dominated by documents the task never
+asked to touch.
+
+When the baseline shows the tree was never completed (any document still
+`planned` / `in_progress` / `generated`), say so and offer the choice:
+(a) run the structural revise first (recommended), or (b) proceed
+targeted anyway, accepting that the run ends with the tree still
+incomplete. The user's call, stated, never decided for them.
+
+### Invariants a task clause never closes
+
+1. `migrate_metadata` (unconditional, every path).
+2. Provenance stamping / re-stamping for every section touched.
+3. Lint + the independent audit for every document written.
+4. The whole-tree gate is **run**, baseline and post-run (see Completion
+   below).
+5. Dashboard auto-serve, including the compact-layout offer and the
+   blocked-findings contract.
+6. The untrusted-repository-data boundary.
+7. Plan-tree confirmation before writing.
+8. Separately-approved retirement / unmanaged-archive **moves** — never
+   under `--auto-accept`.
+9. Flow-index write-back for any flow document written.
+
 ## Questions revise asks
 
 Revise always **stops and asks first** — never proceed on silent defaults.
@@ -185,10 +454,10 @@ current schema before it can be read out. Nothing else — no detection, no
 reconcile, no scaffold, no write — precedes the question set.
 
 Revise uses the same two-turn split as a fresh start
-([`intake.md`](intake.md) "Turn structure"): **Turn 1** asks Scope, Layout,
-and Flow mode, **Turn 2** asks Tier, Profiles, Output audience, and
-Execution mode. Never present layout in the same turn as tier, profiles, audiences,
-or execution mode; open Turn 2 only after Turn 1 is answered.
+([`intake.md`](intake.md) "Turn structure" owns the exact per-turn
+contents and pack rules). **A task clause changes which questions each
+turn actually contains** — see [Revise objective](#revise-objective)
+below — never the two-turn shape itself.
 
 **Scope** (Turn 1) — `flow`, `<area>`, or `all` (pre-checked from
 invocation; asked only for natural-language revise requests, never for a bare `/docforge-revise`).
@@ -224,7 +493,9 @@ there and apply here unchanged:
 
 - **Tier-naming.** `/docforge-revise all`, or any invocation that names a
   tier, always shows the tier control and the selection-change preview
-  below, even with no delta.
+  below, even with no delta — unless a task clause is present and does
+  not itself ask for more/less coverage, in which case G3 stays closed
+  (see [Revise objective](#revise-objective)).
 - **Execution mode.** Skipped only when the invocation already supplies
   `--plan-only` or `--auto-accept`.
 
@@ -466,7 +737,12 @@ effects only:
 Because migration re-registers legacy manifests the same way as the bare
 path ([`validation.md`](validation.md) "Manifest and provenance"), a
 revise run over an old manifest re-grounds and audits the adopted
-documents like any other written tree (steps 1 / 1a / 1b above).
+documents like any other written tree (steps 1 / 1a / 1b above). A
+task-clause revise over a manifest whose adopted documents never
+completed hits the baseline precondition in [Revise
+objective](#revise-objective) — offer the structural-revise-first choice
+rather than running the task against a tree still full of
+`generated`/`in_progress` entries.
 
 The staleness sync runs `check_staleness.{py,js}` — canonical invocations
 and verdict meanings in [`validation.md`](validation.md) "Manifest and
@@ -546,8 +822,11 @@ it.
 
 ## `/docforge-revise flow`
 
-Natural-language **revise flow** always runs the **full** flow pipeline
-below. It is not a blob-only pass. New flow connections force re-ground
+Natural-language **revise flow**, with no task clause, always runs the
+**full** flow pipeline below. It is not a blob-only pass. A task clause
+that changes only how existing flow documents read, not which flows are
+documented, keeps G4 closed instead ([Revise objective](#revise-objective)
+"G4's sub-rule") and never reaches this pipeline. New flow connections force re-ground
 of existing flow docs and big-picture surfaces even when their cited
 `git_blob` values are still `FRESH`. At `spine`, the pipeline still
 harvests but stops at the matrix render — no gate, no selection prompt
@@ -613,3 +892,30 @@ After the last document in scope passes its independent audit, run the
 whole-tree gate and the dashboard auto-serve step exactly as a fresh-start
 run does ([`validation.md`](validation.md) "Whole-tree gate" and
 "Dashboard auto-serve"), including the compact-layout offer exception.
+
+**A targeted revise ([Revise objective](#revise-objective)) completes on
+a baseline-diffed gate, not exit zero.** `scaffold_docs --audit` has no
+scope filter — it returns nonzero for any defect anywhere — so a run that
+deliberately leaves pre-existing findings outside its task could
+otherwise never reach "complete". Run the audit before writing
+(baseline) and again after writing: a targeted revise is complete when
+every document it wrote passes lint and its independent audit, and the
+post-run audit introduces **no finding absent from the baseline**.
+Baseline findings are reported with the scope that would fix them; they
+never block a targeted run. A finding this run introduced always blocks
+it. `scaffold_docs --audit` prints findings grouped by category with
+each group sorted, so a plain text diff of the two runs is the
+introduced-findings set — no JSON mode needed. This absorbs the G6
+question too: an untriaged foreign doc lands in the `unexpected`
+finding, a **baseline** finding, so it is reported, never blocking. A
+structural run keeps the existing exit-zero requirement unchanged.
+
+**Dashboard completion follows the existing blocked-findings contract.**
+Any blocking finding (`broken_link`, `route_plan`, `invalid_mermaid`)
+stops `dashboard start` before build ([`dashboard.md`](dashboard.md)
+"Scan: you should revise again"). No new rule is needed: present the
+full findings list, tell the user they should revise again, recommend
+the scoped revise, and ask whether to run it now — exactly as that
+section already prescribes. A targeted run whose dashboard is blocked by
+a **baseline** finding still satisfies completion via that contract; the
+dashboard offer/started-URL requirement applies unchanged.

@@ -36,8 +36,9 @@ metadata only (no scope question, no writing).
 | *(none)* | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (dry-run preview first, apply only when needed); no scope question, no detection, no writing, no dashboard |
 | `flow` | Full flow pipeline — flow mode question (re-analyze vs reuse) → harvest → organize → analyze → **mandatory flow selection gate** (add/remove/update, never auto-accepted) → write → summary write-back |
 | `<area>` | Scoped revise of one catalog group — `root`, `product`, `architecture`, `engineering`, `operations`, `reference`, `security`, `contributing`, `records`, `portfolio`, `agent-context`, plus aliases (`arch`, `ops`, `ref`, `sec`, `adr`, `agents`, …), listed by `query_catalog --groups`. An unknown area is an error, never a full-tree fallback. `flow`/`flows` is reserved for the flow pipeline and is not an area. |
-| `all` | Full-tree revise, including the flow mode question and the flow selection gate |
-| `--plan-only` | Revise analysis only (migrate, staleness, detect/catalog, dry-run tree); no body writes |
+| `all` | Full-tree revise, including the flow mode question and the flow selection gate — unless the invocation also states a task clause (e.g. `all "add more diagrams"`), which narrows the run to a targeted revise and closes every gate the task does not name |
+| *(a stated task clause)* | Targeted revise: a task clause names an operation on document content ("add more diagrams", "fix the broken links") rather than a change to documented scope, and closes every gate it does not name — profiles, tier, layout, audiences, and the flow index stay baseline facts unless the task's own evidence makes one of them material. See [`workflows/revision.md`](workflows/revision.md) "Revise objective" |
+| `--plan-only` | Revise analysis only (migrate, staleness, detect/catalog, dry-run tree) — narrower under a task clause, since detect/catalog and the audience prompt only run when the task's gates are actually open; no body writes |
 | `--auto-accept` | Same as `/docforge` — display, then continue without routine pauses; side-effect gates stay |
 | `--no-dashboard` | Skip the automatic dashboard build/serve at run completion — suppresses both the forced serve and, in compact layout, the dashboard offer |
 | `--help` | Show this reference and stop |

@@ -63,26 +63,18 @@ first; see [`../docforge/_shared/workflows/tools.md`](../docforge/_shared/workfl
 | `/docforge-revise flow` | Full flow pipeline |
 | `/docforge-revise <area>` | Scoped revise of one catalog group (`architecture`, `reference`, `agents`, …; see `--help`) |
 | `/docforge-revise all` | Full-tree revise |
+| `/docforge-revise <scope> "<task>"` | Targeted revise: a stated task clause ("add more diagrams", "fix the broken links") closes every gate it does not name, instead of the full structural pack |
 
 A bare `/docforge-revise` asks nothing and writes nothing — it only brings
 the manifest metadata up to date (see
 [`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md),
 Bare `/docforge-revise`). Before any migration, detection, or writing, every
-scoped revise stops and asks first. The
-question pack and stop-and-ask mechanics are owned by
+scoped revise stops and asks first — the full two-turn question pack, its
+delta-aware scaling, and how a stated task clause narrows it are owned by
 [`../docforge/_shared/workflows/intake.md`](../docforge/_shared/workflows/intake.md)
 and
-[`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md):
-two turns, then one confirmation. **Turn 1** asks Scope and Layout; **Turn 2**
-asks Tier, Profiles, Output audience, and Execution mode, and opens only after
-Turn 1 is answered. Layout is never presented in the same turn as tier,
-profiles, audiences, or execution mode. Each turn is scaled to what is
-actually unresolved or changed — each
-dimension shows either its persisted value as an unchanged baseline fact, or,
-only when it actually has a delta or a requested change, a
-`Change to <layout>` / `Change to <tier>` /
-`Add` / `Remove` control. Layout leads the change controls when it is asked.
-Never proceed on silent defaults.
+[`../docforge/_shared/workflows/revision.md`](../docforge/_shared/workflows/revision.md)
+"Revise objective". Never proceed on silent defaults.
 
 When the revise finds foreign docs (`.md` / `.mdx` under `docs/` with no
 manifest entry), the same confirmation adds the **unmanaged-document

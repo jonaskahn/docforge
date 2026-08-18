@@ -520,6 +520,142 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("skip their controls; show one confirmation", intake)
         self.assertNotIn("exactly like a fresh start", intake)
 
+    def test_weak_candidates_never_open_a_revise_control(self) -> None:
+        """A weak-cues-only detection must never reopen a settled profile
+        dimension on revise -- intake.md itself forbids confirming a
+        profile on weak cues alone, and the delta check used to treat any
+        unselected candidate, weak or strong, as a delta."""
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        prose = compact_whitespace(intake)
+        self.assertIn("**Weak-only candidates never open a revise control**", intake)
+        self.assertIn("strong evidence", prose)
+        self.assertIn("never confirm a profile on weak cues alone", prose)
+        # The fresh-start weak-candidate framing (a different rule, for a
+        # different turn) must survive unchanged.
+        self.assertIn('keep the "these are weak candidates"', intake)
+        self.assertIn("only candidate —", intake)
+
+    def test_revise_objective_narrows_the_question_pack(self) -> None:
+        """A stated task clause closes every gate it does not name --
+        revision.md's `Revise objective` section owns the recognition
+        test, the composition rule, and the six-gate table."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        prose = compact_whitespace(revision)
+        self.assertIn("## Revise objective", revision)
+        self.assertIn(
+            "a task clause closes every gate it does not name", prose
+        )
+        self.assertIn("### Recognizing a task clause", revision)
+        self.assertIn("**Task clause** → targeted revise", revision)
+        self.assertIn("**No task clause** → structural revise", revision)
+        self.assertIn(
+            "Scope and a task clause **compose**; neither overrides the other",
+            prose,
+        )
+        self.assertIn("agent-side", prose)
+        self.assertIn("### The six gates a task clause can close", revision)
+        for gate in ("G1", "G2", "G3", "G4", "G5", "G6"):
+            self.assertIn(f"**{gate}", revision)
+        self.assertIn("### Detection still runs — as an advisory, never a control", revision)
+        self.assertIn("Detection notes (not applied)", revision)
+        self.assertIn("### How the document set is decided", revision)
+        self.assertIn("**Computed-set tasks**", revision)
+        self.assertIn("**Named-set tasks**", revision)
+        self.assertIn("no cap", prose)
+        self.assertIn("### Reconcile still runs, with no dimension flags", revision)
+        self.assertIn("has **no `--dry-run`**", revision)
+        intake = (SHARED_ROOT / "workflows" / "intake.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "A stated task clause closes every gate it does not name",
+            compact_whitespace(intake),
+        )
+
+    def test_flow_selection_gate_is_not_waived_by_a_task_clause(self) -> None:
+        """G4 closed is not a waiver of the mandatory flow selection gate --
+        a targeted revise simply never reaches the pipeline that gate
+        belongs to, and never silently shows stale flow counts instead."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        prose = compact_whitespace(revision)
+        self.assertIn("G4's sub-rule", revision)
+        self.assertIn(
+            "is not a waiver of the mandatory flow selection gate", prose
+        )
+        self.assertIn("flow index not re-derived on this run", prose)
+        self.assertIn("belongs to *writing a flow document*", prose)
+        flags = (SHARED_ROOT / "flags.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "never reaches the pipeline in the first place, so there is no gate there to waive",
+            flags,
+        )
+
+    def test_closed_gates_reopen_on_material_evidence(self) -> None:
+        """The narrowing must not become a new rigidity: a closed gate
+        re-opens as one scoped question, never the full pack, when the
+        evidence makes it material to the task at hand."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        prose = compact_whitespace(revision)
+        self.assertIn("### When a closed gate re-opens", revision)
+        self.assertIn(
+            "re-opens as ONE scoped question, never the full pack", prose
+        )
+        self.assertIn("### Precondition: a targeted revise needs a completed baseline", revision)
+        self.assertIn("never completed", prose)
+        self.assertIn("### Invariants a task clause never closes", revision)
+        for invariant in (
+            "migrate_metadata",
+            "independent audit",
+            "whole-tree gate",
+            "Dashboard auto-serve",
+            "untrusted-repository-data",
+            "Plan-tree confirmation",
+            "Flow-index write-back",
+        ):
+            self.assertIn(invariant, revision)
+
+    def test_targeted_revise_preserves_invariants(self) -> None:
+        """A targeted revise never waives migration, provenance, lint/audit,
+        the whole-tree gate, dashboard auto-serve, or approved-retirement
+        gating -- only the question pack narrows."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        prose = compact_whitespace(revision)
+        self.assertIn(
+            "never under `--auto-accept`", prose
+        )
+        self.assertIn("Separately-approved retirement", revision)
+        self.assertIn(
+            "targeted mode runs a no-flag `reconcile`", prose
+        )
+        self.assertIn("never demotes a document", prose)
+
+    def test_targeted_revise_completion_uses_a_baseline_gate(self) -> None:
+        """scaffold_docs --audit has no scope filter, so a targeted revise
+        that deliberately leaves pre-existing findings must complete on a
+        baseline-diffed gate rather than exit zero -- and the dashboard's
+        existing blocked-findings contract absorbs the rest."""
+        revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
+        prose = compact_whitespace(revision)
+        self.assertIn(
+            "completes on a baseline-diffed gate, not exit zero", prose
+        )
+        self.assertIn("no scope filter", prose)
+        self.assertIn(
+            "no finding absent from the baseline", prose
+        )
+        self.assertIn("A finding this run introduced always blocks it.", prose)
+        self.assertIn(
+            "keeps the existing exit-zero requirement unchanged", prose
+        )
+        self.assertIn(
+            "follows the existing blocked-findings contract", prose
+        )
+        validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
+        vprose = compact_whitespace(validation)
+        self.assertIn("**A targeted revise**", validation)
+        self.assertIn("no scope filter", vprose)
+        self.assertIn(
+            "introduce nothing absent from a baseline run", vprose
+        )
+
     def test_planning_workflow_never_writes_against_stale_tree(self) -> None:
         planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
         self.assertIn("undisplayed manifest revision", planning)

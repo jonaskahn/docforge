@@ -88,6 +88,21 @@ Present after safe discovery (and the gate when `needs_gate`),
   layout"). small = <50 source files; dep breadth 40+ or flow breadth
   10+ indexed flow candidates → medium. Many tracked config/docs files,
   little source → still small (file-count signal, not coverage judgment).
+  A targeted revise runs detection without the gate pack
+  ([`revision.md`](revision.md) "Revise objective"), so this field does
+  not exist that run — report the manifest's own `project.scale` instead,
+  as a baseline fact.
+- **Detection notes (not applied), targeted revise only.** When a
+  targeted revise's plain `detect_profiles --json` surfaces a
+  strong-evidence candidate not in `project.profiles`, name it here as an
+  advisory the user can act on by name — never "confirmed", since
+  detection only ever proposes:
+  ```
+  Detection notes (not applied): react, kubernetes-helm show strong evidence but
+  are unselected. Ask for a structural revise to act on these.
+  ```
+  Drop "gate-promoted" wording here: that branch is unreachable without
+  the gate pack a targeted revise does not run.
 - Existing documentation note when `docs/` (or equivalent) exists, with
   brief evidence (API schema, web framework manifest, library package
   manifest, pipeline configuration, infrastructure files). Foreign
@@ -380,9 +395,13 @@ baseline facts at the top of the pack, never as controls.
    - **Any revise that rediscovers docs** (`/docforge-revise all`,
      `/docforge-revise <area>`, `/docforge-revise flow`, or
      natural-language revise detecting missing / updated / new
-     documents): after analysis, compute **suitable missing audiences**
-     — catalog `selection.audiences` required by newly selected,
-     missing, or updated documents not already in the manifest. Show
+     documents, **with no task clause**): after analysis, compute
+     **suitable missing audiences** — catalog `selection.audiences`
+     required by newly selected, missing, or updated documents not
+     already in the manifest. A targeted revise ([`revision.md`](revision.md)
+     "Revise objective", gate G5) narrows this to audiences required by
+     documents newly selected inside the task's own set — never the
+     whole tree's delta. Show
      current manifest audiences separately as the baseline. Mark
      suitable-missing and brief-evidenced audiences as recommended `Add`
      actions with a one-line reason (which new/missing doc types they
@@ -435,6 +454,11 @@ baseline facts at the top of the pack, never as controls.
 
 ### Revise: which dimensions each turn actually asks
 
+A stated task clause closes every gate it does not name — the exact gate
+table, and how a task clause is recognized, is owned by
+[`revision.md`](revision.md) "Revise objective"; everything below is the
+no-task-clause (structural) behavior that stays unchanged.
+
 For `/docforge-revise flow` / `<area>` / `all`, or any revise that
 rediscovers docs: stop and ask before any scope decision, detection, or
 writing (the idempotent `migrate_metadata` run precedes the brief — see
@@ -465,7 +489,9 @@ carries Scope, Layout, and Flow mode; Turn 2 carries the rest.
   "Annotated plan tree") — even with no delta — so a tier-naming run can
   never change which documents belong silently. `<area>` and `flow`
   keep the delta-aware behavior; a bare `/docforge-revise` still asks
-  nothing.
+  nothing. A task clause that does not itself name a tier or ask for
+  more/less coverage keeps this gate (G3) closed even on `all`
+  ([`revision.md`](revision.md) "Revise objective").
 - **Profiles** (Turn 2 — Delivers / Runs on / Built with / Behaviors):
   asked only for dimensions with a delta — a fresh detection with
   **strong evidence** (or, when the gate ran, a gate-promoted candidate)
