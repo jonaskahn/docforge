@@ -8,9 +8,9 @@ do — ship, verify, or roll back.}}
 ```mermaid
 %% Which infrastructure node runs which block, per environment. Nodes are
 %% infrastructure; labels name the block that runs on them.
-accTitle: Deployment view for {{environment}}
-accDescr: {{One sentence: which nodes exist and which deployable block runs on each.}}
 flowchart LR
+  accTitle:Deployment view for {{environment}}
+  accDescr: {{One sentence: which nodes exist and which deployable block runs on each.}}
   Registry["{{artifact source}}"] -->|"{{pulled by}}"| Node["{{compute node}} · {{runs: {{block}}}}"]
   Node -->|"{{connects over}}"| Managed["{{managed service}}"]
 ```

@@ -57,9 +57,9 @@ neither depends back. A state transition that needs an HTTP concept is a signal
 the transition belongs in the API, not in the domain.
 
 ```mermaid
-accTitle: Component map for the expense API
-accDescr: The request handler authorizes through the access policy, then uses the receipt store adapter to write the object and the row.
 flowchart LR
+  accTitle:Component map for the expense API
+  accDescr: The request handler authorizes through the access policy, then uses the receipt store adapter to write the object and the row.
   Handler["Request handler"] -->|"authorizes via"| Policy["Access policy"]
   Handler -->|"writes through"| ReceiptStore["Receipt store adapter"]
   ReceiptStore -->|"puts object in"| Bucket["Object bucket"]
@@ -144,9 +144,9 @@ state behind. It succeeds by leaving an image with no row — recoverable and
 cheap — rather than a row with no image.
 
 ```mermaid
-accTitle: Runtime scenario — receipt write failing after the object is stored
-accDescr: The handler calls the store adapter, which puts the object and then writes the row; on a database failure the adapter raises and the object is left for lifecycle collection.
 sequenceDiagram
+  accTitle:Runtime scenario — receipt write failing after the object is stored
+  accDescr: The handler calls the store adapter, which puts the object and then writes the row; on a database failure the adapter raises and the object is left for lifecycle collection.
   participant Handler as Request handler
   participant Adapter as Receipt store adapter
   participant Bucket as Object bucket
@@ -185,9 +185,9 @@ item carries its own amount rather than referencing a catalog, so a change to
 expense categories cannot alter an already-approved total.
 
 ```mermaid
-accTitle: Durable model for receipts and reports
-accDescr: An organization owns many reports, a report collects many receipts, and a receipt extracts to many line items.
 erDiagram
+  accTitle:Durable model for receipts and reports
+  accDescr: An organization owns many reports, a report collects many receipts, and a receipt extracts to many line items.
   ORGANIZATION ||--o{ REPORT : "owns"
   REPORT ||--o{ RECEIPT : "collects"
   RECEIPT ||--o{ LINE_ITEM : "extracts to"

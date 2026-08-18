@@ -24,9 +24,9 @@ neighbours and the contracts between them, not the internals.}}
 
 ```mermaid
 %% C4 Context. Keep this view outside-in: neighbors only, no internals.
-accTitle: System context diagram for {{this system}}
-accDescr: {{One sentence naming each neighbor and what crosses the boundary.}}
 flowchart LR
+  accTitle:   System context diagram for {{this system}}
+  accDescr: {{One sentence naming each neighbor and what crosses the boundary.}}
   Upstream["{{actor / upstream}}"] -->|"{{active verb · protocol}}"| System["{{this system}}"]
   System -->|"{{active verb · protocol}}"| Datastore["{{datastore / downstream}}"]
   System -->|"{{active verb · protocol}}"| External["{{external service}}"]
@@ -66,9 +66,9 @@ Both earn their place, and neither substitutes for the other.
 ```mermaid
 %% C4 Container. Every block named in the table above appears here exactly once;
 %% never mix in a context-level neighbor or a component-level internal.
-accTitle: Container diagram for {{this system}}
-accDescr: {{One sentence: which deployable blocks exist and how they communicate.}}
 flowchart LR
+  accTitle:Container diagram for {{this system}}
+  accDescr: {{One sentence: which deployable blocks exist and how they communicate.}}
   Entry["{{deployable block}} · {{technology}}"] -->|"{{active verb · protocol}}"| Worker["{{deployable block}} · {{technology}}"]
   Worker -->|"{{active verb · protocol}}"| Store["{{datastore}} · {{technology}}"]
 ```

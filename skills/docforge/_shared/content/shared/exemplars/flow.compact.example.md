@@ -73,9 +73,9 @@ retries three times with exponential backoff, then dead-letters; a receipt still
 `pending` after 30 minutes is swept by the reconciliation job.
 
 ```mermaid
-accTitle: Submitting an expense receipt
-accDescr: The employee posts an image to the expense API, which stores the object, records the receipt and enqueues extraction; the worker reads the object, calls OCR and writes line items.
 sequenceDiagram
+  accTitle:Submitting an expense receipt
+  accDescr: The employee posts an image to the expense API, which stores the object, records the receipt and enqueues extraction; the worker reads the object, calls OCR and writes line items.
   participant Employee
   participant ExpenseAPI as Expense API
   participant Store as Receipt bucket
@@ -153,9 +153,9 @@ state, the approver identity, and the approved total.
 notification is queued and retried five times.
 
 ```mermaid
-accTitle: Approving an expense report
-accDescr: The approver calls the expense API, which revalidates the totals against the ledger, writes the approved state and queues a notification to the employee.
 sequenceDiagram
+  accTitle:Approving an expense report
+  accDescr: The approver calls the expense API, which revalidates the totals against the ledger, writes the approved state and queues a notification to the employee.
   participant Approver
   participant ExpenseAPI as Expense API
   participant Ledger as Ledger database

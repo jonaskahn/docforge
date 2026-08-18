@@ -101,9 +101,9 @@ produced; a second receipt source was anticipated, because the store adapter
 takes an image and a report id rather than a request.
 
 ```mermaid
-accTitle: Runtime scenario — receipt write failing after the object is stored
-accDescr: The handler calls the store adapter, which puts the object and then writes the row; on a database failure the adapter raises and the object is left for lifecycle collection.
 sequenceDiagram
+  accTitle:Runtime scenario — receipt write failing after the object is stored
+  accDescr: The handler calls the store adapter, which puts the object and then writes the row; on a database failure the adapter raises and the object is left for lifecycle collection.
   participant Handler as Request handler
   participant Adapter as Receipt store adapter
   participant Bucket as Object bucket

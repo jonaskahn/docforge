@@ -8,9 +8,9 @@ reader is usually trying to find out — why work did or did not run.}}
 ```mermaid
 %% Group by trigger family (schedule, event, queue drain), not one node per job.
 %% Split into a second diagram per family rather than growing this one.
-accTitle: Trigger to job to downstream effect
-accDescr: {{One sentence: which trigger kinds start which job families, and what each produces.}}
 flowchart LR
+  accTitle:Trigger to job to downstream effect
+  accDescr: {{One sentence: which trigger kinds start which job families, and what each produces.}}
   Schedule["{{trigger · schedule}}"] -->|"{{starts}}"| JobA["{{job family}}"]
   Event["{{trigger · event}}"] -->|"{{starts}}"| JobB["{{job family}}"]
   JobA -->|"{{writes}}"| Effect["{{downstream effect}}"]

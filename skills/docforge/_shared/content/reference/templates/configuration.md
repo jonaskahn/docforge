@@ -9,9 +9,9 @@ same key.}}
 
 ```mermaid
 %% Precedence only -- not an inventory of settings. Left loses, right wins.
-accTitle: Configuration source precedence
-accDescr: {{One sentence: which sources exist and which one wins a conflict.}}
 flowchart LR
+  accTitle:Configuration source precedence
+  accDescr: {{One sentence: which sources exist and which one wins a conflict.}}
   Default["{{built-in default}}"] -->|"{{overridden by}}"| File["{{config file}}"]
   File -->|"{{overridden by}}"| Env["{{environment variable}}"]
   Env -->|"{{overridden by}}"| Secret["{{secret store}}"]

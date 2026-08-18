@@ -30,9 +30,9 @@ least one non-linear transition; otherwise the ordered prose above is the
 smaller useful form. See ../../../references/illustration.md. -->
 
 ```mermaid
-accTitle: Lifecycle of {{concept name}}
-accDescr: {{One sentence: which states this concept moves through and what moves it between them.}}
 stateDiagram-v2
+  accTitle:Lifecycle of {{concept name}}
+  accDescr: {{One sentence: which states this concept moves through and what moves it between them.}}
   [*] --> {{State1}}
   {{State1}} --> {{State2}}: {{what causes the transition}}
   {{State2}} --> [*]

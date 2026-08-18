@@ -40,9 +40,9 @@ named in high-level.md needs one._
 ```mermaid
 %% Component map for this whitebox only. Every node is a component written up
 %% below; arrows show the dependency direction the block permits.
-accTitle: Component map for {{high-level parent block}}
-accDescr: {{One sentence: which components this block contains and how they depend on each other.}}
 flowchart LR
+  accTitle:Component map for {{high-level parent block}}
+  accDescr: {{One sentence: which components this block contains and how they depend on each other.}}
   Inbound["{{component}}"] -->|"{{active verb}}"| Core["{{component}}"]
   Core -->|"{{active verb}}"| Outbound["{{component}}"]
 ```
@@ -92,9 +92,9 @@ above, and detail that belongs to a component's own write-up stays there._
 {{Why this scenario matters and its successful outcome. Every message maps to a named component above.}}
 
 ```mermaid
-accTitle: Runtime scenario — {{architecturally relevant intra-block path}}
-accDescr: {{One sentence: which components collaborate, in what order, and how the path can fail.}}
 sequenceDiagram
+  accTitle:Runtime scenario — {{architecturally relevant intra-block path}}
+  accDescr: {{One sentence: which components collaborate, in what order, and how the path can fail.}}
   participant A as {{component}}
   participant B as {{component}}
   A->>B: {{specific action}}
@@ -126,9 +126,9 @@ rename must not falsify this. Link the generated schema if one exists.}}
 ```mermaid
 %% Delete this whole block when no persistent model exists; the declared view is
 %% evidence-conditional and is never demanded of a stateless component.
-accTitle: Data model for {{this decomposition}}
-accDescr: {{One sentence: which durable entities the components own and how they relate.}}
 erDiagram
+  accTitle:Data model for {{this decomposition}}
+  accDescr: {{One sentence: which durable entities the components own and how they relate.}}
   ENTITY1 ||--o{ ENTITY2 : "{{relationship}}"
 ```
 

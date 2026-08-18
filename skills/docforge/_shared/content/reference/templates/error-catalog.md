@@ -48,9 +48,9 @@ should my client *do* with this response?
 ```mermaid
 %% A caller's decision path, not a taxonomy of every code. Terminal nodes are
 %% caller actions, never status codes.
-accTitle: How a caller handles an error response
-accDescr: {{One sentence: how a client decides between retrying, refreshing credentials, and failing.}}
 flowchart TD
+  accTitle: How a caller handles an error response
+  accDescr: {{One sentence: how a client decides between retrying, refreshing credentials, and failing.}}
   Response["{{non-2xx response}}"] -->|"{{retryable: yes}}"| Backoff["{{retry with backoff}}"]
   Response -->|"{{authentication}}"| Refresh["{{refresh credentials, retry once}}"]
   Response -->|"{{invalid request}}"| Fail["{{fix the request; never retry}}"]

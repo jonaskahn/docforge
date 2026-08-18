@@ -81,9 +81,9 @@ failure, and everything after it is retried. A reader deciding whether a lost
 receipt is recoverable needs only to know which side of step 4 it reached.
 
 ```mermaid
-accTitle: Submitting an expense receipt
-accDescr: The employee posts an image to the expense API, which stores the object, records the receipt and enqueues extraction; the worker reads the object, calls OCR and writes line items.
 sequenceDiagram
+   accTitle:Submitting an expense receipt
+   accDescr: The employee posts an image to the expense API, which stores the object, records the receipt and enqueues extraction; the worker reads the object, calls OCR and writes line items.
   participant Employee
   participant ExpenseAPI as Expense API
   participant Store as Receipt bucket

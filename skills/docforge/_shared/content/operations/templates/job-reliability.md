@@ -13,9 +13,9 @@ up, and can it come back?
 ```mermaid
 %% States a unit of work occupies, not the steps of any one job. A terminal
 %% state with no exit is the one to name explicitly in prose.
-accTitle: Retry and recovery states for a unit of work
-accDescr: {{One sentence: which states a failing job moves through and which state it cannot leave without intervention.}}
 stateDiagram-v2
+  accTitle:Retry and recovery states for a unit of work
+  accDescr: {{One sentence: which states a failing job moves through and which state it cannot leave without intervention.}}
   [*] --> Queued
   Queued --> Running: {{claimed}}
   Running --> Done: {{success}}
