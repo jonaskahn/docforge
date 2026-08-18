@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.22.0",
+  "version": "2.23.0",
   "category": "security",
   "purpose": "Security posture, permissions, and threat model.",
   "source": "../../index.json",

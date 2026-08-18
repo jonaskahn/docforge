@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 "use strict";
-/* Migrate Docforge manifest metadata to 3.9 / provenance 2.0.
+/* Migrate Docforge manifest metadata to 3.10 / provenance 2.0.
  *
- * Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
+ * Upgrades manifest 3.9 (seeding each document's catalog-owned
+ * `dominant_form`) and manifest 3.3 (seeding the project's
+ * `unmanaged_docs` list) and
  * manifest 3.2 / provenance 2.0 (seeding each document's
  * catalog-owned `description` and the project's `provenance_storage`, then
  * moving inline frontmatter into `.docforge/provenance/` sidecars when
@@ -11,7 +13,7 @@
  * frontmatter, including pre-schema `doc` / `graph_snapshot` shapes, while
  * preserving section evidence), and re-registers any older legacy manifest —
  * 1.1 (`project_context` / `document_groups`), 2.0 (flat `documents` with
- * overlay profiles), or any other pre-3.0 shape — as 3.5: written documents
+ * overlay profiles), or any other pre-3.0 shape — as 3.10: written documents
  * are adopted as `generated` with provenance 2.0, bodies preserved, and plan
  * entries kept. When a document cannot be converted to complete provenance
  * 2.0 (missing or unparseable frontmatter, conversion failure, or incomplete
@@ -29,8 +31,8 @@ const { computeScale, layoutFor } = require("../../common/js/scale.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
 const { flowCapabilityOf, resolveFirstReady } = require("../../graph/js/graph_source_registry.js");
 
-const MANIFEST_CURRENT = "3.9";
-const MANIFEST_IN_PLACE = ["3.9", "3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
+const MANIFEST_CURRENT = "3.10";
+const MANIFEST_IN_PLACE = ["3.10", "3.9", "3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0"];
 const MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS;
 const WRITTEN = new Set(["generated", "needs_review", "complete"]);
 const SCALAR_FIELDS = ["doc_id", "path", "generated_at", "tier", "target_depth"];
@@ -435,6 +437,27 @@ function seedDescriptions(docs, maps) {
   return seeded;
 }
 
+function seedDominantForms(docs, maps) {
+  // Seed the catalog's `dominant_form` on documents that lack the field;
+  // existing values are never overwritten (a user-configured value is a
+  // decision, not drift).
+  const seeded = [];
+  for (const doc of docs || []) {
+    if ("dominant_form" in doc) continue;
+    const definition = matchDefinition(
+      maps,
+      String(doc.id || ""),
+      doc.type,
+      String(doc.path || ""),
+    );
+    if (definition) {
+      doc.dominant_form = definition.dominant_form;
+      seeded.push(String(doc.id || ""));
+    }
+  }
+  return seeded;
+}
+
 // Scale record for a legacy manifest with no scale field.
 //
 // Legacy repositories were written before layout existed, at standard paths
@@ -628,6 +651,9 @@ function migrateManifestObject(manifest, repo, demoteIncomplete = false) {
   const docs = manifest.documents || [];
   if (docs.some((doc) => !doc.description)) {
     if (seedDescriptions(docs, loadCatalogMaps()).length) changed = true;
+  }
+  if (docs.some((doc) => !("dominant_form" in doc))) {
+    if (seedDominantForms(docs, loadCatalogMaps()).length) changed = true;
   }
   for (const doc of docs) {
     const provenance = doc.provenance;

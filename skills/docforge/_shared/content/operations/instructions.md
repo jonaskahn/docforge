@@ -19,10 +19,6 @@ behavior from manifests, CI, release configuration, or history. Name the role
 authorized to publish, revoke, or roll back each channel; external store policy
 and timing remain unknown unless evidenced.
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); this is a
-how-to — ordered steps and verification, not a diagram.
-
 One verified path from artifact to installed application: build, sign,
 package, publish to channel, verify — in that order. Name every channel
 in use (store, direct download, internal distribution) and what differs
@@ -33,17 +29,30 @@ Give update and rollback the same rigor as initial publish. Never include
 a signing key, secret, or unverified claim about store approval timelines
 the repository doesn't evidence.
 
+## Illustration
+
+- **Form:** prose steps with command blocks.
+- **Renders:** the verified path — build, sign, package, publish to channel,
+  verify — per channel.
+- **Trigger:** never — ordered steps and verification, not a diagram, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Build, sign, package, publish, verify per channel; update and rollback | `deployment` | shipping into environments shares the same rigor and approval discipline |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.
+
 ## Deployment writing craft
 
 Ground artifact source, environment commands, rollout behavior, and verification
 in manifests, CI, deployment configuration, or source. For rollout and rollback,
 name the authorized role and approval or escalation boundary; link incident
 diagnosis to its runbook or disaster-recovery owner.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); prose and
-commands per environment, a flowchart only if promotion order across three
-or more environments is otherwise ambiguous.
 
 One verified path per environment: artifact source, rollout mechanism,
 and rollback — in that order. State the rollout strategy plainly
@@ -57,16 +66,34 @@ safely, not how to recover from a bad one — that's
 environment differences by reference to
 `environments` rather than re-deriving them here.
 
+## Illustration
+
+- **Form:** prose and command blocks per environment; a Mermaid `flowchart`
+  only if promotion order across three or more environments is otherwise
+  ambiguous.
+- **Renders:** artifact source, rollout mechanism, rollback, and the
+  verification signal per environment.
+- **Trigger:** only when promotion order across three or more environments
+  cannot be read as prose, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Environments' artifact path, rollout, rollback, verification | `environments` | which values differ per environment is owned there, referenced not re-derived |
+| Incident diagnosis and recovery | `disaster-recovery` or the relevant `runbook` | recovery from a bad deploy is owned there, never embedded here |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.
+
 ## Disaster-recovery writing craft
 
 For each scenario, name recovery lead, escalation authority, and the role
 authorized to approve failover, restore, or destructive action. Ground RTO, RPO,
 recovery order, and data-loss boundary in backup, test, or incident evidence;
 label untested paths and unknown objectives explicitly.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); prose and
-an ordered command list — this is a runbook shape, not a diagram.
 
 State RTO (how long recovery may take) and RPO (how much data loss is
 acceptable) per scenario, as numbers, not aspirations. Give explicit stop
@@ -81,16 +108,31 @@ explicitly — the exact point in time data recovers to — rather than
 implying "nothing was lost." Keep ordinary deploy steps out; this document
 is for the day deployment already failed.
 
+## Illustration
+
+- **Form:** prose with an ordered command list.
+- **Renders:** per scenario — RTO/RPO as numbers, recovery order, stop
+  conditions, the closing verification step.
+- **Trigger:** never — this is a runbook shape, not a diagram, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Scenarios, RTO/RPO, recovery order, data-loss boundary, escalation | `deployment` | ordinary deploy steps are owned there; this document starts where deployment failed |
+| Symptom-driven diagnosis | the relevant `runbook` | diagnosis from the observable symptom is owned there |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.
+
 ## Flashing-recovery writing craft
 
 Before flashing, identify the evidenced artifact version, target hardware or
 revision, integrity or compatibility check, and source location. Put a
 confirmation checkpoint immediately before erase, overwrite, or irreversible
 actions, and name the recovery authority and escalation owner.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); this is a
-safety-gated how-to — ordered steps, explicit warnings, no diagram.
 
 State prerequisites and required hardware/connection state before the
 first command. Give one verified path: connect, flash, verify — with the
@@ -102,15 +144,29 @@ Never include an unverified destructive command. Where a step is
 irreversible or risks hardware damage, state that plainly immediately
 before the command, not buried in a general safety note at the top.
 
+## Illustration
+
+- **Form:** prose steps with command blocks and inline warnings.
+- **Renders:** prerequisites, the verified connect → flash → verify path, and
+  the mid-flash recovery path.
+- **Trigger:** never — ordered steps, explicit warnings, no diagram, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The verified flash path, recovery path, confirmation checkpoints | `distribution` | artifact provenance and channel discipline are owned there |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.
+
 ## Infrastructure-apply / infrastructure-state writing craft
 
 Covers `infra_apply` and `infra_state` — the plan/apply safety story and
 the state-of-record story are two views of the same discipline and read
 better together than duplicated.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); tables
-for state ownership and locking, prose for drift and recovery.
 
 State who or what may run apply, and what gate stands between plan and
 apply (review, approval, CI check). For state: name where it lives, the
@@ -129,17 +185,32 @@ belong to their reference documents. Show a command only with its environment,
 mutability, prerequisites, expected result, and safe failure behavior; otherwise
 link to the authoritative tool procedure instead of inventing a runnable path.
 
+## Illustration
+
+- **Form:** Markdown tables for state ownership and locking; prose for drift
+  and recovery.
+- **Renders:** who may run apply, the plan→apply gate, where state lives, how
+  drift is detected and recovered.
+- **Trigger:** never — tables and prose, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The plan/apply gate, execution boundary, abort condition | `network-deployment` | network-targeted deploys apply the same authority discipline |
+| Resource inventory and access grants | `reference/infra-resources`, `reference/infra-access` | owned in the reference documents, never restated here |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.
+
 ## Job-reliability writing craft
 
 For every job class, identify failure, lag, or queue signals, their visibility,
 alert owner, and correlation identifier; link shared inventories instead of
 copying them. Ground retry, timeout, backpressure, dead-letter, and replay in
 configuration or code, and require an authorized replay role plus integrity check.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-per job class — retry, idempotency, timeout, backpressure, dead-letter,
-replay — is the whole document.
 
 State each reliability property as a concrete fact, not a category label:
 retry count and backoff shape, not "retries"; the exact idempotency key or
@@ -154,16 +225,31 @@ to `triggers-and-jobs` rather than restating
 trigger/payload detail here; this document owns failure handling, not
 job identity.
 
+## Illustration
+
+- **Form:** a Markdown table per job class.
+- **Renders:** one row per job class — retry, idempotency, timeout,
+  backpressure, dead-letter, replay — the table is the whole document.
+- **Trigger:** never — the table is the whole document, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Failure handling per job class: retry, idempotency, replay | `triggers-and-jobs` | job identity, triggers, and payloads are owned there |
+| Failure, lag, and queue signals' visibility and alert ownership | `observability` | signal → source → alert intent is owned there, linked not copied |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.
+
 ## Network-deployment writing craft
 
 Ground network identity, RPC/configuration source, deployed artifact and version,
 address, and role assignment in deployment configuration, manifests, or verified
 history. For deploy, upgrade, and rollback, state approving authority and the
 confirmation boundary; never infer account or multisig control.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); this is a
-how-to — numbered steps and a verification command, not a diagram.
 
 Write one verified path per target network (mainnet, testnet, or
 equivalent), in order: network configuration, key and role setup, deploy
@@ -177,16 +263,32 @@ Give the upgrade and rollback path the same rigor as the initial deploy.
 Never include a private key, seed phrase, or fabricated address; use an
 obviously synthetic placeholder and say so.
 
+## Illustration
+
+- **Form:** numbered prose steps with a verification command.
+- **Renders:** network configuration, key and role setup, deploy,
+  post-deploy verification — per target network.
+- **Trigger:** never — numbered steps and a verification command, not a
+  diagram, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Per-network deploy, upgrade, rollback, privileged roles | `contract-system` | the upgrade-boundary standard is owned there |
+| Plan/apply gates and recorded state for the rest of infrastructure | `infra-apply`, `infra-state` | the same safety discipline, owned there |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.
+
 ## Observability writing craft
 
 Ground signal names, sources, thresholds, routing, and ownership in
 instrumentation, configuration, or operational evidence. Record absent telemetry
 and unknown thresholds as blind spots; this document owns alert intent and links
 each actionable alert to its runbook and escalation owner.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-of signal → source → alert intent is primary, prose for what's not covered.
 
 Organize around the four golden signals for user-facing services — latency,
 traffic, errors, saturation — and RED (rate/errors/duration) or USE
@@ -201,11 +303,27 @@ from an alert to the request/trace that caused it. Close with blind spots
 named honestly: what this system cannot currently observe, not just what
 it can.
 
-## Runbook writing craft
+## Illustration
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md);
-use a decision flowchart only when diagnosis has material branches.
+- **Form:** a Markdown table of signal → source → alert intent; prose for
+  what is not covered.
+- **Renders:** per signal — what emits it, where it is visible, who owns the
+  alert, what the intent is.
+- **Trigger:** never — the table is primary and blind spots are prose, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Signals, thresholds, routing, alert intent, blind spots | `runbook` | each actionable alert links to its runbook and escalation owner |
+| Job-class failure and queue signals | `worker-reliability` | job-specific signals are owned there |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.
+
+## Runbook writing craft
 
 Write for an operator under pressure. Start with the observable symptom, scope,
 and safety boundaries, then give ordered diagnosis steps whose checks select the
@@ -217,3 +335,23 @@ and prevention follow-up.
 Do not substitute an architecture tutorial for incident action, assume access or
 credentials, or present unverified commands as executable procedure. Link to
 deployment or disaster recovery when those own the operation.
+
+## Illustration
+
+- **Form:** prose diagnosis steps; a Mermaid `flowchart` only when diagnosis
+  has material branches.
+- **Renders:** observable symptom, scope, safety boundaries, ordered checks,
+  remediation, verification signal, escalation threshold.
+- **Trigger:** only when diagnosis has material branches, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Symptom, diagnosis, remediation, verification, escalation | `runbooks-index` | the register owns what each runbook recovers and its trigger |
+| Deploy or recovery operations | `deployment`, `disaster-recovery` | when those own the operation, link rather than restate |
+
+## Voice
+
+- **Voice:** imperative and runnable; every step has an observable result.

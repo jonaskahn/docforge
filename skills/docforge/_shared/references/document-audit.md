@@ -9,6 +9,8 @@ Start a separate cold artifact-only pass after writing. Review only:
 - the finished artifact;
 - its catalog content contract and audit profile;
 - target depth;
+- its group's voice ([`voice.md`](voice.md)) — checked the same way depth and
+  mode are checked, never as a heading checklist;
 - applicable quality checks;
 - sources cited by validated current provenance, after the mechanical gate has
   confirmed concrete metadata, source blobs, and heading-matched sections;

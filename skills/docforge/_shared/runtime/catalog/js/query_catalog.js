@@ -63,7 +63,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.22.0";
+const CATALOG_VERSION = "2.23.0";
 const PRESENTATION_VALUES = {
   code: new Set(["contract-only", "task-focused"]),
   related_docs: new Set(["none", "compact", "traceability"]),
@@ -414,6 +414,7 @@ function route(value, audiences = [], repo = null) {
     requires: detail.requires || [],
     target_depth: detail.target_depth,
     audit_profile: detail.audit_profile,
+    dominant_form: detail.dominant_form === undefined ? null : detail.dominant_form,
     contract_revision: detail.contract_revision === undefined ? null : detail.contract_revision,
     model_depth: modelDepth,
     primary_audience: primaryAudience,

@@ -36,3 +36,7 @@
 | Model/provider boundary, prompts/inputs, outputs, evaluation, safety, privacy, failure | `security/data-handling` | the privacy boundary here is the same discipline data-handling applies to any data flow; link rather than re-derive it |
 | — | `security/threat-model` | the model/provider call is one more external trust boundary the threat model must cover |
 | Model-quality or safety claims for a self-trained model | `model-lifecycle` (`model-card`) | this document owns the integration boundary only; quality/safety evaluation belongs to the model's own lifecycle document |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

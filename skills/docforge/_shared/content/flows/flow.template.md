@@ -78,4 +78,17 @@ never invent a failure mode.}}
 
 **Deferred work:** {{what continues asynchronously after this flow returns, or "none"}}
 
+{{When the flow has two or more terminal outcomes and the reader's question is
+only "what does this trigger lead to, in order" — no second-level branch, no
+per-step actor — render them as one ASCII fan-out, the second diagram form
+illustration.md blesses for a different question than the primary diagram
+above; otherwise delete this block. Follow the fence with a sentence stating
+that a single trigger fans out to these outcomes and nothing branches further.}}
+
+```text
+{{trigger event}}
+├─ {{condition A}} ──> {{step}} ──> {{outcome A}}
+└─ {{condition B}} ──> {{step}} ──> {{outcome B}}
+```
+
 > **Related:** {{Existing generated documents that own adjacent behavior; delete this footer when none exist.}}

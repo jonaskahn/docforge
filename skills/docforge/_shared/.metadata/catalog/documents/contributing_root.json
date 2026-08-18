@@ -19,5 +19,6 @@
   "write_order": 84,
   "provenance_mode": "sections",
   "audit_profile": "router",
+  "dominant_form": null,
   "template_file": "content/shared/generic.template.md"
 }

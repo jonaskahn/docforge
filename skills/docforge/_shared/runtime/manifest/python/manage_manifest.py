@@ -43,7 +43,7 @@ TRANSITIONS = {
     "retired": {"planned"},
 }
 TOOL_VERSION = GENERATOR_VERSION
-MANIFEST_VERSION = "3.9"
+MANIFEST_VERSION = "3.10"
 USER_CONFIRMED_TRIGGERS = {
     "new-trust-boundary", "per-interaction-review", "regulated-workload",
     "high-criticality", "new-external-integration", "new-data-classification",
@@ -225,6 +225,7 @@ def make_document(
         "write_order": definition["write_order"],
         "provenance_mode": definition["provenance_mode"],
         "audit_profile": definition["audit_profile"],
+        "dominant_form": detail.get("dominant_form"),
         "presentation": {"primary_audience": primary_audience, **presentation},
         "provenance": scaffold_provenance(
             definition["id"],
@@ -880,6 +881,26 @@ def sync_presentations(catalog: dict, docs: list[dict], audiences: list[str]) ->
     return updated
 
 
+def sync_dominant_forms(catalog: dict, docs: list[dict]) -> list[str]:
+    """Hydrate the catalog's `dominant_form` and demote written documents
+    whose declared form changed, so the illustration gate and the writer
+    brief read one value."""
+    updated: list[str] = []
+    for doc in docs:
+        catalog_id = catalog_id_for_document(catalog, doc)
+        if catalog_id is None:
+            continue
+        declared = query_catalog.load_type(catalog_id).get("dominant_form")
+        if "dominant_form" not in doc:
+            doc["dominant_form"] = declared
+            continue
+        if doc["dominant_form"] != declared:
+            doc["dominant_form"] = declared
+            demote_written(doc)
+            updated.append(doc["id"])
+    return updated
+
+
 def relayout_dynamic_documents(
     catalog: dict,
     documents: list[dict],
@@ -1064,6 +1085,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     added += [doc for doc in relaid_out if doc["id"] not in kept_ids]
     contract_updated = sync_contract_revisions(catalog, kept)
     presentation_updated = sync_presentations(catalog, kept, profiles["audiences"])
+    form_updated = sync_dominant_forms(catalog, kept)
     old_tier = manifest["project"]["tier"]
     manifest["documents"] = kept + added
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
@@ -1122,6 +1144,8 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         count_parts.append(f"{len(contract_updated)} contract-updated")
     if presentation_updated:
         count_parts.append(f"{len(presentation_updated)} presentation-updated")
+    if form_updated:
+        count_parts.append(f"{len(form_updated)} dominant-form-updated")
     print(f"  counts: {', '.join(count_parts) or 'no change'}")
     if added:
         print(f"  added: {', '.join(doc['id'] for doc in sorted(added, key=lambda d: d['id']))}")
@@ -1133,6 +1157,8 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         print(f"  contract-updated: {', '.join(sorted(contract_updated))}")
     if presentation_updated:
         print(f"  presentation-updated: {', '.join(sorted(presentation_updated))}")
+    if form_updated:
+        print(f"  dominant-form-updated: {', '.join(sorted(form_updated))}")
     print(f"  kept: {len(kept)} documents")
     print()
     for line in plan_lines(args.repo, manifest, args.repo / ".docforge" / "flow-index.json", revise=True):

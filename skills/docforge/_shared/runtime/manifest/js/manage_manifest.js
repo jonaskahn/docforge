@@ -28,7 +28,7 @@ const TRANSITIONS = {
   retired: new Set(["planned"]),
 };
 const TOOL_VERSION = pf.GENERATOR_VERSION;
-const MANIFEST_VERSION = "3.9";
+const MANIFEST_VERSION = "3.10";
 const USER_CONFIRMED_TRIGGERS = new Set([
   "new-trust-boundary", "per-interaction-review", "regulated-workload",
   "high-criticality", "new-external-integration", "new-data-classification",
@@ -164,6 +164,7 @@ function makeDocument(definition, origins, evidence = [], catalogId = null, audi
     write_order: definition.write_order,
     provenance_mode: definition.provenance_mode,
     audit_profile: definition.audit_profile,
+    dominant_form: detail.dominant_form === undefined ? null : detail.dominant_form,
     presentation: { primary_audience: primaryAudience, ...presentation },
     provenance: pf.scaffoldProvenance(definition.id, definition.path, {
       target_depth: definition.target_depth,
@@ -762,6 +763,27 @@ function syncPresentations(catalog, docs, audiences) {
   }
   return updated;
 }
+function syncDominantForms(catalog, docs) {
+  // Hydrate the catalog's `dominant_form` and demote written documents whose
+  // declared form changed, so the illustration gate and the writer brief
+  // read one value.
+  const updated = [];
+  for (const doc of docs) {
+    const catalogId = catalogIdForDocument(catalog, doc);
+    if (catalogId === null) continue;
+    const declared = queryCatalog.loadType(catalogId).dominant_form;
+    if (!("dominant_form" in doc)) {
+      doc.dominant_form = declared === undefined ? null : declared;
+      continue;
+    }
+    if (doc.dominant_form !== declared) {
+      doc.dominant_form = declared === undefined ? null : declared;
+      demoteWritten(doc);
+      updated.push(doc.id);
+    }
+  }
+  return updated;
+}
 // Move discovered instances across a layout switch, so neither direction loses
 // one. Returns `[extraDocuments, foldedIds]`.
 //
@@ -932,6 +954,7 @@ function cmdReconcile(args) {
   ];
   const contractUpdated = syncContractRevisions(catalog, kept);
   const presentationUpdated = syncPresentations(catalog, kept, profiles.audiences);
+  const formUpdated = syncDominantForms(catalog, kept);
   const oldTier = manifest.project.tier;
   manifest.documents = [...kept, ...added];
   manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
@@ -990,12 +1013,14 @@ function cmdReconcile(args) {
   if (retire.length) countParts.push(`${retire.length} retire`);
   if (contractUpdated.length) countParts.push(`${contractUpdated.length} contract-updated`);
   if (presentationUpdated.length) countParts.push(`${presentationUpdated.length} presentation-updated`);
+  if (formUpdated.length) countParts.push(`${formUpdated.length} dominant-form-updated`);
   console.log(`  counts: ${countParts.join(", ") || "no change"}`);
   if (added.length) console.log(`  added: ${added.map((doc) => doc.id).sort().join(", ")}`);
   if (removed.length) console.log(`  removed-planned: ${removed.sort().join(", ")}`);
   if (retire.length) console.log(`  retire: ${retire.sort().join(", ")} (written, out of scope — approve the retire step to move or delete)`);
   if (contractUpdated.length) console.log(`  contract-updated: ${contractUpdated.sort().join(", ")}`);
   if (presentationUpdated.length) console.log(`  presentation-updated: ${presentationUpdated.sort().join(", ")}`);
+  if (formUpdated.length) console.log(`  dominant-form-updated: ${formUpdated.sort().join(", ")}`);
   console.log(`  kept: ${kept.length} documents`);
   console.log("");
   for (const line of planLines(args.repo, manifest, path.join(args.repo, ".docforge", "flow-index.json"), true)) {

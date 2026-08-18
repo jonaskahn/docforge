@@ -33,7 +33,6 @@ const fs = require("fs");
 const path = require("path");
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
-const { validateLocators } = require("../../common/js/evidence_locators.js");
 const { illustrationDefects: budgetDefects } = require("../../common/js/illustration_metrics.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const { visiblePresentationDefects } = require("../../common/js/markdown_fences.js");
@@ -266,9 +265,6 @@ function checkDocument(filePath, requireHeadings) {
     ? context.provenance.target_depth || "deep-dive"
     : "deep-dive";
   defects.push(...budgetDefects(text, targetDepth));
-  // Hand over the resolved provenance: under sidecar storage the markdown has
-  // no frontmatter, and a locator check that re-parsed it would find nothing.
-  defects.push(...validateLocators(filePath, text, context.provenance, context.bodyStart));
   defects.push(...visiblePresentationDefects(text));
 
   // scaffold markers + tokens, with line numbers

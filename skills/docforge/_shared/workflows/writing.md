@@ -48,7 +48,9 @@ Contract ([`../references/parallel-execution.md`](../references/parallel-executi
   relocks a provider. On a Portfolio-collection root, an absent lock is
   expected and is never self-healed.
 - Each worker receives its document card (route, `requires`, audience,
-  presentation), evidence budget, one target artifact, and the session's
+  presentation, the illustration brief — declared `dominant_form`,
+  `## Illustration` trigger, per-illustration budget — and the group
+  voice), evidence budget, one target artifact, and the session's
   locked graph provider/flow (`manifest["graph"]`, read-only). It runs the
   artifact portion of **Write one document** — route, materialize,
   re-ground (native provider first, whole-file read last, per step 4
@@ -74,12 +76,16 @@ For the next document in `write_order` (serial mode):
 0. Immediately before materializing it, show the current structure summary
    (or "tree unchanged since the displayed checkpoint") and a compact
    **execution card**: path, reader, owned topics, evidence query, links to
-   owning documents, and acceptance checks. Derive it from the manifest and
-   the document's route (`query_catalog.{py,js} --route <id>`), never from a
-   second plan file. This applies to every document — fresh start and
-   revise, flow documents and static ones alike. A parallel worker receives
-   the same card as its brief (see Parallel fan-out) rather than printing
-   its own.
+   owning documents, and acceptance checks. Include an **illustration
+   brief** — the route's declared `dominant_form`, the instruction's
+   `## Illustration` trigger, the per-illustration budget for the
+   document's `target_depth`, and the reminder that illustration count is
+   never capped — plus the group's **voice** line. Derive it from the
+   manifest and the document's route
+   (`query_catalog.{py,js} --route <id>`), never from a second plan file.
+   This applies to every document — fresh start and revise, flow documents
+   and static ones alike. A parallel worker receives the same card as its
+   brief (see Parallel fan-out) rather than printing its own.
 1. Check every capability in its `requires` list. On a Portfolio-collection
    root (see [`../rules.md`](../rules.md) "Code-graph precondition"), a
    `code_graph` requirement is already resolved as "no source of its own" —
@@ -99,8 +105,14 @@ For the next document in `write_order` (serial mode):
    [`../references/code-presentation.md`](../references/code-presentation.md)
    and
    [`../references/evidence-presentation.md`](../references/evidence-presentation.md).
-   Select and author any visual using
-   [`../references/illustration.md`](../references/illustration.md).
+   Read the route's `dominant_form` (a document whose declared form
+   warrants a visual must carry one — `scaffold_docs --audit` enforces it),
+   apply the instruction's `## Illustration` block, and select and author
+   every visual using
+   [`../references/illustration.md`](../references/illustration.md)'s
+   per-illustration budget for the document's `target_depth`; the count of
+   illustrations is never capped. Apply the group voice from
+   [`../references/voice.md`](../references/voice.md) the same way.
 3. Materialize that document and selected ancestor indexes:
 
    ```sh

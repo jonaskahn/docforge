@@ -24,6 +24,7 @@
   "write_order": 19,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
+  "dominant_form": null,
   "template_file": "content/architecture/templates/assets-and-scenes.md",
   "compact_group": "architecture_compact",
   "compact_order": 18

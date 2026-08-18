@@ -7,7 +7,11 @@ This file owns mechanical and whole-tree acceptance.
 - no `{{...}}` scaffold marker or retired TODO punt;
 - complete current-schema provenance in the document's folder sidecar, with
   concrete write metadata, valid source blobs, and heading-matched sections;
-- valid, accessible illustrations that satisfy `illustration.md` when present;
+- valid, accessible illustrations that satisfy `illustration.md`; a
+  document whose declared `dominant_form` warrants a visual carries one
+  (mechanical `missing-illustration` defect in `scaffold_docs --audit`);
+- no visible source-path `:line` or `#L<n>` citations in prose outside
+  fences (mechanical `visible-source-line` defect);
 - no dead relative links;
 - no invented claims or untyped external unknowns;
 - no links into Docforge's internal `references/` directory;
@@ -53,6 +57,15 @@ Mechanical success does not complete a document; the independent audit in
 7. **No duplication:** shared non-agent facts have one owner and other
    non-agent views link. Self-contained agent-context duplication is allowed.
 8. **Promotion integrity:** no flow or concept folder contains only README.
+9. **Section cohesion:** in any section folder holding two or more
+   non-router documents, no document is an island — each either links a
+   sibling or is linked by one. The section README alone does not satisfy
+   it. Applies to non-agent documents only; agent-context outputs are
+   excluded exactly as they are from routing.
+10. **Declared illustration coverage:** every written non-agent document
+    whose manifest entry declares a `dominant_form` other than `table` or
+    `null` carries at least one `mermaid` fence or structural `text` fence
+    (mechanical `missing-illustration` defect).
 
 `scaffold_docs.{py,js} --audit` must exit nonzero on any mechanical defect and
 zero on a clean tree. If a whole-tree correction changes one document,

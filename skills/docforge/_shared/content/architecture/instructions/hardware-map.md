@@ -32,3 +32,7 @@
 | Boards, peripherals, protocols, boot/update states, memory/power, failure | `architecture-high-level` | this is the deep-dive of the hardware/firmware block named there |
 | A memory or power bound imposed by the hardware itself | `constraints` | an immovable hardware limit is a constraint, not restated lifecycle detail |
 | A deferred firmware or hardware shortcut | `tech-debt-register` | fixable-by-us gaps are tracked there |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

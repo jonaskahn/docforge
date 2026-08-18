@@ -2,28 +2,70 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Docforge Catalog Index",
   "type": "object",
-  "required": ["version", "tiers", "groups", "capabilities", "profiles", "presentation_defaults", "document_types"],
+  "required": [
+    "version",
+    "tiers",
+    "groups",
+    "capabilities",
+    "profiles",
+    "presentation_defaults",
+    "document_types"
+  ],
   "properties": {
-    "version": {"const": "2.22.0"},
+    "version": {
+      "const": "2.23.0"
+    },
     "profiles": {
       "type": "object",
-      "required": ["shapes", "platforms", "frameworks", "concerns", "audiences"],
+      "required": [
+        "shapes",
+        "platforms",
+        "frameworks",
+        "concerns",
+        "audiences"
+      ],
       "properties": {
-        "shapes": {"type": "string"},
-        "platforms": {"type": "string"},
-        "frameworks": {"type": "string"},
-        "concerns": {"type": "string"},
-        "audiences": {"type": "string"}
+        "shapes": {
+          "type": "string"
+        },
+        "platforms": {
+          "type": "string"
+        },
+        "frameworks": {
+          "type": "string"
+        },
+        "concerns": {
+          "type": "string"
+        },
+        "audiences": {
+          "type": "string"
+        }
       },
       "additionalProperties": false
     },
     "presentation_defaults": {
       "type": "object",
-      "required": ["source_evidence", "primary_audience_by_group", "by_audience"],
+      "required": [
+        "source_evidence",
+        "primary_audience_by_group",
+        "by_audience"
+      ],
       "properties": {
-        "source_evidence": {"const": "provenance-only"},
-        "primary_audience_by_group": {"type": "object", "additionalProperties": {"type": "string"}},
-        "by_audience": {"type": "object", "additionalProperties": {"$ref": "#/definitions/presentation"}}
+        "source_evidence": {
+          "const": "provenance-only"
+        },
+        "primary_audience_by_group": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "by_audience": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/presentation"
+          }
+        }
       },
       "additionalProperties": false
     },
@@ -31,25 +73,55 @@
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["order"],
-        "properties": {"order": {"type": "integer"}},
+        "required": [
+          "order"
+        ],
+        "properties": {
+          "order": {
+            "type": "integer"
+          }
+        },
         "additionalProperties": false
       }
     },
-    "groups": {"type": "array", "items": {"type": "string"}},
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "capabilities": {
       "type": "array",
-      "items": {"enum": ["code_graph", "flow_graph", "manifests", "git_history"]}
+      "items": {
+        "enum": [
+          "code_graph",
+          "flow_graph",
+          "manifests",
+          "git_history"
+        ]
+      }
     },
     "cue_hints": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["cue", "note"],
+        "required": [
+          "cue",
+          "note"
+        ],
         "properties": {
-          "cue": {"type": "string"},
-          "examples": {"type": "array", "items": {"type": "string"}},
-          "note": {"type": "string"}
+          "cue": {
+            "type": "string"
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       }
@@ -58,12 +130,29 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "tier", "path", "record"],
+        "required": [
+          "id",
+          "tier",
+          "path",
+          "record"
+        ],
         "properties": {
-          "id": {"type": "string"},
-          "tier": {"enum": ["spine", "diligence", "portfolio"]},
-          "path": {"type": "string"},
-          "record": {"type": "string"}
+          "id": {
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "spine",
+              "diligence",
+              "portfolio"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "record": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       }
@@ -72,11 +161,31 @@
   "definitions": {
     "presentation": {
       "type": "object",
-      "required": ["code", "related_docs", "repository_paths"],
+      "required": [
+        "code",
+        "related_docs",
+        "repository_paths"
+      ],
       "properties": {
-        "code": {"enum": ["contract-only", "task-focused"]},
-        "related_docs": {"enum": ["none", "compact", "traceability"]},
-        "repository_paths": {"enum": ["hidden", "actionable-only"]}
+        "code": {
+          "enum": [
+            "contract-only",
+            "task-focused"
+          ]
+        },
+        "related_docs": {
+          "enum": [
+            "none",
+            "compact",
+            "traceability"
+          ]
+        },
+        "repository_paths": {
+          "enum": [
+            "hidden",
+            "actionable-only"
+          ]
+        }
       },
       "additionalProperties": false
     }

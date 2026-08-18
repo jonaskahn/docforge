@@ -50,3 +50,7 @@
 | Module/component responsibilities, one representative runtime scenario, data/control paths, failure boundaries | `architecture-high-level` (as parent zoom level) | every component here must trace to a block named there — no parallel decomposition |
 | A specific persisted entity or dataset touched by a component | `persistence` or `dataset` | storage mechanics are owned there; this document only names the dependency |
 | A rule this component enforces on request/response shape | `reference` (API/config) | the observable contract is owned by the reference document; this document explains the mechanism behind it |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

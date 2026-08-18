@@ -8,6 +8,7 @@ const { ensureDocforgeGitignore, fail, loadManifest, unmanagedPaths } = require(
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const { planEntries } = require("../../common/js/plan.js");
+const { scanFences } = require("../../common/js/markdown_fences.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const {
   AGENT_CONTEXT_GROUP,
@@ -360,6 +361,73 @@ function readmeChildCoverage(repo, doc, manifest, text) {
   }
   return [...missing].sort();
 }
+
+const STRUCTURAL_GLYPHS = /[│├└┌┐┘┬┴┤─]/;
+
+function hasDeclaredIllustration(text) {
+  // True when the file carries a `mermaid` fence or a structural `text`
+  // fence (one whose content uses tree/box/timeline glyphs).
+  for (const fence of scanFences(text)) {
+    if (fence.role === "diagram") return true;
+    if (["text", "ascii", ""].includes(fence.language) && fence.lines.some(([, line]) => STRUCTURAL_GLYPHS.test(line))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function missingIllustration(doc, text) {
+  // A written non-agent document whose declared `dominant_form` warrants a
+  // visual must carry one — a `mermaid` fence or a structural `text` fence.
+  if (doc.group === AGENT_CONTEXT_GROUP) return [];
+  if (MARKDOWN_EXCEPTIONS.has(doc.path) || doc.type === "machine-config") return [];
+  if (!WRITTEN.has(doc.status)) return [];
+  const form = doc.dominant_form;
+  if (form == null || form === "table") return [];
+  if (hasDeclaredIllustration(text)) return [];
+  return [`${doc.path}: declared dominant_form ${form}, no mermaid or structural text fence`];
+}
+
+function cohesionDefects(docs, texts) {
+  // No document is an island: in a section folder holding two or more
+  // written non-router documents, each either links a sibling or is linked
+  // by one. The section README alone does not satisfy it.
+  const findings = [];
+  const byFolder = new Map();
+  for (const doc of docs) {
+    if (doc.group === AGENT_CONTEXT_GROUP) continue;
+    if (INDEX_TYPES.has(doc.type) || doc.type === COMPACT_TYPE) continue;
+    if (!WRITTEN.has(doc.status)) continue;
+    const folder = posixDirname(doc.path);
+    if (!byFolder.has(folder)) byFolder.set(folder, []);
+    byFolder.get(folder).push(doc);
+  }
+  for (const [folder, members] of [...byFolder.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (members.length < 2) continue;
+    const siblingPaths = new Set(members.map((member) => member.path));
+    const outgoing = new Map();
+    for (const member of members) {
+      const base = posixDirname(member.path);
+      const linked = new Set();
+      const body = texts.get(member.path) || "";
+      for (const match of body.matchAll(LINK)) {
+        const target = match[1].split("#", 1)[0].trim();
+        if (!target || /^(https?:\/\/|mailto:)/.test(target)) continue;
+        if (/\{\{[^}]+\}\}|<[A-Z][A-Z0-9_]{2,}>/.test(target)) continue;
+        const normalized = path.posix.normalize(path.posix.join(base, target));
+        if (siblingPaths.has(normalized) && normalized !== member.path) linked.add(normalized);
+      }
+      outgoing.set(member.path, linked);
+    }
+    const linkedBy = new Set([...outgoing.values()].flatMap((set) => [...set]));
+    for (const member of members) {
+      if (!(outgoing.get(member.path) || new Set()).size && !linkedBy.has(member.path)) {
+        findings.push(`${folder}: ${member.path} is an island — links no sibling and no sibling links it`);
+      }
+    }
+  }
+  return findings;
+}
 function audit(repo, manifest) {
   const findings = {
     missing: [],
@@ -374,6 +442,8 @@ function audit(repo, manifest) {
     "unknown section": [],
     "broken links": [],
     "readme child coverage": [],
+    "missing illustration": [],
+    "section cohesion": [],
     "agent-context leak": [],
     "agent-context outbound": [],
     "invalid json": [],
@@ -382,6 +452,7 @@ function audit(repo, manifest) {
     unexpected: [],
   };
   const tokens = [];
+  const texts = new Map();
   const docs = activeDocuments(manifest);
   const expected = new Set(docs.map((doc) => doc.path));
   const selfManaged = unmanagedPaths(manifest);
@@ -444,7 +515,10 @@ function audit(repo, manifest) {
     for (const item of readmeChildCoverage(repo, doc, manifest, text)) {
       findings["readme child coverage"].push(`${doc.path}: missing link to ${item}`);
     }
+    findings["missing illustration"].push(...missingIllustration(doc, text));
+    texts.set(doc.path, text);
   }
+  findings["section cohesion"].push(...cohesionDefects(docs, texts));
   for (const prefix of ["docs/flows/", "docs/architecture/concepts/"]) {
     const folders = new Set([...expected].filter((value) => value.startsWith(prefix)).map(posixDirname));
     for (const folder of [...folders].sort()) {

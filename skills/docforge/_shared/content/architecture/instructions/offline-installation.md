@@ -29,3 +29,7 @@
 |---|---|---|
 | Installability, cache/update lifecycle, offline boundaries, invalidation, recovery | `application-lifecycle` | app-level launch/background states are owned there; this document owns the cache/network dimension specifically |
 | A data staleness guarantee | `dataset` or `data-flow`, if the cached data has an owning contract elsewhere | avoids restating a freshness guarantee already owned by the data document |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

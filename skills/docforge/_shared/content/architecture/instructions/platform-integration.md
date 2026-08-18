@@ -29,3 +29,7 @@
 | OS services, adapters, permissions boundary, callbacks, failure and fallback | `security/platform-permissions` | permission rationale and scope is owned there; this document only names which permission each integration requires |
 | A host-product (not OS) integration surface | `host-integration` | keeps host-product extension points distinct from OS/runtime adapters |
 | A lifecycle transition affected by a platform callback | `application-lifecycle` | avoids re-deriving app lifecycle states here |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

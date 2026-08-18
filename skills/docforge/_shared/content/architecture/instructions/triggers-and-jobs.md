@@ -28,3 +28,7 @@
 | Trigger, payload, scheduling, concurrency, ownership, downstream effects | `operations` runbooks | remediation for a misbehaving job is owned there; this document describes intended behavior only |
 | A downstream effect that starts a flow | the relevant `flow` document | avoids re-deriving flow steps inside a job description |
 | A data-shape guarantee in the payload | `dataset` or `data-flow` | schema/lineage detail is owned there, linked not restated |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

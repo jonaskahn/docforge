@@ -35,3 +35,7 @@
 | Entities, storage mapping, migrations, transactions, consistency, failure recovery | `architecture-low-level` | the component that owns each entity is named there; this document owns the entity's storage contract |
 | Entity field/schema definitions | the owning schema/reference document | never repeated inline |
 | A state machine that uses this storage | `state-management` | state-management owns the lifecycle; this document owns the durability mechanics beneath it |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

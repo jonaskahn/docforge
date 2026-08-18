@@ -27,3 +27,7 @@
 | Launch/activation/background/termination states, ownership, restoration, failure boundaries | `ui-components` | the UI component inventory is owned there; this document only describes lifecycle states |
 | Persisted state on backgrounding or restoration | `persistence` or `state-management` | what survives a lifecycle transition is owned by the state/persistence documents, linked not restated |
 | A platform-imposed lifecycle bound (e.g. background execution limits) | `platform-integration` | OS-imposed lifecycle constraints are owned there; this document describes the app's own state machine |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

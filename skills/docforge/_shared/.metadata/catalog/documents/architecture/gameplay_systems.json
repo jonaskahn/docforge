@@ -23,6 +23,7 @@
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
+  "dominant_form": null,
   "template_file": "content/architecture/templates/gameplay-systems.md",
   "compact_group": "architecture_compact",
   "compact_order": 19

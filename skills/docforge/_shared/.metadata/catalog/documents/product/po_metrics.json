@@ -24,6 +24,7 @@
   "write_order": 49,
   "provenance_mode": "sections",
   "audit_profile": "standard",
+  "dominant_form": "table",
   "template_file": "content/product/templates/success-metrics.md",
   "compact_group": "po_compact",
   "compact_order": 13

@@ -25,7 +25,8 @@
   "write_order": 79,
   "provenance_mode": "sections",
   "audit_profile": "risk",
-  "contract_revision": "2.22.0",
+  "dominant_form": "table",
+  "contract_revision": "2.23.0",
   "template_file": "content/security/templates/platform-permissions.md",
   "compact_group": "security_compact",
   "compact_order": 13

@@ -26,7 +26,12 @@ zero documentation references, no generated non-agent document mentions an
 agent-context output (`agent-context outbound` and `agent-context leak`,
 respectively), and no section README routes readers into source files.
 Plain source/configuration paths and verified commands remain valid inside
-agent-context outputs. A whole-tree discovery that changes one artifact
+agent-context outputs. Two structural findings are mechanical too:
+`missing illustration` (a written non-agent document whose declared
+`dominant_form` warrants a visual carries no `mermaid` or structural
+`text` fence) and `section cohesion` (a section with two or more
+non-router documents has an island document that neither links a sibling
+nor is linked by one). A whole-tree discovery that changes one artifact
 sends that artifact through its independent audit again
 ([`writing.md`](writing.md)).
 
@@ -39,7 +44,7 @@ only.
 ## Manifest and provenance
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit
-record. Its schema version is `3.9`. There is no second manifest or shadow
+record. Its schema version is `3.10`. There is no second manifest or shadow
 state file — `.docforge/flow-index.json` (the flow ledger) and the
 provenance sidecars are the only other persistent records.
 
@@ -51,12 +56,13 @@ covering both manifest schema and provenance storage. Migration is
 idempotent, so an already-current manifest reports a clean no-op; that
 cheapness is why the run is unconditional, never "when needed".
 
-Manifest 3.8 (and 3.7 / 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
+Manifest 3.9 (and 3.8 / 3.7 / 3.6 / 3.5 / 3.4 / 3.3 / 3.2 / 3.1 / 3.0 / provenance 1.0) are migrated by
 `migrate_metadata.{py,js}`
 (see [`../runtime/manifest/README.md`](../runtime/manifest/README.md)) before
 resume, revision, or provenance synchronization — every run,
 version-agnostic and idempotent. It also seeds each document's
-catalog-owned `description` from the catalog `summary`, normalizes
+catalog-owned `description` from the catalog `summary` and its
+catalog-owned `dominant_form` (added in 3.10), normalizes
 `provenance_storage` to `json` (moving any surviving inline frontmatter
 into the sidecars), the project's `unmanaged_docs` list (empty by default),
 and the project's `scale` record. A legacy manifest with **no** scale

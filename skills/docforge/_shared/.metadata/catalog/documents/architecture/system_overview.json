@@ -22,13 +22,13 @@
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "sequenceDiagram",
-  "schema_min": "2.22.0",
+  "schema_min": "2.23.0",
   "template_file": "content/architecture/templates/system-overview.md",
   "model_depth": {
     "arc42": "runtime-scenarios",
     "mermaid": "complementary"
   },
-  "contract_revision": "2.22.0",
+  "contract_revision": "2.23.0",
   "compact_group": "architecture_compact",
   "compact_order": 11
 }

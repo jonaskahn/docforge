@@ -19,5 +19,6 @@
   "write_order": 102,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
+  "dominant_form": "flowchart",
   "template_file": "content/portfolio/templates/system-context.md"
 }

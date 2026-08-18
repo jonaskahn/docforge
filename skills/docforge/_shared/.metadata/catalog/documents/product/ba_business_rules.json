@@ -24,7 +24,8 @@
   "write_order": 45,
   "provenance_mode": "sections",
   "audit_profile": "standard",
-  "contract_revision": "2.22.0",
+  "dominant_form": "table",
+  "contract_revision": "2.23.0",
   "template_file": "content/product/templates/business-rules.md",
   "compact_group": "ba_compact",
   "compact_order": 13

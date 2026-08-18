@@ -32,7 +32,7 @@ The dashboard directory is fully self-contained:
 
 ## Legacy manifest gate
 
-`scan`, `start`, `export`, and `status` all require a manifest 3.9 (or
+`scan`, `start`, `export`, and `status` all require a manifest 3.10 (or
 any older 3.x shape, upgraded in place by `migrate_metadata.{py,js}`;
 the full version list and upgrade mechanics live in
 [`validation.md`](validation.md) "Manifest and
@@ -53,7 +53,7 @@ command writes:
   migrated manifest:
 
   ```
-  manifest: legacy manifest auto-migrated to 3.9 (4 migrate, 1 skip)
+  manifest: legacy manifest auto-migrated to 3.10 (4 migrate, 1 skip)
   ```
 
   `--plan-only` runs the same `migrate_metadata.{py,js} --dry-run` preview

@@ -24,6 +24,7 @@
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
+  "dominant_form": "table",
   "template_file": "content/architecture/templates/hardware-map.md",
   "compact_group": "architecture_compact",
   "compact_order": 20

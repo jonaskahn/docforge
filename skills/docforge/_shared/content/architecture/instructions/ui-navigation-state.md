@@ -28,3 +28,7 @@
 |---|---|---|
 | Surfaces, navigation, state ownership, transitions, restoration, error presentation | `ui-components` | visual design tokens are owned there; this document owns only navigation state |
 | Restoration behavior after an app-lifecycle transition | `application-lifecycle` | process-death restoration is a lifecycle concern owned there, linked not restated |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

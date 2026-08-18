@@ -22,7 +22,7 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
 | `manage_manifest` | both | CLI | `init` / `preview` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `reconcile` / `retire` / `unmanaged` / `finish` |
 | `check_staleness` | both | CLI | Provenance blob drift report (raw / normalized / range-scoped); optional provenance sync |
 | `hash_evidence` | both | CLI | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one cited source |
-| `migrate_metadata` | both | CLI | Idempotent manifest 3.9 / provenance 2.1 upgrade + sidecar moves |
+| `migrate_metadata` | both | CLI | Idempotent manifest 3.10 / provenance 2.1 upgrade + sidecar moves |
 
 ## Details
 
@@ -84,7 +84,7 @@ non-UTF-8 span).
 python3 runtime/cli/python/migrate_metadata.py --repo <repo> [--manifest <path>] [--dry-run] [--report]
 ```
 
-Upgrades manifest 3.8 / 3.7 / 3.6 / 3.5 / 3.4 / 3.3 (or 3.2 / 3.1 / 3.0 / provenance 1.0) to 3.9 / 2.1 —
+Upgrades manifest 3.9 / 3.8 / 3.7 / 3.6 / 3.5 / 3.4 / 3.3 (or 3.2 / 3.1 / 3.0 / provenance 1.0) to 3.10 / 2.1 —
 seeding each document's catalog-owned `description` from the catalog
 `summary`, the project's `provenance_storage` (default `json`), the project's
 `unmanaged_docs` list (default empty), and the project's `scale` record
@@ -117,5 +117,5 @@ or failed conversion.
 ## Boundaries
 
 Consumes `common/` libraries (`_util`, `plan`, `provenance_frontmatter`,
-`evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.9) and
+`evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.10) and
 flow-index schema (1.2) are enforced by `validation/validate_metadata`.

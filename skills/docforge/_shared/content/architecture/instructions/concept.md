@@ -35,3 +35,7 @@
 | — | `architecture-low-level` | low-level traces the mechanism that implements this concept's invariants |
 | A shortcut affecting this concept | `tech-debt-register` | fixable-by-us shortcuts are never described here as if permanent |
 | A hard bound affecting this concept | `constraints` | externally imposed limits are owned there, not repeated per concept |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

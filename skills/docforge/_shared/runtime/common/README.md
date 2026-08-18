@@ -13,7 +13,7 @@ they exist to be imported, not executed.
   (`.docforge/provenance/<folder>.json`), or moving a pre-migration
   document's inline frontmatter into one → `provenance_store`.
 - Planning manifest document actions → `plan`.
-- Linting documents → `evidence_locators`, `illustration_metrics`,
+- Linting documents → `illustration_metrics`,
   `markdown_fences`.
 - Checking that a human-facing document does not reference the agent-context
   group → `agent_context`.
@@ -36,7 +36,6 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | `_util` | JSON/error/manifest helpers, `.docforge/.gitignore` and `tmp/`/`scratch/` cleanup | mixes — mutates `.docforge` state |
 | `agent_context` | Manifest-derived inbound and outbound agent-context isolation checks | yes |
 | `evidence_hash` | Raw/normalized/range-scoped blob hashing and fresh/cosmetic/stale classification | yes |
-| `evidence_locators` | Validate `path#Lx-Ly @ <git-blob>` locators against files and provenance | yes |
 | `illustration_metrics` | Enforce per-illustration Mermaid/ASCII complexity bounds per target depth | yes |
 | `manifest_deps` | Extract dependency names + own-package identities from manifests (9 ecosystems) | yes |
 | `markdown_fences` | CommonMark fence scanning and visible-presentation policy checks | yes |
@@ -81,9 +80,6 @@ All are paired libraries (Python snake_case / JS camelCase exports).
   `range_blob_hash`, `classify_source(source, current_bytes)` returning
   `missing`/`fresh`/`cosmetic`/`stale`. No git dependency; normalization is
   whitespace/EOL-only (no comment stripping).
-- `evidence_locators` — `validate_locators(document, text=None)`; defects for
-  path escape, missing source, stale blob, invalid range, unknown heading,
-  provenance mismatch.
 - `illustration_metrics` — `illustration_defects(text, target_depth)`; bounds
   the elements within a single illustration per depth (orientation 5, all
   others 12). The number of illustrations in a document is never capped.
@@ -128,7 +124,7 @@ and `manifest_deps` for import compatibility only (no CLI behavior). Known
 consumers:
 
 - `documents/` — `_util`, `plan`, `special_files`, `provenance_frontmatter`,
-  `provenance_store`, `evidence_locators`, `illustration_metrics`,
+  `provenance_store`, `illustration_metrics`,
   `markdown_fences`, `agent_context`.
 - `manifest/` — `_util`, `plan`, `provenance_frontmatter`, `provenance_store`,
   `evidence_hash`, `flow_index_schema` (migration merges the flow ledger).

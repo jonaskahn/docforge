@@ -24,6 +24,7 @@
   "write_order": 41,
   "provenance_mode": "sections",
   "audit_profile": "standard",
+  "dominant_form": "table",
   "template_file": "content/product/templates/content-model.md",
   "compact_group": "product_compact",
   "compact_order": 13

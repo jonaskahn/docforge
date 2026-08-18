@@ -2,22 +2,51 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Docforge Category Index",
   "type": "object",
-  "required": ["$schema", "version", "category", "purpose", "source", "records"],
+  "required": [
+    "$schema",
+    "version",
+    "category",
+    "purpose",
+    "source",
+    "records"
+  ],
   "properties": {
-    "$schema": {"type": "string"},
-    "version": {"const": "2.22.0"},
-    "category": {"type": "string"},
-    "purpose": {"type": "string", "maxLength": 160},
-    "source": {"type": "string"},
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": "2.23.0"
+    },
+    "category": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "source": {
+      "type": "string"
+    },
     "records": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "path", "summary"],
+        "required": [
+          "id",
+          "path",
+          "summary"
+        ],
         "properties": {
-          "id": {"type": "string"},
-          "path": {"type": "string"},
-          "summary": {"type": "string", "maxLength": 160}
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 160
+          }
         },
         "additionalProperties": false
       }

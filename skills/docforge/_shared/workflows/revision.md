@@ -104,7 +104,10 @@ falls in scope:
    tree, re-ground the affected connection / overview sections even when
    recorded source blobs still match. Blob freshness proves cited source
    files are unchanged; it does not prove the document's place in the
-   documentation graph is still correct.
+   documentation graph is still correct. The same holds for illustration
+   coverage: a `FRESH` document whose declared `dominant_form` warrants a
+   visual but carries none must gain it on this revise — blob freshness
+   does not prove the document satisfies the illustration gate.
 7. **Triage unmanaged documents** — detect foreign docs and run the triage
    exactly as owned in
    [`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
@@ -331,7 +334,7 @@ repair rather than failing:
 Agent-context isolation never changes with scope. Outputs remain
 self-contained and zero-reference whether revised alone, alongside
 human-facing documentation, or after the selected area set changes. The
-catalog contract revision `2.22.0` therefore rewrites any older routed or
+catalog contract revision `2.23.0` therefore rewrites any older routed or
 importing form through steps 1a and 1b without a conversion prompt.
 Standard and compact layout switches remain content-preserving under the
 normal split/merge mechanics.
@@ -430,7 +433,7 @@ detection or rediscovery, writes no documents, never starts the dashboard.
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
 2. Migration is unconditional (see [`validation.md`](validation.md)
-   "Manifest and provenance"): upgrade any manifest below 3.9 to 3.9 / provenance 2.1 —
+   "Manifest and provenance"): upgrade any manifest below 3.10 to 3.10 / provenance 2.1 —
    moving each section-provenance document's inline
    frontmatter into the folder sidecar
    (`.docforge/provenance/<folder>.json`) and stripping it from the
@@ -508,8 +511,10 @@ update the doc wherever it now lives.
      unchanged (a `COSMETIC` source differs only in
      whitespace/line-endings or outside the cited range). Do not rewrite
      unless the user also asked for wording edits unrelated to source
-     drift, or the document's structure / format / content deviates from
-     the current template (step 1b) — then rewrite to the template.
+     drift, the document's structure / format / content deviates from
+     the current template (step 1b) — then rewrite to the template — or
+     the document's declared `dominant_form` warrants a visual the file
+     does not carry (below).
    - blocking `PARTIAL` (`STALE` / `MISSING` / `NO_BLOB`) → open only
      the listed section ids and their source files; re-ground those
      sections; keep every `FRESH` and `COSMETIC` section verbatim;
@@ -518,7 +523,16 @@ update the doc wherever it now lives.
      [`../references/provenance-tracking.md`](../references/provenance-tracking.md)).
    - `UNTRACKED` / empty sections / `UNPARSEABLE` → full re-ground and
      stamp via [`writing.md`](writing.md).
-4. Run mechanical lint, independent audit, and manifest status updates.
+4. **Illustration coverage is structural, never a blob check** — in every
+   branch above, verify the document's declared `dominant_form` (the
+   manifest entry) against the file: a non-null, non-`table` form requires
+   at least one `mermaid` fence or structural `text` fence. Missing →
+   author it from the instruction's `## Illustration` block and
+   `illustration.md`'s budget for the document's depth, in the same pass,
+   without touching `FRESH`/`COSMETIC` section prose. This is what makes
+   an already-written, diagram-less document gain its diagram on the next
+   revise.
+5. Run mechanical lint, independent audit, and manifest status updates.
 
 Graph precheck still applies when the document's `requires` list demands
 it.

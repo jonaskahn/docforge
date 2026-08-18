@@ -108,8 +108,9 @@ inline from the absolute cartridge root with `query_catalog --validate`,
 - `check_staleness.{py,js}`: `--document <id|path>`, `--section`, JSON
   output, and provenance sync.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata
-  upgrade to manifest 3.9 / provenance 2.1 — sidecar moves,
-  catalog-owned `description` seeding, `unmanaged_docs` and `scale` record
+  upgrade to manifest 3.10 / provenance 2.1 — sidecar moves,
+  catalog-owned `description` and `dominant_form` seeding,
+  `unmanaged_docs` and `scale` record
   defaults, and legacy pre-3.0 re-registration. Mechanics:
   [`validation.md`](validation.md) "Manifest and provenance" and
   [`../runtime/manifest/README.md`](../runtime/manifest/README.md).

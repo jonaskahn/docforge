@@ -19,5 +19,6 @@
   "write_order": 103,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
+  "dominant_form": null,
   "template_file": "content/shared/adr.template.md"
 }

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import posixpath
 import re
 import sys
 from pathlib import Path, PurePosixPath
@@ -16,6 +17,7 @@ from runtime.common.python.agent_context import (
     agent_context_outbound_findings,
 )
 from runtime.common.python.plan import plan_entries
+from runtime.common.python.markdown_fences import scan_fences
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.provenance_frontmatter import (
     BLOB,
@@ -449,6 +451,80 @@ def is_direct_child(folder: PurePosixPath, candidate: PurePosixPath) -> bool:
     return len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.name == "README.md")
 
 
+STRUCTURAL_GLYPHS = re.compile(r"[│├└┌┐┘┬┴┤─]")
+
+
+def has_declared_illustration(text: str) -> bool:
+    """True when the file carries a `mermaid` fence or a structural `text`
+    fence (one whose content uses tree/box/timeline glyphs)."""
+    for fence in scan_fences(text):
+        if fence["role"] == "diagram":
+            return True
+        if fence["language"] in {"text", "ascii", ""} and any(
+            STRUCTURAL_GLYPHS.search(line) for _, line in fence["lines"]
+        ):
+            return True
+    return False
+
+
+def missing_illustration(doc: dict, text: str) -> list[str]:
+    """A written non-agent document whose declared `dominant_form` warrants a
+    visual must carry one — a `mermaid` fence or a structural `text` fence."""
+    if doc.get("group") == AGENT_CONTEXT_GROUP:
+        return []
+    if doc.get("path") in MARKDOWN_EXCEPTIONS or doc.get("type") == "machine-config":
+        return []
+    if doc.get("status") not in WRITTEN:
+        return []
+    form = doc.get("dominant_form")
+    if form is None or form == "table":
+        return []
+    if has_declared_illustration(text):
+        return []
+    return [f"{doc['path']}: declared dominant_form {form}, no mermaid or structural text fence"]
+
+
+def cohesion_defects(docs: list[dict], texts: dict[str, str]) -> list[str]:
+    """No document is an island: in a section folder holding two or more
+    written non-router documents, each either links a sibling or is linked by
+    one. The section README alone does not satisfy it."""
+    findings: list[str] = []
+    by_folder: dict[str, list[dict]] = {}
+    for doc in docs:
+        if doc.get("group") == AGENT_CONTEXT_GROUP:
+            continue
+        if doc["type"] in INDEX_TYPES or doc["type"] == COMPACT_TYPE:
+            continue
+        if doc.get("status") not in WRITTEN:
+            continue
+        by_folder.setdefault(str(PurePosixPath(doc["path"]).parent), []).append(doc)
+    for folder, members in sorted(by_folder.items()):
+        if len(members) < 2:
+            continue
+        sibling_paths = {member["path"] for member in members}
+        outgoing: dict[str, set[str]] = {}
+        for member in members:
+            member_path = member["path"]
+            base = PurePosixPath(member_path).parent
+            linked = set()
+            for raw in LINK.findall(texts.get(member_path, "")):
+                target = raw.split("#", 1)[0].strip()
+                if not target or target.startswith(("http://", "https://", "mailto:")):
+                    continue
+                if PLACEHOLDER.search(target) or TOKEN.search(target):
+                    continue
+                normalized = posixpath.normpath(str(base / target))
+                if normalized in sibling_paths and normalized != member_path:
+                    linked.add(normalized)
+            outgoing[member_path] = linked
+        linked_by = {target for linked in outgoing.values() for target in linked}
+        for member in members:
+            member_path = member["path"]
+            if not outgoing.get(member_path) and member_path not in linked_by:
+                findings.append(f"{folder}: {member_path} is an island — links no sibling and no sibling links it")
+    return findings
+
+
 def audit(repo: Path, manifest: dict) -> int:
     findings: dict[str, list[str]] = {
         "missing": [],
@@ -463,6 +539,8 @@ def audit(repo: Path, manifest: dict) -> int:
         "unknown section": [],
         "broken links": [],
         "readme child coverage": [],
+        "missing illustration": [],
+        "section cohesion": [],
         "agent-context leak": [],
         "agent-context outbound": [],
         "invalid json": [],
@@ -471,6 +549,7 @@ def audit(repo: Path, manifest: dict) -> int:
         "unexpected": [],
     }
     tokens: list[str] = []
+    texts: dict[str, str] = {}
     docs = active_documents(manifest)
     expected = {doc["path"] for doc in docs}
     self_managed = unmanaged_paths(manifest)
@@ -532,6 +611,9 @@ def audit(repo: Path, manifest: dict) -> int:
             f"{doc['path']}: missing link to {item}"
             for item in readme_child_coverage(repo, doc, manifest, text)
         )
+        findings["missing illustration"].extend(missing_illustration(doc, text))
+        texts[doc["path"]] = text
+    findings["section cohesion"].extend(cohesion_defects(docs, texts))
     for prefix in ("docs/flows/", "docs/architecture/concepts/"):
         folders = {
             str(PurePosixPath(path).parent)

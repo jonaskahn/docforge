@@ -20,6 +20,7 @@
   "write_order": 74,
   "provenance_mode": "sections",
   "audit_profile": "operations",
+  "dominant_form": null,
   "template_file": "content/operations/templates/runbook.md",
   "compact_group": "operations_compact",
   "compact_order": 52

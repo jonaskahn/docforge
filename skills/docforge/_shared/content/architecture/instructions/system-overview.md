@@ -31,3 +31,7 @@
 | The handful of major capabilities, components touched, owning flow, primary end-to-end paths, external boundary systems | `flows/flow-index` (`docs/flows/README.md`) | this document links to the flow matrix; it never restates individual flow steps |
 | — | `architecture-high-level` | component detail per capability is owned there; this document only names which components a capability touches |
 | — | this document is itself aligned per `document-composition.md`: it owns no new fact | every fact here must already be owned by a flow or architecture document — this is a router, exactly like `flow-index` |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

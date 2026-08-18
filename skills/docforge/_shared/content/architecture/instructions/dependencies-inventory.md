@@ -48,3 +48,7 @@
 | Direct dependencies/integrations, purpose, criticality, failure behavior | `reference/tech-stack` | tech-stack states what the repository is built with; this document adds the failure-framing judgment tech-stack omits |
 | A dependency's known weakness or accepted risk | `tech-debt-register` or `security/threat-model`'s accepted-risk section | route by whether it's fixable (debt) or an accepted external risk (threat model), never both |
 | A network boundary a dependency crosses | `network` | the trust-zone crossing is owned there; this document owns the dependency's criticality judgment |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

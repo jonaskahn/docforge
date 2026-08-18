@@ -19,6 +19,7 @@ from _support import (
     provenance,
     run,
     write_flow_index,
+    write_written_doc,
 )
 
 
@@ -280,7 +281,7 @@ class ReadmeFlowIndexTests(unittest.TestCase):
                 self.assertIn(".docforge/flow-index.json", [source["path"] for source in sources])
                 self.assertTrue(sources[0]["git_blob"])
                 payload = json.loads(run(runtime, "query_catalog", "--route", "flows_index").stdout)
-                self.assertEqual(payload["contract_revision"], "2.22.0")
+                self.assertEqual(payload["contract_revision"], "2.23.0")
 
 
 class AgentContextIsolationTests(unittest.TestCase):
@@ -562,6 +563,130 @@ class AgentContextIsolationTests(unittest.TestCase):
                 self.assertEqual(agent_findings, [], coverage)
                 observed[runtime] = agent_findings
         self.assertEqual(observed["py"], observed["js"])
+
+
+class SectionCohesionTests(unittest.TestCase):
+    def _fixture(self, repo: Path, *bodies: str) -> Path:
+        """Two written sibling architecture documents with the given bodies
+        (prose, no provenance requirements beyond the minimum) and a hand-built
+        3.10 manifest."""
+        source = repo / "source.txt"
+        source.write_text("arch\n", encoding="utf-8")
+
+        def doc(doc_id: str, path: str, order: int) -> dict:
+            return {
+                "id": doc_id, "type": "arch-high-level", "path": path,
+                "group": "architecture",
+                "selection": {"origins": [], "evidence": []},
+                "status": "complete", "requires": [],
+                "scaffold_template": "architecture-high-level.md",
+                "instruction_file": None, "target_depth": "deep-dive",
+                "write_order": order, "provenance_mode": "sections",
+                "audit_profile": "architecture", "dominant_form": None,
+                "provenance": provenance(
+                    doc_id=doc_id, path=path, tier="spine",
+                    target_depth="deep-dive", section_id="coverage",
+                    source_path="source.txt",
+                    source_blob=blob_hash(source.read_bytes()),
+                ),
+                "audit": None,
+            }
+
+        documents = [
+            doc("arch_high_level", "docs/architecture/high-level.md", 10),
+            doc("arch_low_level", "docs/architecture/low-level.md", 11),
+        ]
+        for entry, body in zip(documents, bodies):
+            write_written_doc(repo, entry, body)
+        manifest = {
+            "version": "3.10",
+            "generated_at": "2026-08-01T00:00:00+00:00",
+            "project": {
+                "name": "fixture", "root": str(repo), "tier": "spine",
+                "provenance_storage": "json",
+                "profiles": {"shapes": [], "platforms": [], "frameworks": [],
+                             "concerns": [], "audiences": []},
+            },
+            "discovery": [], "documents": documents, "metadata": {},
+        }
+        manifest_path = repo / ".docforge" / "manifest.json"
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        return manifest_path
+
+    def _audit(self, runtime: str, repo: Path, manifest_path: Path):
+        return run(runtime, "scaffold_docs", "--repo", str(repo),
+                   "--manifest", str(manifest_path), "--audit")
+
+    def test_island_documents_are_an_audit_defect_with_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest_path = self._fixture(
+                repo,
+                "# Coverage\n\nNo links at all.\n",
+                "# Coverage\n\nNo links either.\n",
+            )
+            outputs = [self._audit(runtime, repo, manifest_path) for runtime in ("py", "js")]
+            for result in outputs:
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("SECTION COHESION", result.stdout)
+                self.assertIn("docs/architecture/high-level.md is an island", result.stdout)
+                self.assertIn("docs/architecture/low-level.md is an island", result.stdout)
+            self.assertEqual(outputs[0].stdout, outputs[1].stdout)
+
+    def test_sibling_linked_pair_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest_path = self._fixture(
+                repo,
+                "# Coverage\n\nSee [low-level](low-level.md) for components.\n",
+                "# Coverage\n\nZoom-out is in [high-level](high-level.md).\n",
+            )
+            for runtime in ("py", "js"):
+                result = self._audit(runtime, repo, manifest_path)
+                self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_one_direction_alone_is_enough(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest_path = self._fixture(
+                repo,
+                "# Coverage\n\nSee [low-level](low-level.md) for components.\n",
+                "# Coverage\n\nNo outgoing link, but the sibling links here.\n",
+            )
+            for runtime in ("py", "js"):
+                result = self._audit(runtime, repo, manifest_path)
+                self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_linking_only_the_readme_does_not_satisfy_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest_path = self._fixture(
+                repo,
+                "# Coverage\n\nSee [the section](README.md).\n",
+                "# Coverage\n\nSee [the section](README.md).\n",
+            )
+            (repo / "docs" / "architecture" / "README.md").write_text("# Architecture\n", encoding="utf-8")
+            for runtime in ("py", "js"):
+                result = self._audit(runtime, repo, manifest_path)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("SECTION COHESION", result.stdout)
+
+    def test_single_non_router_document_is_never_flagged(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest_path = self._fixture(
+                repo,
+                "# Coverage\n\nAlone in the section.\n",
+                "# Coverage\n\nAlone in the section.\n",
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["documents"] = manifest["documents"][:1]
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            (repo / "docs" / "architecture" / "low-level.md").unlink()
+            for runtime in ("py", "js"):
+                result = self._audit(runtime, repo, manifest_path)
+                self.assertEqual(result.returncode, 0, result.stdout)
 
 
 if __name__ == "__main__":

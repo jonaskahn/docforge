@@ -23,6 +23,7 @@
   "write_order": 79,
   "provenance_mode": "sections",
   "audit_profile": "risk",
+  "dominant_form": "table",
   "template_file": "content/security/templates/api-authentication.md",
   "compact_group": "security_compact",
   "compact_order": 11

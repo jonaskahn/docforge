@@ -23,9 +23,10 @@
   "write_order": 43,
   "provenance_mode": "sections",
   "audit_profile": "router",
+  "dominant_form": null,
   "template_file": "content/product/templates/ba-readme.md",
   "title": "Business Analyst documentation",
-  "contract_revision": "2.22.0",
+  "contract_revision": "2.23.0",
   "compact_group": "ba_compact",
   "compact_order": 11
 }

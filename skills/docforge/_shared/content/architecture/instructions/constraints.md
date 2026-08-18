@@ -28,3 +28,7 @@
 | Hard, externally imposed, immovable bounds | `tech-debt-register` | fixable-by-us shortcuts are routed there instead, never cross-filed |
 | — | `limitations-register` | deliberate, accepted, user-visible limitations are routed there instead, never cross-filed |
 | A bound that shapes a specific block | `architecture-high-level` (the affected block) | the block names what it is; this document says why it cannot be otherwise |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

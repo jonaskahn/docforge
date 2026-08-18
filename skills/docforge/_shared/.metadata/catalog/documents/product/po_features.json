@@ -23,6 +23,7 @@
   "write_order": 48,
   "provenance_mode": "sections",
   "audit_profile": "standard",
+  "dominant_form": "table",
   "template_file": "content/product/templates/feature-catalog.md",
   "compact_group": "po_compact",
   "compact_order": 12

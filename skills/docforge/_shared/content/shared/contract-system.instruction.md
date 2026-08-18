@@ -6,11 +6,6 @@ invariant framing used by manual smart-contract audits (Trail of Bits,
 ConsenSys Diligence style): map the system boundary and trust assumptions
 before individual mechanisms, then state what must always hold.
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); an ER or
-flowchart diagram only for contract-to-contract call relationships that
-prose cannot carry cleanly; otherwise tables and prose.
-
 - For contract-system: name every contract, its storage layout at the level
   a reader needs (not a field-by-field dump), which authorities can call its
   privileged functions, which network(s) it is deployed to, and its upgrade
@@ -31,3 +26,24 @@ prose cannot carry cleanly; otherwise tables and prose.
 - Network, authority, upgrade, and governance claims require deployment or
   governance evidence; absent evidence is an explicit unknown, never a
   safety conclusion.
+
+## Illustration
+
+- **Form:** tables and prose; a Mermaid `erDiagram` or `flowchart` only for
+  contract-to-contract call relationships that prose cannot carry cleanly.
+- **Renders:** the call relationships among contracts — otherwise the
+  inventory tables and invariant statements themselves.
+- **Trigger:** only when contract-to-contract call relationships cannot be
+  read as prose, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Invariant identifiers and their enforcement mechanisms | `economic-invariants` | the paired view; inventory rows link to invariants, never restate them |
+| Accepted residual risk and audit evidence | `threat-model` | the same evidence-and-residual-risk discipline is owned there |
+
+## Voice
+
+- **Voice:** precise; hedge only where evidence is thin; never alarmist.

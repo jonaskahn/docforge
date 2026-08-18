@@ -24,9 +24,9 @@
   "model_depth": {
     "c4": "container",
     "arc42": "building-block-l1",
-    "mermaid": "annotated"
+    "mermaid": "complementary"
   },
-  "contract_revision": "2.22.0",
+  "contract_revision": "2.23.0",
   "template_file": "content/architecture/templates/architecture-high-level.md",
   "compact_group": "architecture_compact",
   "compact_order": 2

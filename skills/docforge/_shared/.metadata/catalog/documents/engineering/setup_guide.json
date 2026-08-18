@@ -19,6 +19,7 @@
   "write_order": 51,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
+  "dominant_form": null,
   "template_file": "content/engineering/templates/setup.md",
   "compact_group": "engineering_compact",
   "compact_order": 2

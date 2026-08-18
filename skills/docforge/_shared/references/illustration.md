@@ -58,6 +58,14 @@ when lookup fields cannot express the relationship clearly. Router documents
 normally use prose and links, because their reader wants a destination rather
 than a picture. Both are form preferences, not quotas.
 
+The form a document type expects is **declared** in the catalog
+(`dominant_form`, mirrored into each manifest document) and restated as a
+Form/Renders/Trigger block in the type's writing-craft instruction. A written
+document whose declared form warrants a visual must carry one — the mechanical
+gate reports `missing-illustration` when it does not, on a fresh run and on
+revise alike. This file still owns which forms exist, when each fits, and the
+budgets; the declaration only names the form, never overrides it.
+
 Split any illustration that exceeds its bound into linked views with one stated
 question each. **Splitting is always available** — the resulting views are
 additional illustrations, and that is the intended outcome, not a violation.

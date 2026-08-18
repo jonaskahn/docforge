@@ -53,7 +53,7 @@ path: "docs/architecture/constraints.md"
 generated_at: "2026-07-27T09:12:44Z"
 generator:
   name: "docforge"
-  version: "2.22.0"
+  version: "2.23.0"
 tier: "diligence"
 target_depth: "deep-dive"
 git_commit: "9f1c0aa4e2b7d3915c6f0b8ad24e7c31b5a0e6d2"
@@ -149,7 +149,7 @@ preserves section evidence (inferring source `role` and adding empty
 `unresolved` when absent), migrates embedded manifest provenance objects,
 seeds each document's catalog-owned public `description` (from the catalog
 `summary`), and bumps the manifest from `3.8` / `3.7` / `3.6` / `3.5` /
-`3.4` / `3.3` (or `3.2` / `3.1` / `3.0`) to `3.9`.
+`3.4` / `3.3` (or `3.2` / `3.1` / `3.0`) to `3.10`.
 
 When frontmatter is missing or unparseable, conversion throws, or the result
 for a previously written document is still incomplete (scaffold tokens, empty

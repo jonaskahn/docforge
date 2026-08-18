@@ -32,3 +32,7 @@
 | Lifecycle, boundaries, transitions, failure/recovery | `architecture-high-level` | this is the deep-dive of the stateful block named there |
 | Persisted state's storage contract | `persistence` | persistence owns durability mechanics; this document owns the state machine that uses it |
 | A transition affected by UI-level state | `ui-navigation-state` | avoids re-deriving navigation state here when it is owned there |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

@@ -16,12 +16,6 @@ surface and compatibility boundary. Ground issuance, rotation, revocation,
 scopes, statuses, and caller actions in code, config, or schema evidence; link
 quota and shared error contracts to their reference owners.
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a
-sequence diagram only when a flow (OAuth2 authorization code, mTLS
-handshake) has more than two actors — otherwise prose and a credential
-table.
-
 Name the scheme by its real category first — API key, bearer token, OAuth2
 grant type, mTLS, signed request. For each scheme in use, state the
 credential's lifecycle in order: issued, transmitted, rotated, then what
@@ -35,17 +29,36 @@ parse to find the one scope they need. Never include a real credential,
 secret, or token value, including as an "example" — use an obviously
 synthetic placeholder.
 
+## Illustration
+
+- **Form:** prose and a credential table; a Mermaid `sequenceDiagram` only
+  when a flow (OAuth2 authorization code, mTLS handshake) has more than two
+  actors.
+- **Renders:** per scheme, the credential lifecycle — issued, transmitted,
+  rotated, then expiry/revocation; for multi-actor flows, the actors and
+  each call in order.
+- **Trigger:** only when a flow has more than two actors — otherwise prose
+  and the credential table, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The public surface and compatibility boundary | `api-reference` | the schema or generator that defines it is owned there |
+| Quota contracts | `api-rate-limits` | owned there, linked not restated |
+| Shared error contracts | `api-errors` | owned there, linked not restated |
+
+## Voice
+
+- **Voice:** precise; hedge only where evidence is thin; never alarmist.
+
 ## Data-handling writing craft
 
 For each data-class lifecycle row, cite repository evidence for collection, use,
 access, storage or retention, and deletion. Keep classification here, but link
 retention authority and deletion execution to their evidence-backed owner; state
 unevidenced duration, processor, or outcome as a limit.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-for data class × lifecycle stage, prose only for a nuance a table cannot
-carry.
 
 Classify data first — the categories the system actually distinguishes
 (public, internal, confidential, regulated/PII), not a generic three-tier
@@ -62,15 +75,31 @@ claim. Never name an internal hostname, a real credential, or an
 individual's name as a security contact — use the role or the channel from
 [Security-policy](#security-policy-writing-craft) instead.
 
+## Illustration
+
+- **Form:** a Markdown table for data class × lifecycle stage; prose only
+  for a nuance a table cannot carry.
+- **Renders:** per class — collection, use, retention, deletion, access
+  boundaries.
+- **Trigger:** never — the table plus prose, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Data classes, lifecycle, access boundaries, deletion | `threat-model` | classifications are referenced there, never restated |
+| The security contact role or channel | `security-policy` | owned there, referenced not restated |
+
+## Voice
+
+- **Voice:** precise; hedge only where evidence is thin; never alarmist.
+
 ## Platform-permissions writing craft
 
 Pair each manifest or entitlement declaration with provenance for request timing,
 denial fallback, and revocation recovery. A declaration without runtime evidence
 is a gap, not proof of behavior.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-per permission is primary, prose only for a denial-flow nuance.
 
 One entry per requested capability, in this order: the capability itself,
 what triggers the request (first launch, first use of a feature, explicit
@@ -86,17 +115,32 @@ claim the repository does not evidence; a permission the reader cannot find
 declared anywhere is worse than an undocumented one, because it reads as
 authoritative.
 
+## Illustration
+
+- **Form:** a Markdown table per permission; prose only for a denial-flow
+  nuance.
+- **Renders:** capability, request trigger, value unlocked, denial behavior,
+  revocation recovery.
+- **Trigger:** never — the permission table is primary, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Requested capabilities, request timing, denial fallback, revocation recovery | `platform-compatibility` | platform minimums and degradation are owned there |
+| The data a granted permission unlocks | `data-handling` | access boundaries per class are owned there |
+
+## Voice
+
+- **Voice:** precise; hedge only where evidence is thin; never alarmist.
+
 ## Security-policy writing craft
 
 Add a distinct Safe harbor and authorized testing section only when an accountable
 policy decision establishes it, including good-faith limits and exclusions. Cite
 policy, release, configuration, or maintainer evidence for scope, contact, and
 response commitments; otherwise retain typed external unknowns.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); disclosure
-policy is procedural prose, not a diagram, unless an evidenced lifecycle needs
-three or more states.
 
 Write disclosure instructions as a calm, unambiguous procedure — the human-readable
 companion to a `security.txt` (RFC 9116): the same facts a machine-readable Contact and
@@ -119,17 +163,33 @@ from what they must not do, as two short, separate lists, not one merged paragra
 technical threat-model detail in the linked security documents; this page is a procedure,
 not an analysis.
 
+## Illustration
+
+- **Form:** procedural prose; a diagram only when an evidenced lifecycle
+  needs three or more states.
+- **Renders:** scope, reporting steps, response commitments — the facts a
+  reporter acts on without guessing.
+- **Trigger:** only when an evidenced lifecycle needs three or more states —
+  disclosure policy is procedural prose, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Scope, reporting procedure, response commitments, safe harbor | `threat-model` | technical analysis is owned there; this page is procedure, not analysis |
+| Scored threats and exhaustive interactions | `threat-register` | owned there, never restated on this page |
+
+## Voice
+
+- **Voice:** precise; hedge only where evidence is thin; never alarmist.
+
 ## Threat-model writing craft
 
 For every control and response, cite code, configuration, or test evidence and
 name an accountable owner only when established. Record accepted risk only with
 a documented decision, rationale, review condition, and owner; otherwise leave
 the exposure unresolved rather than describing it as mitigated.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a data-flow
-Mermaid diagram naming trust boundaries, prose for each threat and its
-response.
 
 Analyze a bounded DFD proportionately: name assets, trust zones, external
 entities, processes, data stores, and flows first. Apply STRIDE (Spoofing,
@@ -152,6 +212,29 @@ Scores and exhaustive interactions belong in the conditional `threat-register`
 owner, never this narrative. Do not infer likelihood, owner, or control
 effectiveness. Trust boundaries are zones or crossings, not process nodes.
 
+## Illustration
+
+- **Form:** a data-flow Mermaid diagram naming trust boundaries; prose for
+  each threat and its response.
+- **Renders:** assets, trust zones, external entities, processes, data
+  stores, and flows — then one response per threat tied to a testable
+  control.
+- **Trigger:** the bounded DFD is the analysis frame — draw it before the
+  STRIDE pass, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The bounded DFD, STRIDE matrix, threats, responses | `threat-register` | scores and exhaustive interactions are owned there, never this narrative |
+| Data classifications | `data-handling` | owned there, linked not restated |
+| Disclosure workflow | `security-policy` | owned there; kept out of this document |
+
+## Voice
+
+- **Voice:** precise; hedge only where evidence is thin; never alarmist.
+
 ## Threat-register writing craft
 
 Generate this dynamic document only after a recorded high-criticality trigger
@@ -160,3 +243,21 @@ Impact rubric throughout, or `unscored` if evidence cannot support a score.
 Each row covers one STRIDE category for one named DFD interaction. Controls must
 be concrete and safe to publish; name an owner only when evidence establishes
 one. Link back to `threat-model` for the bounded DFD and narrative.
+
+## Illustration
+
+- **Form:** a Markdown table — one row per threat.
+- **Renders:** one STRIDE category per named DFD interaction, with
+  likelihood, impact, control, and owner.
+- **Trigger:** never — the bounded DFD and narrative are owned by
+  `threat-model`, linked not redrawn.
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Scored threats, controls, owners | `threat-model` | the bounded DFD and narrative this register scores are owned there |
+
+## Voice
+
+- **Voice:** precise; hedge only where evidence is thin; never alarmist.

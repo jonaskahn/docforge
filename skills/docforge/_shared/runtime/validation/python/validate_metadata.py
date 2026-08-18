@@ -22,7 +22,7 @@ from runtime.catalog.python import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
-CATALOG_VERSION = "2.22.0"
+CATALOG_VERSION = "2.23.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--group", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
@@ -74,8 +74,8 @@ def validate() -> list[str]:
         errors.append("split catalog index.json is missing")
     if (metadata / "catalog.json").is_file():
         errors.append("obsolete monolith catalog.json remains; use .metadata/catalog/")
-    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.9":
-        errors.append("manifest schema must require version 3.9")
+    if manifest_schema.get("properties", {}).get("version", {}).get("const") != "3.10":
+        errors.append("manifest schema must require version 3.10")
     project_required = set(manifest_schema.get("properties", {}).get("project", {}).get("required", []))
     if "provenance_storage" not in project_required:
         errors.append("manifest schema project must require provenance_storage")
@@ -86,8 +86,8 @@ def validate() -> list[str]:
         errors.append("shipped .metadata/manifest.json example is missing")
     else:
         example_manifest = read_json(example_manifest_path)
-        if example_manifest.get("version") != "3.9":
-            errors.append("shipped .metadata/manifest.json example must use version 3.9")
+        if example_manifest.get("version") != "3.10":
+            errors.append("shipped .metadata/manifest.json example must use version 3.10")
         example_project = example_manifest.get("project", {})
         missing_project_fields = project_required - set(example_project)
         if missing_project_fields:

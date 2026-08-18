@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Migrate Docforge manifest metadata to 3.9 / provenance 2.0.
+"""Migrate Docforge manifest metadata to 3.10 / provenance 2.0.
 
-Upgrades manifest 3.3 (seeding the project's `unmanaged_docs` list) and
+Upgrades manifest 3.9 (seeding each document's catalog-owned
+`dominant_form`) and manifest 3.3 (seeding the project's `unmanaged_docs`
+list) and
 manifest 3.2 / provenance 2.0 (seeding each document's catalog-owned
 `description` and the project's `provenance_storage`, then moving inline
 frontmatter into `.docforge/provenance/` sidecars when storage is `json`) and
@@ -10,7 +12,7 @@ schema 1.0 and schema-less
 legacy frontmatter, including pre-schema `doc` / `graph_snapshot` shapes,
 while preserving section evidence), and re-registers any older legacy
 manifest — 1.1 (`project_context` / `document_groups`), 2.0 (flat
-`documents` with overlay profiles), or any other pre-3.0 shape — as 3.9:
+`documents` with overlay profiles), or any other pre-3.0 shape — as 3.10:
 written documents are adopted as `generated` with provenance 2.0, bodies
 preserved, and plan entries kept. When a document cannot be converted to
 complete provenance 2.0 (missing or unparseable frontmatter, conversion
@@ -46,8 +48,8 @@ from runtime.common.python.provenance_frontmatter import (
 )
 from runtime.graph.python.graph_source_registry import flow_capability_of, resolve_first_ready
 
-MANIFEST_CURRENT = "3.9"
-MANIFEST_IN_PLACE = ("3.9", "3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
+MANIFEST_CURRENT = "3.10"
+MANIFEST_IN_PLACE = ("3.10", "3.9", "3.8", "3.7", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0")
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_OUTPUTS
 WRITTEN = {"generated", "needs_review", "complete"}
 SCALAR_FIELDS = ("doc_id", "path", "generated_at", "tier", "target_depth")
@@ -476,6 +478,33 @@ def seed_descriptions(
     return seeded
 
 
+def seed_dominant_forms(
+    docs: list[dict],
+    by_id: dict[str, dict],
+    by_type: dict[str, list[dict]],
+    by_path: dict[str, dict],
+) -> list[str]:
+    """Seed the catalog's `dominant_form` on documents that lack the field;
+    existing values are never overwritten (a user-configured value is a
+    decision, not drift)."""
+    seeded: list[str] = []
+    for doc in docs:
+        if "dominant_form" in doc:
+            continue
+        definition = match_definition(
+            by_id,
+            by_type,
+            by_path,
+            str(doc.get("id") or ""),
+            doc.get("type"),
+            str(doc.get("path") or ""),
+        )
+        if definition is not None:
+            doc["dominant_form"] = definition.get("dominant_form")
+            seeded.append(str(doc.get("id") or ""))
+    return seeded
+
+
 def backfill_project_scale(repo: Path, tier: str = "diligence") -> dict:
     """Scale record for a legacy manifest with no scale field.
 
@@ -674,6 +703,10 @@ def migrate_manifest_object(
     if any(not doc.get("description") for doc in docs):
         by_id, by_type, by_path = load_catalog_maps()
         if seed_descriptions(docs, by_id, by_type, by_path):
+            changed = True
+    if any("dominant_form" not in doc for doc in docs):
+        by_id, by_type, by_path = load_catalog_maps()
+        if seed_dominant_forms(docs, by_id, by_type, by_path):
             changed = True
     for doc in docs:
         provenance = doc.get("provenance")

@@ -51,7 +51,6 @@ from runtime.common.python.provenance_frontmatter import (
     split_frontmatter,
 )
 from runtime.common.python import provenance_store as store
-from runtime.common.python.evidence_locators import validate_locators
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.illustration_metrics import illustration_defects as budget_defects
 from runtime.common.python.markdown_fences import visible_presentation_defects
@@ -284,9 +283,6 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
     _state, provenance, body_start, _public = _metadata_context(path, text)
     target_depth = provenance.get("target_depth", "deep-dive") if isinstance(provenance, dict) else "deep-dive"
     defects.extend(budget_defects(text, target_depth))
-    # Hand over the resolved provenance: under sidecar storage the markdown has
-    # no frontmatter, and a locator check that re-parsed it would find nothing.
-    defects.extend(validate_locators(path, text, provenance, body_start))
     defects.extend(visible_presentation_defects(text))
 
     # scaffold markers + tokens, with line numbers

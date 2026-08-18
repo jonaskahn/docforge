@@ -1,5 +1,44 @@
 # Changelog
 
+## 2.23.0
+
+- **Illustrations are declared, briefed, and enforced.** The catalog now
+  declares a `dominant_form` for every document, the writer's execution card
+  carries an illustration brief, and `scaffold_docs --audit` reports
+  **`missing-illustration`** for any written non-agent document whose declared
+  form warrants a visual but carries no `mermaid` or structural `text` fence.
+  Manifest 3.10 seeds each document's `dominant_form` (migration hydrates
+  existing manifests; reconcile demotes written documents whose declared form
+  changed).
+  - All 54 one-line "Preferred illustration" hints across the merged group
+    instruction files became structured `## Illustration`
+    (Form/Renders/Trigger) blocks; `content/compact/instructions.md` gained
+    the same blocks for every routed section.
+  - Revise now treats illustration coverage as a structural check, never a
+    blob check: an already-written, diagram-less document gains its diagram on
+    the next revise even when its sources are `FRESH`.
+  - Flow templates carry a second diagram slot — an ASCII trigger-to-outcome
+    fan-out — for flows with two or more terminal outcomes, the form
+    `illustration.md` already blesses for a different reader question.
+- **One source-reference rule, three enforcers.** `evidence-presentation.md`
+  now owns "Naming things a reader can find": a readable noun phrase first, a
+  backticked parenthesized path only when the reader must open, edit, run, or
+  inspect the file — never a Markdown link into source, never a line number.
+  The linter gains **`visible-source-line`** for bare `path:line` / `#L<n>`
+  citations in prose, closing the hole flow-step guidance previously shipped
+  through.
+  - The body-text locator subsystem (`evidence_locators`) is retired on policy
+    grounds: since locators in prose are forbidden outright, validating them
+    was unreachable code that could only ever add defects. The hashing helpers
+    (`evidence_hash`) it depended on remain untouched.
+- **Sections connect; sections sound consistent.** A `## Connections` table
+  now accompanies every routed document section across all eight group
+  instruction files, and `scaffold_docs --audit` enforces **section
+  cohesion**: in any section folder with two or more non-router documents, no
+  document is an island. New `references/voice.md` owns one voice per group
+  (rules plus do/don't pairs); every instruction file carries a `## Voice`
+  line, the execution card carries it, and the independent audit checks it.
+
 ## 2.22.0
 
 - **Agent documentation is permanently isolated.** The conditional

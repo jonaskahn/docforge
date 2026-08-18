@@ -33,3 +33,7 @@
 | Dataset identity, producers, consumers, freshness, retention, failure/recovery | `data-flow` | data-flow traces movement and transformation; this document owns the dataset's own contract at rest |
 | Schema fields | the owning schema/reference document | never repeat field definitions inline; name the owner and link |
 | A known gap in lineage evidence | `tech-debt-register` | an unevidenced claim is a defect to fix, not a fact to assert here |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

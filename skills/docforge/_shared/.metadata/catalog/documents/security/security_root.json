@@ -17,5 +17,6 @@
   "write_order": 75,
   "provenance_mode": "sections",
   "audit_profile": "risk",
+  "dominant_form": null,
   "template_file": "content/security/templates/root-security.md"
 }

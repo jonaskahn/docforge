@@ -91,6 +91,23 @@ It belongs in normal prose because it is not runnable implementation code.
                 self.assertIn("prose-in-code-fence", kinds)
             self.assertEqual(payloads[0]["defects"], payloads[1]["defects"])
 
+    def test_visible_source_lines_are_rejected_with_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            document = self._document(Path(tmp), """# Failure and recovery
+
+Retries live in the worker module (`src/worker.py:2`), and the budget is
+capped there (`src/worker.py#L1-L2`).
+""")
+            results = [run(runtime, "lint_document", "--file", str(document), "--json") for runtime in ("py", "js")]
+            payloads = []
+            for result in results:
+                self.assertEqual(result.returncode, 1, result.stderr)
+                payloads.append(json.loads(result.stdout))
+            for payload in payloads:
+                kinds = {item["kind"] for item in payload["defects"]}
+                self.assertIn("visible-source-line", kinds)
+            self.assertEqual(payloads[0]["defects"], payloads[1]["defects"])
+
     def test_literal_output_is_not_treated_as_prose(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             document = self._document(Path(tmp), """# Failure and recovery

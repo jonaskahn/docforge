@@ -30,3 +30,7 @@
 |---|---|---|
 | Environment differences, promotion boundaries, configuration ownership | `operations` deployment/runbook documents | this document says what differs; deployment procedure (how to ship into an environment) is owned there |
 | Configuration values themselves | `reference/configuration` | this document owns which team controls config per environment, not the values or their schema |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

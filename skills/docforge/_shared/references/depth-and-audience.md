@@ -50,7 +50,9 @@ without implementation excerpts; engineers, beginners, operators, and coding
 agents receive only task-relevant commands or examples; security reviewers
 receive control and traceability detail without source citations. See
 [`code-presentation.md`](code-presentation.md) and
-[`evidence-presentation.md`](evidence-presentation.md).
+[`evidence-presentation.md`](evidence-presentation.md). How each group's
+documents are phrased at that depth is the adjacent axis owned by
+[`voice.md`](voice.md).
 
 When the evidence cannot establish an audience-critical fact, record its limit
 or typed external unknown in the owning document. **Never** fill a depth tier

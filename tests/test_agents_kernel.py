@@ -15,7 +15,7 @@ GOLDEN = """\
 
 A TypeScript service with an HTTP API, domain layer, and PostgreSQL store.
 
-<!-- docforge-provenance v2.22.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->
+<!-- docforge-provenance v2.23.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->
 
 ## Commands
 
@@ -160,7 +160,7 @@ npm run build
                     self.assertTrue(any("destructive commands" in detail for detail in details))
 
     def test_forbidden_references_are_detected_in_prose_fences_and_comments(self) -> None:
-        provenance = "<!-- docforge-provenance v2.22.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->"
+        provenance = "<!-- docforge-provenance v2.23.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->"
         cases = {
             "markdown-link": (
                 GOLDEN.replace(

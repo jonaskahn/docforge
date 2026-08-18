@@ -21,7 +21,7 @@ that lists every script, its purpose, and when to use it:
 - [`cli/`](cli/README.md) — public launchers, split by language (invoke tools
   here, never the implementations directly).
 - [`common/`](common/README.md) — shared libraries: `_util`, `manifest_deps`,
-  `provenance_frontmatter`, `plan`, `special_files`, `evidence_locators`,
+  `provenance_frontmatter`, `plan`, `special_files`,
   `illustration_metrics`, `markdown_fences`, `agent_context`.
 - [`catalog/`](catalog/README.md) — catalog query and profile detection:
   `query_catalog`, `detect_profiles`, `discovery_gate`.

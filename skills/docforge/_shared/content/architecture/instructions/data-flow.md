@@ -36,3 +36,7 @@
 | Producer, each transformation, every consumer, per-handoff guarantees, failure/recovery | `dataset` | dataset owns the data's contract at rest; this document owns its movement and transformation |
 | Field definitions at each handoff | the owning schema/reference document | never repeated inline; name the owner and link |
 | A rule enforced during a transformation | the flow document that triggers this pipeline, if one exists | avoids re-deriving business logic already owned by a flow |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

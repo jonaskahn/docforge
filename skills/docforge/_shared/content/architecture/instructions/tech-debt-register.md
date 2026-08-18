@@ -41,3 +41,7 @@
 | Shortcut, consequence, evidence, remediation direction | `constraints` | hard, externally imposed bounds are routed there instead — never cross-filed |
 | — | `limitations-register` | deliberate, accepted, user-visible boundaries are routed there instead — never cross-filed |
 | A debt item affecting a named architecture block | `architecture-high-level` or `architecture-low-level` | links back so a reader on that block sees the debt without this register restating the architecture |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

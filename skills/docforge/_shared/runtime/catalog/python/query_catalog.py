@@ -67,7 +67,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.22.0"
+CATALOG_VERSION = "2.23.0"
 PRESENTATION_VALUES = {
     "code": {"contract-only", "task-focused"},
     "related_docs": {"none", "compact", "traceability"},
@@ -413,6 +413,7 @@ def route(
         "requires": detail.get("requires", []),
         "target_depth": detail.get("target_depth"),
         "audit_profile": detail.get("audit_profile"),
+        "dominant_form": detail.get("dominant_form"),
         "contract_revision": detail.get("contract_revision"),
         "model_depth": model_depth,
         "primary_audience": primary_audience,

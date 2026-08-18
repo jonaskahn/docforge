@@ -29,3 +29,7 @@
 | Lifecycle, boundaries, transitions, failure and recovery behavior | `ui-components` | the component catalog is owned there; this document owns only the render/state mechanism |
 | Persisted state surviving a render cycle | `persistence` | durability mechanics are owned there |
 | Navigation-triggered state changes | `ui-navigation-state` | avoids re-deriving navigation state here |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

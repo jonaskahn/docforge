@@ -140,10 +140,12 @@ Write at the slowest-changing useful layer:
 
 - behavior and boundaries instead of private symbols;
 - file/module paths instead of line numbers;
-- source mentions in non-agent documents rendered as human-readable links to
-  the repository file, never bare `path:line` references (see
-  `host-neutrality.md`); agent-context outputs instead use plain durable
-  source or configuration paths because they cannot contain links;
+- source mentions in non-agent documents rendered as a readable noun phrase
+  with the repository path in parentheses — backticked, never a Markdown
+  link into source, never a line number, and only when the reader must
+  open, edit, run, or inspect the file (see `evidence-presentation.md`);
+  agent-context outputs instead use plain durable source or configuration
+  paths because they cannot contain links;
 - observable contracts instead of implementation trivia;
 - decision rationale in append-only records;
 - volatile values in reference documents.

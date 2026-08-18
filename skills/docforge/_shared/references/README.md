@@ -20,6 +20,7 @@ concern; workflows link here instead of repeating the rule.
 - "What counts as mechanical vs whole-tree quality?" → [quality-bar.md](quality-bar.md)
 - "How is provenance stamped, migrated, and checked for staleness?" → [provenance-tracking.md](provenance-tracking.md)
 - "Which diagram or table form fits this content?" → [illustration.md](illustration.md)
+- "How should each section sound?" → [voice.md](voice.md)
 - "How do I keep prose free of forge-specific names?" → [host-neutrality.md](host-neutrality.md)
 - "Why record a decision, and where?" → [decision-records.md](decision-records.md)
 - "What does the portfolio tier add across repositories?" → [portfolio.md](portfolio.md)

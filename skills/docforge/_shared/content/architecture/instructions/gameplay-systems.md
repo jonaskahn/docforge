@@ -30,3 +30,7 @@
 | System boundaries, scenes/assets, loading, save state, platform builds | `architecture-high-level` | this is the deep-dive of the gameplay/asset block named there |
 | A platform-specific asset pipeline difference | `platform-integration` | per-platform packaging/runtime detail is owned there |
 | A known loading or save-state shortcut | `tech-debt-register` | a fixable shortcut is tracked there, not normalized into the description here |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

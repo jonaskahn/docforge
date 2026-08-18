@@ -13,7 +13,7 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.22.0";
+const CATALOG_VERSION = "2.23.0";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--group", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
@@ -71,8 +71,8 @@ function validate() {
   if (fs.existsSync(path.join(metadata, "catalog.json"))) {
     errors.push("obsolete monolith catalog.json remains; use .metadata/catalog/");
   }
-  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.9") {
-    errors.push("manifest schema must require version 3.9");
+  if ((((manifestSchema.properties || {}).version || {}).const) !== "3.10") {
+    errors.push("manifest schema must require version 3.10");
   }
   const projectRequired = new Set(((((manifestSchema.properties || {}).project || {}).required) || []));
   if (!projectRequired.has("provenance_storage")) {
@@ -86,8 +86,8 @@ function validate() {
     errors.push("shipped .metadata/manifest.json example is missing");
   } else {
     const exampleManifest = readJson(exampleManifestPath);
-    if (exampleManifest.version !== "3.9") {
-      errors.push("shipped .metadata/manifest.json example must use version 3.9");
+    if (exampleManifest.version !== "3.10") {
+      errors.push("shipped .metadata/manifest.json example must use version 3.10");
     }
     const exampleProject = exampleManifest.project || {};
     const missingProjectFields = [...projectRequired].filter((field) => !(field in exampleProject)).sort();

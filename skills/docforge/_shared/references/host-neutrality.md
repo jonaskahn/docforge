@@ -51,7 +51,7 @@ Exactly three places may contain forge-specific detail. Everywhere else stays ne
 
 **Diagrams.** Mermaid illustrations follow [`illustration.md`](illustration.md) for complexity budgets, rendering, and fallback rules. Always precede a diagram with one or two sentences stating what it shows.
 
-**Links.** Relative paths (`../architecture/high-level.md`) work when browsing the forge, in most editors, and in generated static sites. Absolute URLs to the current host break on migration and on forks. Link generated documentation for related topics. Source grounding stays in provenance; see [`evidence-presentation.md`](evidence-presentation.md). Never link to a line number or a private symbol.
+**Links.** Relative paths (`../architecture/high-level.md`) work when browsing the forge, in most editors, and in generated static sites. Absolute URLs to the current host break on migration and on forks. Link generated documentation for related topics. Source grounding stays in provenance; see [`evidence-presentation.md`](evidence-presentation.md). Never link to a line number or a private symbol. Source paths are never Markdown links into source files — the parenthesized-path form and its rules are owned by [`evidence-presentation.md`](evidence-presentation.md).
 
 **Callouts.** Blockquote-based callouts are the only universally portable form:
 

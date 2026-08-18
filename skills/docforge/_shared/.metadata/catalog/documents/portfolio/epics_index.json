@@ -20,6 +20,7 @@
   "write_order": 102,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
+  "dominant_form": null,
   "template_file": "content/shared/section-readme.template.md",
-  "contract_revision": "2.22.0"
+  "contract_revision": "2.23.0"
 }

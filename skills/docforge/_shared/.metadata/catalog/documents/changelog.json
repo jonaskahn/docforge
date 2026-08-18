@@ -19,5 +19,6 @@
   "write_order": 90,
   "provenance_mode": "sections",
   "audit_profile": "standard",
+  "dominant_form": null,
   "template_file": "content/root/changelog.template.md"
 }

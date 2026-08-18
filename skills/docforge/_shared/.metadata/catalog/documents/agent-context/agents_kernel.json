@@ -24,7 +24,8 @@
   "write_order": 200,
   "provenance_mode": "manifest",
   "audit_profile": "agents-kernel",
-  "contract_revision": "2.22.0",
+  "dominant_form": null,
+  "contract_revision": "2.23.0",
   "presentation": {
     "related_docs": "none"
   },

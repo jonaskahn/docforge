@@ -46,3 +46,7 @@
 | — | `records/` (decisions) | rationale for why a block is shaped this way lives in decisions, never restated here |
 | — | `tech-debt-register`, `constraints` | known shortcuts and hard bounds are tracked in their own registers, not folded into this stable document |
 | Each deployable block's implementing technology | `reference/tech-stack` | what the repository is built with is owned there; this document only labels each block with it |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

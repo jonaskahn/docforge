@@ -20,5 +20,6 @@
   "write_order": 101,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
+  "dominant_form": "table",
   "template_file": "content/portfolio/templates/repo-inventory.md"
 }

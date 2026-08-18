@@ -2,6 +2,7 @@
 
 const OPEN_RE = /^\s{0,3}(`{3,}|~{3,})([^`]*)$/;
 const SOURCE_LINK_RE = /\[[^\]]+\]\(([^)]+\.(?:c|cc|cpp|cs|go|java|js|jsx|json|mjs|properties|py|rb|rs|swift|toml|ts|tsx|xml|ya?ml)(?:#[^)]+)?)\)/g;
+const SOURCE_LINE_RE = /[A-Za-z0-9][A-Za-z0-9_./-]*\.(?:c|cc|cpp|cs|go|java|js|jsx|json|mjs|properties|py|rb|rs|swift|toml|ts|tsx|xml|ya?ml)(?:#L\d+(?:-L\d+)?|:\d+(?:-\d+)?)(?!\s*@\s*[0-9a-f]{40})\b/g;
 const LOCATOR_RE = /[A-Za-z0-9][A-Za-z0-9_./-]*#L\d+(?:-L\d+)?\s*@\s*[0-9a-f]{40}/;
 const SHELL_LANGUAGES = new Set(["bash", "sh", "shell", "zsh", "fish", "powershell", "pwsh"]);
 
@@ -41,6 +42,8 @@ function visiblePresentationDefects(text) {
     if (LOCATOR_RE.test(line)) defects.push({ kind: "visible-source-locator", line: number, detail: "use provenance, not a path/range/blob citation" });
     SOURCE_LINK_RE.lastIndex = 0; let match;
     while ((match = SOURCE_LINK_RE.exec(line)) !== null) defects.push({ kind: "source-code-link", line: number, detail: match[1] });
+    SOURCE_LINE_RE.lastIndex = 0; let sourceLineMatch;
+    while ((sourceLineMatch = SOURCE_LINE_RE.exec(line)) !== null) defects.push({ kind: "visible-source-line", line: number, detail: sourceLineMatch[0] });
   }
   for (const fence of fences) {
     if (!["command", "code", "diagram", "structure", "ambiguous"].includes(fence.role)) continue;

@@ -26,6 +26,8 @@
   diligence.
 - [`references/illustration.md`](references/illustration.md): visual form
   selection and illustration constraints.
+- [`references/voice.md`](references/voice.md): the per-section voice
+  vocabulary — one voice per group, stated as rules with do/don't pairs.
 - [`references/depth-and-audience.md`](references/depth-and-audience.md):
   reader-facing depth (decision-relevant detail, not file/word count) and
   audience-driven content scope.

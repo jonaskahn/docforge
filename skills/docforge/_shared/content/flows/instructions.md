@@ -41,6 +41,10 @@ here; those belong solely to the `flow` document once it exists.
 | — | `.docforge/flow-index.json` (declared as the machine-readable source of truth) | this document is the human-readable projection of that file, never a second source of truth |
 | A `member` row's `composed_into` id | the parent flow document's matching H2 section | keeps composed members traceable without duplicating their content here |
 
+## Voice
+
+- **Voice:** narrative and ordered; one idea per sentence; branch beside its step.
+
 ## Flow (`flow`) writing craft
 
 Default to an evidence-backed `sequenceDiagram`; use a flowchart only when branch
@@ -59,10 +63,14 @@ Work from the deep pack at `.docforge/flow-analysis.json` (and the row's
 steps with their locators, the branches, the rules, and the failures. Do not
 re-derive the step order by grep — that is what the pack exists to prevent.
 
-**A step is one hop with a `file:line`**, not a paraphrase of a subsystem.
-"Content is indexed into Elasticsearch" naming only a file is a summary; a
-named symbol at `path/to/file.js:88` is a step. Where the pack marks a step
-`evidence: "source"` rather than `"graph"`, cite the file you read it in.
+**A step is one hop with a `file:line` grounding**, not a paraphrase of a
+subsystem. "Content is indexed into Elasticsearch" naming only a file is a
+summary; a named symbol with a `path/to/file.js:88` locator is a step. That
+locator is the grounding standard — it belongs in provenance, never in the
+step's prose, which names the actor and the action (see
+[`evidence-presentation.md`](../../references/evidence-presentation.md)).
+Where the pack marks a step `evidence: "source"` rather than `"graph"`, cite
+the file you read it in.
 
 Open with trigger, actors, and result in one short paragraph. Number the happy path in
 plain language, one step per action, one idea per sentence. Put branches immediately
@@ -95,6 +103,10 @@ business rules linked rather than duplicated.
 | — (once promoted) | its own `engineering.md` subfile | implementation mechanism links back; this document keeps only a one-line gist |
 | A business rule referenced by 3+ flows | the rule's own document | never duplicated per-flow; link, don't restate |
 | A step that crosses a system boundary named in `architecture-high-level` | the relevant architecture block | avoids re-deriving the box diagram inside flow prose |
+
+## Voice
+
+- **Voice:** narrative and ordered; one idea per sentence; branch beside its step.
 
 ## Composition and folders
 

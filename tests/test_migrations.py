@@ -275,7 +275,7 @@ class Manifest39MigrationParityTests(unittest.TestCase):
             "status": "complete",
             "audit": dict(self.AGENT_AUDIT),
             # These are the historical linked-mode pointers. The files keep
-            # their names in 3.9, but their contract is now permanently
+            # their names in 3.10, but their contract is now permanently
             # self-contained, so every written agent document is re-grounded.
             "scaffold_template": "content/compact/templates/agents.template.md",
             "instruction_file": "content/compact/instructions/agents.md",
@@ -377,7 +377,7 @@ class Manifest39MigrationParityTests(unittest.TestCase):
                     )
 
                     manifest = load_manifest(repo)
-                    self.assertEqual(manifest["version"], "3.9")
+                    self.assertEqual(manifest["version"], "3.10")
                     self.assertNotIn("agent_context", manifest["project"])
                     self.assertEqual(manifest["project"]["groups"], ["agent-context"])
                     by_id = {doc["id"]: doc for doc in manifest["documents"]}
@@ -500,7 +500,7 @@ class Manifest39MigrationParityTests(unittest.TestCase):
                     )
                     reports.append(self._semantic_report(json.loads(migrated.stdout), repo))
                     current = load_manifest(repo)
-                    self.assertEqual(current["version"], "3.9")
+                    self.assertEqual(current["version"], "3.10")
                     self.assertNotIn("agent_context", current["project"])
                     self.assertEqual(current["project"]["profiles"], profiles_before)
                     self.assertEqual(current["project"]["groups"], groups_before)
@@ -530,7 +530,7 @@ class Manifest39MigrationParityTests(unittest.TestCase):
 
     def test_metadata_migration_merges_flow_index_and_backfills_standard_layout(self) -> None:
         """A bare metadata migration leaves every artifact at the newest
-        schema: manifest 3.9, and the flow ledger 1.2. A legacy manifest with
+        schema: manifest 3.10, and the flow ledger 1.2. A legacy manifest with
         no scale record gets layout `standard` with `decided_by: "migration"`
         (never a silent compact fold), recording what detection would have
         said in `detected_layout`."""
@@ -598,7 +598,7 @@ class Manifest39MigrationParityTests(unittest.TestCase):
                     migrated = run(runtime, "migrate_metadata", "--repo", str(repo), "--report")
                     self.assertEqual(migrated.returncode, 0, migrated.stderr + migrated.stdout)
                     current = load_manifest(repo)
-                    self.assertEqual(current["version"], "3.9")
+                    self.assertEqual(current["version"], "3.10")
                     scale = current["project"]["scale"]
                     self.assertEqual(scale["layout"], "standard")
                     self.assertEqual(scale["decided_by"], "migration")

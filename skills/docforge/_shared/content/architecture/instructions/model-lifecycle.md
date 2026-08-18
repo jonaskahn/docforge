@@ -36,3 +36,7 @@
 | Dataset lineage, training/evaluation, artifact lineage, inference, limitations, drift, ownership | `dataset` | dataset owns the training data's own identity/producers/consumers contract; this document owns the pipeline that consumes it |
 | Evaluation numbers, intended-use boundaries | `model-card` (same content contract, different emphasis) | this document owns the pipeline; the card owns the report |
 | A privacy boundary in the training or inference data | `security/data-handling` | data classification and handling is owned there, linked not restated |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

@@ -32,3 +32,7 @@
 | Topology zones, boundary crossings, traffic purpose, enforcement, concentration-risk | `security/threat-model` | the threat model analyzes what an attacker gains per boundary; this document only maps the zones and crossings |
 | A dependency whose failure exposes a network boundary | `dependencies-inventory` | asks the same concentration-risk question about packages; link rather than re-derive |
 | Credential material referenced by an enforcement mechanism | never this document | credential material is explicitly kept out; link to a secrets-management reference if one exists |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

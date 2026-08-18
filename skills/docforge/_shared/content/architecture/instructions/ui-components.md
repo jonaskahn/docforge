@@ -24,3 +24,7 @@
 |---|---|---|
 | Component responsibilities, composition, tokens/themes, browser matrix, degradation | `application-lifecycle` and `rendering`/`state-management` | lifecycle and render/state mechanics are owned there; this document owns only the component contract |
 | A navigation-driving component | `ui-navigation-state` | navigation ownership is owned there, linked not restated |
+
+## Voice
+
+- **Voice:** declarative present tense, strong active verbs, no hedging.

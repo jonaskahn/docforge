@@ -24,7 +24,7 @@
   "write_order": 55,
   "provenance_mode": "sections",
   "audit_profile": "standard",
-  "dominant_form": "erDiagram",
+  "dominant_form": "table",
   "template_file": "content/engineering/templates/data-quality.md",
   "compact_group": "engineering_compact",
   "compact_order": 11

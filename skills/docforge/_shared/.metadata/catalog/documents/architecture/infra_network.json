@@ -24,6 +24,7 @@
   "write_order": 19,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
+  "dominant_form": "flowchart",
   "template_file": "content/architecture/templates/network.md",
   "compact_group": "architecture_compact",
   "compact_order": 23

@@ -24,7 +24,7 @@
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "standard",
-  "dominant_form": "erDiagram",
+  "dominant_form": "table",
   "template_file": "content/architecture/templates/data-contract.md",
   "compact_group": "architecture_compact",
   "compact_order": 52

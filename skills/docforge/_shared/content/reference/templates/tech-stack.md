@@ -7,9 +7,9 @@ _Last reviewed: {{YYYY-MM-DD}}_
 | {{layer}} | {{technology}} | {{version}} | {{manifest path}} |
 
 {{Optional ASCII layered-stack diagram per illustration.md, only if the table
-alone doesn't convey layering — do not add a diagram merely because
-dominant_form suggests one; illustration.md's "smallest useful form" rule
-still governs.}}
+alone doesn't convey layering — the declared dominant_form for this document
+is a table, so a diagram stays a genuine exception; illustration.md's
+"smallest useful form" rule still governs.}}
 
 {{2-4 sentence paragraph: why this stack shape matters for a reader deciding
 whether to build against or operate this repository.}}

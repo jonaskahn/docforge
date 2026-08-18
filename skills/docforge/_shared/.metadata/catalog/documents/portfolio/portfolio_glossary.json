@@ -19,5 +19,6 @@
   "write_order": 107,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
+  "dominant_form": "table",
   "template_file": "content/portfolio/templates/portfolio-glossary.md"
 }

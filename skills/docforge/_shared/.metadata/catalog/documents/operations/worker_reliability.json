@@ -24,6 +24,7 @@
   "write_order": 72,
   "provenance_mode": "sections",
   "audit_profile": "operations",
+  "dominant_form": "table",
   "template_file": "content/operations/templates/job-reliability.md",
   "compact_group": "operations_compact",
   "compact_order": 17

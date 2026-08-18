@@ -3,11 +3,6 @@
 Covers `host_integration` and `extension_points` — the host contract and
 its extension surface are one relationship viewed from two sides.
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-for contribution points/activation events, prose for the sandbox and
-failure boundary.
-
 - State the host contract first: what this extends, activation events, and
   the compatibility range with host versions.
 - For each contribution/extension point: what it lets an integrator do, its
@@ -23,3 +18,23 @@ failure boundary.
   in a test matrix when one exists.
 - Unsupported versions and unobserved host behavior remain explicit gaps;
   link permission rationale to security rather than duplicating it.
+
+## Illustration
+
+- **Form:** a Markdown table for contribution points and activation events;
+  prose for the sandbox and failure boundary.
+- **Renders:** per point — identifier, trigger, input/output contract,
+  permission, compatibility, source of truth.
+- **Trigger:** never — the table and prose carry both views, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The host's place among neighbors and services | `architecture-high-level` | the block this host extends is named there |
+| Permission rationale per point | `platform-permissions` | owned in the security group, linked not duplicated |
+
+## Voice
+
+- **Voice:** terse and structural; every block, boundary, and relationship is named and evidenced.

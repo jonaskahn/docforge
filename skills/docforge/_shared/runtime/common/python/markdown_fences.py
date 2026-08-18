@@ -6,6 +6,7 @@ import re
 
 OPEN_RE = re.compile(r"^\s{0,3}(?P<marker>`{3,}|~{3,})(?P<info>[^`]*)$")
 SOURCE_LINK_RE = re.compile(r"\[[^\]]+\]\((?P<target>[^)]+\.(?:c|cc|cpp|cs|go|java|js|jsx|json|mjs|properties|py|rb|rs|swift|toml|ts|tsx|xml|ya?ml)(?:#[^)]+)?)\)")
+SOURCE_LINE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./-]*\.(?:c|cc|cpp|cs|go|java|js|jsx|json|mjs|properties|py|rb|rs|swift|toml|ts|tsx|xml|ya?ml)(?:#L\d+(?:-L\d+)?|:\d+(?:-\d+)?)(?!\s*@\s*[0-9a-f]{40})\b")
 LOCATOR_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./-]*#L\d+(?:-L\d+)?\s*@\s*[0-9a-f]{40}")
 SHELL_LANGUAGES = {"bash", "sh", "shell", "zsh", "fish", "powershell", "pwsh"}
 
@@ -66,6 +67,8 @@ def visible_presentation_defects(text: str) -> list[dict]:
             defects.append({"kind": "visible-source-locator", "line": number, "detail": "use provenance, not a path/range/blob citation"})
         for match in SOURCE_LINK_RE.finditer(line):
             defects.append({"kind": "source-code-link", "line": number, "detail": match.group("target")})
+        for match in SOURCE_LINE_RE.finditer(line):
+            defects.append({"kind": "visible-source-line", "line": number, "detail": match.group(0)})
     for fence in fences:
         if fence["role"] not in {"command", "code", "diagram", "structure", "ambiguous"}:
             continue

@@ -24,10 +24,6 @@ Cite gateway, configuration, or specification evidence for every limit, header,
 and 429 behavior. Link endpoint-specific authentication to `api-authentication`;
 an absent documented limit is an unknown, not an unlimited contract.
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-for limit values by dimension, prose only for the retry contract.
-
 State the limiting dimension first — per API key, per IP, per endpoint, per
 account tier. Distinguish sustained rate from burst allowance where both
 exist. Give the exact response
@@ -40,16 +36,33 @@ the stated duration, then retry — not "clients should implement backoff."
 If limits differ by plan or tier, give one table with tier as a column
 rather than one prose paragraph per tier.
 
+## Illustration
+
+- **Form:** Markdown table for limit values by dimension; prose only for the
+  429 retry contract.
+- **Renders:** the limit table itself — one row per limit × dimension, tier as
+  a column — and the retry contract as imperative prose.
+- **Trigger:** the table by default; a diagram only when a limit relationship
+  cannot be read from the table, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Limit values by dimension, tiering, the 429 retry contract | `api-reference` | the surface these limits attach to is owned there; per-endpoint rate-limit classes are its columns |
+| Endpoint-specific authentication | `api-authentication` | the auth mechanism is owned there, linked not restated |
+| The 429 code's machine-readable semantics | `api-errors` | codes, triggers, and retryability are owned there |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Api-reference writing craft
 
 For every operation, cite the authoritative schema, export, or generator. Link
 authentication, limits, errors, compatibility, and version policy to their
 respective owners instead of maintaining parallel copies of those contracts.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); this is a
-reference document — tables for endpoint and field lookups, prose only to
-explain a contract nuance a table cannot carry.
 
 Derive the surface from the repository's spec, schema, or exported interface
 — never hand-transcribe route handlers into a parallel list. Open with the
@@ -69,30 +82,63 @@ not a repeated paragraph.
 Mark deprecated operations inline with the version that deprecated them and
 the replacement, following the policy in `api-versioning`.
 
+## Illustration
+
+- **Form:** Markdown tables for endpoint and field lookups; prose only to
+  explain a contract nuance a table cannot carry.
+- **Renders:** the lookup tables themselves — one row per operation with
+  method/path, purpose, request, response, auth, and rate-limit class.
+- **Trigger:** a diagram only when a contract nuance cannot be expressed in a
+  table row — a reference document stays tabular, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The operation surface: method/path, request and response shapes, examples | `api-errors` | the shared response envelope is restated once there and linked per endpoint |
+| A deprecated operation and its replacement | `api-versioning` | the deprecation policy is owned there |
+| Per-operation auth and rate-limit class | `api-authentication`, `api-rate-limits` | each contract is owned by its own document; this one carries the class as a column |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Browser-support writing craft
 
 Cite CI or manual-browser evidence and date for every support row. Link
 component degradation behavior to `ui-components`; a browser absent from the
 matrix is not implicitly supported or unsupported.
 
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a
-browser × minimum-version matrix table is the whole document.
-
 State the tested matrix, not an aspiration; a browser listed as supported
 should mean it's in the test matrix or verified manually — say which. State
 degradation behavior per unsupported browser (polyfilled, reduced
 functionality, blocked outright) rather than leaving it implicit.
+
+## Illustration
+
+- **Form:** a Markdown matrix table.
+- **Renders:** browser × minimum version × degradation behavior — the matrix
+  table is the whole document.
+- **Trigger:** never — the matrix table is the whole document, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The tested browser × minimum-version matrix and per-browser degradation | `ui-components` | component-level degradation behavior is owned there |
+| The same tested-evidence discipline at OS/device level | `platform-compatibility` | platform minimums apply the identical matrix discipline |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
 
 ## Command-reference writing craft
 
 Every entry cites its command definition, help output, or tested invocation and
 records side effects only when observed. Link machine-output semantics to
 `output-exit-contract`; do not present a plausible invocation as runnable.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-of flags is primary, one example block per command.
 
 Follow POSIX/GNU convention: pair every short flag with its long-named
 equivalent (`-v` / `--verbose`), and document them together, not as
@@ -104,15 +150,30 @@ entry, not buried in prose elsewhere.
 Group subcommands under their parent, not flattened alphabetically — a
 reader exploring `repo sync` should find its subcommands together. Never show a call-graph or internal function name.
 
+## Illustration
+
+- **Form:** a Markdown table of flags; one code-fence example block per
+  command.
+- **Renders:** the flag table — short/long pairs documented together — and
+  each command's copy-pasteable example.
+- **Trigger:** never — no call-graph or internal structure diagram, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Flags, subcommands, runnable examples, side effects | `output-exit-contract` | machine-output semantics — exit codes, streams, format stability — are owned there |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Compatibility writing craft
 
 Every supported row cites CI, manual, or community evidence with its date. Link
 migration procedures to their owner rather than embedding upgrade steps, and
 mark an untested version or platform as unknown rather than compatible by default.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a
-version/platform matrix table is the whole document.
 
 State the supported-version matrix as tested evidence, not aspiration — a
 version marked supported should mean "we run CI against it," not "it
@@ -124,15 +185,30 @@ Order rows newest-version-first. State the actual test evidence (CI
 matrix, manual verification, community report) per row where confidence
 varies.
 
+## Illustration
+
+- **Form:** a Markdown matrix table.
+- **Renders:** version/platform × test evidence × deprecation horizon — the
+  matrix table is the whole document.
+- **Trigger:** never — the matrix table is the whole document, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The supported library-version matrix and deprecation horizon | `migration` | the path between two specific versions is owned there |
+| The same tested-evidence discipline at OS/device level | `platform-compatibility` | platform minimums apply the identical discipline |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Configuration writing craft
 
 For every setting, cite its exact configuration source and consuming code, and
 state scope and sensitivity only when evidenced. Link environment-specific
 differences to `environments`; do not infer defaults from one deployment file.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-is the whole document — one row per setting.
 
 Apply the 12-factor discipline: every setting the application actually
 reads from its environment, with name, default, scope (which
@@ -148,16 +224,30 @@ lives instead. Order by how often a reader tunes the setting, not
 alphabetically; the setting everyone changes in local dev belongs above the
 one nobody has touched since launch.
 
+## Illustration
+
+- **Form:** a Markdown table.
+- **Renders:** one row per setting — name, default, scope, sensitivity — the
+  table is the whole document.
+- **Trigger:** never — the table is the whole document, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Every read setting: name, default, scope, sensitivity | `environments` | which environment differs and how is owned there, referenced not re-derived |
+| The settings a first-run reader changes | `setup-guide` | the verified path to a running instance consumes these settings; the guide links here rather than restating them |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Data-types writing craft
 
 Cite the authoritative schema or export for every type, constraint, and
 representation change. Link business semantics to their glossary or rule owner;
 do not reconstruct field meaning from a sample payload.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a single
-table is almost always sufficient — this document is a lookup, not an
-explanation.
 
 One row per type: name, wire representation (not the internal language
 type), constraints (range, length, pattern), and nullability. State the
@@ -170,10 +260,27 @@ the most operations first — not alphabetically and not by internal module.
 Do not restate business meaning already owned by
 `business-rules` or `glossary`.
 
-## Error-catalog writing craft
+## Illustration
 
-**Preferred illustration:** Use an error-envelope table followed by a catalog
-and status summary; no diagram is needed.
+- **Form:** a single Markdown table.
+- **Renders:** one row per type — name, wire representation, constraints,
+  nullability — the lookup itself.
+- **Trigger:** almost never — a diagram only when a type relationship cannot
+  be read from the lookup table; this document is a lookup, not an
+  explanation, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Wire types, constraints, nullability, representation changes | `business-rules`, `glossary` | business meaning is owned there, never reconstructed from a sample payload |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
+## Error-catalog writing craft
 
 Document the stable response envelope once, emphasizing which fields clients may
 branch on and which are human-facing or additive. Give every machine-readable
@@ -185,16 +292,31 @@ Never expose stack traces, internal exception names, secrets, or a retryable
 claim unsupported by the actual behavior. Treat a renamed code or changed error
 meaning as a compatibility change, not prose cleanup.
 
+## Illustration
+
+- **Form:** an error-envelope table, then a per-code catalog table, then a
+  status-level summary table.
+- **Renders:** the envelope fields clients may branch on; one row per
+  machine-readable code; the complete failure surface survey.
+- **Trigger:** never — no diagram is needed.
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The response envelope, code semantics, retryability, status summary | `api-reference` | endpoints restate the envelope once here and link to it |
+| The 429 contract's headers and backoff facts | `api-rate-limits` | rate-limit mechanics are owned there |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Limitations-register writing craft
 
 Each limitation cites implementation, test, issue, or incident evidence and
 names a review owner when established. Route remediable engineering debt to
 `tech-debt-register`; preserve an unowned or unresolved limitation without
 softening it into a roadmap promise.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); use tables
-for comparable limits and prose for trigger, impact, workaround, and evidence.
 
 Use one entry per observable limitation, and place it in exactly one of the register's
 sections — a boundary test decides which, not a judgment call:
@@ -215,16 +337,31 @@ without a review date a reader cannot tell whether a missing entry means "no suc
 limitation" or "nobody has looked." Order entries by how often a reader will hit them, not
 by discovery date or file location.
 
+## Illustration
+
+- **Form:** Markdown tables for comparable limits; prose for each entry's
+  trigger, impact, workaround, and evidence.
+- **Renders:** the register's sections with one entry per row; prose carries
+  the entry's chain of facts.
+- **Trigger:** never — tables and prose carry the whole register, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Known limitations, known issues, not-supported, scale envelope | `tech-debt-register` | remediable engineering debt is routed there instead |
+| Measured numeric boundaries | `performance-budgets` | budget rows share this register's dated-review discipline |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Model-card writing craft
 
 Cite dataset, run or artifact, and evaluation evidence for every metric, and
 name the model owner when established. Link lifecycle mechanics to
 `model-lifecycle`; do not infer model quality from a declared architecture.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); prose
-sections per Mitchell et al.'s standard shape, table only for evaluation
-metrics.
 
 Follow the Model Cards for Model Reporting shape (Mitchell et al., 2019):
 model details, intended use, training data summary, evaluation results,
@@ -238,16 +375,31 @@ evaluated; state what was measured and what wasn't. Link training-data
 lineage to `model-lifecycle` rather than repeating
 it here.
 
+## Illustration
+
+- **Form:** prose sections per Mitchell et al.'s standard shape; a Markdown
+  table only for evaluation metrics.
+- **Renders:** model details, intended use, training data summary, evaluation
+  results, limitations, out-of-scope uses — the metrics table with dataset,
+  metric, and date.
+- **Trigger:** never — prose sections and the metrics table carry the card,
+  per [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Model details, intended use, evaluation, limitations, out-of-scope uses | `model-lifecycle` | lifecycle mechanics and training-data lineage are owned there, linked not repeated |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Output-exit-contract writing craft
 
 For each captured example, cite the command and version that produced its exit
 status and streams. Link command-specific side effects back to
 `command-reference`; this contract owns stable output semantics, not usage prose.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); tables
-for exit codes and stream ownership — this document exists so a script can
-be written against it, not read for prose.
 
 State the exit-code table first: code, meaning, and whether it's stable
 enough to script against. State which stream
@@ -260,15 +412,31 @@ Give one real, captured output example per format, not a hand-typed
 approximation — including whitespace and field order if those are part of
 the contract.
 
+## Illustration
+
+- **Form:** Markdown tables for exit codes and stream ownership; one captured
+  code-fence example per format.
+- **Renders:** the exit-code table — code, meaning, scripting stability — and
+  the stream-ownership table.
+- **Trigger:** never — this document exists so a script can be written against
+  it, not read for prose, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Exit codes, stream ownership, format stability, captured examples | `command-reference` | per-command usage and side effects are owned there, linked not restated |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Performance-budgets writing craft
 
 Every budget cites its measurement artifact and date, then names the owner and
 remediation or limit when breached. Link user-visible constraints and detailed
 remediation to their owning register rather than hiding them in a threshold row.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a table
-of budget × measurement × degradation is the whole document.
 
 One row per budget: the evidenced limit (CPU, GPU, memory, storage,
 timing), how it was measured (load test, profiler, production
@@ -280,15 +448,29 @@ Order by how often a reader hits the budget in practice, not by resource
 type alphabetically. State the measurement's recency; date it the way `limitations-register`
 dates its review.
 
+## Illustration
+
+- **Form:** a Markdown table of budget × measurement × degradation.
+- **Renders:** one row per budget — evidenced limit, how it was measured, what
+  degrades — the table is the whole document.
+- **Trigger:** never — the table is the whole document, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| Each budget's evidenced limit, measurement, degradation | `limitations-register` | user-visible limits date their review the way this document dates its measurements |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Platform-compatibility writing craft
 
 Cite device or test-matrix evidence for every platform row. Link permission and
 lifecycle behavior to their owning documents, and mark unverified target support
 or degradation as unknown rather than inferring it from a build artifact.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); a matrix
-table (OS/device/architecture × minimum version) is the whole document.
 
 State minimums as tested evidence, not aspiration — the same discipline
 [Compatibility](#compatibility-writing-craft) applies to library versions, applied
@@ -296,14 +478,30 @@ here to OS/device/architecture. State degradation behavior below the
 minimum (refuses to run, runs with reduced features) and the deprecation
 horizon for older supported platforms.
 
+## Illustration
+
+- **Form:** a Markdown matrix table (OS/device/architecture × minimum
+  version).
+- **Renders:** tested minimums, degradation below the minimum, and the
+  deprecation horizon — the matrix table is the whole document.
+- **Trigger:** never — the matrix table is the whole document, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The OS/device/architecture matrix, minimums, degradation, deprecation | `compatibility` | the same matrix discipline applied to library versions |
+| Permission and lifecycle behavior | `platform-permissions` | owned there, linked not restated |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
 ## Resources / access writing craft
 
 Covers `infra_resources` and `infra_access` — both are lookup inventories;
 the craft is keeping them that way rather than letting narrative creep in.
-
-**Preferred illustration:** Follow
-[`../../references/illustration.md`](../../references/illustration.md); tables
-only — this is Reference depth, not Explanation.
 
 Resources: one row per managed resource — name, type, owner, criticality.
 Order by criticality, the same principle `dependencies-inventory` uses,
@@ -323,10 +521,26 @@ review cadence from `unknown` rather than treating silence as permanence. Keep
 resource inventory and grants separate: a resource does not prove who can use
 it, and a grant does not prove current resource state.
 
-## Tech-stack writing craft
+## Illustration
 
-**Preferred illustration:** Use one evidence-backed table grouped by layer; no
-architecture diagram is needed.
+- **Form:** Markdown tables only.
+- **Renders:** one row per managed resource — name, type, owner, criticality;
+  one row per grant — principal, scope, mechanism, review cadence.
+- **Trigger:** never — this is Reference depth, not Explanation, per
+  [`../../references/illustration.md`](../../references/illustration.md).
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The resource inventory and access grants | `dependencies-inventory` | the same criticality ordering principle for dependency rows |
+| Plan/apply procedure and recorded state | `infra-apply`, `infra-state` | this document lists resources and grants; those own applying and recording state |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
+
+## Tech-stack writing craft
 
 Make this a stable lookup of what the repository is built with: language and
 runtime versions, frameworks, build and package tools, datastores or messaging,
@@ -338,3 +552,22 @@ would change together, not alphabetically.
 Keep operational dependency failure behavior in `architecture/dependencies.md`.
 Do not dump lockfiles, present transitive packages as primary choices, invent
 versions, or turn the table into a marketing comparison.
+
+## Illustration
+
+- **Form:** one evidence-backed Markdown table grouped by layer.
+- **Renders:** the layered table itself — language/runtime, frameworks, build
+  tools, datastores, test/CI tooling, key libraries with role and manifest
+  source.
+- **Trigger:** never — no architecture diagram is needed.
+
+## Connections
+
+| This document owns | Links to | Because |
+|---|---|---|
+| The layered technology inventory with declared versions | `architecture/dependencies` | operational dependency failure behavior is owned there |
+| Each deployable block's implementing technology | `architecture-high-level` | the blocks built with this stack are named there; this document only labels each block with it |
+
+## Voice
+
+- **Voice:** terse and tabular; no narrative connective tissue.
