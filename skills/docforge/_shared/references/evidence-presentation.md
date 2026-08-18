@@ -8,10 +8,12 @@ separate concerns.
 
 - Every substantive heading has a complete provenance entry in the document's
   folder sidecar, including source paths, roles, and blob hashes.
-- Never show source paths, line ranges, blob hashes, or source-code links as
-  claim citations in generated documentation.
-- Show a repository path only when the reader must open, edit, run, or inspect
-  that file. It is not evidence and must not be appended to a behavioral claim.
+- Never show a bare source path, line range, or blob hash as a claim citation.
+  Provenance carries the evidence; prose carries the claim.
+- Send the reader into source only through a **pinned permalink** built from
+  the repository base declared in the manifest, and only when they must open,
+  edit, run, or inspect that file. A link is not evidence and must never be
+  appended to a behavioral claim as if it were.
 - Use a compact `Related` footer only for generated documentation that already
   exists and owns an adjacent topic. Omit the footer when there is no useful
   destination.
@@ -30,23 +32,53 @@ does not establish the retention period.`
 
 ## Naming things a reader can find
 
-A source, module, or API mention is a **readable noun phrase** first. A
-repository path may follow it, in backticks, in parentheses — never as a
-Markdown link, never with a line number, and only when the reader must open,
-edit, run, or inspect that file. Public API surface is named in its own
-vocabulary (HTTP method + route, CLI command, exported name), not as a source
-location.
+**Name the thing, then link it.** A source, module, or API mention is a
+**readable noun phrase** first — always. What changes is what that phrase may
+carry: when the reader genuinely needs to open the file, the phrase becomes the
+link text of a pinned permalink. Never the reverse: a path is never the visible
+text, because the URL already carries the location and the reader needs the
+name.
+
+Public API surface is named in its own vocabulary (HTTP method + route, CLI
+command, exported name), not as a source location.
 
 | Situation | Write | Never |
 |---|---|---|
 | Behavioral claim | The checkout handler rejects a cart whose total drifted since pricing. | …rejects it (`src/api/checkout.ts:88`). |
-| Reader must edit the file | Add the key to the worker config (`config/worker.yaml`). | `[worker config (config/worker.yaml)](config/worker.yaml)` |
+| Claim the reader will want to verify | …rejects it, in [the checkout route](…/blob/…/src/api/checkout.ts#L88-L104). | …rejects it (see `src/api/checkout.ts` lines 88-104). |
+| Reader must edit the file | Add the key to [the worker config](…/blob/…/config/worker.yaml). | `[config/worker.yaml](config/worker.yaml)` |
 | Module orientation | Request validation lives in the validation module (`src/http/validation/`). | `src/http/validation/schema.ts:12-40` |
 | API surface | `POST /v1/checkout` returns `409` when the cart total drifted. | `checkoutHandler(req, res)` at `routes.ts:88` |
 | A symbol the reader will grep | the `retryBudget` setting | the private `RetryBudget` class at `internal/retry.ts:14` |
-| Flow step | **2.** The pricing service revalidates the cart total. | **2.** `revalidate()` at `pricing/cart.js:88` |
+| Flow step | **2.** The pricing service revalidates the cart total, in [the pricing revalidation path](…/blob/…/pricing/cart.js#L88-L96). | **2.** `revalidate()` at `pricing/cart.js:88` |
 
-Directory paths keep a trailing `/` and are preferred over file paths whenever
-the boundary, not the file, is the point. Agent-context outputs are
-unchanged: bare durable paths, no links, no line numbers
+### How a link gets written
+
+The writer never types a commit sha. It writes the **authoring form** — a
+readable label and a repository-relative path with an optional line range:
+
+```markdown
+The scheduler claims pending items and marks them `Crawling`
+([the crawl-job runner](src/lib/crawler/crawlerjob.js#L397-L399)).
+```
+
+`link_sources` then expands it into an absolute permalink pinned to the commit
+the document was grounded against, after checking that the path exists and the
+range is inside the file. A reference that fails either check is reported and
+left untouched, so a broken link fails at write time instead of for a reader.
+
+Three rules keep the result honest:
+
+- **A bare `path:line` in prose is still a defect.** That form is what
+  permalinks replace, not a shorthand for them.
+- **Omit the line range unless it is the point.** A module-orientation mention
+  wants the file; a range that a routine refactor invalidates is worse than
+  none.
+- **Directory paths** keep a trailing `/` and stay unlinked backticked prose:
+  the boundary is the point, not a file.
+
+Agent-context outputs are **unchanged and must stay unchanged**: bare durable
+paths, no links, no URLs, no line numbers
 ([`profiles/audience-coding-agents.md`](profiles/audience-coding-agents.md)).
+Audiences whose routed `source_evidence` is `provenance-only` — security
+reviewers among them — receive no source links at all.

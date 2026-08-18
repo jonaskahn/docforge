@@ -648,6 +648,27 @@ function scan(repo, manifest) {
   };
 }
 
+// `includedDocuments` drops a written record silently -- a file that is not on
+// disk, a root document whose provenance did not parse -- and Fumadocs then
+// hard-404s the slug with no directory fallback. Nothing else notices: README
+// child coverage skips a child that is not a file, and the planner previously
+// validated only the root index. A `planned` document correctly has no page
+// yet and is not reported.
+function unrenderedDocuments(repo, manifest, ledger) {
+  const rendered = new Set(ledger.pages.map((page) => page.source_path));
+  const problems = [];
+  for (const doc of dashboardDocuments(manifest)) {
+    const docPath = doc.path || "";
+    if (!docPath.startsWith(DOC_PREFIX) || !(docPath.endsWith(".md") || docPath.endsWith(".mdx"))) continue;
+    if (!WRITTEN.has(doc.status) || rendered.has(docPath)) continue;
+    const reason = !fs.existsSync(path.join(repo, docPath))
+      ? "file missing from the working tree"
+      : "excluded from the page ledger";
+    problems.push(`no page for ${docPath} (${doc.id}): ${reason}`);
+  }
+  return problems.sort();
+}
+
 function plan(repo, manifest) {
   const docs = includedDocuments(repo, manifest);
   const ledger = buildLedger(docs);
@@ -671,6 +692,7 @@ function plan(repo, manifest) {
   if (!ledger.pages.some((page) => page.url === BASE_URL) && !noHumanDocs) {
     problems.push("no docs index: docs/README.md is not a written document");
   }
+  problems.push(...unrenderedDocuments(repo, manifest, ledger));
   return {
     base_url: BASE_URL,
     pages: ledger.pages,

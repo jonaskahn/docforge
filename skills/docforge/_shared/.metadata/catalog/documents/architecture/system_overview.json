@@ -30,5 +30,17 @@
   },
   "contract_revision": "2.23.0",
   "compact_group": "architecture_compact",
-  "compact_order": 11
+  "compact_order": 11,
+  "illustration_views": [
+    {
+      "form": "flowchart",
+      "section": "System overview",
+      "question": "which capabilities exist and which actors and boundary systems surround them"
+    },
+    {
+      "form": "sequenceDiagram",
+      "section": "Primary end-to-end path",
+      "question": "which single journey crosses the most capabilities, in order"
+    }
+  ]
 }

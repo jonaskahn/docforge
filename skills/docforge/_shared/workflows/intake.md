@@ -293,8 +293,12 @@ baseline facts at the top of the pack, never as controls.
 
 4. **Documentation tier.** New or plan-only scope: always offer Spine
    (essential repository documentation) and Diligence (Spine + flows,
-   risks, security, operations, dependencies, ADRs), marking one as the
-   grounded recommendation Docforge will explain after inspection.
+   risks, security, operations, dependencies, and decision records where
+   history evidences them), marking one as the grounded recommendation
+   Docforge will explain after inspection. Decision records are conditional
+   by nature — `harvest_candidates` proposes them from history and the user
+   selects; a repository whose history evidences none gets no decisions
+   folder, which the tier description must not over-promise.
    Offer Portfolio (Diligence + `docs-portfolio/` diligence views) only
    when nested repos detected: every included member at Diligence or
    higher → offer it normally and say why it qualifies; else name the

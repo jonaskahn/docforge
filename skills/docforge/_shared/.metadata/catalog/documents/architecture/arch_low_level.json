@@ -29,5 +29,29 @@
   "contract_revision": "2.23.0",
   "template_file": "content/architecture/templates/architecture-low-level.md",
   "compact_group": "architecture_compact",
-  "compact_order": 3
+  "compact_order": 3,
+  "illustration_views": [
+    {
+      "form": "text",
+      "section": "Layout",
+      "question": "how is the source grouped, and what does each group own"
+    },
+    {
+      "form": "flowchart",
+      "section": "Components",
+      "question": "which components sit inside this whitebox, and which direction may they depend",
+      "depth": "working"
+    },
+    {
+      "form": "sequenceDiagram",
+      "section": "Runtime scenario",
+      "question": "in what order do components collaborate on one architecturally relevant path"
+    },
+    {
+      "form": "erDiagram",
+      "section": "Data model",
+      "question": "which durable entities does this decomposition touch, and how do they relate",
+      "required": false
+    }
+  ]
 }

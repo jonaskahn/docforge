@@ -16,6 +16,7 @@ const {
   agentContextOutboundFindings,
 } = require("../../common/js/agent_context.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
+const { identityOf } = require("../../common/js/repo_identity.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const PLACEHOLDER = /\{\{[^}]+\}\}|TODO\([^)]*\)/g;
 const TOKEN = /<[A-Z][A-Z0-9_]{2,}>/g;
@@ -32,6 +33,27 @@ const INDEX_TYPES = new Set([
 const COMPACT_TYPE = "compact-doc";
 const CHILDREN_START = "<!-- docforge-children:start -->";
 const CHILDREN_END = "<!-- docforge-children:end -->";
+const TABLE_SEPARATOR = /^\|(?:\s*:?-{3,}:?\s*\|)+$/;
+// Folders whose contents are dynamically discovered, mapped to whether the
+// collection root itself must hold a child.
+//
+// `docs/flows/` is exempt at the root: its index is a discovery report that
+// also records deferred, placeholder, and skipped candidates, so it earns its
+// place with no promoted flow. Every other collection index is pure routing --
+// with no child it is a promise the tree never keeps, which is how `concepts/`,
+// `decisions/`, and `runbooks/` shipped holding nothing but an index explaining
+// its own emptiness, in two separate repositories, with the audit recording
+// PASS. Family subfolders are checked under every prefix.
+const COLLECTION_PREFIXES = {
+  "docs/flows/": false,
+  "docs/architecture/concepts/": true,
+  "docs/architecture/decisions/": true,
+  "docs/architecture/contracts/": true,
+  "docs/operations/runbooks/": true,
+  "docs/product/migrations/": true,
+  "docs-portfolio/epics/": true,
+  "docs-portfolio/decisions/": true,
+};
 const SCALAR_PROVENANCE_FIELDS = new Set(
   [...pf.PROVENANCE_FIELDS].filter((key) => !["graph", "sections", "generator"].includes(key)),
 );
@@ -111,17 +133,42 @@ function isDirectChild(directory, candidate) {
   const parts = relative.split("/");
   return !relative.startsWith("..") && (parts.length === 1 || (parts.length === 2 && parts[1] === "README.md"));
 }
-function childRows(doc, manifest) {
+// Each index template carries its own table header inside the managed markers,
+// and the templates disagree on width (2 columns for a section README, 5 for
+// the decision log, 8 for the flow index). Regenerating the block has to
+// re-emit that header: rows alone render as literal pipe text, not a table.
+function tableHeader(block) {
+  const lines = block.split("\n").filter((line) => line.trim());
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const head = lines[index].trim();
+    const rule = lines[index + 1].trim();
+    if (head.startsWith("|") && TABLE_SEPARATOR.test(rule)) {
+      return { header: [head, rule], columns: (rule.replace(/^\||\|$/g, "").match(/\|/g) || []).length + 1 };
+    }
+  }
+  return { header: ["| Document | Answers |", "|---|---|"], columns: 2 };
+}
+function padRow(cells, columns) {
+  const padded = cells.slice(0, columns);
+  while (padded.length < columns) padded.push("—");
+  return `| ${padded.join(" | ")} |`;
+}
+function childRows(doc, manifest, columns = 2) {
   const directory = posixDirname(doc.path);
   const children = routableChildren(doc, manifest)
     .filter((candidate) => candidate.id !== doc.id && isDirectChild(directory, candidate))
     .sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path));
   const rows = children.map((child) => {
     const relative = path.posix.relative(directory, child.path);
-    return `| [${titleFor(child)}](${relative}) | {{the reader question ${child.id} answers}} |`;
+    return padRow([`[${titleFor(child)}](${relative})`, `{{the reader question ${child.id} answers}}`], columns);
   });
   if (!rows.length) {
-    return ["| _No documents are selected in this section yet; they are written when repository evidence selects them._ | — |"];
+    return [
+      padRow(
+        ["_No documents are selected in this section yet; they are written when repository evidence selects them._", "—"],
+        columns,
+      ),
+    ];
   }
   return rows;
 }
@@ -129,7 +176,8 @@ function expandChildrenBlock(body, doc, manifest) {
   const start = body.indexOf(CHILDREN_START);
   const end = body.indexOf(CHILDREN_END);
   if (start === -1 || end === -1) return body;
-  const block = [CHILDREN_START, ...childRows(doc, manifest), CHILDREN_END].join("\n");
+  const { header, columns } = tableHeader(body.slice(start + CHILDREN_START.length, end));
+  const block = [CHILDREN_START, ...header, ...childRows(doc, manifest, columns), CHILDREN_END].join("\n");
   return body.slice(0, start) + block + body.slice(end + CHILDREN_END.length);
 }
 function scaffoldBody(doc, manifest) {
@@ -363,28 +411,75 @@ function readmeChildCoverage(repo, doc, manifest, text) {
 }
 
 const STRUCTURAL_GLYPHS = /[│├└┌┐┘┬┴┤─]/;
+// Accessibility directives and a closing `}` may precede the diagram
+// declaration inside a mermaid fence.
+const MERMAID_DIRECTIVE = /^(?:accTitle|accDescr)\s*:|^\}$/;
 
-function hasDeclaredIllustration(text) {
-  // True when the file carries a `mermaid` fence or a structural `text`
-  // fence (one whose content uses tree/box/timeline glyphs).
+/**
+ * The form of every illustration in the document, in order.
+ *
+ * A Mermaid fence's form is the first token of its content, so a declared
+ * `sequenceDiagram` is no longer satisfied by whatever diagram happens to be
+ * present -- which is how a pre-baked ASCII layout tree passed for the one
+ * runtime scenario a 30 KB document owed.
+ */
+function illustrationForms(text) {
+  const forms = [];
   for (const fence of scanFences(text)) {
-    if (fence.role === "diagram") return true;
-    if (["text", "ascii", ""].includes(fence.language) && fence.lines.some(([, line]) => STRUCTURAL_GLYPHS.test(line))) {
-      return true;
+    const lines = fence.lines.map(([, line]) => line.trim()).filter((line) => line);
+    if (fence.language === "mermaid") {
+      // `%%` comments and the `accTitle:` / `accDescr:` accessibility directives
+      // may precede the declaration, so the kind is the first line that is
+      // neither.
+      const body = lines.filter((line) => !line.startsWith("%%") && !MERMAID_DIRECTIVE.test(line));
+      if (body.length) forms.push(body[0].split(/\s+/)[0]);
+      continue;
+    }
+    if (["text", "ascii", ""].includes(fence.language) && lines.some((line) => STRUCTURAL_GLYPHS.test(line))) {
+      forms.push("text");
     }
   }
-  return false;
+  return forms;
 }
 
-function missingIllustration(doc, text) {
-  // A written non-agent document whose declared `dominant_form` warrants a
-  // visual must carry one — a `mermaid` fence or a structural `text` fence.
+/** True when the file carries any recognized illustration. */
+function hasDeclaredIllustration(text) {
+  return illustrationForms(text).length > 0;
+}
+
+/**
+ * Every view a document declares must be present, by form.
+ *
+ * `illustration_views` lists the reader questions this type owes an answer to;
+ * a missing view is a question the document leaves unanswered. A view marked
+ * `required: false` is conditional on evidence (a data model that does not
+ * exist, a flow with one outcome) and is never demanded. Falls back to
+ * `dominant_form` for a type that declares no views.
+ */
+function illustrationCoverage(doc, text) {
   if (doc.group === AGENT_CONTEXT_GROUP) return [];
   if (MARKDOWN_EXCEPTIONS.has(doc.path) || doc.type === "machine-config") return [];
   if (!WRITTEN.has(doc.status)) return [];
+  const present = illustrationForms(text);
+  const views = (doc.illustration_views || []).filter((view) => view.required !== false);
+  if (views.length) {
+    const findings = [];
+    const remaining = [...present];
+    for (const view of views) {
+      const index = remaining.indexOf(view.form);
+      if (index >= 0) {
+        remaining.splice(index, 1);
+        continue;
+      }
+      findings.push(
+        `${doc.path}: missing the ${view.form} view in "${view.section}" (${view.question})`,
+      );
+    }
+    return findings;
+  }
   const form = doc.dominant_form;
   if (form == null || form === "table") return [];
-  if (hasDeclaredIllustration(text)) return [];
+  if (present.length) return [];
   return [`${doc.path}: declared dominant_form ${form}, no mermaid or structural text fence`];
 }
 
@@ -429,6 +524,8 @@ function cohesionDefects(docs, texts) {
   return findings;
 }
 function audit(repo, manifest) {
+  const identity = identityOf(manifest);
+  const webBase = identity ? identity.web_base : null;
   const findings = {
     missing: [],
     "unfilled scaffold": [],
@@ -442,7 +539,7 @@ function audit(repo, manifest) {
     "unknown section": [],
     "broken links": [],
     "readme child coverage": [],
-    "missing illustration": [],
+    "illustration coverage": [],
     "section cohesion": [],
     "agent-context leak": [],
     "agent-context outbound": [],
@@ -494,7 +591,11 @@ function audit(repo, manifest) {
     if (placeholders.length) findings["unfilled scaffold"].push(`${doc.path} (${placeholders.length})`);
     const foundTokens = [...new Set(text.match(TOKEN) || [])].sort();
     if (foundTokens.length) tokens.push(`${doc.path}: ${foundTokens.join(", ")}`);
-    const forgeHits = [...new Set((text.match(FORGE) || []).map((item) => item.toLowerCase()))].sort();
+    // A declared permalink base is the one sanctioned place a forge name may
+    // appear; without this every GitHub- or GitLab-hosted repository would trip
+    // on every source link it is now expected to carry.
+    const scrubbed = webBase ? text.split(webBase).join("") : text;
+    const forgeHits = [...new Set((scrubbed.match(FORGE) || []).map((item) => item.toLowerCase()))].sort();
     if (forgeHits.length) findings["forge leakage"].push(`${doc.path}: ${forgeHits.join(", ")}`);
     if (doc.provenance_mode === "sections" && !MARKDOWN_EXCEPTIONS.has(doc.path)) {
       const meta = store.readDocMetadata(repo, doc);
@@ -515,14 +616,16 @@ function audit(repo, manifest) {
     for (const item of readmeChildCoverage(repo, doc, manifest, text)) {
       findings["readme child coverage"].push(`${doc.path}: missing link to ${item}`);
     }
-    findings["missing illustration"].push(...missingIllustration(doc, text));
+    findings["illustration coverage"].push(...illustrationCoverage(doc, text));
     texts.set(doc.path, text);
   }
   findings["section cohesion"].push(...cohesionDefects(docs, texts));
-  for (const prefix of ["docs/flows/", "docs/architecture/concepts/"]) {
+  for (const [prefix, rootCounts] of Object.entries(COLLECTION_PREFIXES)) {
+    const root = prefix.replace(/\/$/, "");
     const folders = new Set([...expected].filter((value) => value.startsWith(prefix)).map(posixDirname));
+    if (rootCounts) folders.add(root);
+    else folders.delete(root);
     for (const folder of [...folders].sort()) {
-      if (folder === prefix.replace(/\/$/, "")) continue;
       if (expected.has(`${folder}/README.md`)) {
         const children = [...expected].filter((value) => posixDirname(value) === folder && !value.endsWith("/README.md"));
         if (!children.length) findings["folder-only promotion"].push(folder);

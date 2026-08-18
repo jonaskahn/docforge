@@ -15,7 +15,12 @@
   and the business capability it owns.
 - Move from context to blocks to communication and boundaries in that order —
   a reader should be able to draw the box diagram from the prose alone.
-- Add a visual only when it clarifies relationships among three or more blocks.
+- Carry **both** C4 views as separate diagrams: a Context diagram in "System in
+  context" and a Container diagram in "Building blocks". C4 recommends each of
+  them for every software development team, and they answer different reader
+  questions — who borders this system, then what runs inside it. One diagram
+  standing in for both is the most common way this document ends up thinner
+  than the prose it sits above.
 - Name responsibilities with strong verbs ("owns," "validates," "routes"),
   not passive nouns ("handling," "management"). Put invariants in a visually
   distinct section.
@@ -25,18 +30,28 @@
   consequences — rationale lives in decisions, not here.
 - Every relationship is directional and uses a specific active verb. Name its
   protocol or channel when evidence establishes one; otherwise say `unknown`.
-  Do not combine C4 Context and Container zooms in the one permitted
-  orientation illustration.
+  Never combine the C4 Context and Container zooms in a single diagram — they
+  are two diagrams, one per section.
 
 ## Illustration
 
-- **Form:** a small Mermaid `flowchart` for context and container relationships.
-- **Renders:** this system as one box among its neighbors (context), then its
-  deployable blocks and their communication (containers) — never both zoom
-  levels in the same diagram.
-- **Trigger:** only when it clarifies relationships among three or more
-  blocks — per
-   [`illustration.md`](../../../references/illustration.md)'s orientation budget.
+Two views, one per section, each answering a different question. Splitting is
+the remedy for density, never a violation: per
+[`illustration.md`](../../../references/illustration.md), complexity goes into
+more diagrams, never into a bigger one.
+
+- **Form:** a Mermaid `flowchart` in each of the two sections.
+- **Renders:** *context* — this system as one box among its neighbors, naming
+  each neighbor and the contract between them, never an internal;
+  *containers* — the deployable blocks inside that box and how they
+  communicate, each labeled with its implementing technology.
+- **Trigger:** context, always. Containers, whenever more than one deployable
+  block exists — which is every repository that ships more than a single
+  process. The container table beside it stays: it carries technology,
+  interface, and boundary columns the diagram cannot.
+- **Budget:** the orientation bound applies per diagram, not per document. If
+  either view exceeds it, split by business or functional area rather than
+  dropping the view.
 
 ## Connections
 

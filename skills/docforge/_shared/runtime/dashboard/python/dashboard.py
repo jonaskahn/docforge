@@ -698,6 +698,32 @@ def scan(repo: Path, manifest: dict) -> dict:
     }
 
 
+def unrendered_documents(repo: Path, manifest: dict, ledger: dict) -> list[str]:
+    """Documents the manifest calls written that produced no page.
+
+    `included_documents` drops such a record silently -- a file that is not on
+    disk, a root document whose provenance did not parse -- and Fumadocs then
+    hard-404s the slug with no directory fallback. Nothing else notices:
+    `readme_child_coverage` skips a child that is not a file, and this planner
+    previously validated only the root index. A `planned` document correctly
+    has no page yet and is not reported."""
+    rendered = {page["source_path"] for page in ledger["pages"]}
+    problems: list[str] = []
+    for doc in dashboard_documents(manifest):
+        path = doc.get("path", "")
+        if not path.startswith(DOC_PREFIX) or not path.endswith((".md", ".mdx")):
+            continue
+        if doc.get("status") not in WRITTEN or path in rendered:
+            continue
+        reason = (
+            "file missing from the working tree"
+            if not (repo / path).is_file()
+            else "excluded from the page ledger"
+        )
+        problems.append(f"no page for {path} ({doc.get('id')}): {reason}")
+    return sorted(problems)
+
+
 def plan(repo: Path, manifest: dict) -> dict:
     docs = included_documents(repo, manifest)
     ledger = build_ledger(docs)
@@ -716,6 +742,7 @@ def plan(repo: Path, manifest: dict) -> dict:
     missing_index = any(page["url"] == BASE_URL for page in ledger["pages"])
     if not missing_index and not no_human_docs:
         problems.append("no docs index: docs/README.md is not a written document")
+    problems.extend(unrendered_documents(repo, manifest, ledger))
     return {
         "base_url": BASE_URL,
         "pages": ledger["pages"],

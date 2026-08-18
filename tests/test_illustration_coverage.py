@@ -1,5 +1,10 @@
-"""Declared illustration coverage: the `missing-illustration` mechanical
-defect in `scaffold_docs --audit`, with Python/Node parity."""
+"""Declared illustration coverage in `scaffold_docs --audit`, with
+Python/Node parity.
+
+A document owes one illustration per distinct reader question its type
+declares, checked **by form**. Presence-only checking is what let a 30 KB
+low-level document satisfy a declared `sequenceDiagram` with the ASCII layout
+tree its own template shipped pre-baked."""
 
 from __future__ import annotations
 
@@ -86,7 +91,7 @@ class MissingIllustrationTests(unittest.TestCase):
             ]
             for result in outputs:
                 self.assertEqual(result.returncode, 1)
-                self.assertIn("MISSING ILLUSTRATION", result.stdout)
+                self.assertIn("ILLUSTRATION COVERAGE", result.stdout)
                 self.assertIn("docs/architecture/high-level.md: declared dominant_form flowchart", result.stdout)
                 self.assertNotIn("docs/agents/test.md", result.stdout)
             self.assertEqual(outputs[0].stdout, outputs[1].stdout)
@@ -126,6 +131,99 @@ class MissingIllustrationTests(unittest.TestCase):
                     result = run(runtime, "scaffold_docs", "--repo", str(repo),
                                   "--manifest", str(manifest_path), "--audit")
                     self.assertEqual(result.returncode, 0, result.stdout)
+
+    def _with_views(self, repo: Path, manifest: dict, views: list[dict], body: str) -> list:
+        doc = next(item for item in manifest["documents"] if item["id"] == "arch_high_level")
+        doc["illustration_views"] = views
+        (repo / ".docforge" / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        write_written_doc(repo, doc, body)
+        return [
+            run(runtime, "scaffold_docs", "--repo", str(repo),
+                "--manifest", str(repo / ".docforge" / "manifest.json"), "--audit")
+            for runtime in ("py", "js")
+        ]
+
+    LAYOUT_ONLY = (
+        "# Coverage\n\nGrounded body text.\n\n"
+        "```text\nrepo/\n├── src/      implementation\n└── tests/    suites\n```\n"
+    )
+
+    def test_wrong_form_does_not_satisfy_a_declared_view(self) -> None:
+        """The exact plugilo failure: a layout tree standing in for a sequence."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest, _source = _repo_manifest(repo)
+            views = [
+                {"form": "text", "section": "Layout", "question": "how is the source grouped"},
+                {"form": "sequenceDiagram", "section": "Runtime scenario",
+                 "question": "in what order do components collaborate"},
+            ]
+            outputs = self._with_views(repo, manifest, views, self.LAYOUT_ONLY)
+            for result in outputs:
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(
+                    'missing the sequenceDiagram view in "Runtime scenario" '
+                    "(in what order do components collaborate)",
+                    result.stdout,
+                )
+                self.assertNotIn('missing the text view', result.stdout)
+            self.assertEqual(outputs[0].stdout, outputs[1].stdout)
+
+    def test_two_views_of_the_same_form_both_count(self) -> None:
+        """High-level owes a context diagram AND a container diagram."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest, _source = _repo_manifest(repo)
+            views = [
+                {"form": "flowchart", "section": "System in context", "question": "who borders this"},
+                {"form": "flowchart", "section": "Containers", "question": "what runs inside"},
+            ]
+            one = self._with_views(
+                repo, manifest, views,
+                "# Coverage\n\nBody.\n\n```mermaid\nflowchart LR\n  A --> B\n```\n",
+            )
+            for result in one:
+                self.assertEqual(result.returncode, 1)
+                self.assertIn('missing the flowchart view in "Containers"', result.stdout)
+
+            both = self._with_views(
+                repo, manifest, views,
+                "# Coverage\n\nBody.\n\n```mermaid\nflowchart LR\n  A --> B\n```\n"
+                "\nMore body.\n\n```mermaid\nflowchart LR\n  C --> D\n```\n",
+            )
+            for result in both:
+                self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_optional_view_is_never_demanded(self) -> None:
+        """A data model that does not exist owes no erDiagram."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest, _source = _repo_manifest(repo)
+            views = [
+                {"form": "text", "section": "Layout", "question": "how is the source grouped"},
+                {"form": "erDiagram", "section": "Data model",
+                 "question": "which entities relate", "required": False},
+            ]
+            for result in self._with_views(repo, manifest, views, self.LAYOUT_ONLY):
+                self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_agent_context_never_owes_a_view(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            manifest, _source = _repo_manifest(repo)
+            agent = next(item for item in manifest["documents"] if item["id"] == "agents_test")
+            agent["illustration_views"] = [
+                {"form": "sequenceDiagram", "section": "Anything", "question": "unused"},
+            ]
+            (repo / ".docforge" / "manifest.json").write_text(
+                json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+            )
+            for runtime in ("py", "js"):
+                result = run(runtime, "scaffold_docs", "--repo", str(repo),
+                             "--manifest", str(repo / ".docforge" / "manifest.json"), "--audit")
+                self.assertNotIn("docs/agents/test.md", result.stdout)
 
     def test_planned_document_without_fence_is_not_a_defect(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

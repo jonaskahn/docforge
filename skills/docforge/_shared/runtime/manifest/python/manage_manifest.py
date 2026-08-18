@@ -24,6 +24,7 @@ from runtime.common.python import scale
 from runtime.catalog.python.detect_profiles import detect as detect_profiles
 from runtime.catalog.python.detect_profiles import inventory as inventory_files
 from runtime.common.python import provenance_store as store
+from runtime.common.python import repo_identity
 from runtime.common.python.provenance_frontmatter import GENERATOR_VERSION, scaffold_provenance
 from runtime.catalog.python import query_catalog
 from runtime.graph.python.graph_source_registry import SOURCES as GRAPH_SOURCES, flow_capability_of, resolve_all_ready, resolve_first_ready
@@ -234,6 +235,8 @@ def make_document(
         ),
         "audit": None,
     }
+    if detail.get("illustration_views"):
+        document["illustration_views"] = detail["illustration_views"]
     if detail.get("contract_revision") is not None:
         document["contract_revision"] = detail["contract_revision"]
     if detail.get("nav_order") is not None:
@@ -418,6 +421,18 @@ def empty_selection_message(groups: list[str], profiles: dict[str, list[str]]) -
     )
 
 
+def dynamic_types_present(documents: list[dict]) -> set[str]:
+    """Document types already seeded as dynamic instances in a manifest."""
+    return {
+        doc.get("type")
+        for doc in documents
+        if any(
+            origin.get("kind") == "dynamic"
+            for origin in doc.get("selection", {}).get("origins", [])
+        )
+    }
+
+
 def selected_static_documents(
     catalog: dict,
     repo: Path,
@@ -425,14 +440,29 @@ def selected_static_documents(
     profiles: dict[str, list[str]],
     layout: str = "standard",
     groups: list[str] | None = None,
+    dynamic_types: set[str] | None = None,
 ) -> list[dict]:
     """`groups` restricts the run to those catalog groups; empty means all.
 
     The filter is strictly subtractive and runs before every other test, so it
     can never add a document and skips `condition_evidence` filesystem work for
-    out-of-scope types."""
+    out-of-scope types.
+
+    `dynamic_types` names the dynamic instance types a manifest already holds.
+    In standard layout an index declaring `requires_children` is selected only
+    when one of its member types is present: tier alone would otherwise
+    materialize a folder and README whose only possible children are
+    agent-asserted, which is how `concepts/`, `decisions/`, and `runbooks/`
+    shipped containing nothing but an index explaining its own emptiness.
+    Seeding the first child brings the index back through
+    `add_ancestor_indexes`.
+
+    Compact layout is unaffected: a folded member is a `##` section inside a
+    merged file, so it creates no folder and no empty README, and dropping it
+    from the fold would strand the dynamic instances that merge into it."""
     ranks = {item["id"]: item["order"] for item in catalog["tiers"]}
     scoped = set(groups or [])
+    seeded = dynamic_types or set()
     selected: list[dict] = []
     for definition in catalog["documents"]:
         rule = definition["selection"]
@@ -442,6 +472,9 @@ def selected_static_documents(
             continue
         tier_selected = ranks[rule["min_tier"]] <= ranks[tier]
         if not tier_selected:
+            continue
+        members = rule.get("requires_children")
+        if layout != "compact" and members and not (set(members) & seeded):
             continue
         origins = matching_origins(rule, profiles)
         has_selectors = any(rule.get("selectors", {}).values())
@@ -785,6 +818,12 @@ def cmd_add(args: argparse.Namespace) -> int:
         audiences=manifest["project"]["profiles"]["audiences"],
     )
     manifest["documents"].append(doc)
+    # An index declaring `requires_children` was skipped at selection time
+    # precisely because this child did not exist yet. Now it does, so the
+    # folder gets its router -- otherwise the child would hang off nothing.
+    add_ancestor_indexes(
+        catalog, manifest["documents"], manifest["project"]["profiles"]["audiences"]
+    )
     manifest["documents"].sort(key=lambda item: (item["write_order"], item["path"], item["id"]))
     save_manifest(args.repo, manifest)
     if flow_index is not None and flow_row is not None:
@@ -882,20 +921,39 @@ def sync_presentations(catalog: dict, docs: list[dict], audiences: list[str]) ->
 
 
 def sync_dominant_forms(catalog: dict, docs: list[dict]) -> list[str]:
-    """Hydrate the catalog's `dominant_form` and demote written documents
-    whose declared form changed, so the illustration gate and the writer
-    brief read one value."""
+    """Hydrate the catalog's `dominant_form` and `illustration_views`, demoting
+    written documents whose declared visuals changed, so the illustration gate
+    and the writer brief read one value.
+
+    A changed view list is a real content change: a document written when it
+    owed one diagram is not complete once it owes three."""
     updated: list[str] = []
     for doc in docs:
         catalog_id = catalog_id_for_document(catalog, doc)
         if catalog_id is None:
             continue
-        declared = query_catalog.load_type(catalog_id).get("dominant_form")
+        detail = query_catalog.load_type(catalog_id)
+        declared = detail.get("dominant_form")
+        declared_views = detail.get("illustration_views", [])
+        drifted = False
+
         if "dominant_form" not in doc:
             doc["dominant_form"] = declared
-            continue
-        if doc["dominant_form"] != declared:
+        elif doc["dominant_form"] != declared:
             doc["dominant_form"] = declared
+            drifted = True
+
+        # Adding the field to a manifest that predates it is hydration, not
+        # drift; changing an already-recorded list is drift and re-grounds.
+        had_views = "illustration_views" in doc
+        if had_views and doc["illustration_views"] != declared_views:
+            drifted = True
+        if declared_views:
+            doc["illustration_views"] = declared_views
+        else:
+            doc.pop("illustration_views", None)
+
+        if drifted:
             demote_written(doc)
             updated.append(doc["id"])
     return updated
@@ -1036,6 +1094,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         return fail(str(exc), 2)
     selected = selected_static_documents(
         catalog, args.repo, new_tier, profiles, layout=new_layout, groups=new_groups,
+        dynamic_types=dynamic_types_present(manifest["documents"]),
     )
     if not selected:
         return fail(empty_selection_message(new_groups, profiles), 2)
@@ -1311,6 +1370,51 @@ def cmd_status(args: argparse.Namespace) -> int:
         f"complete={counts['complete']} skipped={counts['skipped']} "
         f"retired={counts.get('retired', 0)}"
     )
+    return 0
+
+
+def cmd_set_repository(args: argparse.Namespace) -> int:
+    """Declare the repository web base source permalinks are built from.
+
+    Detection fills in what it can, but the forge flavor of a self-hosted host
+    is never guessed: the line-anchor syntax differs per forge, and a wrong
+    guess yields links that open the right file with the wrong lines
+    highlighted. When detection cannot name the flavor, `--forge` is required.
+    """
+    try:
+        manifest = load_manifest(manifest_path(args.repo), unsupported_hint=MANIFEST_HINT)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+
+    detected = repo_identity.detect(args.repo)
+    web_base = args.web_base or (detected or {}).get("web_base")
+    if not web_base:
+        return fail(
+            "no `origin` remote to detect a web base from; pass --web-base", 2
+        )
+    forge = args.forge or repo_identity.detect_flavor(web_base)
+    if not forge:
+        return fail(
+            f"cannot infer the forge flavor of {web_base}; pass --forge "
+            f"({', '.join(sorted(repo_identity.BLOB_TEMPLATES))}). Line-anchor "
+            "syntax differs per forge, so this is asked rather than guessed",
+            2,
+        )
+    record = {"web_base": web_base, "forge": forge}
+    if args.blob_template:
+        record["blob_template"] = args.blob_template
+    try:
+        normalized = repo_identity.normalize(record)
+    except ValueError as exc:
+        return fail(str(exc), 2)
+    normalized["declared_by"] = "detected" if (
+        not args.web_base and not args.forge and not args.blob_template
+    ) else "user"
+    normalized["declared_at"] = now_iso()
+    manifest["project"]["repository"] = normalized
+    save_manifest(args.repo, manifest)
+    print(f"Source permalinks resolve against {normalized['web_base']} ({forge}).")
+    print(f"  template: {normalized['blob_template']}")
     return 0
 
 
@@ -1723,6 +1827,13 @@ def build_parser() -> argparse.ArgumentParser:
     set_graph.add_argument("--provider")
     set_graph.add_argument("--force", action="store_true")
     set_graph.set_defaults(func=cmd_set_graph)
+
+    set_repository = sub.add_parser("set-repository")
+    add_repo(set_repository)
+    set_repository.add_argument("--web-base", help="browse URL root; detected from `origin` when omitted")
+    set_repository.add_argument("--forge", choices=sorted(repo_identity.BLOB_TEMPLATES))
+    set_repository.add_argument("--blob-template", help="override the forge's default permalink template")
+    set_repository.set_defaults(func=cmd_set_repository)
 
     reconcile = sub.add_parser("reconcile")
     add_repo(reconcile)

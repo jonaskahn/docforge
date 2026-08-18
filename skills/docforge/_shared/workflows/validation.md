@@ -26,12 +26,15 @@ zero documentation references, no generated non-agent document mentions an
 agent-context output (`agent-context outbound` and `agent-context leak`,
 respectively), and no section README routes readers into source files.
 Plain source/configuration paths and verified commands remain valid inside
-agent-context outputs. Two structural findings are mechanical too:
-`missing illustration` (a written non-agent document whose declared
-`dominant_form` warrants a visual carries no `mermaid` or structural
-`text` fence) and `section cohesion` (a section with two or more
-non-router documents has an island document that neither links a sibling
-nor is linked by one). A whole-tree discovery that changes one artifact
+agent-context outputs. Three structural findings are mechanical too:
+`illustration coverage` (a written non-agent document is missing a view its
+`illustration_views` declares, matched by form — a declared
+`sequenceDiagram` is not satisfied by a layout tree), `section cohesion` (a
+section with two or more non-router documents has an island document that
+neither links a sibling nor is linked by one), and `folder-only promotion`
+(a collection folder — concepts, decisions, runbooks, contracts, migrations,
+epics — holding nothing but its index, which means a stale manifest since
+such an index is not selected until a child exists). A whole-tree discovery that changes one artifact
 sends that artifact through its independent audit again
 ([`writing.md`](writing.md)).
 

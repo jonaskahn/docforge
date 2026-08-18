@@ -54,6 +54,7 @@ from runtime.common.python import provenance_store as store
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.illustration_metrics import illustration_defects as budget_defects
 from runtime.common.python.markdown_fences import visible_presentation_defects
+from runtime.common.python.repo_identity import identity_of
 
 SCAFFOLD_RE = re.compile(r"\{\{.*?\}\}")
 TOKEN_RE = re.compile(r"<[A-Z][A-Z0-9_]*>")
@@ -272,7 +273,7 @@ def public_metadata_defects(path: Path, text: str) -> list[dict]:
     return []
 
 
-def lint_document(path: Path, require_headings: list[str]) -> dict:
+def lint_document(path: Path, require_headings: list[str], web_base: str | None = None) -> dict:
     text = path.read_text(encoding="utf-8", errors="ignore")
     lines = text.split("\n")
     defects: list[dict] = []
@@ -283,7 +284,7 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
     _state, provenance, body_start, _public = _metadata_context(path, text)
     target_depth = provenance.get("target_depth", "deep-dive") if isinstance(provenance, dict) else "deep-dive"
     defects.extend(budget_defects(text, target_depth))
-    defects.extend(visible_presentation_defects(text))
+    defects.extend(visible_presentation_defects(text, web_base))
 
     # scaffold markers + tokens, with line numbers
     for i, line in enumerate(lines, 1):
@@ -345,8 +346,18 @@ def lint_document(path: Path, require_headings: list[str]) -> dict:
         if not any(req in h for h in headings_text):
             defects.append({"kind": "missing-heading", "line": 0, "detail": req})
 
+    # A declared permalink base is the one sanctioned place a forge name may
+    # appear. Without this exemption every GitHub- or GitLab-hosted repository
+    # trips `forge-leakage` on every source link it is now expected to carry.
+    base = (web_base or "").rstrip("/")
     for i, line in enumerate(lines, 1):
+        pinned = [
+            (match.start(), match.end())
+            for match in re.finditer(re.escape(base), line)
+        ] if base else []
         for match in FORGE_RE.finditer(line):
+            if any(start <= match.start() and match.end() <= end for start, end in pinned):
+                continue
             defects.append({"kind": "forge-leakage", "line": i, "detail": match.group(0)})
 
     return {"file": str(path), "defects": defects, "tokens": sorted(set(tokens))}
@@ -358,6 +369,10 @@ def main() -> int:
     ap.add_argument("--file", required=True, type=Path, help="the single document to check")
     ap.add_argument("--require-heading", action="append", default=[], dest="require_heading",
                     help="a heading substring that must appear (repeatable)")
+    ap.add_argument("--repo", type=Path,
+                    help="repository root, to read the declared source-permalink base "
+                         "from .docforge/manifest.json; without it a permalink is "
+                         "reported like any other source link")
     ap.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     args = ap.parse_args()
 
@@ -365,7 +380,18 @@ def main() -> int:
         print(f"error: not a file: {args.file}", file=sys.stderr)
         return 2
 
-    result = lint_document(args.file, args.require_heading)
+    web_base = None
+    if args.repo:
+        try:
+            manifest = json.loads(
+                (args.repo / ".docforge" / "manifest.json").read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError):
+            manifest = {}
+        identity = identity_of(manifest)
+        web_base = identity["web_base"] if identity else None
+
+    result = lint_document(args.file, args.require_heading, web_base)
 
     if args.json:
         print(json.dumps(result, indent=2))

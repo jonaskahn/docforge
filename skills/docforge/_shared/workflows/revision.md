@@ -105,9 +105,9 @@ falls in scope:
    recorded source blobs still match. Blob freshness proves cited source
    files are unchanged; it does not prove the document's place in the
    documentation graph is still correct. The same holds for illustration
-   coverage: a `FRESH` document whose declared `dominant_form` warrants a
-   visual but carries none must gain it on this revise — blob freshness
-   does not prove the document satisfies the illustration gate.
+   coverage: a `FRESH` document missing any view its `illustration_views`
+   declares must gain that view on this revise — blob freshness does not
+   prove the document answers every reader question its type owes.
 7. **Triage unmanaged documents** — detect foreign docs and run the triage
    exactly as owned in
    [`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
@@ -524,15 +524,22 @@ update the doc wherever it now lives.
    - `UNTRACKED` / empty sections / `UNPARSEABLE` → full re-ground and
      stamp via [`writing.md`](writing.md).
 4. **Illustration coverage is structural, never a blob check** — in every
-   branch above, verify the document's declared `dominant_form` (the
-   manifest entry) against the file: a non-null, non-`table` form requires
-   at least one `mermaid` fence or structural `text` fence. Missing →
-   author it from the instruction's `## Illustration` block and
-   `illustration.md`'s budget for the document's depth, in the same pass,
-   without touching `FRESH`/`COSMETIC` section prose. This is what makes
-   an already-written, diagram-less document gain its diagram on the next
-   revise.
-5. Run mechanical lint, independent audit, and manifest status updates.
+   branch above, verify each view the manifest entry's
+   `illustration_views` declares against the file, **by form**: a declared
+   `sequenceDiagram` is not satisfied by a layout tree that happens to be
+   present. Missing → author that view in its named section from the
+   instruction's `## Illustration` block and `illustration.md`'s budget, in
+   the same pass, without touching `FRESH`/`COSMETIC` section prose. A view
+   marked `required: false` is authored only when its evidence exists. This
+   is what makes an already-written, under-illustrated document gain the
+   views it owes on the next revise.
+5. **Re-expand source links** — run `link_sources.{py,js} --write` for the
+   document (see [`writing.md`](writing.md)). Re-running re-pins every link
+   to the current commit and re-validates every path and range, so a
+   reference that a refactor invalidated surfaces here instead of 404ing
+   for a reader. A document whose sources are `FRESH` still gets this: the
+   commit moved even when the file did not.
+6. Run mechanical lint, independent audit, and manifest status updates.
 
 Graph precheck still applies when the document's `requires` list demands
 it.

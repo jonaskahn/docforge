@@ -29,5 +29,12 @@
   "dominant_form": "flowchart",
   "template_file": "content/architecture/templates/data-flow.md",
   "compact_group": "architecture_compact",
-  "compact_order": 16
+  "compact_order": 16,
+  "illustration_views": [
+    {
+      "form": "flowchart",
+      "section": "Data flow",
+      "question": "where does data enter, what transforms it, and where does it come to rest"
+    }
+  ]
 }

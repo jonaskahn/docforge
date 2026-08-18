@@ -692,11 +692,20 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("`rewrite (template)`", revision)
 
     def test_source_evidence_stays_in_provenance(self) -> None:
-        """Reader-facing source citations are replaced by provenance and docs links."""
+        """Claim evidence lives in provenance; a link is navigation, not proof.
+
+        A reader who must open a file now gets a commit-pinned permalink, but
+        that link never stands in for the provenance entry behind a claim.
+        """
         host = (SHARED_ROOT / "references" / "host-neutrality.md").read_text(encoding="utf-8")
-        self.assertIn("Source grounding stays in provenance", host)
+        self.assertIn("Claim evidence still stays in provenance", host)
+        # The declared permalink base is a confinement location, not a licence
+        # to name a forge anywhere else.
+        self.assertIn("Exactly four places may contain forge-specific detail", host)
+        self.assertIn("`project.repository` in `.docforge/manifest.json`", host)
         evidence = (SHARED_ROOT / "references" / "evidence-presentation.md").read_text(encoding="utf-8")
-        self.assertIn("Never show source paths, line ranges, blob hashes", evidence)
+        self.assertIn("Never show a bare source path, line range, or blob hash", evidence)
+        self.assertIn("Provenance carries the evidence; prose carries the claim.", evidence)
         code = (SHARED_ROOT / "references" / "code-presentation.md").read_text(encoding="utf-8")
         self.assertIn("paste repository implementation", code)
 

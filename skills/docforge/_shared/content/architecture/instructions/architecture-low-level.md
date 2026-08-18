@@ -7,10 +7,11 @@
   holding three unrelated responsibilities gets three write-ups, not one.
 - Per subsystem, explain inputs, state transitions, outputs, failure
   containment, and adjacent dependencies in that order.
-- Add a sequence diagram only when the reader must follow who calls whom
-  across components; use prose and a record-layout fence when the point is
-  the shape of data rather than call order. Skip the visual when prose alone
-  does not force a reader to reconstruct a multi-step interaction.
+- Carry one view per question this document actually answers: the layout
+  fence for static grouping, a component map per selected whitebox, one to
+  three runtime scenarios, and an `erDiagram` when a persistent model exists.
+  These are different questions, not alternatives — answering four of them
+  with a single diagram is what leaves a 30 KB document carrying one visual.
 - Write invariants as absence-based facts a reader cannot recover by reading
   code ("never retries a non-idempotent write").
 - Close each section with the stable file/module paths that orient
@@ -34,14 +35,24 @@
 
 ## Illustration
 
-- **Form:** an ASCII layered stack for static decomposition; a Mermaid
-  `sequenceDiagram` for cross-component call order.
-- **Renders:** the component grouping and its boundaries (ASCII), or the
-  one architecturally relevant runtime scenario across components (sequence).
-- **Trigger:** the sequence diagram only when a reader must follow a
-  multi-step interaction across components — per
-  [`illustration.md`](../../../references/illustration.md)'s deep-dive budget
-  (at most 5 participants).
+Four distinct views, each in its own section. Progressive disclosure, not one
+crowded picture — per
+[`illustration.md`](../../../references/illustration.md).
+
+| View | Form | Renders | Trigger |
+|---|---|---|---|
+| Layout | ASCII `text` fence | the directory grouping and what each group owns | always |
+| Component map | Mermaid `flowchart` | the components inside one selected whitebox and the permitted dependency direction between them | per selected whitebox with three or more components |
+| Runtime scenario | Mermaid `sequenceDiagram` | one architecturally relevant path across components, with its outcome and a material error path | one to three scenarios, chosen for architectural relevance — never a catalogue of every call |
+| Data model | Mermaid `erDiagram` | the durable entities this decomposition touches and their relationships | when a persistent model exists; otherwise prose |
+
+The deep-dive budget bounds each view separately (at most 5 sequence
+participants, 8 ER entities). A view that exceeds its bound splits into two
+views with one stated question each; it is never dropped to fit.
+
+Selecting *which* whiteboxes and scenarios to draw is the judgment call:
+document the important, surprising, risky, or volatile ones and leave the
+normal and standardized parts out.
 
 ## Connections
 

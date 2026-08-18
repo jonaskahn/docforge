@@ -27,6 +27,20 @@ named in high-level.md needs one._
 
 **Allowed dependency direction:** {{direction and rationale.}}
 
+```mermaid
+%% Component map for this whitebox only. Every node is a component written up
+%% below; arrows show the dependency direction the block permits.
+accTitle: Component map for {{high-level parent block}}
+accDescr: {{One sentence: which components this block contains and how they depend on each other.}}
+flowchart LR
+  Inbound["{{component}}"] -->|"{{active verb}}"| Core["{{component}}"]
+  Core -->|"{{active verb}}"| Outbound["{{component}}"]
+```
+
+{{One or two sentences: what the grouping reveals about responsibility, and
+which dependency the direction above deliberately forbids. Omit this diagram
+only when the whitebox holds fewer than three components.}}
+
 ## Components
 
 _Repeat per component inside this whitebox — the ones material to the decomposition's
@@ -50,11 +64,17 @@ motivation above, not an exhaustive file listing._
 
 ## Runtime scenario
 
+_Repeat per architecturally relevant scenario — **one to three**, chosen for
+relevance, never one per code path. Document the important, surprising, risky,
+or volatile paths and leave the routine ones out._
+
 ### {{Architecturally relevant intra-block path}}
 
 {{Why this scenario matters and its successful outcome. Every message maps to a named component above.}}
 
 ```mermaid
+accTitle: Runtime scenario — {{architecturally relevant intra-block path}}
+accDescr: {{One sentence: which components collaborate, in what order, and how the path can fail.}}
 sequenceDiagram
   participant A as {{component}}
   participant B as {{component}}
@@ -66,10 +86,25 @@ sequenceDiagram
   end
 ```
 
+{{One or two sentences restating the order and the failure branch in prose, so
+the scenario survives without the diagram.}}
+
 ## Data model
 
 {{The main entities and how they relate, described. Not a schema dump — a routine column
 rename must not falsify this. Link the generated schema if one exists.}}
+
+```mermaid
+%% Delete this whole block when no persistent model exists; the declared view is
+%% evidence-conditional and is never demanded of a stateless component.
+accTitle: Data model for {{this decomposition}}
+accDescr: {{One sentence: which durable entities the components own and how they relate.}}
+erDiagram
+  ENTITY1 ||--o{ ENTITY2 : "{{relationship}}"
+```
+
+{{One or two sentences: which relationship constrains the components above, and
+which entity owns the write path.}}
 
 ## Significant subsystems
 

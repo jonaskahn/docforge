@@ -12,6 +12,7 @@ const { detect: detectProfiles, inventory: inventoryFiles } = require("../../cat
 const pf = require("../../common/js/provenance_frontmatter.js");
 const store = require("../../common/js/provenance_store.js");
 const queryCatalog = require("../../catalog/js/query_catalog.js");
+const repoIdentity = require("../../common/js/repo_identity.js");
 const { SOURCES: GRAPH_SOURCES, flowCapabilityOf, resolveAllReady, resolveFirstReady } = require("../../graph/js/graph_source_registry.js");
 
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
@@ -171,6 +172,9 @@ function makeDocument(definition, origins, evidence = [], catalogId = null, audi
     }),
     audit: null,
   };
+  if (detail.illustration_views && detail.illustration_views.length) {
+    document.illustration_views = detail.illustration_views;
+  }
   if (detail.contract_revision !== undefined && detail.contract_revision !== null) {
     document.contract_revision = detail.contract_revision;
   }
@@ -329,9 +333,31 @@ function emptySelectionMessage(groups, profiles) {
 // filter is strictly subtractive and runs before every other test, so it can
 // never add a document and skips `conditionEvidence` filesystem work for
 // out-of-scope types.
-function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standard", groups = null) {
+// Document types already seeded as dynamic instances in a manifest.
+function dynamicTypesPresent(documents) {
+  const types = new Set();
+  for (const doc of documents) {
+    const origins = (doc.selection || {}).origins || [];
+    if (origins.some((origin) => origin.kind === "dynamic")) types.add(doc.type);
+  }
+  return types;
+}
+
+// `dynamicTypes` names the dynamic instance types a manifest already holds. In
+// standard layout an index declaring `requires_children` is selected only when
+// one of its member types is present: tier alone would otherwise materialize a
+// folder and README whose only possible children are agent-asserted, which is
+// how `concepts/`, `decisions/`, and `runbooks/` shipped containing nothing but
+// an index explaining its own emptiness. Seeding the first child brings the
+// index back through `addAncestorIndexes`.
+//
+// Compact layout is unaffected: a folded member is a `##` section inside a
+// merged file, so it creates no folder and no empty README, and dropping it
+// from the fold would strand the dynamic instances that merge into it.
+function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standard", groups = null, dynamicTypes = null) {
   const ranks = Object.fromEntries(catalog.tiers.map((item) => [item.id, item.order]));
   const scoped = new Set(groups || []);
+  const seeded = dynamicTypes || new Set();
   let selected = [];
   for (const definition of catalog.documents) {
     const rule = definition.selection;
@@ -339,6 +365,8 @@ function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standa
     if (scoped.size && !scoped.has(definition.group)) continue;
     const tierSelected = ranks[rule.min_tier] <= ranks[tier];
     if (!tierSelected) continue;
+    const members = rule.requires_children;
+    if (layout !== "compact" && members && !members.some((member) => seeded.has(member))) continue;
     const origins = matchingOrigins(rule, profiles);
     const hasSelectors = Object.values(rule.selectors || {}).some((values) => values.length);
     if (hasSelectors && !origins.length) continue;
@@ -368,7 +396,7 @@ function selectedStaticDocuments(catalog, repo, tier, profiles, layout = "standa
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  const knownCommands = new Set(["init", "preview", "add", "set", "presentation", "audit", "status", "set-graph", "reconcile", "finish", "unmanaged", "retire"]);
+  const knownCommands = new Set(["init", "preview", "add", "set", "presentation", "audit", "status", "set-graph", "set-repository", "reconcile", "finish", "unmanaged", "retire"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
   const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "group", "overlay", "evidence", "doc"]);
   const boolean = new Set(["force", "keep-tmp", "reset", "dry-run", "json"]);
@@ -381,6 +409,7 @@ function parseArgs(argv) {
     audit: new Set(["repo", "id", "mode", "verdict", "report"]),
     status: new Set(["repo"]),
     "set-graph": new Set(["repo", "provider", "force"]),
+    "set-repository": new Set(["repo", "web-base", "forge", "blob-template"]),
     reconcile: new Set(["repo", "tier", "scale-class", "layout", "shape", "platform", "framework", "concern", "audience", "group"]),
     finish: new Set(["repo", "keep-tmp"]),
     unmanaged: new Set(["repo", "action", "path", "dry-run"]),
@@ -538,6 +567,50 @@ function cmdInit(args) {
   }
   return 0;
 }
+/**
+ * Declare the repository web base source permalinks are built from.
+ *
+ * Detection fills in what it can, but the forge flavor of a self-hosted host is
+ * never guessed: the line-anchor syntax differs per forge, and a wrong guess
+ * yields links that open the right file with the wrong lines highlighted. When
+ * detection cannot name the flavor, `--forge` is required.
+ */
+function cmdSetRepository(args) {
+  let manifest;
+  try {
+    manifest = loadManifest(manifestPath(args.repo), MANIFEST_HINT);
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  const detected = repoIdentity.detect(args.repo);
+  const webBase = args.web_base || (detected ? detected.web_base : null);
+  if (!webBase) return fail("no `origin` remote to detect a web base from; pass --web-base", 2);
+  const forge = args.forge || repoIdentity.detectFlavor(webBase);
+  if (!forge) {
+    return fail(
+      `cannot infer the forge flavor of ${webBase}; pass --forge ` +
+        `(${Object.keys(repoIdentity.BLOB_TEMPLATES).sort().join(", ")}). Line-anchor ` +
+        "syntax differs per forge, so this is asked rather than guessed",
+      2,
+    );
+  }
+  const record = { web_base: webBase, forge };
+  if (args.blob_template) record.blob_template = args.blob_template;
+  let normalized;
+  try {
+    normalized = repoIdentity.normalize(record);
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  normalized.declared_by = !args.web_base && !args.forge && !args.blob_template ? "detected" : "user";
+  normalized.declared_at = nowIso();
+  manifest.project.repository = normalized;
+  saveManifest(args.repo, manifest);
+  console.log(`Source permalinks resolve against ${normalized.web_base} (${forge}).`);
+  console.log(`  template: ${normalized.blob_template}`);
+  return 0;
+}
+
 function cmdSetGraph(args) {
   required(args, ["repo"]);
   try {
@@ -674,6 +747,10 @@ function cmdAdd(args) {
     const origins = [{ kind: "dynamic", id: definition.type }, ...profileOrigins];
     if (rule.condition) origins.push({ kind: "condition", id: rule.condition });
     manifest.documents.push(makeDocument(actual, origins, evidence, definition.id, manifest.project.profiles.audiences));
+    // An index declaring `requires_children` was skipped at selection time
+    // precisely because this child did not exist yet. Now it does, so the
+    // folder gets its router -- otherwise the child would hang off nothing.
+    addAncestorIndexes(catalog, manifest.documents, manifest.project.profiles.audiences);
     manifest.documents.sort((a, b) => a.write_order - b.write_order || a.path.localeCompare(b.path) || a.id.localeCompare(b.id));
     saveManifest(args.repo, manifest);
     if (flowIndex && flowRow) {
@@ -764,20 +841,38 @@ function syncPresentations(catalog, docs, audiences) {
   return updated;
 }
 function syncDominantForms(catalog, docs) {
-  // Hydrate the catalog's `dominant_form` and demote written documents whose
-  // declared form changed, so the illustration gate and the writer brief
-  // read one value.
+  // Hydrate the catalog's `dominant_form` and `illustration_views`, demoting
+  // written documents whose declared visuals changed, so the illustration gate
+  // and the writer brief read one value.
+  //
+  // A changed view list is a real content change: a document written when it
+  // owed one diagram is not complete once it owes three.
   const updated = [];
   for (const doc of docs) {
     const catalogId = catalogIdForDocument(catalog, doc);
     if (catalogId === null) continue;
-    const declared = queryCatalog.loadType(catalogId).dominant_form;
+    const detail = queryCatalog.loadType(catalogId);
+    const declared = detail.dominant_form;
+    const declaredViews = detail.illustration_views || [];
+    let drifted = false;
+
     if (!("dominant_form" in doc)) {
       doc.dominant_form = declared === undefined ? null : declared;
-      continue;
-    }
-    if (doc.dominant_form !== declared) {
+    } else if (doc.dominant_form !== declared) {
       doc.dominant_form = declared === undefined ? null : declared;
+      drifted = true;
+    }
+
+    // Adding the field to a manifest that predates it is hydration, not drift;
+    // changing an already-recorded list is drift and re-grounds.
+    const hadViews = "illustration_views" in doc;
+    if (hadViews && JSON.stringify(doc.illustration_views) !== JSON.stringify(declaredViews)) {
+      drifted = true;
+    }
+    if (declaredViews.length) doc.illustration_views = declaredViews;
+    else delete doc.illustration_views;
+
+    if (drifted) {
       demoteWritten(doc);
       updated.push(doc.id);
     }
@@ -900,7 +995,9 @@ function cmdReconcile(args) {
   } catch (error) {
     return fail(error.message, 2);
   }
-  const selected = selectedStaticDocuments(catalog, args.repo, newTier, profiles, newLayout, newGroups);
+  const selected = selectedStaticDocuments(
+    catalog, args.repo, newTier, profiles, newLayout, newGroups, dynamicTypesPresent(manifest.documents),
+  );
   if (!selected.length) return fail(emptySelectionMessage(newGroups, profiles), 2);
   const selectedIds = new Set(selected.map((doc) => doc.id));
   const [relaidOut, foldedAway] = relayoutDynamicDocuments(
@@ -1457,7 +1554,7 @@ function main() {
     if (!args.repo || !fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
       return fail(`not a directory: ${args.repo || ""}`, 2);
     }
-    return { init: cmdInit, preview: cmdPreview, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, reconcile: cmdReconcile, finish: cmdFinish, unmanaged: cmdUnmanaged, retire: cmdRetire }[args.command](args);
+    return { init: cmdInit, preview: cmdPreview, add: cmdAdd, set: cmdSet, presentation: cmdPresentation, audit: cmdAudit, status: cmdStatus, "set-graph": cmdSetGraph, "set-repository": cmdSetRepository, reconcile: cmdReconcile, finish: cmdFinish, unmanaged: cmdUnmanaged, retire: cmdRetire }[args.command](args);
   } catch (error) {
     usage();
     return fail(error.message, 2);

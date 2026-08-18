@@ -18,6 +18,7 @@ from runtime.common.python.agent_context import (
 )
 from runtime.common.python.plan import plan_entries
 from runtime.common.python.markdown_fences import scan_fences
+from runtime.common.python.repo_identity import identity_of
 from runtime.common.python.special_files import SPECIAL_DOC_OUTPUTS
 from runtime.common.python.provenance_frontmatter import (
     BLOB,
@@ -53,6 +54,31 @@ INDEX_TYPES = {
 COMPACT_TYPE = "compact-doc"
 CHILDREN_START = "<!-- docforge-children:start -->"
 CHILDREN_END = "<!-- docforge-children:end -->"
+# Each index template carries its own table header inside the managed markers,
+# and the templates disagree on width (2 columns for a section README, 5 for
+# the decision log, 8 for the flow index). Regenerating the block has to
+# re-emit that header: rows alone render as literal pipe text, not a table.
+TABLE_SEPARATOR = re.compile(r"^\|(?:\s*:?-{3,}:?\s*\|)+$")
+# Folders whose contents are dynamically discovered, mapped to whether the
+# collection root itself must hold a child.
+#
+# `docs/flows/` is exempt at the root: its index is a discovery report that
+# also records deferred, placeholder, and skipped candidates, so it earns its
+# place with no promoted flow. Every other collection index is pure routing --
+# with no child it is a promise the tree never keeps, which is how `concepts/`,
+# `decisions/`, and `runbooks/` shipped holding nothing but an index explaining
+# its own emptiness, in two separate repositories, with the audit recording
+# PASS. Family subfolders are checked under every prefix.
+COLLECTION_PREFIXES = {
+    "docs/flows/": False,
+    "docs/architecture/concepts/": True,
+    "docs/architecture/decisions/": True,
+    "docs/architecture/contracts/": True,
+    "docs/operations/runbooks/": True,
+    "docs/product/migrations/": True,
+    "docs-portfolio/epics/": True,
+    "docs-portfolio/decisions/": True,
+}
 
 
 def resolve_manifest(value: Path, repo: Path) -> Path:
@@ -145,7 +171,27 @@ def scaffold_entry(doc: dict, manifest: dict) -> dict:
     return entry
 
 
-def child_rows(doc: dict, manifest: dict) -> list[str]:
+def table_header(block: str) -> tuple[list[str], int]:
+    """Return the template's own header/separator lines and its column count.
+
+    Both live between the markers, so a regenerated block that emits only data
+    rows destroys them. Falls back to a two-column header when a template
+    carries none, so the output is always a well-formed table."""
+    lines = [line for line in block.splitlines() if line.strip()]
+    for index in range(len(lines) - 1):
+        head, rule = lines[index].strip(), lines[index + 1].strip()
+        if head.startswith("|") and TABLE_SEPARATOR.match(rule):
+            return [head, rule], rule.strip("|").count("|") + 1
+    return ["| Document | Answers |", "|---|---|"], 2
+
+
+def pad_row(cells: list[str], columns: int) -> str:
+    """Render one row at the template's width; a narrower row breaks the table."""
+    padded = cells[:columns] + ["—"] * max(0, columns - len(cells))
+    return "| " + " | ".join(padded) + " |"
+
+
+def child_rows(doc: dict, manifest: dict, columns: int = 2) -> list[str]:
     directory = PurePosixPath(doc["path"]).parent
     children = []
     for candidate in routable_children(doc, manifest):
@@ -160,12 +206,24 @@ def child_rows(doc: dict, manifest: dict) -> list[str]:
             children.append(candidate)
     children.sort(key=lambda item: (item["write_order"], item["path"]))
     rows = [
-        f"| [{title_for(child)}]({PurePosixPath(child['path']).relative_to(directory).as_posix()}) | {{{{the reader question {child['id']} answers}}}} |"
+        pad_row(
+            [
+                f"[{title_for(child)}]({PurePosixPath(child['path']).relative_to(directory).as_posix()})",
+                f"{{{{the reader question {child['id']} answers}}}}",
+            ],
+            columns,
+        )
         for child in children
     ]
     if not rows:
         return [
-            "| _No documents are selected in this section yet; they are written when repository evidence selects them._ | — |",
+            pad_row(
+                [
+                    "_No documents are selected in this section yet; they are written when repository evidence selects them._",
+                    "—",
+                ],
+                columns,
+            ),
         ]
     return rows
 
@@ -175,8 +233,9 @@ def expand_children_block(body: str, doc: dict, manifest: dict) -> str:
     end = body.find(CHILDREN_END)
     if start == -1 or end == -1:
         return body
-    rows = child_rows(doc, manifest)
-    block = CHILDREN_START + "\n" + "\n".join(rows) + "\n" + CHILDREN_END
+    header, columns = table_header(body[start + len(CHILDREN_START):end])
+    rows = child_rows(doc, manifest, columns)
+    block = CHILDREN_START + "\n" + "\n".join(header + rows) + "\n" + CHILDREN_END
     return body[:start] + block + body[end + len(CHILDREN_END):]
 
 
@@ -452,34 +511,80 @@ def is_direct_child(folder: PurePosixPath, candidate: PurePosixPath) -> bool:
 
 
 STRUCTURAL_GLYPHS = re.compile(r"[│├└┌┐┘┬┴┤─]")
+# Accessibility directives and a closing `}` may precede the diagram
+# declaration inside a mermaid fence.
+MERMAID_DIRECTIVE = re.compile(r"^(?:accTitle|accDescr)\s*:|^\}$")
+
+
+def illustration_forms(text: str) -> list[str]:
+    """The form of every illustration in the document, in order.
+
+    A Mermaid fence's form is the first token of its content, so a declared
+    `sequenceDiagram` is no longer satisfied by whatever diagram happens to be
+    present -- which is how a pre-baked ASCII layout tree passed for the one
+    runtime scenario a 30 KB document owed."""
+    forms: list[str] = []
+    for fence in scan_fences(text):
+        lines = [line.strip() for _, line in fence["lines"] if line.strip()]
+        if fence["language"] == "mermaid":
+            # `%%` comments and the `accTitle:` / `accDescr:` accessibility
+            # directives may precede the declaration, so the kind is the first
+            # line that is neither.
+            body = [
+                line for line in lines
+                if not line.startswith("%%") and not MERMAID_DIRECTIVE.match(line)
+            ]
+            if body:
+                forms.append(body[0].split()[0])
+            continue
+        if fence["language"] in {"text", "ascii", ""} and any(
+            STRUCTURAL_GLYPHS.search(line) for line in lines
+        ):
+            forms.append("text")
+    return forms
 
 
 def has_declared_illustration(text: str) -> bool:
-    """True when the file carries a `mermaid` fence or a structural `text`
-    fence (one whose content uses tree/box/timeline glyphs)."""
-    for fence in scan_fences(text):
-        if fence["role"] == "diagram":
-            return True
-        if fence["language"] in {"text", "ascii", ""} and any(
-            STRUCTURAL_GLYPHS.search(line) for _, line in fence["lines"]
-        ):
-            return True
-    return False
+    """True when the file carries any recognized illustration."""
+    return bool(illustration_forms(text))
 
 
-def missing_illustration(doc: dict, text: str) -> list[str]:
-    """A written non-agent document whose declared `dominant_form` warrants a
-    visual must carry one — a `mermaid` fence or a structural `text` fence."""
+def illustration_coverage(doc: dict, text: str) -> list[str]:
+    """Every view a document declares must be present, by form.
+
+    `illustration_views` lists the reader questions this type owes an answer
+    to; a missing view is a question the document leaves unanswered. A view
+    marked `required: false` is conditional on evidence (a data model that does
+    not exist, a flow with one outcome) and is never demanded. Falls back to
+    `dominant_form` for a type that declares no views."""
     if doc.get("group") == AGENT_CONTEXT_GROUP:
         return []
     if doc.get("path") in MARKDOWN_EXCEPTIONS or doc.get("type") == "machine-config":
         return []
     if doc.get("status") not in WRITTEN:
         return []
+    present = illustration_forms(text)
+    views = [
+        view for view in doc.get("illustration_views") or []
+        if view.get("required", True)
+    ]
+    if views:
+        findings = []
+        remaining = list(present)
+        for view in views:
+            form = view.get("form")
+            if form in remaining:
+                remaining.remove(form)
+                continue
+            findings.append(
+                f"{doc['path']}: missing the {form} view in \"{view.get('section')}\" "
+                f"({view.get('question')})"
+            )
+        return findings
     form = doc.get("dominant_form")
     if form is None or form == "table":
         return []
-    if has_declared_illustration(text):
+    if present:
         return []
     return [f"{doc['path']}: declared dominant_form {form}, no mermaid or structural text fence"]
 
@@ -526,6 +631,8 @@ def cohesion_defects(docs: list[dict], texts: dict[str, str]) -> list[str]:
 
 
 def audit(repo: Path, manifest: dict) -> int:
+    identity = identity_of(manifest)
+    web_base = identity["web_base"] if identity else None
     findings: dict[str, list[str]] = {
         "missing": [],
         "unfilled scaffold": [],
@@ -539,7 +646,7 @@ def audit(repo: Path, manifest: dict) -> int:
         "unknown section": [],
         "broken links": [],
         "readme child coverage": [],
-        "missing illustration": [],
+        "illustration coverage": [],
         "section cohesion": [],
         "agent-context leak": [],
         "agent-context outbound": [],
@@ -586,7 +693,11 @@ def audit(repo: Path, manifest: dict) -> int:
         found_tokens = sorted(set(TOKEN.findall(text)))
         if found_tokens:
             tokens.append(f"{doc['path']}: {', '.join(found_tokens)}")
-        forge_hits = sorted({match.group(0).lower() for match in FORGE.finditer(text)})
+        # A declared permalink base is the one sanctioned place a forge name may
+        # appear; without this every GitHub- or GitLab-hosted repository would
+        # trip on every source link it is now expected to carry.
+        scrubbed = text.replace(web_base, "") if web_base else text
+        forge_hits = sorted({match.group(0).lower() for match in FORGE.finditer(scrubbed)})
         if forge_hits:
             findings["forge leakage"].append(f"{doc['path']}: {', '.join(forge_hits)}")
         if doc["provenance_mode"] == "sections" and doc["path"] not in MARKDOWN_EXCEPTIONS:
@@ -611,18 +722,21 @@ def audit(repo: Path, manifest: dict) -> int:
             f"{doc['path']}: missing link to {item}"
             for item in readme_child_coverage(repo, doc, manifest, text)
         )
-        findings["missing illustration"].extend(missing_illustration(doc, text))
+        findings["illustration coverage"].extend(illustration_coverage(doc, text))
         texts[doc["path"]] = text
     findings["section cohesion"].extend(cohesion_defects(docs, texts))
-    for prefix in ("docs/flows/", "docs/architecture/concepts/"):
+    for prefix, root_counts in COLLECTION_PREFIXES.items():
+        root = prefix.rstrip("/")
         folders = {
             str(PurePosixPath(path).parent)
             for path in expected
-            if path.startswith(prefix) and len(PurePosixPath(path).parts) > len(PurePosixPath(prefix).parts)
+            if path.startswith(prefix)
         }
+        if root_counts:
+            folders.add(root)
+        else:
+            folders.discard(root)
         for folder in sorted(folders):
-            if folder == prefix.rstrip("/"):
-                continue
             if f"{folder}/README.md" in expected:
                 children = [
                     path for path in expected

@@ -20,8 +20,15 @@
   "write_order": 71,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
-  "dominant_form": null,
+  "dominant_form": "flowchart",
   "template_file": "content/operations/templates/deployment.md",
   "compact_group": "operations_compact",
-  "compact_order": 2
+  "compact_order": 2,
+  "illustration_views": [
+    {
+      "form": "flowchart",
+      "section": "Environments",
+      "question": "which infrastructure nodes run which blocks, per environment"
+    }
+  ]
 }

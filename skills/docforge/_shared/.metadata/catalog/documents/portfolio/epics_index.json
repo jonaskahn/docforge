@@ -10,7 +10,10 @@
     "mode": "static",
     "min_tier": "portfolio",
     "selectors": {},
-    "condition": null
+    "condition": null,
+    "requires_children": [
+      "epic"
+    ]
   },
   "instruction_file": "content/shared/folder-index.instruction.md",
   "requires": [

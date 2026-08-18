@@ -13,7 +13,10 @@
         "library-sdk"
       ]
     },
-    "condition": null
+    "condition": null,
+    "requires_children": [
+      "migration"
+    ]
   },
   "instruction_file": "content/shared/folder-index.instruction.md",
   "requires": [],

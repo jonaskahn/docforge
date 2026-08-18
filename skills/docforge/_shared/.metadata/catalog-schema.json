@@ -116,7 +116,13 @@
             "mode": {"enum": ["static", "dynamic", "compact"]},
             "min_tier": {"enum": ["spine", "diligence", "portfolio"]},
             "selectors": {"$ref": "#/definitions/selectors"},
-            "condition": {"type": ["string", "null"]}
+            "condition": {"type": ["string", "null"]},
+            "requires_children": {
+              "description": "A static index whose only children are dynamic. Tier alone would select it, materializing a folder and README that can never gain a child unless discovery seeds one, so it is selected only once at least one child of its member types is. Names those member types.",
+              "type": "array",
+              "items": {"type": "string"},
+              "minItems": 1
+            }
           },
           "additionalProperties": false
         },
@@ -131,7 +137,24 @@
         "audit_profile": {"type": "string"},
         "dominant_form": {
           "type": ["string", "null"],
-            "enum": ["table", "flowchart", "sequenceDiagram", "stateDiagram-v2", "erDiagram", "journey", "timeline", null]
+            "enum": ["table", "flowchart", "sequenceDiagram", "stateDiagram-v2", "erDiagram", "journey", "text", null]
+        },
+        "illustration_views": {
+          "description": "Every view this document type owes, each answering a distinct reader question. The gate checks one diagram of each declared form. Count follows obligations, never document length.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["form", "section", "question"],
+            "properties": {
+              "form": {"enum": ["flowchart", "sequenceDiagram", "stateDiagram-v2", "erDiagram", "journey", "text"]},
+              "section": {"type": "string"},
+              "question": {"type": "string"},
+              "depth": {"enum": ["orientation", "working", "deep-dive", "reference", "router"]},
+              "required": {"type": "boolean"}
+            },
+            "additionalProperties": false
+          }
         },
         "schema_min": {"type": "string"},
         "model_depth": {

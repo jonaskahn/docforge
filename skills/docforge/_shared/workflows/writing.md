@@ -48,8 +48,9 @@ Contract ([`../references/parallel-execution.md`](../references/parallel-executi
   relocks a provider. On a Portfolio-collection root, an absent lock is
   expected and is never self-healed.
 - Each worker receives its document card (route, `requires`, audience,
-  presentation, the illustration brief — declared `dominant_form`,
-  `## Illustration` trigger, per-illustration budget — and the group
+  presentation, the illustration brief — the declared
+  `illustration_views` with their reader questions, `## Illustration`
+  trigger, per-illustration budget — and the group
   voice), evidence budget, one target artifact, and the session's
   locked graph provider/flow (`manifest["graph"]`, read-only). It runs the
   artifact portion of **Write one document** — route, materialize,
@@ -77,10 +78,11 @@ For the next document in `write_order` (serial mode):
    (or "tree unchanged since the displayed checkpoint") and a compact
    **execution card**: path, reader, owned topics, evidence query, links to
    owning documents, and acceptance checks. Include an **illustration
-   brief** — the route's declared `dominant_form`, the instruction's
-   `## Illustration` trigger, the per-illustration budget for the
-   document's `target_depth`, and the reminder that illustration count is
-   never capped — plus the group's **voice** line. Derive it from the
+   brief** — one line per declared `illustration_views` entry (its form,
+   its section, and the reader question it answers), the instruction's
+   `## Illustration` trigger, and the per-illustration budget — plus the
+   group's **voice** line. Count follows those declared obligations, never
+   document length. Derive it from the
    manifest and the document's route
    (`query_catalog.{py,js} --route <id>`), never from a second plan file.
    This applies to every document — fresh start and revise, flow documents
@@ -105,13 +107,19 @@ For the next document in `write_order` (serial mode):
    [`../references/code-presentation.md`](../references/code-presentation.md)
    and
    [`../references/evidence-presentation.md`](../references/evidence-presentation.md).
-   Read the route's `dominant_form` (a document whose declared form
-   warrants a visual must carry one — `scaffold_docs --audit` enforces it),
-   apply the instruction's `## Illustration` block, and select and author
-   every visual using
-   [`../references/illustration.md`](../references/illustration.md)'s
-   per-illustration budget for the document's `target_depth`; the count of
-   illustrations is never capped. Apply the group voice from
+   Read the route's `illustration_views` — every view this type owes, each
+   with the reader question it answers — and author one diagram per view, in
+   the named section, using the declared form. `scaffold_docs --audit`
+   enforces coverage **by form**, so a layout tree never stands in for a
+   runtime scenario. A view marked `required: false` is
+   evidence-conditional: write it when the evidence exists, delete the
+   scaffold when it does not. Apply the instruction's `## Illustration`
+   block and the per-illustration budget in
+   [`../references/illustration.md`](../references/illustration.md) — a view
+   carrying its own `depth` is bounded by that instead of the document's.
+   Count follows declared obligations, never document length: a diagram that
+   answers no question of its own is decoration and is rejected. Apply the
+   group voice from
    [`../references/voice.md`](../references/voice.md) the same way.
 3. Materialize that document and selected ancestor indexes:
 
@@ -199,9 +207,27 @@ For the next document in `write_order` (serial mode):
      artifact, together with the status transitions. Serial writers may
      merge-edit the sidecar directly.
 
-5. Set it `generated`.
+5. Set it `generated`, then expand its source links:
+
+   ```sh
+   python3 runtime/cli/python/link_sources.py --repo <repo> \
+     --manifest <repo>/.docforge/manifest.json --file <path> --write
+   node runtime/cli/js/link_sources.js --repo <repo> \
+     --manifest <repo>/.docforge/manifest.json --file <path> --write
+   ```
+
+   The writer writes the readable authoring form
+   (`[readable label](path/to/file.ext#L10-L20)`); this pass pins it to the
+   current commit, validates that every path exists and every range is
+   inside its file, and stamps `provenance.git_commit`. A nonzero exit names
+   references that could not be resolved — fix the reference, never the URL
+   by hand. Skip this step when `project.repository` is undeclared: source
+   mentions then stay unlinked prose, which is a supported state, not a
+   defect (`manage_manifest set-repository` declares it once).
 6. Run the document linter and any audit-profile-specific mechanical
-   checks. For the `agents-kernel` output (`AGENTS.md`, a
+   checks. Pass `--repo <repo>` so the linter knows the declared permalink
+   base; without it a legitimate permalink is reported like any other source
+   link. For the `agents-kernel` output (`AGENTS.md`, a
    `SPECIAL_DOC_OUTPUTS` member that `lint_document.{py,js}` skips; see
    [`../runtime/documents/README.md`](../runtime/documents/README.md)), the
    mechanical gate is `lint_agents_kernel.{py,js} --file <path> --repo

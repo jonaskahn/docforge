@@ -26,17 +26,27 @@ const INDEX_PATH = path.join(CATALOG_DIR, "index.json");
 const TYPES_DIR = path.join(CATALOG_DIR, "types");
 const PROFILES_DIR = path.join(CATALOG_DIR, "profiles");
 const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
+// `timeline`, `mindmap`, `sankey`, `treemap`, and `C4` are documented by Mermaid
+// as experimental ("the syntax and properties can change in future releases"),
+// and `architecture-beta` / `block-beta` still require a `-beta` keyword. A
+// diagram that stops rendering on a dependency bump is worse than the prose it
+// replaced, so none of them is declarable.
 const ALLOWED_DOMINANT_FORMS = new Set([
   null,
   undefined,
   "table",
+  "text",
   "flowchart",
   "sequenceDiagram",
   "erDiagram",
   "stateDiagram-v2",
   "journey",
-  "timeline",
 ]);
+// A declared view is always a real illustration, so `table` is not a view form.
+const ALLOWED_VIEW_FORMS = new Set(
+  [...ALLOWED_DOMINANT_FORMS].filter((form) => form && form !== "table"),
+);
+const VIEW_DEPTHS = new Set(["orientation", "working", "deep-dive", "reference", "router"]);
 const TARGET_DEPTHS = new Set(["orientation", "deep-dive", "reference", "router"]);
 const MODEL_DEPTHS = {
   c4: ["context", "container", "component", "component-evidence"],
@@ -370,6 +380,7 @@ function composedCompactContract(detail, repo = null) {
       target_depth: member.target_depth === undefined ? null : member.target_depth,
       model_depth: member.model_depth || {},
       dominant_form: member.dominant_form === undefined ? null : member.dominant_form,
+      illustration_views: member.illustration_views || [],
     };
     if (entry && typeof entry === "object") {
       row.slug = entry.slug === undefined ? null : entry.slug;
@@ -415,6 +426,7 @@ function route(value, audiences = [], repo = null) {
     target_depth: detail.target_depth,
     audit_profile: detail.audit_profile,
     dominant_form: detail.dominant_form === undefined ? null : detail.dominant_form,
+    illustration_views: detail.illustration_views || [],
     contract_revision: detail.contract_revision === undefined ? null : detail.contract_revision,
     model_depth: modelDepth,
     primary_audience: primaryAudience,
@@ -764,6 +776,7 @@ function validate() {
     if (!ALLOWED_DOMINANT_FORMS.has(doc.dominant_form)) {
       errors.push(`${docId}: invalid dominant_form ${JSON.stringify(doc.dominant_form)}`);
     }
+    errors.push(...validateIllustrationViews(doc, docId));
     const summary = doc.summary;
     if (!summary || typeof summary !== "string" || summary.length > 160) {
       errors.push(`${docId}: summary must be a non-empty string of at most 160 characters`);
@@ -848,6 +861,54 @@ function validate() {
         errors.push(`infrastructure-platform missing alias ${alias}`);
       }
     }
+  }
+  return errors;
+}
+
+/**
+ * Every declared view names a real form, a section, and its own question.
+ *
+ * The question is the load-bearing field: a view that cannot say which reader
+ * question it answers, that no other view here answers, is decoration.
+ */
+function validateIllustrationViews(doc, docId) {
+  const views = doc.illustration_views;
+  if (views === undefined || views === null) return [];
+  if (!Array.isArray(views) || !views.length) {
+    return [`${docId}: illustration_views must be a non-empty array`];
+  }
+  const errors = [];
+  const seen = new Set();
+  views.forEach((view, index) => {
+    const where = `${docId}: illustration_views[${index}]`;
+    if (typeof view !== "object" || view === null || Array.isArray(view)) {
+      errors.push(`${where} must be an object`);
+      return;
+    }
+    if (!ALLOWED_VIEW_FORMS.has(view.form)) {
+      errors.push(`${where} invalid form ${JSON.stringify(view.form)}`);
+    }
+    for (const field of ["section", "question"]) {
+      if (!view[field] || typeof view[field] !== "string") {
+        errors.push(`${where} ${field} must be a non-empty string`);
+      }
+    }
+    if (view.depth !== undefined && !VIEW_DEPTHS.has(view.depth)) {
+      errors.push(`${where} invalid depth ${JSON.stringify(view.depth)}`);
+    }
+    if ("required" in view && typeof view.required !== "boolean") {
+      errors.push(`${where} required must be boolean`);
+    }
+    const key = `${view.form}${view.section}`;
+    if (seen.has(key)) {
+      errors.push(`${where} duplicates form ${JSON.stringify(view.form)} in section ${JSON.stringify(view.section)}`);
+    }
+    seen.add(key);
+  });
+  const declared = doc.dominant_form;
+  const forms = new Set(views.filter((view) => view && typeof view === "object").map((view) => view.form));
+  if (ALLOWED_VIEW_FORMS.has(declared) && !forms.has(declared)) {
+    errors.push(`${docId}: dominant_form ${JSON.stringify(declared)} is not among illustration_views forms`);
   }
   return errors;
 }

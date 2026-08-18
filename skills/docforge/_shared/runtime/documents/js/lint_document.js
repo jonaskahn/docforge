@@ -36,6 +36,7 @@ const store = require("../../common/js/provenance_store.js");
 const { illustrationDefects: budgetDefects } = require("../../common/js/illustration_metrics.js");
 const { SPECIAL_DOC_OUTPUTS } = require("../../common/js/special_files.js");
 const { visiblePresentationDefects } = require("../../common/js/markdown_fences.js");
+const { identityOf } = require("../../common/js/repo_identity.js");
 
 const SCAFFOLD_RE = /\{\{.*?\}\}/g;
 const TOKEN_RE = /<[A-Z][A-Z0-9_]*>/g;
@@ -252,7 +253,7 @@ function publicMetadataDefects(filePath, text) {
   return [];
 }
 
-function checkDocument(filePath, requireHeadings) {
+function checkDocument(filePath, requireHeadings, webBase = null) {
   const text = fs.readFileSync(filePath, "utf8");
   const lines = text.split("\n");
   const defects = [];
@@ -265,7 +266,7 @@ function checkDocument(filePath, requireHeadings) {
     ? context.provenance.target_depth || "deep-dive"
     : "deep-dive";
   defects.push(...budgetDefects(text, targetDepth));
-  defects.push(...visiblePresentationDefects(text));
+  defects.push(...visiblePresentationDefects(text, webBase));
 
   // scaffold markers + tokens, with line numbers
   for (let i = 0; i < lines.length; i++) {
@@ -350,10 +351,25 @@ function checkDocument(filePath, requireHeadings) {
     }
   }
 
+  // A declared permalink base is the one sanctioned place a forge name may
+  // appear. Without this exemption every GitHub- or GitLab-hosted repository
+  // trips `forge-leakage` on every source link it is now expected to carry.
+  const base = (webBase || "").replace(/\/+$/, "");
   for (let i = 0; i < lines.length; i++) {
+    const pinned = [];
+    if (base) {
+      let from = lines[i].indexOf(base);
+      while (from !== -1) {
+        pinned.push([from, from + base.length]);
+        from = lines[i].indexOf(base, from + 1);
+      }
+    }
     FORGE_RE.lastIndex = 0;
     let m;
     while ((m = FORGE_RE.exec(lines[i])) !== null) {
+      const start = m.index;
+      const finish = start + m[0].length;
+      if (pinned.some(([a, b]) => a <= start && finish <= b)) continue;
       defects.push({ kind: "forge-leakage", line: i + 1, detail: m[0] });
     }
   }
@@ -362,14 +378,15 @@ function checkDocument(filePath, requireHeadings) {
 }
 
 function parseArgs(argv) {
-  const args = { file: null, requireHeading: [], json: false };
+  const args = { file: null, requireHeading: [], repo: null, json: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--file" || a === "--require-heading") {
+    if (a === "--file" || a === "--require-heading" || a === "--repo") {
       if (i + 1 >= argv.length || argv[i + 1].startsWith("--")) {
         throw new Error(`option requires a value: ${a}`);
       }
       if (a === "--file") args.file = argv[++i];
+      else if (a === "--repo") args.repo = argv[++i];
       else args.requireHeading.push(argv[++i]);
     }
     else if (a === "--json") args.json = true;
@@ -388,7 +405,7 @@ function main() {
     return 2;
   }
   if (args.help) {
-    console.log("usage: lint_document.js --file <path> [--require-heading <text>] [--json]");
+    console.log("usage: lint_document.js --file <path> [--require-heading <text>] [--repo <dir>] [--json]");
     return 0;
   }
   if (!args.file || !fs.existsSync(args.file) || !fs.statSync(args.file).isFile()) {
@@ -396,7 +413,19 @@ function main() {
     return 2;
   }
 
-  const result = checkDocument(args.file, args.requireHeading);
+  let webBase = null;
+  if (args.repo) {
+    let manifest = {};
+    try {
+      manifest = JSON.parse(fs.readFileSync(path.join(args.repo, ".docforge", "manifest.json"), "utf8"));
+    } catch {
+      manifest = {};
+    }
+    const identity = identityOf(manifest);
+    webBase = identity ? identity.web_base : null;
+  }
+
+  const result = checkDocument(args.file, args.requireHeading, webBase);
 
   if (args.json) {
     console.log(JSON.stringify(result, null, 2));

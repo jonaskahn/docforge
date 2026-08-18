@@ -18,6 +18,7 @@ they exist to be imported, not executed.
 - Checking that a human-facing document does not reference the agent-context
   group → `agent_context`.
 - Classifying a source's drift (fresh / cosmetic / stale) → `evidence_hash`.
+- Building a source permalink from the declared repository base → `repo_identity`.
 - Extracting declared dependencies from package manifests → `manifest_deps`.
 - Naming special outputs that bypass normal provenance → `special_files`.
 - Classifying project scale (`small` / `medium` / `large`) and suggesting a
@@ -42,6 +43,7 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | `plan` | Deterministic add/update/rewrite/unchanged/skip plans for documents | yes |
 | `provenance_frontmatter` | Restricted-YAML provenance codec: parse, v1→v2 migration, hashing; `emit_yaml` remains only to build pre-migration test fixtures | yes |
 | `provenance_store` | Folder-mirrored JSON sidecar store: sidecar-first reads, entry writes, inline-to-sidecar moves | mixes — writes `.docforge/provenance/` and strips migrated frontmatter |
+| `repo_identity` | Declared repository web base, forge flavor, and pinned-commit permalink construction | yes |
 | `special_files` | Constants: special output names and their template sources | yes |
 | `flow_index_schema` | Flow-index schema versioning and the additive 1.1→1.2 upgrade, shared by the flows runtime and metadata migration | yes |
 | `entry_vocabulary` | Entry-surface vocabulary: entry/surface name regexes, entry path segments, and the graph-layer word list | yes |
@@ -84,7 +86,12 @@ All are paired libraries (Python snake_case / JS camelCase exports).
   the elements within a single illustration per depth (orientation 5, all
   others 12). The number of illustrations in a document is never capped.
 - `markdown_fences` — `inferred_role`, `scan_fences`,
-  `visible_presentation_defects`.
+  `visible_presentation_defects(text, web_base=None)`. A link built from the
+  declared permalink base is exempt from the source-link and source-line rules;
+  an unexpanded authoring-form link is reported as `unpinned-source-link`.
+- `repo_identity` — `git_remote_url`, `head_commit`, `detect`, `detect_flavor`,
+  `normalize`, `blob_url`, `identity_of(manifest)`. Line-anchor syntax differs
+  per forge, so a self-hosted host's flavor is declared, never guessed.
 - `special_files` — `SPECIAL_DOC_OUTPUTS` (AGENTS.md, CLAUDE.md,
   CLAUDE.local.md) and `SPECIAL_DOC_SOURCES` (agents-kernel.md, claude-md.md,
   claude-local-md.md).
@@ -125,7 +132,7 @@ consumers:
 
 - `documents/` — `_util`, `plan`, `special_files`, `provenance_frontmatter`,
   `provenance_store`, `illustration_metrics`,
-  `markdown_fences`, `agent_context`.
+  `markdown_fences`, `agent_context`, `repo_identity`.
 - `manifest/` — `_util`, `plan`, `provenance_frontmatter`, `provenance_store`,
   `evidence_hash`, `flow_index_schema` (migration merges the flow ledger).
 - `validation/` — `_util`, `provenance_frontmatter`, `special_files`.

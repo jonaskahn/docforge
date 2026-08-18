@@ -1,5 +1,12 @@
 # Decision-record writing craft
 
+Which decisions earn a record, and how to recover them from a repository that
+never wrote any, are owned by
+[`../../references/decision-records.md`](../../references/decision-records.md) —
+including the five-to-ten backfill ceiling and the exact git signals. Candidates
+reach this document through `harvest_candidates` and the write-start selection
+gate, never by invention.
+
 - Each record follows Nygard's ADR shape — title, status, context, decision,
   consequences — which the scaffold already carries; the craft is in how the
   title and consequences read.

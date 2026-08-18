@@ -28,5 +28,12 @@
   "dominant_form": "erDiagram",
   "template_file": "content/architecture/templates/persistence.md",
   "compact_group": "architecture_compact",
-  "compact_order": 25
+  "compact_order": 25,
+  "illustration_views": [
+    {
+      "form": "erDiagram",
+      "section": "Data model",
+      "question": "which entities are stored, and how do they relate"
+    }
+  ]
 }

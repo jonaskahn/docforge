@@ -15,13 +15,18 @@ external services and systems it borders. The "part of a business" view: name th
 neighbours and the contracts between them, not the internals.}}
 
 ```mermaid
+%% C4 Context. Keep this view outside-in: neighbors only, no internals.
+accTitle: System context diagram for {{this system}}
+accDescr: {{One sentence naming each neighbor and what crosses the boundary.}}
 flowchart LR
-  Upstream["{{actor / upstream}}"] --> System["{{this system}}"]
-  System --> Datastore["{{datastore / downstream}}"]
-  System --> External["{{external service}}"]
+  Upstream["{{actor / upstream}}"] -->|"{{active verb · protocol}}"| System["{{this system}}"]
+  System -->|"{{active verb · protocol}}"| Datastore["{{datastore / downstream}}"]
+  System -->|"{{active verb · protocol}}"| External["{{external service}}"]
 ```
 
-{{One sentence: what crosses each boundary and why the relationship matters.}}
+{{One or two sentences: what crosses each boundary and why the relationship
+matters. This prose is not optional — a reader whose renderer drops the diagram,
+and every screen-reader user, gets only this.}}
 
 ## Containers and blackboxes
 
@@ -41,6 +46,24 @@ cites [reference/tech-stack.md](../reference/tech-stack.md); an unproven choice 
 | Block | Responsibility | Technology | External interface | Boundary it owns |
 |---|---|---|---|---|
 | {{block}} | {{active responsibility}} | {{stack or unknown}} | {{protocol/channel}} | {{trust / API / data boundary, if any}} |
+
+The table carries technology, interface, and boundary per block; the diagram
+carries what a table cannot — which block talks to which, in which direction.
+Both earn their place, and neither substitutes for the other.
+
+```mermaid
+%% C4 Container. Every block named in the table above appears here exactly once;
+%% never mix in a context-level neighbor or a component-level internal.
+accTitle: Container diagram for {{this system}}
+accDescr: {{One sentence: which deployable blocks exist and how they communicate.}}
+flowchart LR
+  Entry["{{deployable block}} · {{technology}}"] -->|"{{active verb · protocol}}"| Worker["{{deployable block}} · {{technology}}"]
+  Worker -->|"{{active verb · protocol}}"| Store["{{datastore}} · {{technology}}"]
+```
+
+{{One or two sentences: which communication paths matter and why, and which
+block's absence would stop the system. If this view outgrows its budget, split
+it by functional area — never drop it.}}
 
 ## Relationship matrix
 

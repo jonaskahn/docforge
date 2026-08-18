@@ -18,9 +18,12 @@ _Last reviewed: {{YYYY-MM-DD}}_
 2. {{observable action}}
 3. {{outcome}}
 
-<!-- Default: sequenceDiagram. Switch to a flowchart instead (never both) only when
-the reader's primary question is "what are the branches and where do they go" —
-see ../../references/illustration.md. -->
+<!-- The flow's primary diagram. Default: sequenceDiagram. Switch to a flowchart
+when the reader's primary question is "what are the branches and where do they
+go", or to a journey for felt experience — one primary form, not two of the same
+shape. A second diagram answering a *different* question is welcome: the
+trigger-to-outcome fan-out under ## Outcome below. See
+../../references/illustration.md. -->
 
 ```mermaid
 sequenceDiagram

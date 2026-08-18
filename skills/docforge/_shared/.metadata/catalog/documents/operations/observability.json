@@ -20,8 +20,15 @@
   "write_order": 72,
   "provenance_mode": "sections",
   "audit_profile": "operations",
-  "dominant_form": "table",
+  "dominant_form": "flowchart",
   "template_file": "content/operations/templates/observability.md",
   "compact_group": "operations_compact",
-  "compact_order": 3
+  "compact_order": 3,
+  "illustration_views": [
+    {
+      "form": "flowchart",
+      "section": "Correlation",
+      "question": "how does a reader get from an alert to the request or trace that caused it"
+    }
+  ]
 }

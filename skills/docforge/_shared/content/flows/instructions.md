@@ -82,11 +82,14 @@ business rules linked rather than duplicated.
 
 ## Illustration
 
-- **Form:** Mermaid `flowchart` when the reader's question is "what are the branches and
-  where do they go"; Mermaid `sequenceDiagram` when it is "in what order do the actors talk
-  to each other"; Mermaid `journey` when it is "how did the experience feel across the
-  process for a given actor" (effort or satisfaction per step) — pick exactly one form,
-  never more than one, for the same flow.
+- **Form:** one **primary** form answering the flow's main question — Mermaid
+  `sequenceDiagram` for "in what order do the actors talk to each other",
+  `flowchart` for "what are the branches and where do they go", `journey` for
+  "how did the experience feel across the process for a given actor". Pick one
+  primary form; a second diagram is permitted only when it answers a
+  *different* question, and only in its own section: the ASCII
+  trigger-to-outcome fan-out under `## Outcome` when the flow has two or more
+  terminal outcomes. Never two diagrams of the same shape restating each other.
 - **Renders:** for a flowchart, each gateway and its outcomes, labeled with the condition
   that selects them; for a sequence diagram, the actors as participants and each call as a
   labeled arrow, in the order they actually occur; for a journey, the steps grouped into

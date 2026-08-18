@@ -13,7 +13,10 @@
         "data-pipeline"
       ]
     },
-    "condition": null
+    "condition": null,
+    "requires_children": [
+      "dataset"
+    ]
   },
   "instruction_file": "content/shared/folder-index.instruction.md",
   "requires": [],

@@ -111,6 +111,32 @@ that is the write-start selection gate below, a mandatory user decision even
 under `--auto-accept`. Never seed an example artifact to stand in
 for discovery.
 
+**Decisions and concepts are harvested the same way, not left to chance.**
+They were the one dynamic family with no discovery step: their
+`discovered_decision` / `discovered_concept` conditions have no mechanical
+evaluator, so a run that never looked produced a `decisions/` and `concepts/`
+folder holding nothing but an index explaining its own emptiness. Run the
+harvest during repository inspection, before the plan gate:
+
+```sh
+python3 runtime/cli/python/harvest_candidates.py --repo <repo>
+node    runtime/cli/js/harvest_candidates.js  --repo <repo>
+```
+
+It writes `.docforge/candidates.json` — candidates only, each carrying the
+repository evidence that suggested it (existing ADR/RFC/design files,
+dependency-manifest history, when each substantial module first appeared,
+reverts; module clusters for concepts). Present them at the same write-start
+selection gate as flows and let the user choose; a chosen candidate becomes a
+document through `manage_manifest add --type adr|concept`. The craft for
+writing them, including the five-to-ten backfill ceiling and the mandatory
+`Reconstructed …` provenance notice, is owned by
+[`../references/decision-records.md`](../references/decision-records.md)
+"Backfilling". An index over these children is not selected at all until one
+exists, so choosing none leaves no empty folder behind — that is a correct
+outcome, not a gap to paper over. Never invent rationale the history does not
+support.
+
 ## Planning over an existing manifest
 
 When the goal is **replace the plan** — or any new plan over a manifest

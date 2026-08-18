@@ -9,7 +9,10 @@
     "mode": "static",
     "min_tier": "diligence",
     "selectors": {},
-    "condition": null
+    "condition": null,
+    "requires_children": [
+      "adr"
+    ]
   },
   "instruction_file": "content/shared/decision-records.instruction.md",
   "requires": [

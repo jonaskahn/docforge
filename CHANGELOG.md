@@ -2,6 +2,76 @@
 
 ## 2.23.0
 
+- **Source mentions become links a reader can follow.** A mention is still a
+  readable noun phrase first, but when the reader must open the file that
+  phrase is now the link text of a **commit-pinned permalink**. The writer
+  writes the authoring form (`[readable label](src/worker.py#L97-L104)`) and
+  the new `link_sources` pass expands it against the repository base declared
+  in `project.repository`, validating that every path exists and every range
+  is inside its file — a stale reference fails at write time instead of
+  404ing for a reader. Generated output previously carried over a thousand
+  unchecked `path:line` strings pinned to a commit that had already moved.
+  - New `manage_manifest set-repository` declares the base, forge flavor, and
+    permalink template. Line-anchor syntax differs per forge, so a self-hosted
+    host's flavor is asked for once, never guessed.
+  - `host-neutrality.md` gains a fourth confinement location for that
+    declaration; the linters exempt links built from it (`source-code-link`
+    and `forge-leakage` no longer fire on a sanctioned permalink) and add
+    `unpinned-source-link` for an authoring-form link that was never expanded.
+    A bare `path:line` in prose remains a defect, and agent-context outputs
+    remain link-free and URL-free.
+  - `provenance.git_commit` — schema-declared and validated since 2.0 but
+    never produced — is now stamped with the commit a document's links pin to.
+- **Illustration count follows declared obligations, not document length.**
+  A type now declares `illustration_views`: every view it owes, each with the
+  reader question it answers. The gate checks coverage **by form**, so a
+  pre-baked ASCII layout tree no longer satisfies a declared
+  `sequenceDiagram` — the way a 30 KB low-level document shipped carrying one
+  diagram. Three one-diagram caps that contradicted `illustration.md`'s own
+  "no cap" rule are gone: high-level owes both a C4 context **and** container
+  diagram, low-level owes layout, component map, one to three runtime
+  scenarios, and a data model, and a flow may carry its outcome fan-out
+  beside its primary form.
+  - Templates gained the slots to match, including for `triggers-and-jobs`,
+    `observability`, `deployment`, `job-reliability`, `configuration`, and
+    `errors` — document types that previously produced tens of kilobytes with
+    no visual at all. Reference catalogs stay tabular on purpose.
+  - New `decorative illustration` (fewer than three meaningful elements) and
+    `undescribed illustration` (no explanatory sentence beside the fence)
+    defects. The second is an accessibility floor: screen readers announce a
+    Mermaid diagram as an unordered jumble of node labels, so the adjacent
+    prose is the only content those readers get. Every Mermaid scaffold now
+    carries `accTitle` / `accDescr`.
+  - `timeline` is no longer declarable (Mermaid documents it as
+    experimental); `journey` and structural `text` are. The `working` budget
+    key documented since 2.22 is now actually enforced, and a view may carry
+    its own `depth`.
+- **Collection folders no longer ship empty.** `concepts/`, `decisions/`, and
+  `runbooks/` were guaranteed to appear holding nothing but an index
+  explaining its own emptiness on **every** Diligence run — their child types
+  are gated on `discovered_*` conditions that no code evaluated and no step
+  produced. Seven such indexes now declare `requires_children` and are
+  selected only once a child exists; seeding the first child brings the index
+  back automatically.
+  - New `harvest_candidates` proposes decision and concept candidates from
+    the git signals `references/decision-records.md` already prescribed for
+    backfilling — a procedure that existed in full and was linked from no
+    workflow. Candidates only: nothing is selected, and no rationale is
+    invented.
+  - The `folder-only promotion` check now covers the collection root itself
+    (it previously skipped the very folder it was named for) and all seven
+    locations rather than two. `docs/flows/` stays exempt at the root, since
+    its index is a discovery report that records deferred candidates too.
+- **Generated index tables render as tables.** `expand_children_block`
+  discarded the header and separator rows, which sit inside the managed
+  markers, so every section README emitted literal pipe text. Each template's
+  own header and column count are now preserved.
+- **The dashboard reports a document that produced no page.** A written
+  record dropped from the page ledger previously became a silent 404 with no
+  finding anywhere.
+
+## 2.23.0 (initial)
+
 - **Illustrations are declared, briefed, and enforced.** The catalog now
   declares a `dominant_form` for every document, the writer's execution card
   carries an illustration brief, and `scaffold_docs --audit` reports

@@ -30,5 +30,18 @@
   "contract_revision": "2.23.0",
   "template_file": "content/flows/flow.template.md",
   "compact_group": "flows_compact",
-  "compact_order": 52
+  "compact_order": 52,
+  "illustration_views": [
+    {
+      "form": "sequenceDiagram",
+      "section": "Happy path",
+      "question": "in what order do the actors interact to reach the outcome"
+    },
+    {
+      "form": "text",
+      "section": "Outcome",
+      "question": "which terminal outcomes does this single trigger fan out to",
+      "required": false
+    }
+  ]
 }

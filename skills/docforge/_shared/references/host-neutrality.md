@@ -28,7 +28,7 @@ The commands `git`, `git log`, `git blame`, `git tag`, and semantic version tags
 
 ## The confinement rule
 
-Exactly three places may contain forge-specific detail. Everywhere else stays neutral.
+Exactly four places may contain forge-specific detail. Everywhere else stays neutral.
 
 **1. `docs/contributing/README.md`** — one clearly marked section:
 
@@ -47,11 +47,15 @@ Exactly three places may contain forge-specific detail. Everywhere else stays ne
 
 **3. A single ownership file at the platform's required path** — derived from `docs/contributing/ownership.md`, which stays the human-readable source of truth explaining *why* each area has the owner it has.
 
+**4. `project.repository` in `.docforge/manifest.json`** — the web base, forge flavor, and permalink template every source link is built from. It exists for the same reason as the other three: a reader who must open a file needs a link that works, and a repository-relative link 404s in a generated static site. Confining the host to one declared value keeps migration bounded — re-declare it and re-run, never hand-edit links across every document. Nothing else in the tree may name a forge or hardcode a host, and the generated prose around a link still uses neutral vocabulary.
+
 ## Portable content choices
 
 **Diagrams.** Mermaid illustrations follow [`illustration.md`](illustration.md) for complexity budgets, rendering, and fallback rules. Always precede a diagram with one or two sentences stating what it shows.
 
-**Links.** Relative paths (`../architecture/high-level.md`) work when browsing the forge, in most editors, and in generated static sites. Absolute URLs to the current host break on migration and on forks. Link generated documentation for related topics. Source grounding stays in provenance; see [`evidence-presentation.md`](evidence-presentation.md). Never link to a line number or a private symbol. Source paths are never Markdown links into source files — the parenthesized-path form and its rules are owned by [`evidence-presentation.md`](evidence-presentation.md).
+**Links between documents.** Relative paths (`../architecture/high-level.md`) work when browsing the forge, in most editors, and in generated static sites. A hand-written absolute URL to the current host breaks on migration and on forks, so documentation links stay relative. Link generated documentation for related topics.
+
+**Links into source.** A repository-relative link into source is *not* portable in the way a document link is: it 404s in the rendered site, since only `.md` targets resolve there. So a source link is an absolute permalink built from the declared base in confinement location 4 and pinned to a commit — generated mechanically, never hand-written. Claim evidence still stays in provenance, and a private symbol is still never linked. The form, and when a mention earns a link at all, are owned by [`evidence-presentation.md`](evidence-presentation.md).
 
 **Callouts.** Blockquote-based callouts are the only universally portable form:
 

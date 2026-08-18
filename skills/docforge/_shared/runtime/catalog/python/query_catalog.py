@@ -30,16 +30,24 @@ COMPACT_DYNAMIC_CAP = 6
 INDEX_PATH = CATALOG_DIR / "index.json"
 TYPES_DIR = CATALOG_DIR / "types"
 PROFILES_DIR = CATALOG_DIR / "profiles"
+# `timeline`, `mindmap`, `sankey`, `treemap`, and `C4` are documented by Mermaid
+# as experimental ("the syntax and properties can change in future releases"),
+# and `architecture-beta` / `block-beta` still require a `-beta` keyword. A
+# diagram that stops rendering on a dependency bump is worse than the prose it
+# replaced, so none of them is declarable.
 ALLOWED_DOMINANT_FORMS = {
     None,
     "table",
+    "text",
     "flowchart",
     "sequenceDiagram",
     "erDiagram",
     "stateDiagram-v2",
     "journey",
-    "timeline",
 }
+# A declared view is always a real illustration, so `table` is not a view form.
+ALLOWED_VIEW_FORMS = ALLOWED_DOMINANT_FORMS - {None, "table"}
+VIEW_DEPTHS = {"orientation", "working", "deep-dive", "reference", "router"}
 TARGET_DEPTHS = {"orientation", "deep-dive", "reference", "router"}
 MODEL_DEPTHS = {
     "c4": ("context", "container", "component", "component-evidence"),
@@ -368,6 +376,7 @@ def composed_compact_contract(
             "target_depth": member.get("target_depth"),
             "model_depth": member.get("model_depth", {}),
             "dominant_form": member.get("dominant_form"),
+            "illustration_views": member.get("illustration_views", []),
         }
         if isinstance(entry, dict):
             row["slug"] = entry.get("slug")
@@ -414,6 +423,7 @@ def route(
         "target_depth": detail.get("target_depth"),
         "audit_profile": detail.get("audit_profile"),
         "dominant_form": detail.get("dominant_form"),
+        "illustration_views": detail.get("illustration_views", []),
         "contract_revision": detail.get("contract_revision"),
         "model_depth": model_depth,
         "primary_audience": primary_audience,
@@ -774,6 +784,7 @@ def validate() -> list[str]:
         form = doc.get("dominant_form")
         if form not in ALLOWED_DOMINANT_FORMS:
             errors.append(f"{doc_id}: invalid dominant_form {form!r}")
+        errors.extend(_validate_illustration_views(doc, doc_id))
         summary = doc.get("summary")
         if not summary or not isinstance(summary, str) or len(summary) > 160:
             errors.append(f"{doc_id}: summary must be a non-empty string of at most 160 characters")
@@ -856,6 +867,47 @@ def validate() -> list[str]:
         for alias in ("deployment-config", "iac"):
             if alias not in aliases:
                 errors.append(f"infrastructure-platform missing alias {alias}")
+    return errors
+
+
+def _validate_illustration_views(doc: dict, doc_id: str) -> list[str]:
+    """Every declared view names a real form, a section, and its own question.
+
+    The question is the load-bearing field: a view that cannot say which reader
+    question it answers, that no other view here answers, is decoration."""
+    views = doc.get("illustration_views")
+    if views is None:
+        return []
+    errors: list[str] = []
+    if not isinstance(views, list) or not views:
+        return [f"{doc_id}: illustration_views must be a non-empty array"]
+    seen: set[tuple[str, str]] = set()
+    for index, view in enumerate(views):
+        where = f"{doc_id}: illustration_views[{index}]"
+        if not isinstance(view, dict):
+            errors.append(f"{where} must be an object")
+            continue
+        form = view.get("form")
+        if form not in ALLOWED_VIEW_FORMS:
+            errors.append(f"{where} invalid form {form!r}")
+        for field in ("section", "question"):
+            if not view.get(field) or not isinstance(view[field], str):
+                errors.append(f"{where} {field} must be a non-empty string")
+        depth = view.get("depth")
+        if depth is not None and depth not in VIEW_DEPTHS:
+            errors.append(f"{where} invalid depth {depth!r}")
+        if "required" in view and not isinstance(view["required"], bool):
+            errors.append(f"{where} required must be boolean")
+        key = (str(form), str(view.get("section")))
+        if key in seen:
+            errors.append(f"{where} duplicates form {form!r} in section {view.get('section')!r}")
+        seen.add(key)
+    declared = doc.get("dominant_form")
+    forms = {view.get("form") for view in views if isinstance(view, dict)}
+    if declared in ALLOWED_VIEW_FORMS and declared not in forms:
+        errors.append(
+            f"{doc_id}: dominant_form {declared!r} is not among illustration_views forms"
+        )
     return errors
 
 

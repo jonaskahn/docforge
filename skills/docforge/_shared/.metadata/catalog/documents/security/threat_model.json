@@ -27,5 +27,12 @@
   "contract_revision": "2.23.0",
   "template_file": "content/security/templates/threat-model.md",
   "compact_group": "security_compact",
-  "compact_order": 2
+  "compact_order": 2,
+  "illustration_views": [
+    {
+      "form": "flowchart",
+      "section": "Trust boundaries",
+      "question": "which zones exist, and what crosses each trust boundary"
+    }
+  ]
 }

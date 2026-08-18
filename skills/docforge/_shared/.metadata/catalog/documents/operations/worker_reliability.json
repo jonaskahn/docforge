@@ -24,8 +24,15 @@
   "write_order": 72,
   "provenance_mode": "sections",
   "audit_profile": "operations",
-  "dominant_form": "table",
+  "dominant_form": "stateDiagram-v2",
   "template_file": "content/operations/templates/job-reliability.md",
   "compact_group": "operations_compact",
-  "compact_order": 17
+  "compact_order": 17,
+  "illustration_views": [
+    {
+      "form": "stateDiagram-v2",
+      "section": "Retry and recovery",
+      "question": "which states does a failing unit of work move through, and where does it come to rest"
+    }
+  ]
 }

@@ -56,18 +56,40 @@ def inferred_role(language: str) -> str:
     return "code"
 
 
-def visible_presentation_defects(text: str) -> list[dict]:
+def visible_presentation_defects(text: str, web_base: str | None = None) -> list[dict]:
+    """Presentation defects outside fences.
+
+    `web_base` is the repository's declared permalink base. A link built from it
+    is the sanctioned way to send a reader into source, so it is exempt from the
+    source-link and source-line rules -- both of which are otherwise
+    scheme-blind and would fire on the very form the expander produces. An
+    unexpanded authoring-form link stays a defect: it means `link_sources` never
+    ran, and it would 404 in the rendered site."""
     defects: list[dict] = []
     fences = scan_fences(text)
     fenced_lines = {number for fence in fences for number, _ in fence["lines"]}
+    base = (web_base or "").rstrip("/")
     for number, line in enumerate(text.splitlines(), 1):
         if number in fenced_lines:
             continue
         if LOCATOR_RE.search(line):
             defects.append({"kind": "visible-source-locator", "line": number, "detail": "use provenance, not a path/range/blob citation"})
+        pinned: list[tuple[int, int]] = []
         for match in SOURCE_LINK_RE.finditer(line):
-            defects.append({"kind": "source-code-link", "line": number, "detail": match.group("target")})
+            target = match.group("target")
+            if base and target.startswith(base):
+                pinned.append(match.span())
+                continue
+            defects.append({
+                "kind": "unpinned-source-link" if base else "source-code-link",
+                "line": number,
+                "detail": target,
+            })
         for match in SOURCE_LINE_RE.finditer(line):
+            # The `#L97-104` inside a pinned permalink is part of the URL, not a
+            # citation a reader has to decode.
+            if any(start <= match.start() and match.end() <= end for start, end in pinned):
+                continue
             defects.append({"kind": "visible-source-line", "line": number, "detail": match.group(0)})
     for fence in fences:
         if fence["role"] not in {"command", "code", "diagram", "structure", "ambiguous"}:

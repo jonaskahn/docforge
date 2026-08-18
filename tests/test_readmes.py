@@ -59,11 +59,101 @@ class ReadmeScaffoldTests(unittest.TestCase):
             self.assertIn("docforge-children:start", body)
             self.assertNotIn("{{TITLE}}", body)
 
-    def test_empty_collection_readme_has_honest_empty_state(self) -> None:
+    def test_children_block_keeps_its_table_header_at_template_width(self) -> None:
+        """The header and separator live inside the managed markers.
+
+        Regenerating the block used to emit data rows only, so every generated
+        section README rendered as literal pipe text instead of a table. Each
+        template also sets its own width -- the decision log is five columns --
+        and a narrower row breaks the table just as badly as a missing header.
+        """
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                result = initialize(runtime, repo, "diligence")
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+                body = self._scaffold(runtime, repo, "architecture_index")
+                block = body.split("docforge-children:start -->")[1].split("<!-- docforge-children:end")[0]
+                lines = [line for line in block.splitlines() if line.strip()]
+                self.assertEqual(lines[0].strip(), "| Document | Answers |")
+                self.assertEqual(lines[1].strip(), "|---|---|")
+                self.assertIn("| [Arch High Level](high-level.md) |", block)
+                for line in lines:
+                    self.assertEqual(line.count("|"), 3, line)
+
+                # The decision log is five columns wide, and it only exists
+                # once a record does.
+                added = run(
+                    runtime, "manage_manifest", "add", "--repo", str(repo),
+                    "--type", "adr", "--id", "adr_0001",
+                    "--path", "docs/architecture/decisions/0001-use-postgres.md",
+                )
+                self.assertEqual(added.returncode, 0, added.stderr)
+                decisions = self._scaffold(runtime, repo, "decisions_index")
+                block = decisions.split("docforge-children:start -->")[1].split("<!-- docforge-children:end")[0]
+                lines = [line for line in block.splitlines() if line.strip()]
+                self.assertEqual(lines[0].strip(), "| # | Title | Status | Date | Topic |")
+                self.assertEqual(lines[1].strip(), "|---|---|---|---|---|")
+                for line in lines:
+                    self.assertEqual(line.count("|"), 6, line)
+
+    def test_dynamic_only_index_is_absent_until_a_child_is_seeded(self) -> None:
+        """A static index over dynamic-only children is not created empty.
+
+        Tier alone used to select it, so every Diligence run materialized
+        `decisions/`, `concepts/`, and `runbooks/` folders holding nothing but
+        an index explaining its own emptiness -- the child types are gated on
+        `discovered_*` conditions no code evaluates. Seeding the first child
+        brings the index back as an ancestor.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             result = initialize("py", repo, "portfolio")
             self.assertEqual(result.returncode, 0, result.stderr)
+            paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
+            for absent in (
+                "docs/architecture/decisions/README.md",
+                "docs/architecture/concepts/README.md",
+                "docs/operations/runbooks/README.md",
+            ):
+                self.assertNotIn(absent, paths)
+
+            added = run(
+                "py", "manage_manifest", "add", "--repo", str(repo),
+                "--type", "adr", "--id", "adr_0001",
+                "--path", "docs/architecture/decisions/0001-use-postgres.md",
+            )
+            self.assertEqual(added.returncode, 0, added.stderr)
+            paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
+            self.assertIn("docs/architecture/decisions/README.md", paths)
+
+    def test_empty_collection_readme_has_honest_empty_state(self) -> None:
+        """An index that legitimately has no child still says so honestly.
+
+        Reached through a manifest that already carries such an index -- the
+        state every pre-fix run left behind -- since selection no longer
+        creates one.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            result = initialize("py", repo, "portfolio")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            manifest = load_manifest(repo)
+            sibling = next(
+                doc for doc in manifest["documents"]
+                if doc["id"] == "architecture_index"
+            )
+            manifest["documents"].append({
+                **sibling,
+                "id": "decisions_index",
+                "type": "decision-index",
+                "path": "docs/architecture/decisions/README.md",
+                "scaffold_template": "content/shared/decision-index.template.md",
+            })
+            (repo / ".docforge" / "manifest.json").write_text(
+                json.dumps(manifest), encoding="utf-8"
+            )
             body = self._scaffold("py", repo, "decisions_index")
             self.assertIn("No documents are selected in this section yet", body)
             self.assertNotIn("{{NNNN}}", body)
@@ -96,11 +186,20 @@ class ReadmeScaffoldTests(unittest.TestCase):
             self.assertIn("# Product Owner documentation\n", po)
             self.assertIn("](feature-catalog.md)", po)
 
-    def test_epics_index_is_selected_at_portfolio_tier(self) -> None:
+    def test_epics_index_appears_at_portfolio_tier_once_an_epic_exists(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             result = initialize("py", repo, "portfolio")
             self.assertEqual(result.returncode, 0, result.stderr)
+            paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
+            self.assertNotIn("docs-portfolio/epics/README.md", paths)
+
+            added = run(
+                "py", "manage_manifest", "add", "--repo", str(repo),
+                "--type", "epic", "--id", "epic_checkout",
+                "--path", "docs-portfolio/epics/checkout.md",
+            )
+            self.assertEqual(added.returncode, 0, added.stderr)
             paths = {doc["path"] for doc in load_manifest(repo)["documents"]}
             self.assertIn("docs-portfolio/epics/README.md", paths)
             body = self._scaffold("py", repo, "epics_index")

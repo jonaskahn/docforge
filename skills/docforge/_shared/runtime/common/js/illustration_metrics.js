@@ -7,12 +7,47 @@ const CONNECTOR = /(?:-->|--|\|\|--|->>|-->>)/;
 // There is deliberately no cap on the number of illustrations in a document:
 // every documentation authority surveyed prescribes splitting a dense diagram
 // into several simpler ones, so a count cap would forbid the recommended remedy.
-const BUDGETS = { orientation: 5, "deep-dive": 12, reference: 12, router: 12 };
+// `working` is documented in illustration.md's budget table and was previously
+// unenforced: the missing key silently resolved to the deep-dive bound of 12. A
+// view may declare `depth: working` to be sized at this bound inside a document
+// of a different depth.
+const BUDGETS = { orientation: 5, working: 8, "deep-dive": 12, reference: 12, router: 12 };
+// Below this a diagram carries no relationship a sentence could not carry.
+// Adding one is decoration, and decoration is not neutral: the seductive-detail
+// effect is small, negative, and reproduced across dozens of studies, while the
+// coherence principle (exclude extraneous pictures) is among the best-supported
+// findings in multimedia learning.
+const MIN_MEANINGFUL_ELEMENTS = 3;
+
+/** A sentence a reader could use instead of seeing the picture. */
+function isExplanatoryProse(line) {
+  const stripped = line.trim();
+  if (!stripped) return false;
+  for (const prefix of ["#", "|", ">", "```", "~~~", "<!--", "_Last reviewed"]) {
+    if (stripped.startsWith(prefix)) return false;
+  }
+  return (stripped.match(/[A-Za-z]{2,}/g) || []).length >= 6;
+}
+
+/**
+ * Prose within `window` lines above the opening or below the closing fence.
+ *
+ * Adjacency is the point, not mere presence somewhere in the document: a reader
+ * whose renderer or screen reader drops the diagram must find the same
+ * relationships right there, and splitting the explanation away from the
+ * picture splits the reader's attention.
+ */
+function hasAdjacentProse(lines, start, end, window = 4) {
+  const before = lines.slice(Math.max(0, start - 1 - window), Math.max(0, start - 1));
+  const after = lines.slice(end, end + window);
+  return [...before, ...after].some(isExplanatoryProse);
+}
 function illustrationDefects(text, targetDepth) {
   const defects = []; const blocks = []; let active = null;
-  for (const [index, line] of text.split(/\r?\n/).entries()) {
+  const lines = text.split(/\r?\n/);
+  for (const [index, line] of lines.entries()) {
     const match = line.match(FENCE);
-    if (match) { const [marker, language] = [match[1], match[2]]; if (!active) active = { language, line: index + 1, rows: [], marker }; else if (marker === active.marker) { blocks.push(active); active = null; } continue; }
+    if (match) { const [marker, language] = [match[1], match[2]]; if (!active) active = { language, line: index + 1, rows: [], marker }; else if (marker === active.marker) { active.end = index + 1; blocks.push(active); active = null; } continue; }
     if (active) active.rows.push(line);
   }
   if (active) defects.push({ kind: "unclosed illustration fence", line: active.line, detail: active.language || "untagged" });
@@ -34,6 +69,15 @@ function illustrationDefects(text, targetDepth) {
       }
     } else elements = content.filter((row) => !CONNECTOR.test(row)).length;
     if (elements > maxElements) defects.push({ kind: "illustration budget", line: block.line, detail: `${elements} elements exceeds ${maxElements}` });
+    if (block.language === "mermaid" && elements && elements < MIN_MEANINGFUL_ELEMENTS) {
+      defects.push({ kind: "decorative illustration", line: block.line, detail: `${elements} meaningful elements; state this in a sentence instead` });
+    }
+    if (!hasAdjacentProse(lines, block.line, block.end)) {
+      defects.push({ kind: "undescribed illustration", line: block.line, detail: "no explanatory sentence beside the fence" });
+    }
+    if (block.language === "mermaid" && content.some((row) => /(?:^|[\s[(>|-])end(?:[\s\])<|-]|$)/.test(row))) {
+      defects.push({ kind: "invalid mermaid", line: block.line, detail: "lowercase `end` breaks rendering; capitalize or wrap it" });
+    }
   }
   return defects;
 }

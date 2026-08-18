@@ -278,7 +278,15 @@ class CompactFoldTests(unittest.TestCase):
                 for member in (doc.get("compact_members") or [])
             }
             kept = {doc["id"] for doc in compact_docs if not doc.get("compact_members")}
-            self.assertEqual(unfolded | kept, standard_ids)
+            # Standard layout omits an index whose only children are dynamic:
+            # it would materialize a folder and README that can never gain a
+            # child until discovery seeds one. Compact folds the same subject
+            # as a `##` section inside a merged file, which costs no folder, so
+            # it keeps the member. That is the one intended difference.
+            dynamic_only_indexes = {"decisions_index", "concepts_index", "runbooks_index"}
+            self.assertEqual((unfolded | kept) - dynamic_only_indexes, standard_ids)
+            self.assertTrue(dynamic_only_indexes <= unfolded)
+            self.assertFalse(dynamic_only_indexes & standard_ids)
             merged_paths = {doc["path"] for doc in compact_docs if doc.get("compact_members")}
             self.assertEqual(
                 merged_paths,
@@ -355,12 +363,14 @@ class CompactFoldTests(unittest.TestCase):
                     paths = {doc["path"] for doc in manifest["documents"]}
                     self.assertNotIn("docs-portfolio.md", paths)
                     # The portfolio layer stays one file per member subject.
+                    # `decisions/` and `epics/` are not listed: both index
+                    # dynamic-only children, so they appear once a record is
+                    # seeded rather than on tier alone.
                     for path in (
                         "docs-portfolio/README.md", "docs-portfolio/repo-inventory.md",
                         "docs-portfolio/system-context.md", "docs-portfolio/security-posture.md",
                         "docs-portfolio/operations.md", "docs-portfolio/diligence-index.md",
-                        "docs-portfolio/glossary.md", "docs-portfolio/decisions/README.md",
-                        "docs-portfolio/epics/README.md",
+                        "docs-portfolio/glossary.md",
                     ):
                         self.assertIn(path, paths)
 

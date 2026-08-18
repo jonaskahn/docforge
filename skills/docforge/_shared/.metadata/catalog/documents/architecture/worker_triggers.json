@@ -24,8 +24,15 @@
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
-  "dominant_form": "table",
+  "dominant_form": "flowchart",
   "template_file": "content/architecture/templates/triggers-and-jobs.md",
   "compact_group": "architecture_compact",
-  "compact_order": 31
+  "compact_order": 31,
+  "illustration_views": [
+    {
+      "form": "flowchart",
+      "section": "Triggers and jobs",
+      "question": "which trigger starts which job, and what downstream effect follows"
+    }
+  ]
 }

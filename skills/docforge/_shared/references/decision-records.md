@@ -69,10 +69,19 @@ Most repos start with years of undocumented decisions. Backfill five to ten
 load-bearing ones per repo — enough to cover the architecture a reviewer will
 ask about — rather than attempting completeness.
 
-To find them:
+`harvest_candidates` (see
+[`../runtime/documents/README.md`](../runtime/documents/README.md)) runs these
+signals mechanically and writes `.docforge/candidates.json`; the user picks from
+it at the write-start selection gate. Run it rather than searching by hand, and
+treat its output as candidates, never as records:
 
-- `git log --diff-filter=A -- <path>` on major directories: when did each subsystem appear?
+- `git log --diff-filter=A -- <path>` on major directories: when did each subsystem appear? A subsystem that arrived in the repository's first commit came with the import, not with a decision made here.
 - Large merge commits and dependency-manifest changes; each significant dependency added is a decision.
+- Reverts — a reverted change is a decision that was re-argued.
+- An ADR, RFC, or design file already in the tree: migrate its rationale rather than reconstructing it.
+
+Two signals stay human, because no tool can see them:
+
 - Surprising or awkward code — the awkwardness almost always encodes a constraint worth recording.
 - Ask the longest-tenured engineer which decisions get re-argued most often. Those are the highest-value records.
 

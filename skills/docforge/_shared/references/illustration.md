@@ -22,13 +22,72 @@ visual.
 - Use a Mermaid `journey` when the reader's question is how effort or
   satisfaction changes across an end-to-end process for one actor, not just
   the order of steps.
-- Use a Mermaid `timeline` when the reader's question is what happened, or
-  will happen, in calendar order, not in step or actor order.
 - Use a Mermaid `stateDiagram-v2` for lifecycle states and transitions.
 - Use a Mermaid `erDiagram` for durable data relationships.
 
+Only these forms. Mermaid documents `timeline`, `mindmap`, `sankey`, `treemap`,
+and `C4` as experimental — "the syntax and properties can change in future
+releases" — and `architecture-beta` / `block-beta` still require a `-beta`
+keyword. A diagram that stops rendering on a dependency bump is worse than the
+prose it replaced, so none of them is available here.
+
 Do not turn a list into a diagram merely for decoration. If two forms could
 work, choose the one that answers the reader's question with fewer elements.
+
+## How many illustrations a document owes
+
+**Count obligations, not pages.** A document owes one illustration per distinct
+reader question it answers, drawn from the closed list its type declares; it
+owes nothing for length. A long document does not earn a diagram by being long,
+and a short one does not lose the two it needs.
+
+This cuts both ways, and the second direction matters as much as the first:
+
+- **Too few** is the common failure. A document that answers four questions
+  with one picture has three unanswered. Splitting is always available and is
+  the recommended remedy for density — complexity goes into *more* diagrams,
+  never into a bigger one.
+- **Too many** measurably harms. Adding an interesting-but-inessential visual
+  is not neutral: the seductive-detail effect is small, negative, and
+  reproduced across dozens of studies, and the coherence principle — people
+  learn better when extraneous pictures are excluded — is among the
+  best-supported findings in multimedia learning. A diagram added to break up
+  text costs the reader comprehension.
+
+So the test for every candidate diagram is a question, never a quota: *which
+reader question does this answer, that no other view here answers?* If there is
+no such question, the diagram is decoration and must not be emitted. If a
+prose paragraph conveying the same relationships cannot be written, the diagram
+was not conveying anything either — delete it rather than ship it.
+
+Three practical consequences:
+
+1. **Relevance over completeness.** Draw the important, surprising, risky,
+   complex, or volatile parts. Leave out the normal, simple, and standardized.
+2. **A representative selection, not a catalogue.** One to three runtime
+   scenarios is the right number for a deep-dive document, not one per code
+   path.
+3. **Every diagram is a maintenance liability.** An inaccurate diagram is worse
+   than no diagram, so prefer the stable parts of a system and retire a view
+   that no longer answers a live question.
+
+## Every illustration carries its own prose
+
+A diagram is never the only carrier of a fact. Each one is introduced or
+followed — **adjacent to it**, not in a separate section — by prose that states
+its point, the relationships that matter, and any exception the reader must
+understand.
+
+This is not optional politeness. Screen readers announce a Mermaid diagram as
+an unordered jumble of node labels with no relationships between them, so for
+those readers the adjacent prose is the only content. Accessibility guidance is
+explicit that non-text content needs an equivalent text alternative and that
+new information must never appear only in a picture. Keeping the prose beside
+the diagram rather than elsewhere also avoids splitting the reader's attention
+between two places.
+
+Give every Mermaid diagram an `accTitle:` and an `accDescr:` as well; they
+become the rendered figure's accessible name and description.
 
 ## Complexity budgets
 
@@ -58,13 +117,21 @@ when lookup fields cannot express the relationship clearly. Router documents
 normally use prose and links, because their reader wants a destination rather
 than a picture. Both are form preferences, not quotas.
 
-The form a document type expects is **declared** in the catalog
-(`dominant_form`, mirrored into each manifest document) and restated as a
-Form/Renders/Trigger block in the type's writing-craft instruction. A written
-document whose declared form warrants a visual must carry one — the mechanical
-gate reports `missing-illustration` when it does not, on a fresh run and on
-revise alike. This file still owns which forms exist, when each fits, and the
-budgets; the declaration only names the form, never overrides it.
+The views a document type owes are **declared** in the catalog and restated in
+the type's writing-craft instruction. `dominant_form` names the primary form;
+`illustration_views` lists every view the type owes, each with the reader
+question it answers. A written document must carry a diagram of each declared
+view's form — the mechanical gate reports `illustration-coverage` when one is
+missing, on a fresh run and on revise alike, and it checks the *form*, so an
+ASCII layout tree no longer satisfies a declared `sequenceDiagram`.
+
+A view may carry its own `depth`, which bounds that view alone. A high-level
+container diagram is budgeted at working depth even though its document is
+orientation depth, because the container view of a real system does not fit in
+five elements and dropping it is worse than sizing it correctly.
+
+This file still owns which forms exist, when each fits, and the budgets; the
+declaration only names the views, never overrides them.
 
 Split any illustration that exceeds its bound into linked views with one stated
 question each. **Splitting is always available** — the resulting views are

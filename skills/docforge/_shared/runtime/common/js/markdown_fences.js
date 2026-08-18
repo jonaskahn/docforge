@@ -34,16 +34,42 @@ function scanFences(text) {
   return fences;
 }
 
-function visiblePresentationDefects(text) {
+/**
+ * Presentation defects outside fences.
+ *
+ * `webBase` is the repository's declared permalink base. A link built from it is
+ * the sanctioned way to send a reader into source, so it is exempt from the
+ * source-link and source-line rules -- both of which are otherwise scheme-blind
+ * and would fire on the very form the expander produces. An unexpanded
+ * authoring-form link stays a defect: it means `link_sources` never ran, and it
+ * would 404 in the rendered site.
+ */
+function visiblePresentationDefects(text, webBase = null) {
   const defects = []; const fences = scanFences(text);
   const fencedLines = new Set(fences.flatMap((fence) => fence.lines.map(([number]) => number)));
+  const base = (webBase || "").replace(/\/+$/, "");
   for (const [index, line] of text.split(/\r?\n/).entries()) {
     const number = index + 1; if (fencedLines.has(number)) continue;
     if (LOCATOR_RE.test(line)) defects.push({ kind: "visible-source-locator", line: number, detail: "use provenance, not a path/range/blob citation" });
+    const pinned = [];
     SOURCE_LINK_RE.lastIndex = 0; let match;
-    while ((match = SOURCE_LINK_RE.exec(line)) !== null) defects.push({ kind: "source-code-link", line: number, detail: match[1] });
+    while ((match = SOURCE_LINK_RE.exec(line)) !== null) {
+      const target = match[1];
+      if (base && target.startsWith(base)) {
+        pinned.push([match.index, match.index + match[0].length]);
+        continue;
+      }
+      defects.push({ kind: base ? "unpinned-source-link" : "source-code-link", line: number, detail: target });
+    }
     SOURCE_LINE_RE.lastIndex = 0; let sourceLineMatch;
-    while ((sourceLineMatch = SOURCE_LINE_RE.exec(line)) !== null) defects.push({ kind: "visible-source-line", line: number, detail: sourceLineMatch[0] });
+    while ((sourceLineMatch = SOURCE_LINE_RE.exec(line)) !== null) {
+      // The `#L97-104` inside a pinned permalink is part of the URL, not a
+      // citation a reader has to decode.
+      const start = sourceLineMatch.index;
+      const finish = start + sourceLineMatch[0].length;
+      if (pinned.some(([from, to]) => from <= start && finish <= to)) continue;
+      defects.push({ kind: "visible-source-line", line: number, detail: sourceLineMatch[0] });
+    }
   }
   for (const fence of fences) {
     if (!["command", "code", "diagram", "structure", "ambiguous"].includes(fence.role)) continue;

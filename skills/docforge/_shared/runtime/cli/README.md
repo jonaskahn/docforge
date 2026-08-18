@@ -58,6 +58,8 @@ Always put the command/subcommand before flags (e.g.
 | `read_graph` | JSON code-graph probe helpers (not DB providers) |
 | `lint_document` | Mechanical document lint |
 | `lint_agents_kernel` | AGENTS.md / agent-kernel lint |
+| `harvest_candidates` | Decision and concept candidates from git history and module structure |
+| `link_sources` | Expand repo-relative source links into commit-pinned permalinks |
 | `discover_child_repos` | Portfolio child-repository discovery |
 | `dashboard` | `scan` / `start` / `export` / `status` / `stop` for the local Fumadocs site |
 | `graph_source_codegraph` / `graph_source_gitnexus` | Per-provider `detect` readiness probes |

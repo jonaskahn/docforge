@@ -62,7 +62,10 @@ cannot establish an external value, use one typed token. If evidence should
 establish a fact but does not, query or inspect further; do not punt it.
 
 Synthesize every source mention into a readable noun phrase, never a raw
-path, `file:line` string, or symbol dump. The rendering form — including
-the parenthesized-path rule and the do/don't pairs — lives in
+path, `file:line` string, or symbol dump. When the reader must open the file,
+that phrase becomes the link text of a permalink written in the authoring form
+(`[readable label](path/to/file.ext#L10-L20)`) and expanded to a pinned URL by
+`link_sources`. The rendering form, when a mention earns a link, and the
+do/don't pairs live in
 [`evidence-presentation.md`](evidence-presentation.md) "Naming things a
 reader can find".

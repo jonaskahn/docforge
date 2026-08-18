@@ -29,11 +29,13 @@ CATALOG_VERSION = json.loads(
     .read_text(encoding="utf-8")
 )["version"]
 
+# `docs-portfolio/decisions/README.md` and `docs-portfolio/epics/README.md` are
+# deliberately absent: both index folders whose only children are dynamic, so
+# they appear once a decision or epic is seeded, never on tier alone.
 PORTFOLIO_PATHS = {
     "docs-portfolio/README.md",
     "docs-portfolio/repo-inventory.md",
     "docs-portfolio/system-context.md",
-    "docs-portfolio/decisions/README.md",
     "docs-portfolio/security-posture.md",
     "docs-portfolio/operations.md",
     "docs-portfolio/diligence-index.md",

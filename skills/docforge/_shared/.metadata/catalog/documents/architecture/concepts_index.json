@@ -9,7 +9,10 @@
     "mode": "static",
     "min_tier": "diligence",
     "selectors": {},
-    "condition": null
+    "condition": null,
+    "requires_children": [
+      "concept"
+    ]
   },
   "instruction_file": "content/shared/folder-index.instruction.md",
   "requires": [

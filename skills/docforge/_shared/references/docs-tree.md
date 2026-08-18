@@ -19,6 +19,11 @@ path list is `.metadata/catalog/` (queried via `runtime/cli/python/query_catalog
 - Actual flows, decisions, runbooks, datasets, concepts, migrations,
   portfolio decisions, and epics are dynamically discovered. Do not create
   example files.
+- A collection index over those dynamic children is selected only once one of
+  them is seeded, so the tree never grows a folder holding nothing but an
+  index. Seeding the first record brings its index back automatically as an
+  ancestor. `docs/flows/README.md` is the exception: it is a discovery report
+  that records deferred and skipped candidates too, so it is always selected.
 - A flow or concept stays a flat file until real deeper material is written in
   the same operation; see `document-composition.md`.
 

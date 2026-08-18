@@ -63,9 +63,18 @@ fragments.
 
 ## Empty state
 
-When no detailed child is evidenced (for example a decisions or runbooks index
-before any record exists), say so honestly and explain when content will
-appear. Never emit a placeholder row that names a document that does not exist.
+When no detailed child is evidenced, say so honestly and explain when content
+will appear. Never emit a placeholder row that names a document that does not
+exist.
+
+This is for a section whose children were genuinely not selected in this run —
+**not** for a collection folder whose children are dynamic. A decisions,
+concepts, runbooks, contracts, migrations, or epics index is not selected at
+all until one of its records is seeded, precisely so the tree never carries a
+folder whose only content is an index explaining its own emptiness. If you find
+yourself writing that page, the manifest is wrong: harvest the records or drop
+the index, rather than writing a graceful apology for a folder that should not
+exist.
 
 ## Illustration
 

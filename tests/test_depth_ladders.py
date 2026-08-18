@@ -20,12 +20,37 @@ class DepthLadderTests(unittest.TestCase):
         diagram into several simpler ones, so a per-document count cap would
         forbid the recommended remedy for an over-budget illustration."""
         document = "".join(
-            f"```mermaid\nflowchart TD\n  A{i} --> B{i}\n```\n\nProse about diagram {i}.\n\n"
+            f"```mermaid\nflowchart TD\n  A{i} --> B{i}\n  B{i} --> C{i}\n  C{i} --> D{i}\n```\n\n"
+            f"This paragraph explains what diagram {i} shows and why the relationship matters.\n\n"
             for i in range(6)
         )
         for depth in ("orientation", "deep-dive", "reference", "router"):
             with self.subTest(depth=depth):
                 self.assertEqual(illustration_defects(document, depth), [])
+
+    def test_a_two_element_diagram_is_decoration(self) -> None:
+        """A relationship a sentence carries needs no picture.
+
+        Decoration is not neutral: the seductive-detail effect is small,
+        negative, and reproduced across dozens of studies."""
+        trivial = (
+            "This paragraph explains the relationship between the two services.\n\n"
+            "```mermaid\nflowchart LR\n  A --> B\n```\n"
+        )
+        kinds = [defect["kind"] for defect in illustration_defects(trivial, "deep-dive")]
+        self.assertIn("decorative illustration", kinds)
+
+    def test_a_diagram_without_adjacent_prose_is_a_defect(self) -> None:
+        """Screen readers announce a Mermaid diagram as an unordered jumble of
+        node labels, so the adjacent prose is the only content those readers
+        get. A diagram is never the sole carrier of a fact."""
+        bare = (
+            "## Overview\n\n"
+            "```mermaid\nflowchart TD\n  A --> B\n  B --> C\n  C --> D\n```\n\n"
+            "## Next section\n"
+        )
+        kinds = [defect["kind"] for defect in illustration_defects(bare, "deep-dive")]
+        self.assertIn("undescribed illustration", kinds)
 
     def test_split_illustration_never_becomes_a_defect(self) -> None:
         """Splitting is the prescribed remedy for an over-budget illustration.
@@ -39,7 +64,7 @@ class DepthLadderTests(unittest.TestCase):
         split = "".join(
             "```mermaid\nflowchart TD\n"
             + "".join(f"  A{i} --> B{i}\n" for i in range(half * 7, half * 7 + 7))
-            + "```\n\nProse.\n\n"
+            + "```\n\nThis paragraph states the point of the half above and what it reveals.\n\n"
             for half in range(2)
         )
         self.assertEqual(illustration_defects(split, "deep-dive"), [])
