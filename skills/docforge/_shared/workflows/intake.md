@@ -164,11 +164,11 @@ When a dimension is re-asked because it has a delta or a requested change:
   per alternative tier.
 - **Profiles and output audiences:** show `Currently selected: <values>`;
   offer `Add <value>` for unselected values, `Remove <value>` for
-  selected values. Freshly detected profiles and suitable missing
-  audiences are recommended `Add` actions with evidence or unlock
-  reason. Exception: coding agents appears only as a `Remove` action (or
-  through the `/docforge-revise agents` repair), never as an `Add` in
-  this control.
+  selected values. Freshly detected **strong-evidence** profiles and
+  suitable missing audiences are recommended `Add` actions with evidence
+  or unlock reason. Exception: coding agents appears only as a `Remove`
+  action (or through the `/docforge-revise agents` repair), never as an
+  `Add` in this control.
 
 An empty change set preserves the displayed manifest values but is not
 silent acceptance: include the unchanged values in the final confirmation
@@ -467,9 +467,15 @@ carries Scope, Layout, and Flow mode; Turn 2 carries the rest.
   keep the delta-aware behavior; a bare `/docforge-revise` still asks
   nothing.
 - **Profiles** (Turn 2 — Delivers / Runs on / Built with / Behaviors):
-  asked only for dimensions with a delta — a fresh detection not
-  already selected, or a user-requested change. No new candidates and no
-  requested change → report unchanged, never re-present.
+  asked only for dimensions with a delta — a fresh detection with
+  **strong evidence** (or, when the gate ran, a gate-promoted candidate)
+  not already in `project.profiles`, or a user-requested change.
+  **Weak-only candidates never open a revise control** — never confirm a
+  profile on weak cues alone, and re-litigating a settled dimension on
+  the same weak cue every run is a treadmill, not a decision. They
+  appear in the discovery brief as an advisory the user can act on by
+  name. No strong-evidence candidate and no requested change → report
+  unchanged, never re-present.
 - **Output audience** (Turn 2): asked only when there are suitable
   missing audiences or a user-requested change. No delta → state
   current audiences as unchanged.
