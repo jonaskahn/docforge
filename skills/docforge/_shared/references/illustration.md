@@ -89,6 +89,46 @@ between two places.
 Give every Mermaid diagram an `accTitle:` and an `accDescr:` as well; they
 become the rendered figure's accessible name and description.
 
+## Make every illustration informative
+
+A diagram can be well-formed — right form, budget respected, adjacent
+prose present — and still fail to earn its place. Two rules close that
+gap.
+
+**Non-redundancy: a diagram beside a table must carry what the table
+cannot.** What a table cannot carry is **topology, direction, ordering,
+concurrency, and boundary crossing**. A diagram that re-renders the
+adjacent table's rows — the same entities, the same one-to-one facts, no
+new relationship — is decoration and must not be emitted; this is the
+relevance test above ("which reader question does this answer that no
+other view here answers?") applied to the specific case that produces
+most decorative diagrams. When a table and a diagram sit side by side,
+the table owns per-item attributes and the diagram owns the relationships
+between items; neither substitutes for the other, and neither restates
+the other.
+
+**Descriptiveness: the specificity a diagram owes.** Every meaningful
+relationship is directional and carries a specific active verb (above);
+that requirement extends to the whole figure, not only its edges:
+
+- **Nodes** carry their role, and the technology or protocol where
+  evidenced — not a bare name (e.g. `{{deployable block}} ·
+  {{technology}}`, never just `{{deployable block}}`).
+- **Edges** carry a specific active verb **and** the evidenced protocol
+  or payload. Generic verbs — `calls`, `uses`, `sends`, `handles` — are
+  not descriptive and do not satisfy this rule; state what the call
+  actually does (`validates`, `enqueues`, `streams`, `invalidates`) and
+  the channel it crosses on.
+- **The non-obvious is what earns the diagram.** Surface boundary
+  crossings, asynchrony, fan-out, and failure edges where evidence
+  supports them; a diagram showing only the happy linear path restates
+  the prose beside it and adds nothing.
+- **`accTitle` / `accDescr` are specific.** The description names the
+  actual relationships the diagram shows, not the diagram's type — for a
+  screen-reader user (see "Every illustration carries its own prose"
+  above) it is the *only* content, so `accDescr: sequence diagram` fails
+  the reader it exists for just as surely as an empty one would.
+
 ## Complexity budgets
 
 The depth vocabulary is defined in

@@ -827,6 +827,27 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Scaffold the **newest** template", revision)
         self.assertIn("`rewrite (template)`", revision)
 
+    def test_illustrations_carry_what_a_table_cannot(self) -> None:
+        """illustration.md owns the non-redundancy and descriptiveness rules
+        for illustrations -- a diagram beside a table must carry what the
+        table cannot, and generic verbs are never descriptive enough."""
+        illustration = (SHARED_ROOT / "references" / "illustration.md").read_text(encoding="utf-8")
+        prose = compact_whitespace(illustration)
+        self.assertIn("## Make every illustration informative", illustration)
+        self.assertIn(
+            "a diagram beside a table must carry what the table",
+            prose,
+        )
+        self.assertIn(
+            "topology, direction, ordering, concurrency, and boundary crossing",
+            prose,
+        )
+        for generic_verb in ("`calls`", "`uses`", "`sends`", "`handles`"):
+            self.assertIn(generic_verb, illustration)
+        self.assertIn("are not descriptive and do not satisfy this rule", prose)
+        self.assertIn("The non-obvious is what earns the diagram", illustration)
+        self.assertIn("`accTitle` / `accDescr` are specific", illustration)
+
     def test_source_evidence_stays_in_provenance(self) -> None:
         """Claim evidence lives in provenance; a link is navigation, not proof.
 
