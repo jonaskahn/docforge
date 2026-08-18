@@ -295,6 +295,19 @@ When `start`/`export` (or `scan`) report problems, the agent must:
   validated, then swapped).
 - Re-running with an unchanged signature performs no content writes.
 
+## Capability inventory
+
+- Writes only under `<repo>/.docforge/dashboard/` — see [What the dashboard
+  is not](#what-the-dashboard-is-not).
+- Executes only `npm`, `node`, `git` (`remote get-url origin`, for branding
+  only), and the platform browser opener (`open` / `xdg-open`) — nothing
+  else, and never anything fetched or generated at run time.
+- The dev server binds `127.0.0.1` on an auto-picked (or `--port`) free
+  port and is never exposed off-host.
+- Repository `package.json` / `package-lock.json` are hashed before and
+  after `npm install`; the run aborts if either changed — see [What the
+  dashboard is](#what-the-dashboard-is).
+
 ## Conversion rules (deterministic, code-fence aware)
 
 - Converted pages carry **`id`, `title`, and `description`** frontmatter,
