@@ -39,6 +39,7 @@ from pathlib import Path
 
 from runtime.graph.python.graph_storage import ensure_tmp_dir_gitignored, validate_flow_graph_shape, write_flow_graph
 from runtime.graph.python.graph_source_registry import read_graph_lock, resolve_all_ready, resolve_locked
+from runtime.flows.python.budgets import max_flows_for
 
 TMP_REL = ".docforge/tmp"
 CONTEXT_NAME = "flow-context.json"
@@ -412,7 +413,7 @@ def _report_prepare(context: dict) -> None:
 
 def run_prepare(args: argparse.Namespace) -> int:
     try:
-        context = build_context(args.repo, args.max_flows, args.hops)
+        context = build_context(args.repo, max_flows_for(args.repo, args.max_flows), args.hops)
     except ValueError as error:
         print(f"PREPARE FAILED: {error}", file=sys.stderr)
         return 1
@@ -488,9 +489,11 @@ def main() -> int:
 
     p_prepare = sub.add_parser("prepare", help="emit an entry-point-first code-graph digest for the analyzer")
     p_prepare.add_argument("--repo", required=True, type=Path)
-    p_prepare.add_argument("--max-flows", type=int, default=DEFAULT_MAX_FLOWS,
-                           help=f"main-flow budget: how many top entry points to expand "
-                                f"(default {DEFAULT_MAX_FLOWS}); the rest are the tail")
+    p_prepare.add_argument("--max-flows", type=int, default=None,
+                           help="main-flow budget: how many top entry points to expand; "
+                                "scale-aware default — small 15, medium 30, large 50 "
+                                f"(fallback {DEFAULT_MAX_FLOWS}); --max-flows overrides; "
+                                "the rest are the tail")
     p_prepare.add_argument("--hops", type=int, default=DEFAULT_HOPS,
                            help=f"how many call/contains hops to spread from each entry "
                                 f"point (default {DEFAULT_HOPS})")

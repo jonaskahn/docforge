@@ -45,6 +45,7 @@ const {
   resolveAllReady,
   resolveLocked,
 } = require("../../graph/js/graph_source_registry.js");
+const { maxFlowsFor } = require("./budgets.js");
 
 const TMP_REL = ".docforge/tmp";
 const CONTEXT_NAME = "flow-context.json";
@@ -437,7 +438,7 @@ function reportPrepare(context) {
 function runPrepare(args) {
   let context;
   try {
-    context = buildContext(args.repo, args.maxFlows, args.hops);
+    context = buildContext(args.repo, maxFlowsFor(args.repo, args.maxFlows), args.hops);
   } catch (e) {
     console.error(`PREPARE FAILED: ${e.message}`);
     return 1;
@@ -516,7 +517,9 @@ function runWrite(args) {
 }
 
 function parseArgs(argv) {
-  const args = { _: [], maxFlows: DEFAULT_MAX_FLOWS, hops: DEFAULT_HOPS };
+  // maxFlows: null — the scale-aware default (budgets.js) applies unless an
+  // explicit value was passed; DEFAULT_MAX_FLOWS documents the fallback.
+  const args = { _: [], maxFlows: null, hops: DEFAULT_HOPS };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--repo") args.repo = argv[++i];

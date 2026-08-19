@@ -43,6 +43,7 @@ from runtime.common.python.entry_vocabulary import (
     SURFACE_WORDS,
     is_entry_layer,
 )
+from runtime.flows.python.budgets import main_limit_for
 
 INDEX_REL = Path(".docforge/flow-index.json")
 TMP_REL = Path(".docforge/tmp")
@@ -1323,7 +1324,17 @@ def maybe_write_communities(repo: Path, export: Path | None) -> Path | None:
     return path
 
 
+def _budget_scale_suffix(repo: Path) -> str:
+    """` — scale <class>` when the manifest names a class, else `` — so the
+    resolved main budget's provenance is visible on the summary line."""
+    from runtime.flows.python.budgets import scale_class
+
+    klass = scale_class(repo)
+    return f" — scale {klass}" if klass else ""
+
+
 def cmd_harvest(args: argparse.Namespace) -> int:
+    args.main_limit = main_limit_for(args.repo, args.main_limit)
     try:
         rows, sources, gitnexus_interchange, notes = collect_candidates(args)
     except ValueError as error:
@@ -1349,7 +1360,8 @@ def cmd_harvest(args: argparse.Namespace) -> int:
     summary = summary_for(rows)
     print(
         f"Wrote {target} — {summary['total']} flow candidates "
-        f"({summary['main']} main, {summary['deferred']} deferred)."
+        f"({summary['main']} main, {summary['deferred']} deferred). "
+        f"(main budget {args.main_limit}{_budget_scale_suffix(args.repo)})"
     )
     for line in unread_flow_sources(args.repo, sources):
         # Harvesting something is not the same as harvesting everything: a
@@ -1360,6 +1372,7 @@ def cmd_harvest(args: argparse.Namespace) -> int:
 
 
 def cmd_revise(args: argparse.Namespace) -> int:
+    args.main_limit = main_limit_for(args.repo, args.main_limit)
     try:
         rows, sources, gitnexus_interchange, notes = collect_candidates(args)
     except ValueError as error:
@@ -1412,7 +1425,8 @@ def cmd_revise(args: argparse.Namespace) -> int:
     print(
         f"Revised {target} — {summary['total']} flows "
         f"({summary['placeholder']} placeholder, {summary['documented']} documented, "
-        f"{summary['main']} main-priority)."
+        f"{summary['main']} main-priority). "
+        f"(main budget {args.main_limit}{_budget_scale_suffix(args.repo)})"
     )
     print(f"Created/refreshed {len(stubs)} main-priority placeholder stub(s).")
     if pruned:
@@ -1871,6 +1885,7 @@ def persist_analysis_pack(repo: Path, analysis: dict) -> Path:
 def cmd_import(args: argparse.Namespace) -> int:
     """Seed derived candidates into the index (CodeGraph-only / no native
     flow source), merging with existing rows and preserving their state."""
+    args.main_limit = main_limit_for(args.repo, args.main_limit)
     try:
         analysis = read_json(args.analysis)
     except ValueError as error:
@@ -1911,7 +1926,8 @@ def cmd_import(args: argparse.Namespace) -> int:
     print(
         f"Imported {len(rows)} derived candidate(s) into {target} — "
         f"{summary['total']} total rows "
-        f"({summary['main']} main, {summary['deferred']} deferred)."
+        f"({summary['main']} main, {summary['deferred']} deferred). "
+        f"(main budget {args.main_limit}{_budget_scale_suffix(args.repo)})"
     )
     print(f"Deep pack kept at {pack} — the flow writer reads it instead of re-deriving.")
     return 0
@@ -1945,7 +1961,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     def add_harvest_flags(command: argparse.ArgumentParser) -> None:
         command.add_argument("--repo", required=True, type=Path)
-        command.add_argument("--main-limit", type=int, default=15)
+        command.add_argument("--main-limit", type=int, default=None,
+                             help="deep-dive document budget; scale-aware default — "
+                                  "small 15, medium 25, large 40 (fallback 15); "
+                                  "--main-limit overrides")
 
     harvest = sub.add_parser("harvest")
     add_harvest_flags(harvest)
@@ -1970,7 +1989,10 @@ def build_parser() -> argparse.ArgumentParser:
     import_cmd = sub.add_parser("import")
     import_cmd.add_argument("--repo", required=True, type=Path)
     import_cmd.add_argument("--analysis", required=True, type=Path)
-    import_cmd.add_argument("--main-limit", type=int, default=15)
+    import_cmd.add_argument("--main-limit", type=int, default=None,
+                            help="deep-dive document budget; scale-aware default — "
+                                 "small 15, medium 25, large 40 (fallback 15); "
+                                 "--main-limit overrides")
     import_cmd.set_defaults(func=cmd_import)
 
     organize = sub.add_parser("organize")

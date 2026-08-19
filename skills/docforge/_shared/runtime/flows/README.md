@@ -24,6 +24,7 @@ graph exists. Both are paired Python/JS public commands.
 |---|---|---|---|
 | `flow_index` | both | CLI | Harvest/revise/update/import/organize/render the durable flow candidate index |
 | `derive_flow_graph` | both | CLI | Prepare context + write a provisional flow graph |
+| `budgets` | both | Module | Scale-aware flow budget defaults read from `project.scale.class` |
 
 ## Details
 
@@ -39,6 +40,13 @@ python3 runtime/cli/python/flow_index.py <harvest|revise|update|import|organize|
   [--id <flow-id>] [--priority main|deferred] [--status main|deferred|placeholder|skipped] \
   [--summary <text>] [--written] [--analysis <flow-analysis.json>]
 ```
+
+`--main-limit` (harvest / revise / import) defaults are **scale-aware**: the
+deep-dive document budget follows `project.scale.class` from the manifest
+(small 15, medium 25, large 40; fallback 15 when the manifest is missing or
+names an unknown class). An explicit `--main-limit` always wins; 0 /
+negative counts as "not passed". The harvest/revise/import summary line
+prints the resolved budget (`main budget 40 — scale large`).
 
 There are **no provider flags** — but there is a lock. When
 `manifest["graph"]` records a provider, `harvest` collects that provider's flow
@@ -83,7 +91,8 @@ GitNexus MCP or the offline lbug reader, see
   referencing the index; documented rows with a written `summary` also
   appear in the rendered `Flow summaries` section.
 
-Default main budget is 15 flows. Confirmed native flows rank above candidates.
+The default main budget follows `project.scale.class` (small 15, medium 25,
+large 40; fallback 15). Confirmed native flows rank above candidates.
 
 ### `derive_flow_graph`
 
@@ -91,6 +100,10 @@ Default main budget is 15 flows. Confirmed native flows rank above candidates.
 python3 runtime/cli/python/derive_flow_graph.py prepare --repo <repo> [--max-flows N] [--hops N]
 python3 runtime/cli/python/derive_flow_graph.py write --repo <repo> --analysis <analysis.json>
 ```
+
+`--max-flows` (prepare) defaults to the same scale-aware scheme as
+`--main-limit`: small 15, medium 30, large 50 per `project.scale.class`
+(fallback 15); an explicit value always wins.
 
 - `prepare` — uses the session's locked code provider (`resolve_locked`), falling
   back to registry priority only when no lock exists; JSON sources get

@@ -34,14 +34,21 @@ python3 runtime/cli/python/flow_index.py harvest --repo <repo> \
 node runtime/cli/js/flow_index.js harvest --repo <repo> \
 # bun  runtime/cli/js/flow_index.js harvest --repo <repo> \
 # deno run -A runtime/cli/js/flow_index.js harvest --repo <repo> \
-  [--main-limit 15]
+  [--main-limit N]  # default follows project.scale.class: 15 / 25 / 40
 
 python3 runtime/cli/python/flow_index.py revise --repo <repo> \
 node runtime/cli/js/flow_index.js revise --repo <repo> \
 # bun  runtime/cli/js/flow_index.js revise --repo <repo> \
 # deno run -A runtime/cli/js/flow_index.js revise --repo <repo> \
-  [--main-limit 15]
+  [--main-limit N]  # default follows project.scale.class: 15 / 25 / 40
 ```
+
+`--main-limit` defaults are **scale-aware**: the deep-dive document budget
+follows `project.scale.class` from the manifest (small 15, medium 25,
+large 40; fallback 15 when the manifest is missing or names an unknown
+class). An explicit `--main-limit` always wins; 0 / negative counts as
+"not passed". `--max-flows` on `derive_flow_graph prepare` scales the same
+way (small 15, medium 30, large 50).
 
 There are no provider flags — but the session lock decides whose evidence is
 read. With a provider locked in `manifest["graph"]`, harvest collects that
@@ -264,7 +271,9 @@ updates the index; moves or refreshes stubs; and prunes orphan scaffolds.
 - **Family folder** when ≥3 documentable siblings or composed parents share a
   domain (`docs/flows/email/…`).
 - **Main budget** (`--main-limit`) still caps deep-dives; members do not
-  consume separate deep-dive slots.
+  consume separate deep-dive slots. The default is scale-aware —
+  small 15, medium 25, large 40 per `project.scale.class` — so a large
+  repo's deep-dive budget grows with its breadth without an explicit flag.
 - README render groups by family; deferred/`index_only` rows list without
   stub files.
 
@@ -289,7 +298,8 @@ choose to proceed. See the owning workflows:
   evidence — enough to decide promotion. A promoted row is deep-analyzed
   before writing.
 - **Prompt.** Every candidate listed; main standalone pre-selected;
-  deferred promotable; budget = `--main-limit` (default 15) deep-dives,
+  deferred promotable; budget = `--main-limit` deep-dives (default follows
+  `project.scale.class`: small 15, medium 25, large 40, fallback 15),
   exceeding it needs explicit confirmation.
 - **Apply.** Mechanically with `flow_index.{py,js} update`:
   promote → `--priority main --status placeholder`; demote →

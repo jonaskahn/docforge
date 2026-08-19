@@ -37,6 +37,7 @@ const {
   PATH_WORDS,
   isEntryLayer,
 } = require("../../common/js/entry_vocabulary.js");
+const { mainLimitFor, scaleClass } = require("./budgets.js");
 
 const INDEX_REL = path.join(".docforge", "flow-index.json");
 const TMP_REL = path.join(".docforge", "tmp");
@@ -1152,7 +1153,9 @@ function parseArgs(argv) {
   else if (command === "update") allowed = new Set(["repo", "id", "priority", "status", "summary", "written"]);
   else if (command === "import") allowed = new Set(["repo", "analysis", "main-limit"]);
   else allowed = new Set(["repo", "main-limit"]);
-  const args = { command, organize_command: organizeCommand, main_limit: 15 };
+  // main_limit: null — the scale-aware default (budgets.js) applies unless an
+  // explicit value was passed; the integer check below only runs when it was.
+  const args = { command, organize_command: organizeCommand, main_limit: null };
   for (; index < argv.length; index++) {
     const token = argv[index];
     if (!token.startsWith("--")) throw new Error(`unexpected argument: ${token}`);
@@ -1168,8 +1171,10 @@ function parseArgs(argv) {
     args[key] = argv[++index];
   }
   if (command === "harvest" || command === "revise" || command === "import") {
-    args.main_limit = Number(args.main_limit);
-    if (!Number.isInteger(args.main_limit)) throw new Error("--main-limit must be an integer");
+    if (args.main_limit !== null) {
+      args.main_limit = Number(args.main_limit);
+      if (!Number.isInteger(args.main_limit)) throw new Error("--main-limit must be an integer");
+    }
   }
   if (command === "update") {
     if (!args.id) throw new Error("--id is required for update");
@@ -1192,7 +1197,14 @@ function usage() {
     "       flow_index.js import --repo <path> --analysis <flow-analysis.json> [--main-limit <n>]",
   ].join("\n"));
 }
+/** ` — scale <class>` when the manifest names a class, else `` — so the
+ * resolved main budget's provenance is visible on the summary line. */
+function budgetScaleSuffix(repo) {
+  const klass = scaleClass(repo);
+  return klass ? ` — scale ${klass}` : "";
+}
 function cmdHarvest(args) {
+  args.main_limit = mainLimitFor(args.repo, args.main_limit);
   const [rows, sources, gitnexusInterchange, notes] = collectCandidates(args);
   // A provider substitution is never silent, on either path.
   for (const note of notes) console.log(`NOTICE: ${note}`);
@@ -1207,7 +1219,7 @@ function cmdHarvest(args) {
   const finalRows = finalize(rows, args.main_limit, args.repo);
   const target = writeIndex(args.repo, finalRows, sources);
   const summary = summaryFor(finalRows);
-  console.log(`Wrote ${target} — ${summary.total} flow candidates (${summary.main} main, ${summary.deferred} deferred).`);
+  console.log(`Wrote ${target} — ${summary.total} flow candidates (${summary.main} main, ${summary.deferred} deferred). (main budget ${args.main_limit}${budgetScaleSuffix(args.repo)})`);
   // Harvesting something is not the same as harvesting everything: a second
   // ready flow source silently contributing nothing is worth a NOTICE even on
   // the success path.
@@ -1217,6 +1229,7 @@ function cmdHarvest(args) {
   return 0;
 }
 function cmdRevise(args) {
+  args.main_limit = mainLimitFor(args.repo, args.main_limit);
   const [rows, sources, gitnexusInterchange, notes] = collectCandidates(args);
   // A provider substitution is never silent, on either path.
   for (const note of notes) console.log(`NOTICE: ${note}`);
@@ -1253,7 +1266,7 @@ function cmdRevise(args) {
       doc_role: row.doc_role,
     }));
   const documented = finalRows.filter((row) => row.status === "documented").map((row) => row.id);
-  console.log(`Revised ${target} — ${summary.total} flows (${summary.placeholder} placeholder, ${summary.documented} documented, ${summary.main} main-priority).`);
+  console.log(`Revised ${target} — ${summary.total} flows (${summary.placeholder} placeholder, ${summary.documented} documented, ${summary.main} main-priority). (main budget ${args.main_limit}${budgetScaleSuffix(args.repo)})`);
   console.log(`Created/refreshed ${stubs.length} main-priority placeholder stub(s).`);
   if (pruned.length) console.log(`Pruned ${pruned.length} orphan scaffold stub(s).`);
   if (mainPriority.length) {
@@ -1670,6 +1683,7 @@ function persistAnalysisPack(repo, analysis) {
 function cmdImport(args) {
   // Seed derived candidates into the index (CodeGraph-only / no native flow
   // source), merging with existing rows and preserving their state.
+  args.main_limit = mainLimitFor(args.repo, args.main_limit);
   let analysis;
   try {
     analysis = readJson(args.analysis);
@@ -1708,7 +1722,7 @@ function cmdImport(args) {
   }
   const target = writeIndex(args.repo, merged, sources);
   const summary = summaryFor(merged);
-  console.log(`Imported ${rows.length} derived candidate(s) into ${target} — ${summary.total} total rows (${summary.main} main, ${summary.deferred} deferred).`);
+  console.log(`Imported ${rows.length} derived candidate(s) into ${target} — ${summary.total} total rows (${summary.main} main, ${summary.deferred} deferred). (main budget ${args.main_limit}${budgetScaleSuffix(args.repo)})`);
   console.log(`Deep pack kept at ${pack} — the flow writer reads it instead of re-deriving.`);
   return 0;
 }

@@ -1501,5 +1501,197 @@ class GraphLockConsumptionTests(unittest.TestCase):
                 self.assertIn("codegraph", result.stdout)
 
 
+class ScaleAwareBudgetTests(unittest.TestCase):
+    """The flat budget defaults (--max-flows 15, --main-limit 15) systematically
+    under-covered large repos. Both knobs now default from
+    `project.scale.class` in the manifest (user overrides land in `class`, so
+    it is never re-derived here); an explicit flag always wins; 0 / negative
+    counts as "not passed". Mirrored in py and js via budgets.py / budgets.js."""
+
+    def _write_manifest_scale(self, repo: Path, klass: str | None = None) -> None:
+        (repo / ".docforge").mkdir(parents=True, exist_ok=True)
+        manifest = {"project": {}}
+        if klass is not None:
+            manifest["project"]["scale"] = {"class": klass, "decided_by": "user"}
+        (repo / ".docforge" / "manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
+
+    def _build_entry_point_db(self, path: Path, count: int) -> None:
+        """A CodeGraph db with `count` route entry points, each reaching its own
+        handler through a `references` edge — so entry_points() yields `count`
+        ranked seeds and prepare expands exactly `maxFlows` of them."""
+        import sqlite3
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(path)
+        connection.executescript(
+            """
+            CREATE TABLE schema_versions (version INTEGER PRIMARY KEY, applied_at INTEGER, description TEXT);
+            CREATE TABLE nodes (id TEXT PRIMARY KEY, kind TEXT, name TEXT, qualified_name TEXT,
+                                file_path TEXT, language TEXT, start_line INTEGER, end_line INTEGER,
+                                start_column INTEGER, end_column INTEGER, docstring TEXT, signature TEXT,
+                                visibility TEXT, is_exported INTEGER DEFAULT 0, is_async INTEGER DEFAULT 0,
+                                is_static INTEGER DEFAULT 0, is_abstract INTEGER DEFAULT 0,
+                                decorators TEXT, type_parameters TEXT, return_type TEXT, updated_at INTEGER);
+            CREATE TABLE edges (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT, target TEXT,
+                                kind TEXT, metadata TEXT, line INTEGER, col INTEGER, provenance TEXT);
+            """
+        )
+        connection.execute("INSERT INTO schema_versions VALUES (8, 0, 'fixture')")
+        for index in range(count):
+            route = f"route:{index}"
+            handler = f"fn:handler{index}"
+            connection.execute(
+                "INSERT INTO nodes (id, kind, name, qualified_name, file_path, language, "
+                "start_line, end_line, start_column, end_column, is_exported, updated_at) "
+                "VALUES (?,?,?,?,?,'javascript',?,?,0,0,1,0)",
+                (route, "route", f"POST /items/{index}", f"src/routes/r{index}.js::{route}",
+                 f"src/routes/r{index}.js", 10, 15),
+            )
+            # Handlers stay non-exported: entry_points() seeds routes, then
+            # *exported-uncalled* functions, then high-fanout functions — an
+            # exported handler would quietly double the seed count.
+            connection.execute(
+                "INSERT INTO nodes (id, kind, name, qualified_name, file_path, language, "
+                "start_line, end_line, start_column, end_column, is_exported, updated_at) "
+                "VALUES (?,?,?,?,?,'javascript',?,?,0,0,0,0)",
+                (handler, "function", f"listItems{index}", f"src/controllers/c{index}.js::{handler}",
+                 f"src/controllers/c{index}.js", 20, 25),
+            )
+            connection.execute(
+                "INSERT INTO edges (source, target, kind) VALUES (?,?,?)",
+                (route, handler, "references"),
+            )
+        connection.commit()
+        connection.close()
+
+    def _prepare_context(self, runtime: str, repo: Path) -> tuple[dict, subprocess.CompletedProcess]:
+        result = run(runtime, "derive_flow_graph", "prepare", "--repo", str(repo))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        context = json.loads(
+            (repo / ".docforge" / "tmp" / "flow-context.json").read_text(encoding="utf-8")
+        )
+        return context, result
+
+    def test_prepare_reads_scale_class_and_falls_back_without_manifest(self) -> None:
+        """`project.scale.class = "large"` on a >15-entry-point repo yields
+        maxFlows 50; a repo with no manifest stays at the flat 15 fallback.
+        This also covers `--max-flows`, which had zero test coverage."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._write_manifest_scale(repo, "large")
+                self._build_entry_point_db(repo / ".codegraph" / "codegraph.db", 20)
+                context, result = self._prepare_context(runtime, repo)
+                self.assertEqual(context["maxFlows"], 50, f"{runtime}: scale default not applied")
+                self.assertEqual(context["mainFlows"], 20)
+                self.assertEqual(context["entryPointCount"], 20)
+                self.assertEqual(context["tail"], 0)
+                self.assertIn("20 main flow(s) of 20 entry points", result.stdout)
+
+    def test_prepare_without_manifest_keeps_the_flat_fallback(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._build_entry_point_db(repo / ".codegraph" / "codegraph.db", 20)
+                context, _ = self._prepare_context(runtime, repo)
+                self.assertEqual(context["maxFlows"], 15, f"{runtime}: no-manifest fallback")
+                self.assertEqual(context["mainFlows"], 15)
+                self.assertEqual(context["tail"], 5)
+
+    def test_explicit_max_flows_always_wins(self) -> None:
+        """--max-flows 10 beats the manifest class; 0 counts as "not passed"
+        and falls back to the scale default."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._write_manifest_scale(repo, "large")
+                self._build_entry_point_db(repo / ".codegraph" / "codegraph.db", 20)
+                result = run(runtime, "derive_flow_graph", "prepare",
+                             "--repo", str(repo), "--max-flows", "10")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                context = json.loads(
+                    (repo / ".docforge" / "tmp" / "flow-context.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(context["maxFlows"], 10)
+                self.assertEqual(context["mainFlows"], 10)
+                self.assertEqual(context["tail"], 10)
+
+                result = run(runtime, "derive_flow_graph", "prepare",
+                             "--repo", str(repo), "--max-flows", "0")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                context = json.loads(
+                    (repo / ".docforge" / "tmp" / "flow-context.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(context["maxFlows"], 50, f"{runtime}: explicit 0 must mean 'not passed'")
+
+    def test_harvest_main_limit_follows_scale_and_explicit_wins(self) -> None:
+        """A medium repo harvest with no --main-limit shows the scale default
+        (25) and its provenance on the summary line; an explicit flag wins."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._write_manifest_scale(repo, "medium")
+                _write_ua(repo, _ua_domain("chain"))
+                result = run(runtime, "flow_index", "harvest", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("main budget 25 — scale medium", result.stdout,
+                              f"{runtime}: scale-aware main-limit summary")
+
+                result = run(runtime, "flow_index", "harvest",
+                             "--repo", str(repo), "--main-limit", "1")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                index = json.loads((repo / ".docforge" / "flow-index.json").read_text(encoding="utf-8"))
+                self.assertEqual(index["summary"]["main"], 1, f"{runtime}: explicit --main-limit lost")
+                self.assertIn("main budget 1 — scale medium", result.stdout)
+
+    def test_harvest_without_manifest_keeps_the_flat_fallback(self) -> None:
+        """No manifest -> main-limit 15, with no scale suffix on the summary."""
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _write_ua(repo, _ua_domain("chain"))
+                result = run(runtime, "flow_index", "harvest", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("main budget 15)", result.stdout, f"{runtime}: flat fallback")
+                self.assertNotIn("scale", result.stdout)
+
+    def test_import_main_limit_follows_scale(self) -> None:
+        """import resolves the same scale-aware default as harvest/revise."""
+        with tempfile.TemporaryDirectory() as tmp:
+            analysis_path = Path(tmp) / "analysis.json"
+            analysis_path.write_text(json.dumps({"flows": [
+                {"name": "One", "steps": [{"order": 1, "name": "A", "path": "src/a.py"}]},
+                {"name": "Two", "steps": [{"order": 1, "name": "B", "path": "src/b.py"}]},
+            ]}), encoding="utf-8")
+            for runtime in ("py", "js"):
+                with self.subTest(runtime=runtime):
+                    repo = Path(tmp) / runtime
+                    repo.mkdir()
+                    self._write_manifest_scale(repo, "small")
+                    result = run(runtime, "flow_index", "import", "--repo", str(repo),
+                                 "--analysis", str(analysis_path))
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("main budget 15 — scale small", result.stdout,
+                                  f"{runtime}: import scale default")
+                    index = json.loads((repo / ".docforge" / "flow-index.json").read_text(encoding="utf-8"))
+                    self.assertEqual(index["summary"]["main"], 2)
+
+    def test_budget_summaries_match_across_runtimes(self) -> None:
+        """The resolved budget and its scale suffix print identically in py
+        and js — same wording, same trailing period."""
+        stdouts = []
+        for runtime in ("py", "js"):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                self._write_manifest_scale(repo, "large")
+                _write_ua(repo, _ua_domain("chain"))
+                result = run(runtime, "flow_index", "harvest", "--repo", str(repo))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                stdouts.append(normalized(result.stdout, [repo]))
+        self.assertEqual(stdouts[0], stdouts[1], "main-limit summary must match across runtimes")
+
+
 if __name__ == "__main__":
     unittest.main()

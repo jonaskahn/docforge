@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Flow budgets now scale with the repository.** The flow pipeline used flat
+  defaults — `--max-flows` 15 and `--main-limit` 15 — which systematically
+  under-covered large repos (a 900-source-file repo with 1,300 entry points
+  saw 1.1% of its surface). Both knobs now default from the authoritative
+  `project.scale.class` already recorded in the manifest: `--max-flows`
+  (the candidate surface) small 15 / medium 30 / large 50, `--main-limit`
+  (the deep-dive document budget) small 15 / medium 25 / large 40, with 15
+  as the fallback when the manifest is missing or names an unknown class.
+  An explicit flag always wins; explicit 0 / negative counts as "not
+  passed" (documented in help text). The harvest/revise/import summary
+  line now prints the resolved budget and its scale
+  (`main budget 40 — scale large`). Mirrored across the py and js
+  runtimes (`flows/python/budgets.py` / `flows/js/budgets.js`).
 - **`/docforge-revise` gained an objective, not just a scope.** Revise had one
   axis — scope — so a stated purpose ("add more ascii/mermaid diagrams") fell
   through to the full structural question pack: profile discovery, scale/layout
