@@ -17,11 +17,12 @@
     "manifests"
   ],
   "target_depth": "orientation",
+  "answer_shape": "answer-first",
   "write_order": 40,
   "provenance_mode": "sections",
   "audit_profile": "router",
   "dominant_form": null,
   "template_file": "content/root/root-readme.template.md",
   "title": "Repository README",
-  "contract_revision": "2.24.0"
+  "contract_revision": "3.0.0"
 }

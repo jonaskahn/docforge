@@ -45,10 +45,12 @@ gate, never by invention.
   side by side — per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
+## Linking craft
 
-| This document owns | Links to | Because |
-|---|---|---|
-| Title, status, context, decision, consequences for one decision | the architecture/domain document the decision shaped | the record owns rationale; the shaped document (e.g. `architecture-high-level`) owns the resulting fact, linked not restated |
-| A decision this one supersedes | the superseded record, both directions | preserves history — old and new records must reference each other explicitly |
-| Cross-repository decision evidence | `portfolio-decision`'s member links, when scope is portfolio-wide | keeps a portfolio decision traceable to the member records it draws on |
+Name the shaped document by what it owns, not by its filename: "the resulting
+routing contract lives in `arch_high_level`," never "see `arch_high_level`."
+When a record supersedes another, state the relationship in both directions
+in the same sentence shape ("supersedes NNNN" / "superseded by NNNN") so a
+reader lands on the current record however they arrived. What each side of
+that link owns, and why it is linked rather than restated, is the contract's
+`## Owns / links` table, not this section.

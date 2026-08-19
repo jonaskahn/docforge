@@ -8,6 +8,15 @@ Writing-craft instructions for `portfolio` group documents. Routes:
 - `portfolio_security`, `portfolio_operations` → [Security-posture / portfolio-operations](#security-posture--portfolio-operations-writing-craft)
 - `portfolio_system_context` → [System-context (portfolio)](#system-context-portfolio-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+executive, value and risk before mechanism. Name what a member document
+owns before linking it ("the member's internal steps are owned there,"
+never "see the flow document"). What each side of a link owns, and why it
+is linked rather than restated, is each contract's `## Owns / links` table,
+not this section.
+
 ## Diligence-index writing craft
 
 Each evidence cell links to a member document or repository-relative source path,
@@ -34,14 +43,6 @@ document maps evidence and gaps.
 - **Renders:** nothing beyond the table; no diagram, ever.
 - **Trigger:** never — per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Claim, evidence, confidence, gap, grouped by diligence area | every member repo's own architecture/security/operations documents | each claim's evidence traces to a specific member document; this document maps, never restates, that evidence |
-| An unresolved gap in repository discovery | `repo-inventory` | a claim about a repository that isn't fully inventoried traces its gap there |
-| — | never a verdict of its own | pass/fail judgment belongs to the reader, not to this document |
 
 ## Epic (portfolio) writing craft
 
@@ -71,14 +72,6 @@ manually via `manage_manifest add --type epic` (agent-asserted
   [`../../references/illustration.md`](../../references/illustration.md)'s
   5-participant limit.
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Outcome, member repos, owning flow/feature/component per repo, cross-repo sequence | each member repo's own `flow` document | the member's internal steps are owned there; this document only names which flow/feature each repo contributes |
-| — | `system-context` | system-context maps portfolio-wide boundaries; this document maps one initiative's path across them |
-| An unresolved handoff or missing owner | `diligence-index` | an open gap in the initiative is exactly the kind of claim diligence-index exists to track |
-
 ## Repo-inventory writing craft
 
 For every discovered member, record relative path, membership evidence, explicit
@@ -107,14 +100,6 @@ place judgment calls get resolved.
 - **Trigger:** never — per
   [`../../references/illustration.md`](../../references/illustration.md),
   reference documents default to tables.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Discovered repositories, role, owner token, documentation state, evidence | `system-context` | dependency and boundary relationships between repos are owned there; this document owns only the flat inventory |
-| A gap in a repository's evidence | `diligence-index` | confidence and follow-up gaps are tracked there, not resolved here |
-| A repository's own documentation tier | that repository's own `docs/README.md` | this document names the tier; the repository's own docs are the source of truth for their content |
 
 ## Security-posture / portfolio-operations writing craft
 
@@ -156,14 +141,6 @@ evidence, or risk disposition remains unresolved.
   coupling relationship worth tracing together — per
   [`../../references/illustration.md`](../../references/illustration.md)'s
   deep-dive budget.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Cross-repo controls, gaps, shared dependencies, operational coupling | each member repo's own `threat-model` or `observability` document | member-internal findings are owned there; this document owns only the cross-repo seam |
-| A shared dependency also named in a member's `dependencies-inventory` | that member's `dependencies-inventory` | this document adds the cross-repo blast radius; the member document owns its own criticality judgment |
-| An unresolved cross-repo gap | `diligence-index` | tracks the confidence gap until a member closes it |
 
 ## System-context (portfolio) writing craft
 
@@ -221,11 +198,3 @@ deep-dive (see `document-composition.md`); do not pre-split.
   the point — within
   [`../../references/illustration.md`](../../references/illustration.md)'s
   deep-dive budget.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Portfolio-level repo/system boundaries, cross-repo flows, dependency edges and their resolution | each member's own `architecture-high-level` | member-internal container detail is owned there; this document only borders it |
-| A cross-repo flow's steps | that flow's owning member document | this document states trigger → repos → outcome only; step detail is never re-derived here |
-| A repo not yet resolved to an identity mapping | `repo-inventory` | inventory evidence is owned there; this document consumes it to draw edges |

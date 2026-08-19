@@ -1,17 +1,42 @@
 # `concepts_compact`
 
-Content contract for compact document type `concepts_compact`.
+**Reader question** — "What domain concepts does this codebase use, and what does each one actually mean here?"
 
-The merged `docs/concepts.md` is the compact form of the concepts section. It
-holds the concept register followed by one `##` section per domain concept the
-manifest folded into it. Every discovered concept appears in the register
-whether or not it has a section, so the vocabulary stays complete; the section
-budget bounds how many are explained in full here. Each concept section carries
-**every field** of the `concept` content contract, collapsing each repeated
-block to one line per instance and keeping the contract's level order.
-Condensed, never summarized: a folded concept that has lost its invariants or
-its failure boundary is a defect.
+| Mode | Depth | Shape |
+|---|---|---|
+| Explanation | deep-dive | merged-section-spine |
 
-| Type | Must present | Keep out | Primary mode | Depth |
-|---|---|---|---|---|
-| concepts_compact | section introduction, the concept register (concept, where it is defined in code, which documents depend on it), one section per folded concept carrying what it models, the block it belongs to, its lifecycle and states, its invariants stated as rules, how it relates to neighbouring concepts, its failure boundary, and where it lives; links to every selected, materialized document in this section's folder that this file does not merge | a concept with no definition in the repository, a term that is only a glossary entry, restating a rule an architecture section owns, a neighbouring concept's invariants, direct source-file navigation, a folded concept summarized rather than condensed | Explanation | deep-dive |
+## What this file merges
+
+| Member | At |
+|---|---|
+| `concepts_index` | diligence |
+| `concept` (one section per discovered concept) | diligence (`discovered_concept`) |
+
+The concept register comes first, holding every discovered concept whether or not it earned a written-up section; the section budget bounds how many are explained in full here.
+
+## Must present
+
+| # | Element | At | Done wrong |
+|---|---|---|---|
+| 1 | Section introduction: what this vocabulary register is | lead | a glossary-style definition standing in for a concept's model |
+| 2 | The concept register: concept, where it is defined in code, which documents depend on it | `## Concept register` | dropping a discovered concept from the register because it lacks a section |
+| 3 | Scope and boundaries, linking every unmerged document in this folder | `## Scope and boundaries` | a link to an unmaterialized path |
+| 4 | Per folded concept: what it models, its owning block, lifecycle and states, invariants stated as rules, relationships to neighbouring concepts, failure boundary, where it lives | `## {{Concept name}}` | a neighbouring concept's invariants folded into this one |
+| 5 | Every field of the `concept` contract, repeated blocks collapsed to one line per instance, contract level order kept | `## {{Concept name}}` | summarized, not condensed: a folded concept that lost its invariants or failure boundary |
+
+## Keep out
+
+| Not here | Lives in |
+|---|---|
+| A concept with no definition in the repository | nowhere — it is not a candidate |
+| A term that is only a glossary entry | `glossary` |
+| A rule an architecture section owns | `arch_high_level`, `arch_low_level` |
+| Direct source-file navigation | provenance |
+
+## Owns / links
+
+| Owns | Links to | Because |
+|---|---|---|
+| Section introduction, scope, the concept register, and every folded concept's content | every unmerged document in `docs/concepts/` | the fold covers concepts only; the rest keep their own paths |
+| Nothing a folded concept owns | `concepts.md#<slug>` anchors | a folded concept has no file of its own; the `concept` contract's own links resolve inside this file |

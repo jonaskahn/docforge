@@ -16,9 +16,11 @@
     "manifests"
   ],
   "target_depth": "router",
+  "answer_shape": "router",
   "write_order": 84,
   "provenance_mode": "sections",
   "audit_profile": "router",
   "dominant_form": null,
-  "template_file": "content/shared/generic.template.md"
+  "contract_revision": "3.0.0",
+  "template_file": "content/contributing/contributing-router.template.md"
 }

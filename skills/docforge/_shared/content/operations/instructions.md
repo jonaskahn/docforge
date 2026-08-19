@@ -12,6 +12,15 @@ Writing-craft instructions for `operations` group documents. Routes:
 - `observability` → [Observability](#observability-writing-craft)
 - `runbook` → [Runbook](#runbook-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+imperative and runnable, every step has an observable result. Name what a
+linked document owns before the link ("recovery from a bad deploy is owned
+there," never "see `disaster-recovery`"). What each side of a link owns,
+and why it is linked rather than restated, is each contract's
+`## Owns / links` table, not this section.
+
 ## Application-distribution writing craft
 
 Derive build, signing mechanism, package format, channel eligibility, and update
@@ -36,16 +45,6 @@ the repository doesn't evidence.
   verify — per channel.
 - **Trigger:** never — ordered steps and verification, not a diagram, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Build, sign, package, publish, verify per channel; update and rollback | `deployment` | shipping into environments shares the same rigor and approval discipline |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
 
 ## Deployment writing craft
 
@@ -77,17 +76,6 @@ environment differences by reference to
   cannot be read as prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Environments' artifact path, rollout, rollback, verification | `environments` | which values differ per environment is owned there, referenced not re-derived |
-| Incident diagnosis and recovery | `disaster-recovery` or the relevant `runbook` | recovery from a bad deploy is owned there, never embedded here |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
-
 ## Disaster-recovery writing craft
 
 For each scenario, name recovery lead, escalation authority, and the role
@@ -116,17 +104,6 @@ is for the day deployment already failed.
 - **Trigger:** never — this is a runbook shape, not a diagram, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Scenarios, RTO/RPO, recovery order, data-loss boundary, escalation | `deployment` | ordinary deploy steps are owned there; this document starts where deployment failed |
-| Symptom-driven diagnosis | the relevant `runbook` | diagnosis from the observable symptom is owned there |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
-
 ## Flashing-recovery writing craft
 
 Before flashing, identify the evidenced artifact version, target hardware or
@@ -151,16 +128,6 @@ before the command, not buried in a general safety note at the top.
   the mid-flash recovery path.
 - **Trigger:** never — ordered steps, explicit warnings, no diagram, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The verified flash path, recovery path, confirmation checkpoints | `distribution` | artifact provenance and channel discipline are owned there |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
 
 ## Infrastructure-apply / infrastructure-state writing craft
 
@@ -194,17 +161,6 @@ link to the authoritative tool procedure instead of inventing a runnable path.
 - **Trigger:** never — tables and prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The plan/apply gate, execution boundary, abort condition | `network-deployment` | network-targeted deploys apply the same authority discipline |
-| Resource inventory and access grants | `reference/infra-resources`, `reference/infra-access` | owned in the reference documents, never restated here |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
-
 ## Job-reliability writing craft
 
 For every job class, identify failure, lag, or queue signals, their visibility,
@@ -233,17 +189,6 @@ job identity.
 - **Trigger:** never — the table is the whole document, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Failure handling per job class: retry, idempotency, replay | `triggers-and-jobs` | job identity, triggers, and payloads are owned there |
-| Failure, lag, and queue signals' visibility and alert ownership | `observability` | signal → source → alert intent is owned there, linked not copied |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
-
 ## Network-deployment writing craft
 
 Ground network identity, RPC/configuration source, deployed artifact and version,
@@ -271,17 +216,6 @@ obviously synthetic placeholder and say so.
 - **Trigger:** never — numbered steps and a verification command, not a
   diagram, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Per-network deploy, upgrade, rollback, privileged roles | `contract-system` | the upgrade-boundary standard is owned there |
-| Plan/apply gates and recorded state for the rest of infrastructure | `infra-apply`, `infra-state` | the same safety discipline, owned there |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
 
 ## Observability writing craft
 
@@ -312,17 +246,6 @@ it can.
 - **Trigger:** never — the table is primary and blind spots are prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Signals, thresholds, routing, alert intent, blind spots | `runbook` | each actionable alert links to its runbook and escalation owner |
-| Job-class failure and queue signals | `worker-reliability` | job-specific signals are owned there |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
-
 ## Runbook writing craft
 
 Write for an operator under pressure. Start with the observable symptom, scope,
@@ -344,14 +267,3 @@ deployment or disaster recovery when those own the operation.
   remediation, verification signal, escalation threshold.
 - **Trigger:** only when diagnosis has material branches, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Symptom, diagnosis, remediation, verification, escalation | `runbooks-index` | the register owns what each runbook recovers and its trigger |
-| Deploy or recovery operations | `deployment`, `disaster-recovery` | when those own the operation, link rather than restate |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.

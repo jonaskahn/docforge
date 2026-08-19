@@ -17,11 +17,13 @@
     "manifests"
   ],
   "target_depth": "reference",
+  "answer_shape": "lookup",
   "write_order": 61,
   "nav_order": 61,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "flowchart",
+  "contract_revision": "3.0.0",
   "template_file": "content/reference/templates/configuration.md",
   "compact_group": "reference_compact",
   "compact_order": 2,

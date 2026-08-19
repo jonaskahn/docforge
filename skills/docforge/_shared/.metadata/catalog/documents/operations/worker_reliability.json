@@ -21,10 +21,12 @@
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "lookup",
   "write_order": 72,
   "provenance_mode": "sections",
   "audit_profile": "operations",
   "dominant_form": "stateDiagram-v2",
+  "contract_revision": "3.0.0",
   "template_file": "content/operations/templates/job-reliability.md",
   "compact_group": "operations_compact",
   "compact_order": 17,

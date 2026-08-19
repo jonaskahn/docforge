@@ -20,10 +20,12 @@
     "code_graph"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "lookup",
   "write_order": 48,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/product/templates/feature-catalog.md",
   "compact_group": "po_compact",
   "compact_order": 12

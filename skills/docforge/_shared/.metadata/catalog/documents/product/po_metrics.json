@@ -21,10 +21,12 @@
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "lookup",
   "write_order": 49,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/product/templates/success-metrics.md",
   "compact_group": "po_compact",
   "compact_order": 13

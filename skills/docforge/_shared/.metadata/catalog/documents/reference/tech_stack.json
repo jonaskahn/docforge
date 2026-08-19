@@ -16,11 +16,13 @@
     "manifests"
   ],
   "target_depth": "reference",
+  "answer_shape": "lookup",
   "write_order": 63,
   "nav_order": 67,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "schema_min": "2.23.0",
   "template_file": "content/reference/templates/tech-stack.md",
   "compact_group": "reference_compact",

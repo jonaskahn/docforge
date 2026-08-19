@@ -3,9 +3,10 @@
 A worked `architecture-low-level` document for the same fictional expense
 service as the flow exemplars, showing what the standard-layout template
 produces when it is filled well. Read it beside
-../../architecture/templates/architecture-low-level.md and
-../../architecture/instructions/architecture-low-level.md; update it in the
-same change as either of them.
+../../architecture/templates/architecture-low-level.md and the
+"Low-level architecture writing craft" section of
+../../architecture/instructions.md; update it in the same change as either
+of them.
 
 Where a real document would link a neighbouring document with a relative path,
 this file names the neighbour in bold instead, so it stays self-contained and

@@ -8,9 +8,12 @@ the answer last.
 
 ## The levels
 
-Every substantive document moves through four levels in order. The levels are
-not headings — each type's template owns its section names — they are the
-altitude each section is written at.
+Every document uses these four altitudes. The order a reader travels them in
+is not fixed here — that is the shape's job, see Scope and
+[`document-shapes.md`](document-shapes.md) — but the meaning of each altitude
+is fixed for every document, regardless of shape. The levels are not
+headings — each type's template owns its section names and its shape owns
+their order — they are the altitude each section is written at.
 
 | Level | Carries | The reader who stops here |
 |---|---|---|
@@ -55,19 +58,38 @@ This is the acceptance test the independent audit applies; see
 
 ## Scope
 
-Applies to substantive documents — the ones that carry mechanism, at
-`deep-dive` target depth and to the orientation documents that front them.
+Every document uses these altitudes. The ladder is not a section list — it
+is what a piece of content *is*: a governing answer, the whole subject in one
+shallow pass, per-item depth, or the boundary. Each shape in
+[`document-shapes.md`](document-shapes.md) declares how it instantiates
+them — what its L1 pass consists of, which levels it carries, and in what
+order a reader travels them. A contract's `Must present` table assigns every
+element an altitude in its `At` column, and that column uses this vocabulary
+and no other.
 
-It does **not** apply to:
+`answer-first` travels the levels in file order, L0 to L3, and the five rules
+above apply to it literally — this is the shape the rules were written
+against. Other shapes reorder or thin the same four altitudes rather than
+escape them:
 
-- **Reference documents.** A lookup table has no argument to order; its
-  ordering is whatever makes a field findable. `reference` depth is exempt.
-- **Routers and section READMEs.** These have their own instance of this rule,
-  already stated as `## Top-down shape` in
-  [`../content/shared/folder-index.instruction.md`](../content/shared/folder-index.instruction.md).
-  That file governs them; this one does not restate it.
-- **Agent-context outputs.** They are read by a machine in one pass, not
-  skimmed. [`voice.md`](voice.md) already sets their shape.
+- `lookup` carries an L0 read-rule — the key, the ordering that serves it,
+  any precedence that changes an answer — and an L2 body with no true L1
+  pass: the table's own columns are the L1. A row that is wrong without the
+  read-rule is the defect this altitude split exists to catch.
+- `diagnostic-path` puts harm reduction at L0, before the reader understands
+  the cause, and its L1 is a branch map rather than an ordered list.
+- `router` owns no L2 fact at all. Its instance of the ladder is the
+  six-step order in
+  [`../content/shared/folder-index.instruction.md`](../content/shared/folder-index.instruction.md)
+  `## Top-down shape`; that file governs routers and this one defers to it.
+- `fixed-frame` is exempt outright: an external standard fixes the section
+  order, and reordering to put a governing claim first would break the
+  conformance the shape exists to protect.
+
+Every other shape — `ordered-narrative`, `executable-procedure`,
+`entry-catalog`, `coverage-matrix`, `merged-section-spine` — travels the same
+four altitudes in file order; `document-shapes.md` states what each one's L1
+pass consists of.
 
 ## What this file does not decide
 
@@ -75,4 +97,6 @@ It sets no word counts and no section lengths. Level discipline is the lever;
 length is not one. A document is not improved by growing a section, only by
 putting the right altitude in it — and
 [`depth-and-audience.md`](depth-and-audience.md)'s "promote rather than pad"
-still holds.
+still holds. It does not decide which shape a document uses, or how that
+shape orders these altitudes — [`document-shapes.md`](document-shapes.md)
+does.

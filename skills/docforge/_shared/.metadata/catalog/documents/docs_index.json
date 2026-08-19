@@ -16,11 +16,12 @@
     "code_graph"
   ],
   "target_depth": "orientation",
+  "answer_shape": "router",
   "write_order": 30,
   "provenance_mode": "sections",
   "audit_profile": "router",
   "dominant_form": null,
   "template_file": "content/root/docs-index.template.md",
   "title": "Documentation",
-  "contract_revision": "2.24.0"
+  "contract_revision": "3.0.0"
 }

@@ -28,13 +28,11 @@ its extension surface are one relationship viewed from two sides.
 - **Trigger:** never — the table and prose carry both views, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
+## Linking craft
 
-| This document owns | Links to | Because |
-|---|---|---|
-| The host's place among neighbors and services | `architecture-high-level` | the block this host extends is named there |
-| Permission rationale per point | `platform-permissions` | owned in the security group, linked not duplicated |
-
-## Voice
-
-- **Voice:** terse and structural; every block, boundary, and relationship is named and evidenced.
+Voice for `host_integration` follows `architecture`'s row in
+[`voice.md`](../../references/voice.md); voice for `extension_points`
+follows `reference`'s row. Name what a linked document owns before the
+link ("the block this host extends is named there," never "see
+`arch_high_level`"). What each side of a link owns is each contract's
+`## Owns / links` table, not this section.

@@ -20,11 +20,13 @@
     "code_graph"
   ],
   "target_depth": "reference",
+  "answer_shape": "lookup",
   "write_order": 68,
   "nav_order": 63,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/reference/templates/data-types.md",
   "compact_group": "reference_compact",
   "compact_order": 18

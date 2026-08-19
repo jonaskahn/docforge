@@ -21,10 +21,12 @@
     "git_history"
   ],
   "target_depth": "reference",
+  "answer_shape": "answer-first",
   "write_order": 42,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/product/templates/api-versioning.md",
   "compact_group": "product_compact",
   "compact_order": 12

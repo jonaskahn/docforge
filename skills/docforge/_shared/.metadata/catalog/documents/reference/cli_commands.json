@@ -21,11 +21,13 @@
     "manifests"
   ],
   "target_depth": "reference",
+  "answer_shape": "entry-catalog",
   "write_order": 64,
   "nav_order": 66,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/reference/templates/command-reference.md",
   "compact_group": "reference_compact",
   "compact_order": 14

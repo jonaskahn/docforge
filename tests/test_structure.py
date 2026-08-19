@@ -51,6 +51,29 @@ class CatalogFormAllowlistTests(unittest.TestCase):
         self.assertEqual(schema_forms, py_forms)
         self.assertEqual(py_forms, js_forms)
 
+    def test_answer_shape_allowlist_matches_across_schema_python_js(self) -> None:
+        """The closed shape vocabulary (`references/document-shapes.md`) is
+        duplicated in three places (JSON Schema enum, Python set, JS set) for
+        validation speed at each call site; this test is the guard against
+        them drifting apart."""
+        schema = json.loads((SHARED_ROOT / ".metadata" / "catalog-schema.json").read_text(encoding="utf-8"))
+        schema_shapes = set(schema["definitions"]["document"]["properties"]["answer_shape"]["enum"])
+
+        from runtime.catalog.python.query_catalog import ALLOWED_ANSWER_SHAPES as py_shapes
+
+        node = subprocess.run(
+            [
+                "node", "-e",
+                "const m=require(process.argv[1]); console.log(JSON.stringify([...m.ALLOWED_ANSWER_SHAPES]));",
+                str(SHARED_ROOT / "runtime" / "catalog" / "js" / "query_catalog.js"),
+            ],
+            text=True, capture_output=True, check=True,
+        )
+        js_shapes = set(json.loads(node.stdout))
+
+        self.assertEqual(schema_shapes, py_shapes)
+        self.assertEqual(py_shapes, js_shapes)
+
 
 class SkillContentTests(unittest.TestCase):
     def test_skill_md_routes_to_intake_workflow(self) -> None:
@@ -869,10 +892,9 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("realizes", module_wiring["question"])
         # dominant_form must remain among the declared forms after the edit.
         self.assertIn(catalog["dominant_form"], {v["form"] for v in views})
-        # contract_revision is untouched: this is hydration/drift through
-        # sync_dominant_forms, not a version-bump event for the other 56
-        # document types.
-        self.assertEqual(catalog["contract_revision"], "2.24.0")
+        # contract_revision here is the tree-wide shape-vocabulary sweep's
+        # bump (3.0.0), not a version-bump event specific to this document.
+        self.assertEqual(catalog["contract_revision"], "3.0.0")
 
         template = (
             SHARED_ROOT / "content" / "architecture" / "templates" / "architecture-low-level.md"
@@ -890,7 +912,7 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("Decomposed in", high_level_template)
 
         instruction = (
-            SHARED_ROOT / "content" / "architecture" / "instructions" / "architecture-low-level.md"
+            SHARED_ROOT / "content" / "architecture" / "instructions.md"
         ).read_text(encoding="utf-8")
         self.assertIn("Module wiring", instruction)
 

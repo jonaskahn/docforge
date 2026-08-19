@@ -18,13 +18,14 @@
     "manifests"
   ],
   "target_depth": "orientation",
+  "answer_shape": "merged-section-spine",
   "write_order": 76,
   "nav_order": 70,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": null,
   "template_file": "content/compact/templates/security.template.md",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "compact_target": "docs/security.md",
   "compact_members": [
     "security_index",

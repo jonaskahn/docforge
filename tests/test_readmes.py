@@ -357,7 +357,20 @@ class ReadmeContractRevisionTests(unittest.TestCase):
         for runtime in ("py", "js"):
             result = run(runtime, "query_catalog", "--id", "docs_index")
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertNotIn("contract_revision", json.loads(result.stdout))
+            payload = json.loads(result.stdout)
+            self.assertNotIn("contract_revision", payload)
+            self.assertNotIn("answer_shape", payload)
+
+    def test_route_exposes_answer_shape_across_runtimes(self) -> None:
+        from runtime.catalog.python.query_catalog import ALLOWED_ANSWER_SHAPES
+
+        for doc_id in ("docs_index", "flow", "arch_high_level"):
+            py_out = run("py", "query_catalog", "--route", doc_id).stdout
+            js_out = run("js", "query_catalog", "--route", doc_id).stdout
+            self.assertEqual(py_out, js_out, doc_id)
+            payload = json.loads(py_out)
+            self.assertIn("answer_shape", payload)
+            self.assertIn(payload["answer_shape"], ALLOWED_ANSWER_SHAPES)
 
 
 class ReadmeFlowIndexTests(unittest.TestCase):
@@ -380,7 +393,7 @@ class ReadmeFlowIndexTests(unittest.TestCase):
                 self.assertIn(".docforge/flow-index.json", [source["path"] for source in sources])
                 self.assertTrue(sources[0]["git_blob"])
                 payload = json.loads(run(runtime, "query_catalog", "--route", "flows_index").stdout)
-                self.assertEqual(payload["contract_revision"], "2.24.0")
+                self.assertEqual(payload["contract_revision"], "3.0.0")
 
 
 class AgentContextIsolationTests(unittest.TestCase):

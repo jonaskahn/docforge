@@ -25,8 +25,8 @@ artifact against its group's voice the way it checks depth and mode.
 |---|---|---|
 | root, product | Lead with the outcome a reader can act on; write the first paragraph for a stranger | Bury the point behind history, structure, or feature lists |
 | architecture | "The gateway validates and routes." — active present tense, one job per sentence | "Handling and management of requests is performed by the gateway"; hedge ("generally", "mostly") |
-| flows | "**3.** The pricing service revalidates the cart." — ordered, one idea per sentence, the branch right under the step that creates it. State the outcome in the opening, then the steps that reach it | Merge two ideas into one sentence; gather branches in a section away from their steps; make the reader reach the last section to learn what the flow guarantees |
-| engineering, operations | "Run `make verify` — it prints one line per failing contract." — every step ends in an observable result | Narrate what a step does without a checkable outcome |
+| flows | "**3.** The pricing service revalidates the cart." — ordered, one idea per sentence, the branch right under the step that creates it | Merge two ideas into one sentence; gather branches in a section away from their steps |
+| engineering, operations | "Run `make verify` — it prints one line per failing contract." — imperative, one command per line | Narrate what a step does in prose; hedge with "should typically" |
 | reference | One row per fact; a sentence only when a table cannot carry the nuance | Connect entries with narrative glue ("Additionally", "It is worth noting") |
 | security | "Evidence establishes rate limiting at the gateway; the app layer is unverified." — hedge exactly where evidence stops | Sound the alarm ("critical vulnerability") without evidence, or stay silent about thin evidence |
 | portfolio | State the value or the risk before the mechanism that delivers it | Lead with architecture or inventory detail |
@@ -37,7 +37,11 @@ artifact against its group's voice the way it checks depth and mode.
 
 Depth and audience per reader are owned by
 [`depth-and-audience.md`](depth-and-audience.md); this file owns only *how*
-a document at a given depth is phrased, never *what* it contains. Writing
+a document at a given depth is phrased, never *what* it contains. Which
+altitude order and completeness rule a document follows is owned by
+[`document-shapes.md`](document-shapes.md) — a flow's "state the outcome
+before the steps" and engineering's "every step ends in a checkable result"
+are shape completeness rules, not phrasing, and live there. Writing
 mechanics that touch phrasing but are not voice — provider neutrality,
 presentation policy, evidence citation form — stay with
 [`host-neutrality.md`](host-neutrality.md) and

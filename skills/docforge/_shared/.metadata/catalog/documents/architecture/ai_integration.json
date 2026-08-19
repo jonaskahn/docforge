@@ -15,17 +15,19 @@
     },
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/ai-integration.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph",
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "answer-first",
   "write_order": 17,
   "nav_order": 28,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "flowchart",
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/ai-integration.md",
   "compact_group": "architecture_compact",
   "compact_order": 12

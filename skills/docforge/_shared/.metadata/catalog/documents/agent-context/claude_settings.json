@@ -20,11 +20,12 @@
     "manifests"
   ],
   "target_depth": "reference",
+  "answer_shape": null,
   "write_order": 203,
   "provenance_mode": "manifest",
   "audit_profile": "machine",
   "dominant_form": null,
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "presentation": {
     "related_docs": "none"
   },

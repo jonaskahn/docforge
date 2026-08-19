@@ -18,6 +18,15 @@ Writing-craft instructions for `reference` group documents. Routes:
 - `infra_resources`, `infra_access` → [Resources / access](#resources--access-writing-craft)
 - `tech_stack` → [Tech-stack](#tech-stack-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+terse and tabular, no narrative connective tissue. Name what a linked
+document owns before the link ("the shared response envelope is restated
+once there," never "see `api-errors`"). What each side of a link owns, and
+why it is linked rather than restated, is each contract's `## Owns / links`
+table, not this section.
+
 ## Api-rate-limits writing craft
 
 Cite gateway, configuration, or specification evidence for every limit, header,
@@ -45,18 +54,6 @@ rather than one prose paragraph per tier.
 - **Trigger:** the table by default; a diagram only when a limit relationship
   cannot be read from the table, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Limit values by dimension, tiering, the 429 retry contract | `api-reference` | the surface these limits attach to is owned there; per-endpoint rate-limit classes are its columns |
-| Endpoint-specific authentication | `api-authentication` | the auth mechanism is owned there, linked not restated |
-| The 429 code's machine-readable semantics | `api-errors` | codes, triggers, and retryability are owned there |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
 
 ## Api-reference writing craft
 
@@ -92,18 +89,6 @@ the replacement, following the policy in `api-versioning`.
   table row — a reference document stays tabular, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The operation surface: method/path, request and response shapes, examples | `api-errors` | the shared response envelope is restated once there and linked per endpoint |
-| A deprecated operation and its replacement | `api-versioning` | the deprecation policy is owned there |
-| Per-operation auth and rate-limit class | `api-authentication`, `api-rate-limits` | each contract is owned by its own document; this one carries the class as a column |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Browser-support writing craft
 
 Cite CI or manual-browser evidence and date for every support row. Link
@@ -122,17 +107,6 @@ functionality, blocked outright) rather than leaving it implicit.
   table is the whole document.
 - **Trigger:** never — the matrix table is the whole document, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The tested browser × minimum-version matrix and per-browser degradation | `ui-components` | component-level degradation behavior is owned there |
-| The same tested-evidence discipline at OS/device level | `platform-compatibility` | platform minimums apply the identical matrix discipline |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
 
 ## Command-reference writing craft
 
@@ -159,16 +133,6 @@ reader exploring `repo sync` should find its subcommands together. Never show a 
 - **Trigger:** never — no call-graph or internal structure diagram, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Flags, subcommands, runnable examples, side effects | `output-exit-contract` | machine-output semantics — exit codes, streams, format stability — are owned there |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Compatibility writing craft
 
 Every supported row cites CI, manual, or community evidence with its date. Link
@@ -192,17 +156,6 @@ varies.
   matrix table is the whole document.
 - **Trigger:** never — the matrix table is the whole document, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The supported library-version matrix and deprecation horizon | `migration` | the path between two specific versions is owned there |
-| The same tested-evidence discipline at OS/device level | `platform-compatibility` | platform minimums apply the identical discipline |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
 
 ## Configuration writing craft
 
@@ -232,17 +185,6 @@ one nobody has touched since launch.
 - **Trigger:** never — the table is the whole document, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Every read setting: name, default, scope, sensitivity | `environments` | which environment differs and how is owned there, referenced not re-derived |
-| The settings a first-run reader changes | `setup-guide` | the verified path to a running instance consumes these settings; the guide links here rather than restating them |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Data-types writing craft
 
 Cite the authoritative schema or export for every type, constraint, and
@@ -270,16 +212,6 @@ Do not restate business meaning already owned by
   explanation, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Wire types, constraints, nullability, representation changes | `business-rules`, `glossary` | business meaning is owned there, never reconstructed from a sample payload |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Error-catalog writing craft
 
 Document the stable response envelope once, emphasizing which fields clients may
@@ -299,17 +231,6 @@ meaning as a compatibility change, not prose cleanup.
 - **Renders:** the envelope fields clients may branch on; one row per
   machine-readable code; the complete failure surface survey.
 - **Trigger:** never — no diagram is needed.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The response envelope, code semantics, retryability, status summary | `api-reference` | endpoints restate the envelope once here and link to it |
-| The 429 contract's headers and backoff facts | `api-rate-limits` | rate-limit mechanics are owned there |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
 
 ## Limitations-register writing craft
 
@@ -346,17 +267,6 @@ by discovery date or file location.
 - **Trigger:** never — tables and prose carry the whole register, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Known limitations, known issues, not-supported, scale envelope | `tech-debt-register` | remediable engineering debt is routed there instead |
-| Measured numeric boundaries | `performance-budgets` | budget rows share this register's dated-review discipline |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Model-card writing craft
 
 Cite dataset, run or artifact, and evaluation evidence for every metric, and
@@ -385,16 +295,6 @@ it here.
 - **Trigger:** never — prose sections and the metrics table carry the card,
   per [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Model details, intended use, evaluation, limitations, out-of-scope uses | `model-lifecycle` | lifecycle mechanics and training-data lineage are owned there, linked not repeated |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Output-exit-contract writing craft
 
 For each captured example, cite the command and version that produced its exit
@@ -422,16 +322,6 @@ the contract.
   it, not read for prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Exit codes, stream ownership, format stability, captured examples | `command-reference` | per-command usage and side effects are owned there, linked not restated |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Performance-budgets writing craft
 
 Every budget cites its measurement artifact and date, then names the owner and
@@ -456,16 +346,6 @@ dates its review.
 - **Trigger:** never — the table is the whole document, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Each budget's evidenced limit, measurement, degradation | `limitations-register` | user-visible limits date their review the way this document dates its measurements |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Platform-compatibility writing craft
 
 Cite device or test-matrix evidence for every platform row. Link permission and
@@ -486,17 +366,6 @@ horizon for older supported platforms.
   deprecation horizon — the matrix table is the whole document.
 - **Trigger:** never — the matrix table is the whole document, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The OS/device/architecture matrix, minimums, degradation, deprecation | `compatibility` | the same matrix discipline applied to library versions |
-| Permission and lifecycle behavior | `platform-permissions` | owned there, linked not restated |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
 
 ## Resources / access writing craft
 
@@ -529,17 +398,6 @@ it, and a grant does not prove current resource state.
 - **Trigger:** never — this is Reference depth, not Explanation, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The resource inventory and access grants | `dependencies-inventory` | the same criticality ordering principle for dependency rows |
-| Plan/apply procedure and recorded state | `infra-apply`, `infra-state` | this document lists resources and grants; those own applying and recording state |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
-
 ## Tech-stack writing craft
 
 Make this a stable lookup of what the repository is built with: language and
@@ -560,14 +418,3 @@ versions, or turn the table into a marketing comparison.
   tools, datastores, test/CI tooling, key libraries with role and manifest
   source.
 - **Trigger:** never — no architecture diagram is needed.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The layered technology inventory with declared versions | `architecture/dependencies` | operational dependency failure behavior is owned there |
-| Each deployable block's implementing technology | `architecture-high-level` | the blocks built with this stack are named there; this document only labels each block with it |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.

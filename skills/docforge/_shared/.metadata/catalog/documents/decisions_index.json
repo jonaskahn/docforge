@@ -19,13 +19,14 @@
     "git_history"
   ],
   "target_depth": "router",
+  "answer_shape": "router",
   "write_order": 80,
   "nav_order": 90,
   "provenance_mode": "sections",
   "audit_profile": "router",
   "dominant_form": null,
   "template_file": "content/records/decision-index.template.md",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "title": "Decision log",
   "compact_group": "decisions_compact",
   "compact_order": 51

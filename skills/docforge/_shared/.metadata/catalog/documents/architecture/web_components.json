@@ -16,15 +16,17 @@
     },
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/ui-components.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph"
   ],
   "target_depth": "reference",
+  "answer_shape": "lookup",
   "write_order": 20,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/ui-components.md",
   "compact_group": "architecture_compact",
   "compact_order": 28

@@ -75,6 +75,51 @@ class CatalogRecordTests(unittest.TestCase):
                     f"{entry['id']}: template must live in content/",
                 )
 
+    def test_every_document_type_has_contract_revision(self) -> None:
+        """`contract_revision` is the only channel `manage_manifest reconcile`
+        uses to detect a moved contract (`sync_contract_revisions`); a document
+        type without one can never be flagged `contract-updated` in an existing
+        user's manifest, no matter how much its contract changes."""
+        for entry in self.index["document_types"]:
+            with self.subTest(id=entry["id"]):
+                detail = json.loads((CATALOG_DIR / entry["record"]).read_text(encoding="utf-8"))
+                self.assertTrue(
+                    detail.get("contract_revision"),
+                    f"{entry['id']}: contract_revision must be set",
+                )
+
+    def test_every_document_type_has_a_valid_answer_shape(self) -> None:
+        """`answer_shape` is required (`REQUIRED_DOC_FIELDS`); `null` is valid
+        only for the one non-Markdown template output (`claude_settings`)."""
+        from runtime.catalog.python.query_catalog import ALLOWED_ANSWER_SHAPES
+
+        for entry in self.index["document_types"]:
+            with self.subTest(id=entry["id"]):
+                detail = json.loads((CATALOG_DIR / entry["record"]).read_text(encoding="utf-8"))
+                self.assertIn("answer_shape", detail, f"{entry['id']}: answer_shape must be set")
+                shape = detail["answer_shape"]
+                self.assertIn(shape, ALLOWED_ANSWER_SHAPES)
+                if shape is None:
+                    self.assertEqual(entry["id"], "claude_settings")
+
+    def test_compact_documents_are_merged_section_spine(self) -> None:
+        """The two cross-field rules `query_catalog.validate` enforces on
+        `answer_shape`, re-checked directly against every real record."""
+        for entry in self.index["document_types"]:
+            detail = json.loads((CATALOG_DIR / entry["record"]).read_text(encoding="utf-8"))
+            with self.subTest(id=entry["id"]):
+                is_compact = detail["selection"]["mode"] == "compact"
+                is_spine_shape = detail["answer_shape"] == "merged-section-spine"
+                self.assertEqual(is_compact, is_spine_shape)
+
+    def test_router_depth_implies_router_shape(self) -> None:
+        for entry in self.index["document_types"]:
+            detail = json.loads((CATALOG_DIR / entry["record"]).read_text(encoding="utf-8"))
+            if detail.get("target_depth") != "router":
+                continue
+            with self.subTest(id=entry["id"]):
+                self.assertIn(detail["answer_shape"], {"router", "entry-catalog"})
+
     def test_profiles_path_map_resolves(self) -> None:
         for dimension, rel in self.index["profiles"].items():
             with self.subTest(dimension=dimension):
@@ -284,6 +329,81 @@ class CatalogRecordTests(unittest.TestCase):
             "compact/templates/portfolio.template.md",
         ):
             self.assertFalse((SKILL_ROOT / "content" / path).exists())
+
+
+class OrphanContentFileTests(unittest.TestCase):
+    """Every content-tree file must either be referenced by a catalog
+    record's contract_file/instruction_file/template_file, or be one of the
+    known-intentional exceptions (navigation READMEs, craft exemplars, the
+    two shared templates validate_metadata.py resolves by hardcoded name,
+    and the cross-cutting fact-map). A file outside both sets is a
+    leftover -- the likeliest defect a large content sweep leaves behind."""
+
+    def test_every_content_file_is_referenced_or_allowlisted(self) -> None:
+        index = json.loads((CATALOG_DIR / "index.json").read_text(encoding="utf-8"))
+        referenced = set()
+        for entry in index["document_types"]:
+            detail = json.loads((CATALOG_DIR / entry["record"]).read_text(encoding="utf-8"))
+            for key in ("contract_file", "instruction_file", "template_file"):
+                value = detail.get(key)
+                if value:
+                    referenced.add(value)
+        # Hardcoded by name in validate_metadata.{py,js}, not routed through
+        # any single catalog record.
+        referenced.add("content/shared/audit-report.template.md")
+        referenced.add("content/shared/audience-deepdive.template.md")
+
+        content_root = SKILL_ROOT / "content"
+        orphans = []
+        for path in content_root.rglob("*"):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(SKILL_ROOT).as_posix()
+            if rel in referenced:
+                continue
+            if path.name == "README.md":
+                continue  # navigation index, not a routed document
+            if rel == "content/fact-map.md":
+                continue  # cross-cutting arbitration, not per-document
+            if rel == "content/shared/topic-readme.template.md":
+                continue  # scaffolded by document-composition.md's atomic
+                # promotion, not routed through a single catalog record
+            if "/exemplars/" in rel:
+                continue  # craft references, never catalog-routed
+            orphans.append(rel)
+
+        self.assertEqual(orphans, [], f"unreferenced, unallowlisted content file(s): {orphans}")
+
+
+class FactMapAgreementTests(unittest.TestCase):
+    """content/fact-map.md arbitrates contested ownership between document
+    types; `query_catalog --validate-fact-map` checks every row's contested
+    ids actually route to the declared owner in their own `## Keep out`
+    table, so the map cannot silently drift from the contracts it describes."""
+
+    def test_fact_map_agrees_with_contracts_on_both_runtimes(self) -> None:
+        for runtime in ("py", "js"):
+            with self.subTest(runtime=runtime):
+                result = run(runtime, "query_catalog", "--validate-fact-map")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("fact-map ok", result.stdout)
+
+    def test_fact_map_catches_a_dropped_keep_out_row_on_both_runtimes(self) -> None:
+        contract = SKILL_ROOT / "content" / "reference" / "contracts" / "browser-support.md"
+        original = contract.read_text(encoding="utf-8")
+        broken = original.replace(
+            "| Styling approach and design tokens | `web_styling` |\n", ""
+        )
+        self.assertNotEqual(original, broken, "fixture row not found; contract text may have changed")
+        try:
+            contract.write_text(broken, encoding="utf-8")
+            for runtime in ("py", "js"):
+                with self.subTest(runtime=runtime):
+                    result = run(runtime, "query_catalog", "--validate-fact-map")
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("web_styling", result.stderr)
+        finally:
+            contract.write_text(original, encoding="utf-8")
 
 
 if __name__ == "__main__":

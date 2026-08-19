@@ -19,11 +19,12 @@
     "git_history"
   ],
   "target_depth": "orientation",
+  "answer_shape": "router",
   "write_order": 103,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
   "dominant_form": null,
   "template_file": "content/shared/section-readme.template.md",
   "title": "Portfolio decisions",
-  "contract_revision": "2.24.0"
+  "contract_revision": "3.0.0"
 }

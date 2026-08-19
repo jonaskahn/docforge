@@ -16,9 +16,11 @@
     "manifests"
   ],
   "target_depth": "reference",
+  "answer_shape": "lookup",
   "write_order": 107,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/portfolio/templates/portfolio-glossary.md"
 }

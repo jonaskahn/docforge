@@ -21,11 +21,12 @@
     "manifests"
   ],
   "target_depth": "orientation",
+  "answer_shape": "fixed-frame",
   "write_order": 201,
   "provenance_mode": "manifest",
   "audit_profile": "agents-kernel",
   "dominant_form": null,
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "presentation": {
     "related_docs": "none"
   },

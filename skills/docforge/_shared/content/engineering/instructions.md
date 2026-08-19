@@ -10,6 +10,15 @@ Writing-craft instructions for `engineering` group documents. Routes:
 - `web_styling` → [Styling](#styling-writing-craft)
 - `testing_guide` → [Testing-guide](#testing-guide-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+imperative and runnable, every step has an observable result. Name what a
+linked document owns before the link ("the project's release procedure is
+owned there," never "see `release-guide`"). What each side of a link owns,
+and why it is linked rather than restated, is each contract's
+`## Owns / links` table, not this section.
+
 ## Conventions writing craft
 
 For every review convention, name the evidenced required reviewer or check, its
@@ -38,16 +47,6 @@ without reads as a suggestion.
 - **Trigger:** the comparison table only when many conventions are compared
   side by side — no diagrams, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Evidenced conventions, their artifacts, enforcement consequences | `testing-guide` | how conventions are exercised by the suite is owned there |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
 
 ## Data-quality writing craft
 
@@ -78,18 +77,6 @@ universal.
   per the body prose above and
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Quality dimensions, checks, enforcement points, failure actions | `dataset` | each dataset's identity and lineage contract is owned there |
-| Movement and transformation guarantees | `data-flow` | per-handoff guarantees are owned there |
-| A failed check's recovery handoff | the relevant `runbook` | recovery procedure is owned there, linked not restated |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
-
 ## Publishing writing craft
 
 Before publishing, name artifact identity, version-tag consistency, required
@@ -119,17 +106,6 @@ was published.
   explanation, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Artifact identity, gates, publish mechanics, rollback/deprecate | `release-guide` | the project's release procedure is owned there |
-| What was published | `changelog` | the record is owned there, linked never restated |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
-
 ## Release-guide writing craft
 
 For every release gate and rollback decision, state the evidenced check or
@@ -156,17 +132,6 @@ release; `changelog` is the record of what was released.
 - **Trigger:** never — ordered commands and verification, not prose
   explanation, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The release procedure: gates, versioning, verification, rollback | `changelog` | the record of what was released is owned there |
-| The success-signal discipline | `setup-guide` | each command is followed by its observable signal, the same discipline |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
 
 ## Setup-guide writing craft
 
@@ -197,18 +162,6 @@ verification and a short "what next."
   the steps, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The verified path from prerequisites to a running instance | `quickstart` | the under-a-minute first result is owned there |
-| Configuration semantics and the technology inventory | `reference/configuration`, `reference/tech-stack` | owned there, linked not recreated |
-| Running the test suite after setup | `testing-guide` | owned there |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
-
 ## Styling writing craft
 
 State styling-specific component responsibilities and token-composition
@@ -231,17 +184,6 @@ one owns the token/theme system components consume.
   works.
 - **Trigger:** never — the token table plus theming prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The token/theme system, degradation when a token is missing | `ui-components` | component composition and general hierarchy are owned there |
-| Support policy, accessibility, performance claims | `browser-support`, `accessibility`, `performance-budgets` | each claim is linked to its owner, not restated |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
 
 ## Testing-guide writing craft
 
@@ -268,14 +210,3 @@ usually means, and the first thing to check — the how-to discipline
   failure diagnosis.
 - **Trigger:** the overview table only — no diagrams, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Test layers, run commands, isolation models, failure diagnosis | `conventions` | testing conventions and their enforcement are owned there |
-| Which checks gate a release | `release-guide` | the release procedure owns its gates |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.

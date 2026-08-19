@@ -25,10 +25,12 @@
     "git_history"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "entry-catalog",
   "write_order": 71,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
   "dominant_form": null,
+  "contract_revision": "3.0.0",
   "template_file": "content/operations/templates/application-distribution.md",
   "compact_group": "operations_compact",
   "compact_order": 11

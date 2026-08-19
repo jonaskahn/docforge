@@ -11,16 +11,17 @@
     "selectors": {},
     "condition": "discovered_concept"
   },
-  "instruction_file": "content/architecture/instructions/concept.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "answer-first",
   "write_order": 16,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": null,
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/concept.md",
   "compact_group": "concepts_compact",
   "compact_order": 52

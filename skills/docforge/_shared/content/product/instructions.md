@@ -17,6 +17,15 @@ Writing-craft instructions for `product` group documents. Routes:
 - `ba_requirements` → [Requirements-traceability](#requirements-traceability-writing-craft)
 - `po_metrics` → [Success-metrics](#success-metrics-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+plain and outcome-first, a non-specialist finishes the first paragraph.
+Name what a linked document owns before the link ("capability detail is
+owned per feature there," never "see `feature-catalog`"). What each side
+of a link owns, and why it is linked rather than restated, is each
+contract's `## Owns / links` table, not this section.
+
 ## Accessibility writing craft
 
 For each supported interaction, state implemented semantic or resource behavior
@@ -43,17 +52,6 @@ repository hasn't evidenced.
   — plus the verification method and gaps as prose.
 - **Trigger:** never — the checklist is enumerable and the rest is prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The conformance claim: target level, per-area results, verification method | `feature-catalog` | each supported interaction belongs to a feature owned there |
-| Unverified areas and unresolved gaps | `limitations-register` | limits are listed and linked to their owner rather than buried here |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Api-versioning writing craft
 
@@ -85,16 +83,6 @@ surface.
 - **Trigger:** never — the promise is prose, the facts are a table, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The versioning scheme, compatibility promise, deprecation facts | `api-reference` | operation-level request/response detail is owned there, linked not restated |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
-
 ## Backlog-traceability writing craft
 
 This dynamic document exists only when discovery finds ticket or connected
@@ -114,17 +102,6 @@ document rather than leaving an empty artifact.
   verification → status.
 - **Trigger:** never — no diagram is needed.
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Ticket → feature/flow → verification → status mappings | `feature-catalog` | the feature a ticket maps to is owned there |
-| Flow-level verification evidence | the relevant `flow` document | owned there, linked not duplicated per ticket |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
-
 ## Business-rules writing craft
 
 Make every rule independently reviewable. Give it a stable identifier and plain
@@ -143,17 +120,6 @@ their ordered steps or test implementation.
 - **Renders:** one entry per rule — stable id, plain-language statement,
   trigger, outcome, exceptions, enforcement evidence.
 - **Trigger:** never — this is a rule lookup, not a diagram.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Rule identity, trigger, outcome, exceptions, enforcement evidence | `process-flows` | the business narrative that applies rules is owned there |
-| The chain from requirement to owning rule | `requirements-traceability` | owned there, linked not rebuilt here |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Content-model writing craft
 
@@ -181,16 +147,6 @@ and belongs, if anywhere, outside this document set.
 - **Trigger:** never — field tables plus lifecycle prose carry the model, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Content types, fields, lifecycle, publishing boundary | `reference/data-types` | wire representation of fields is owned there, linked not re-derived |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
-
 ## Feature-catalog writing craft
 
 Describe each externally reachable capability through the outcome it enables,
@@ -210,17 +166,6 @@ instead of duplicating either.
   constraints, owning flow.
 - **Trigger:** never — a feature table, explicitly not an implementation
   diagram.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Each feature's outcome, audience, availability, constraints | its owning `flow` document | behavior is owned there, linked not duplicated |
-| Shared positioning and boundary statements | `product-overview` | the product frame is owned there |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Localization writing craft
 
@@ -242,16 +187,6 @@ add a locale, not just that localization exists. Never claim a locale is
   table is the whole document.
 - **Trigger:** never — the table is the whole document, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The supported-locale table, coverage, fallback behavior | `limitations-register` | partial coverage and unsupported locales are user-visible limits, stated with the same evidence discipline |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Migration writing craft
 
@@ -280,16 +215,6 @@ this document is the path between two specific versions.
   this is a how-to, not a compatibility matrix, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The source→target migration path, breaking changes, verification, rollback | `compatibility` | the full version-support matrix is owned there; this document is the path between two versions |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
-
 ## Process-flows writing craft
 
 Write one business-recognizable narrative per canonical flow: identify the
@@ -311,17 +236,6 @@ is a lead; confirm actors and outcomes against source and flow evidence.
   exceptions, and both successful and unsuccessful outcomes.
 - **Trigger:** only when the business decision path cannot be read as steps,
   per [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The business narrative: actor, trigger, actions, decisions, outcomes | the canonical `flow` document | the technical sequence is owned there, linked not pasted |
-| Formal logic of a referenced rule | `business-rules` | the rule catalog owns definitions; this document names the rule only |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Product-overview writing craft
 
@@ -353,17 +267,6 @@ land belongs in the linked document, not here.
   prose above), per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Users, problems, capabilities, non-goals | `feature-catalog` | capability detail is owned per feature there |
-| Behavior depth | the relevant `flow` documents | owned there, routed not restated |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
-
 ## Quickstart writing craft
 
 Derive prerequisites and commands from manifests and the reachable entry path,
@@ -392,17 +295,6 @@ stated outcome.
 - **Trigger:** never — no diagram at this depth, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The shortest verified path to one first useful result | `setup-guide` | full install, configuration, and troubleshooting are owned there |
-| What this product does for the reader | `product-overview` | the "what next" orientation is owned there |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
-
 ## Release-notes writing craft
 
 Correlate tags, release history, and the feature catalog into concise entries
@@ -422,18 +314,6 @@ evidence.
 - **Renders:** the categorized entries themselves — what changed for users,
   whether they must act, which versions are affected.
 - **Trigger:** never — a release lookup; no illustration.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Released user impact, version/date, compatibility implications | `changelog` | the released-version record is owned there |
-| Affected capabilities | `feature-catalog` | each changed feature is owned there |
-| A compatibility or migration implication needing procedure depth | `api-versioning`, `migration` | the owning guide is linked, not summarized |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Requirements-traceability writing craft
 
@@ -455,17 +335,6 @@ the evidence needed to resolve it.
   → verification → status.
 - **Trigger:** never — no diagram is needed.
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The chain from evidenced requirement to rule/flow, implementation, verification | `business-rules` | the rule a requirement maps to is owned there |
-| Flow-level verification evidence | the relevant `flow` document | owned there, linked not repeated per requirement |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
-
 ## Success-metrics writing craft
 
 For each outcome, separate the desired change from the measurable signal, its
@@ -486,14 +355,3 @@ and link implementation detail to the owning analytics or configuration source.
   interpretation.
 - **Trigger:** only when an evidenced collection pipeline cannot be understood
   from the fields.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Outcome, measurable signal, instrumentation state, interpretation | `feature-catalog` | each outcome belongs to a feature owned there |
-| Instrumentation and pipeline implementation | `reference/configuration` | where the instrumentation is configured is owned there, linked not restated |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.

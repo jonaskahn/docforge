@@ -16,6 +16,10 @@ Writing-craft instructions for compact-layout documents. Routes:
 - `reference_compact` → [Writing `docs/reference.md`](#writing-docsreferencemd)
 - `security_compact` → [Writing `docs/security.md`](#writing-docssecuritymd)
 
+## Voice and linking craft
+
+Each merged file keeps its members' own group voice ([`voice.md`](../../references/voice.md)) section by section — a compact file has no voice of its own, because it hosts documents rather than rewriting them. When a section links a sibling, name what that sibling owns before the link ("the machine-readable matrix this table projects," never "see `flow-index.json`"). What each section owns and why the rest is linked rather than restated is each contract's `## Owns / links` table, not this section.
+
 ## Shared rules
 
 - Ground each section from the repository evidence cited in provenance — one
@@ -94,17 +98,6 @@ section, and never invent detail to fill the budget.
   testing, conventions, tech debt, flows, terms.
 - **Trigger:** never — no links, no diagrams; facts only.
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Each topic section's evidence | its member contract (`agents-architecture`, `agents-patterns`, `agents-testing`, `agents-conventions`, `agents-tech-debt`, `agents-flow`, `agents-glossary`) | each section is written from its own member contract |
-| — | no other document | the coding-agent reference never links (agent-context isolation) |
-
-## Voice
-
-- **Voice:** terse and factual; no links, no reader directions, no attribution.
-
 ## Writing `docs/architecture.md`
 
 The compact architecture file. Write one `##` section per member the
@@ -147,19 +140,6 @@ document actually lists, and do not route readers into source files.
   prose — orientation depth caps a diagram at five elements, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## High-level architecture` | `architecture-high-level` | the member contract the section is written from |
-| `## Component design` | `architecture-low-level` | the zoom-in contract; one level deeper only where the decomposition changes a reader's judgment |
-| `## Constraints`, `## Dependencies`, `## Technical debt` | `constraints`, `dependencies-inventory`, `tech-debt-register` | each section grounds in its member contract, never cross-filed |
-| Selected members not in `compact_members` | their standard paths | spilled siblings are linked from `## Scope and boundaries`, never silently dropped |
-
-## Voice
-
-- **Voice:** terse and structural; every block, boundary, and relationship is named and evidenced.
-
 ## Writing `docs/business-analyst.md`
 
 The compact business-analyst file. It replaces
@@ -197,18 +177,6 @@ document actually lists. Spilled siblings live in `docs/product/business-analyst
 - **Trigger:** a flowchart only when a business decision path cannot be read
   as steps; never for rules or traceability — those are tables, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Process flows` | `process-flows` | the member contract each flow section is written from |
-| `## Business rules` | `business-rules` | a rule is stated once there and linked from the flow that applies it |
-| `## Requirements traceability` | `requirements-traceability` | the chain from requirement to rule/flow is owned there |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Writing `docs/concepts.md`
 
@@ -252,17 +220,6 @@ Spilled siblings live in `docs/architecture/concepts/`.
   budget, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Each budgeted concept section | `concept` | written from the concept contract at full depth |
-| A one-sentence term | `glossary` | a glossary entry in the reference section, never a concept section here |
-
-## Voice
-
-- **Voice:** terse and structural; every block, boundary, and relationship is named and evidenced.
-
 ## Writing `docs/contributing.md`
 
 The compact contributing file. Exists only at Diligence or higher
@@ -288,17 +245,6 @@ document actually lists, and do not route readers into source files.
   escalation token.
 - **Trigger:** never — orientation prose plus the table, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Ownership` | `ownership` | the member contract the section is written from |
-| The verified contribution path and required checks | `contributing-root` (the root `CONTRIBUTING.md`) | linked, never folded into this file |
-
-## Voice
-
-- **Voice:** welcoming imperative; assume competence, not context.
 
 ## Writing `docs/decisions.md`
 
@@ -342,17 +288,6 @@ Spilled siblings live in `docs/architecture/decisions/`.
 - **Trigger:** never — the register is the record, the sections are the
   budget.
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Each budgeted decision section | `adr` | written from the ADR contract at its normal depth |
-| The register's status lifecycle | `decisions-index` | what decision records are and how to read them is owned there |
-
-## Voice
-
-- **Voice:** plain and decisive; context, decision, and consequences stated, never argued.
-
 ## Writing `docs/engineering.md`
 
 The compact engineering file. Write one `##` section per member the
@@ -386,16 +321,6 @@ document actually lists, and do not route readers into source files.
 - **Trigger:** a member's diagram form only when the folded section needs
   it — compact sections keep prose and commands by default, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Setup`, `## Testing`, `## Conventions`, `## Release` | `setup-guide`, `testing-guide`, `conventions`, `release-guide` | each section grounds in its member contract |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
 
 ## Writing `docs/flows.md`
 
@@ -440,17 +365,6 @@ Spilled siblings live in `docs/flows/`.
   path passes about four steps or any branch exists, within the deep-dive
   budget.
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Flow candidate matrix` | `flow-index` (and `.docforge/flow-index.json`) | the machine-readable matrix this table projects, never a second source of truth |
-| Each budgeted flow section | `flow` | written from the flow contract, every field carried at one line per repeated instance |
-
-## Voice
-
-- **Voice:** ordered and evidence-backed; one step per hop, every branch traced to its trigger.
-
 ## Writing `docs/operations.md`
 
 The compact operations file. Exists only at Diligence or higher (operations
@@ -487,18 +401,6 @@ document actually lists, and do not route readers into source files.
 - **Trigger:** a flowchart only in a runbook section whose diagnosis has
   material branches — otherwise prose, commands, and tables, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Deployment` | `deployment` | the member contract the section is written from |
-| `## Observability` | `observability` | the member contract the section is written from |
-| `## Runbook index` and each runbook section | `runbooks-index`, `runbook` | the register and each folded runbook are written from their contracts |
-
-## Voice
-
-- **Voice:** imperative and runnable; every step has an observable result.
 
 ## Writing `docs/product-owner.md`
 
@@ -540,16 +442,6 @@ document actually lists. Spilled siblings live in `docs/product/product-owner/`.
   cannot be understood from the fields; the feature, release, and
   traceability sections never diagram.
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Feature catalog`, `## Success metrics`, `## Release notes`, `## Backlog traceability` | `feature-catalog`, `success-metrics`, `release-notes`, `backlog-traceability` | each section grounds in its member contract; backlog exists only on ticket evidence |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
-
 ## Writing `docs/product.md`
 
 The compact product file. Write one `##` section per member, in this reading
@@ -570,16 +462,6 @@ source files.
 - **Trigger:** rarely — orientation depth; a claim needing a diagram belongs
   in the linked document, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Overview` | `product-overview` | the member contract the section is written from |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Writing `docs/reference.md`
 
@@ -607,16 +489,6 @@ document actually lists, and do not route readers into source files.
   section instead of restating definitions.
 - **Trigger:** never — compact reference is lookup tables, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Configuration`, `## Limitations`, `## Technology stack`, `## Glossary` | `configuration`, `limitations-register`, `tech-stack`, `glossary` | each section grounds in its member contract |
-
-## Voice
-
-- **Voice:** terse and tabular; no narrative connective tissue.
 
 ## Writing `docs/security.md`
 
@@ -647,14 +519,3 @@ document actually lists, and do not route readers into source files.
   with exactly one disposition; one row per data class × lifecycle stage.
 - **Trigger:** the DFD is the threat-model section's analysis frame — per
   the `threat-model` contract; the data-handling section stays tabular.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| `## Threat model` | `threat-model` | the member contract the section is written from |
-| `## Data handling` | `data-handling` | classifications are linked from the threat model, never restated |
-
-## Voice
-
-- **Voice:** precise; hedge only where evidence is thin; never alarmist.

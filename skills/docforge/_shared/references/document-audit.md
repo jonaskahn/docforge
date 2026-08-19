@@ -16,6 +16,9 @@ Start a separate cold artifact-only pass after writing. Review only:
   way voice is: does the document state its outcome before its mechanism, is
   every item named before any item is explained, and does an L1 section carry
   L2 detail for one item only;
+- its declared shape ([`document-shapes.md`](document-shapes.md)) — the
+  travel order that shape prescribes, its completeness rule, and its own stop
+  test, checked as a judgment call rather than a heading match;
 - applicable quality checks;
 - sources cited by validated current provenance, after the mechanical gate has
   confirmed concrete metadata, source blobs, and heading-matched sections;

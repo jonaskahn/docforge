@@ -5,6 +5,15 @@ Writing-craft instructions for `contributing` group documents. Routes:
 - `contributing_root` → [Contributing-router](#contributing-router-writing-craft)
 - `ownership` → [Ownership](#ownership-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+welcoming imperative, assume competence not context. Name what a linked
+document owns before the link ("workspace preparation is owned there,"
+never "see `setup_guide`"). What each side of a link owns, and why it is
+linked rather than restated, is each contract's `## Owns / links` table,
+not this section.
+
 ## Contributing-router writing craft
 
 Open with the smallest verified contribution journey: prepare the workspace,
@@ -24,18 +33,6 @@ review convention, or imply that access is available when it is external.
   required checks, submit through the actual review path.
 - **Trigger:** never — a short ordered path, not a process diagram, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The verified contribution journey, required gates | `setup-guide` | workspace preparation is owned there |
-| The checks a contributor must run | `testing-guide` | owned there |
-| Where an owner or maintainer decision is needed | `ownership` | the escalation route is owned there |
-
-## Voice
-
-- **Voice:** welcoming imperative; assume competence, not context.
 
 ## Ownership writing craft
 
@@ -63,13 +60,3 @@ unowned area stated plainly is more useful than a guessed owner.
   escalation token — the table is the whole document.
 - **Trigger:** never — the table is the whole document, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Owned areas, responsibility boundaries, escalation tokens | `contributing-root` | the contribution journey links here to name who must approve |
-
-## Voice
-
-- **Voice:** welcoming imperative; assume competence, not context.

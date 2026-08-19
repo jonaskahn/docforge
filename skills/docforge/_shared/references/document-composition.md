@@ -25,6 +25,14 @@ more than one audience need this exact fact?
 - Is it a lookup fact (term, value, code)? **Yes** → shared-fact spine. **No** → aligned.
 - Is it a warning or critical constraint? → the topic `README.md` regardless.
 
+A document's *class* (above) says who needs a fact and drives whether it is
+flat, promoted, or a shared spine. A document's *shape*
+([`document-shapes.md`](document-shapes.md)) says how the document that
+holds the fact is built — its spine and travel order. The two vary
+independently: a `shared-fact spine` document can be `lookup`-shaped
+(`glossary`) or `entry-catalog`-shaped (`tech_debt`), and an `aligned`
+document can be `answer-first` (`concept`) or `ordered-narrative` (`flow`).
+
 BA and PO stay distinct audience-specific packs: BA owns precise business-rule
 logic and requirement traceability; PO owns feature value, sequencing, and
 release notes. Averaging them into one "business" folder serves neither. Build
@@ -69,12 +77,13 @@ those facts.
 | Domain term definition | `reference/glossary.md` | every document links; none restates |
 | Flow steps and decision points | flow document | subfiles link for depth, once promoted |
 | Feature mechanism | flow's `engineering.md`, once promoted | flow document carries a one-line gist + link |
-| Success metric / KPI target | PO `success-metrics.md` | BA omits; does not cross-link |
-| Roadmap timing | `product/roadmap.md` | PO README links; does not duplicate |
 | Warning / critical constraint | topic `README.md` | subfile may expand it |
 | Agent-specific non-obvious convention | each selected agent-context output whose reader question needs it | may repeat across isolated outputs; never cross-referenced |
-| What the repository is built with | `reference/tech-stack.md` | architecture and setup link; do not restate |
-| What it depends on operationally and what breaks | `architecture/dependencies.md` (`dependencies-inventory`) | tech-stack omits failure framing |
+
+Ownership disputes between two *document types* rather than between
+audiences — tech-stack vs. the dependency inventory, a success metric vs. a
+roadmap entry, and other cross-type contests — are arbitrated in
+[`../content/fact-map.md`](../content/fact-map.md), not restated here.
 
 ## Atomic promotion
 

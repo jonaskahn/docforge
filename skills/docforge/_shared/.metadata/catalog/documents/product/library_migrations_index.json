@@ -21,13 +21,14 @@
   "instruction_file": "content/shared/folder-index.instruction.md",
   "requires": [],
   "target_depth": "orientation",
+  "answer_shape": "router",
   "write_order": 42,
   "provenance_mode": "sections",
   "audit_profile": "router",
   "dominant_form": null,
   "template_file": "content/shared/section-readme.template.md",
   "title": "Migrations",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "compact_group": "product_compact",
   "compact_order": 51
 }

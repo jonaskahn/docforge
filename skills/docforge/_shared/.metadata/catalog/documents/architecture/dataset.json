@@ -15,16 +15,18 @@
     },
     "condition": "discovered_dataset"
   },
-  "instruction_file": "content/architecture/instructions/dataset.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph",
     "manifests"
   ],
   "target_depth": "reference",
+  "answer_shape": "lookup",
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/data-contract.md",
   "compact_group": "architecture_compact",
   "compact_order": 52

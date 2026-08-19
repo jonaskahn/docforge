@@ -19,6 +19,7 @@
   "instruction_file": "content/compact/instructions.md",
   "requires": [],
   "target_depth": "deep-dive",
+  "answer_shape": "merged-section-spine",
   "write_order": 204,
   "nav_order": 80,
   "provenance_mode": "sections",
@@ -28,7 +29,7 @@
     "related_docs": "none"
   },
   "template_file": "content/compact/templates/agents.template.md",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "compact_target": "docs/agents.md",
   "compact_members": [
     "agents_architecture",

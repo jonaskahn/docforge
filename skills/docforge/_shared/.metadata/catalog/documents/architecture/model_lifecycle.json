@@ -15,17 +15,19 @@
     },
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/model-lifecycle.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph",
     "manifests",
     "git_history"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "ordered-narrative",
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "flowchart",
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/model-lifecycle.md",
   "compact_group": "architecture_compact",
   "compact_order": 24

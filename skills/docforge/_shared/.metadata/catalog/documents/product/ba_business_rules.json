@@ -21,11 +21,12 @@
     "flow_graph"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "entry-catalog",
   "write_order": 45,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "template_file": "content/product/templates/business-rules.md",
   "compact_group": "ba_compact",
   "compact_order": 13

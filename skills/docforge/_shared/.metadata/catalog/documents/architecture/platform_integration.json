@@ -16,16 +16,18 @@
     },
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/platform-integration.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph",
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "entry-catalog",
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": null,
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/platform-integration.md",
   "compact_group": "architecture_compact",
   "compact_order": 26

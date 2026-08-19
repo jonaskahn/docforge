@@ -37,13 +37,11 @@ before individual mechanisms, then state what must always hold.
   read as prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
+## Linking craft
 
-| This document owns | Links to | Because |
-|---|---|---|
-| Invariant identifiers and their enforcement mechanisms | `economic-invariants` | the paired view; inventory rows link to invariants, never restate them |
-| Accepted residual risk and audit evidence | `threat-model` | the same evidence-and-residual-risk discipline is owned there |
-
-## Voice
-
-- **Voice:** precise; hedge only where evidence is thin; never alarmist.
+Voice for `contract_system` follows `architecture`'s row in
+[`voice.md`](../../references/voice.md); voice for `economic_invariants`
+follows `security`'s row. Link an inventory row to its invariant identifier
+by name ("enforced by `INV-03`"), never a bare "see economic-invariants."
+What each side of a link owns is each contract's `## Owns / links` table,
+not this section.

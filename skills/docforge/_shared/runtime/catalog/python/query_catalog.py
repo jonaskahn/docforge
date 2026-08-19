@@ -49,6 +49,23 @@ ALLOWED_DOMINANT_FORMS = {
 ALLOWED_VIEW_FORMS = ALLOWED_DOMINANT_FORMS - {None, "table"}
 VIEW_DEPTHS = {"orientation", "working", "deep-dive", "reference", "router"}
 TARGET_DEPTHS = {"orientation", "deep-dive", "reference", "router"}
+# The closed shape vocabulary (see references/document-shapes.md). `null` is
+# permitted only for the one non-Markdown template output (claude-settings.json).
+ALLOWED_ANSWER_SHAPES = {
+    None,
+    "answer-first",
+    "ordered-narrative",
+    "executable-procedure",
+    "diagnostic-path",
+    "lookup",
+    "entry-catalog",
+    "coverage-matrix",
+    "router",
+    "merged-section-spine",
+    "fixed-frame",
+}
+# A router-depth document routes; it never also carries the answer itself.
+ROUTER_SHAPES = {"router", "entry-catalog"}
 MODEL_DEPTHS = {
     "c4": ("context", "container", "component", "component-evidence"),
     "arc42": ("context", "building-block-l1", "building-block-l2", "runtime-scenarios"),
@@ -71,6 +88,7 @@ REQUIRED_DOC_FIELDS = {
     "template_file",
     "requires",
     "target_depth",
+    "answer_shape",
     "write_order",
     "provenance_mode",
     "audit_profile",
@@ -345,6 +363,22 @@ def manifest_compact_members(repo: Path | None, doc_id: str) -> list | None:
     return None
 
 
+ATX_HEADING = re.compile(r"^(#{1,5})(\s+\S)", re.MULTILINE)
+
+
+def _demote_member_contract(text: str) -> str:
+    """A member contract is a standalone document: one `#` title, then its own
+    `##` sections. Nested under the composed file's `## <member id>` those
+    sections become siblings of the heading that names them, so eight members
+    render as twenty-four same-named `##` blocks. Drop the title — the
+    injected heading already names the member — and demote the rest one
+    level, so the composed contract is a real two-level outline."""
+    lines = text.lstrip().splitlines()
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    return ATX_HEADING.sub(lambda m: "#" + m.group(1) + m.group(2), "\n".join(lines).strip())
+
+
 def composed_compact_contract(
     detail: dict,
     repo: Path | None = None,
@@ -374,6 +408,7 @@ def composed_compact_contract(
             "template": member.get("template_file"),
             "requires": member.get("requires", []),
             "target_depth": member.get("target_depth"),
+            "answer_shape": member.get("answer_shape"),
             "model_depth": member.get("model_depth", {}),
             "dominant_form": member.get("dominant_form"),
             "illustration_views": member.get("illustration_views", []),
@@ -388,7 +423,7 @@ def composed_compact_contract(
         # each get their own `## <member id>` block.
         if member_contract and member_id not in seen_members and (SKILL_ROOT / member_contract).is_file():
             seen_members.add(member_id)
-            text = (SKILL_ROOT / member_contract).read_text(encoding="utf-8").rstrip()
+            text = _demote_member_contract((SKILL_ROOT / member_contract).read_text(encoding="utf-8"))
             parts.append(f"## {member_id}\n\n{text}")
     return "\n\n".join(parts), members
 
@@ -421,6 +456,7 @@ def route(
         "workflow": ROUTE_WORKFLOW,
         "requires": detail.get("requires", []),
         "target_depth": detail.get("target_depth"),
+        "answer_shape": detail.get("answer_shape"),
         "audit_profile": detail.get("audit_profile"),
         "dominant_form": detail.get("dominant_form"),
         "illustration_views": detail.get("illustration_views", []),
@@ -785,6 +821,21 @@ def validate() -> list[str]:
         if form not in ALLOWED_DOMINANT_FORMS:
             errors.append(f"{doc_id}: invalid dominant_form {form!r}")
         errors.extend(_validate_illustration_views(doc, doc_id))
+        # answer_shape is required (REQUIRED_DOC_FIELDS above); null is valid
+        # only for the one non-Markdown template output. Beyond the enum, it
+        # must agree with its two paired fields.
+        shape = doc.get("answer_shape")
+        if shape not in ALLOWED_ANSWER_SHAPES:
+            errors.append(f"{doc_id}: invalid answer_shape {shape!r}")
+        elif (selection.get("mode") == "compact") != (shape == "merged-section-spine"):
+            errors.append(
+                f"{doc_id}: merged-section-spine and selection.mode compact must agree"
+            )
+        elif doc.get("target_depth") == "router" and shape not in ROUTER_SHAPES:
+            errors.append(
+                f"{doc_id}: target_depth router requires answer_shape "
+                f"{' or '.join(sorted(ROUTER_SHAPES))}"
+            )
         summary = doc.get("summary")
         if not summary or not isinstance(summary, str) or len(summary) > 160:
             errors.append(f"{doc_id}: summary must be a non-empty string of at most 160 characters")
@@ -937,6 +988,68 @@ def _validate_presentation(
             errors.append(f"{label}: invalid {field} {value[field]}")
 
 
+FACT_MAP_PATH = "content/fact-map.md"
+FACT_MAP_ROW_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|$", re.MULTILINE)
+KEEP_OUT_SECTION_RE = re.compile(r"## Keep out\n\n(.*?)\n\n## ", re.DOTALL)
+
+
+def _keep_out_targets(contract_text: str) -> list[str]:
+    match = KEEP_OUT_SECTION_RE.search(contract_text)
+    if not match:
+        return []
+    targets = []
+    for line in match.group(1).splitlines():
+        if not line.startswith("|") or "---" in line:
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) >= 2:
+            targets.append(cells[-1])
+    return targets
+
+
+def validate_fact_map() -> list[str]:
+    """Every row of `content/fact-map.md` names a fact class one document type
+    owns and one or more others are contested against. Agreement means: each
+    contested type's `## Keep out` table routes that fact to the owner —
+    otherwise the map and the contracts it describes have drifted apart."""
+    errors: list[str] = []
+    fact_map_file = SKILL_ROOT / FACT_MAP_PATH
+    if not fact_map_file.is_file():
+        return [f"missing {FACT_MAP_PATH}"]
+    text = fact_map_file.read_text(encoding="utf-8")
+    rows = FACT_MAP_ROW_RE.findall(text)
+    if not rows:
+        return [f"{FACT_MAP_PATH}: no data rows found"]
+    for fact, owner, contested, _how in rows:
+        try:
+            owner_detail = load_type(owner)
+        except ValueError:
+            errors.append(f"fact-map row {fact.strip()!r}: unknown owner id {owner!r}")
+            continue
+        owner_contract = owner_detail.get("contract_file")
+        if not owner_contract or not (SKILL_ROOT / owner_contract).is_file():
+            errors.append(f"fact-map row {fact.strip()!r}: owner {owner!r} has no contract file")
+            continue
+        for contested_id in re.findall(r"`([^`]+)`", contested):
+            try:
+                contested_detail = load_type(contested_id)
+            except ValueError:
+                errors.append(f"fact-map row {fact.strip()!r}: unknown contested id {contested_id!r}")
+                continue
+            contested_contract = contested_detail.get("contract_file")
+            if not contested_contract or not (SKILL_ROOT / contested_contract).is_file():
+                errors.append(f"fact-map row {fact.strip()!r}: contested id {contested_id!r} has no contract file")
+                continue
+            contested_text = (SKILL_ROOT / contested_contract).read_text(encoding="utf-8")
+            targets = _keep_out_targets(contested_text)
+            if not any(f"`{owner}`" in target for target in targets):
+                errors.append(
+                    f"fact-map row {fact.strip()!r}: {contested_id!r}'s Keep out "
+                    f"does not route to owner {owner!r}"
+                )
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tier", choices=["spine", "diligence", "portfolio"])
@@ -970,6 +1083,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--include-dynamic", action="store_true")
     parser.add_argument("--legacy", action="store_true", help="Emit reconstructed monolith JSON")
     parser.add_argument("--validate", action="store_true")
+    parser.add_argument("--validate-fact-map", action="store_true")
     parser.add_argument("--category", dest="category", help="Group id, e.g. architecture")
     parser.add_argument("--route", dest="route_id", help="Document id to resolve")
     parser.add_argument(
@@ -989,6 +1103,7 @@ def main(argv: list[str] | None = None) -> int:
             args.profile,
             args.applicable,
             args.validate,
+            args.validate_fact_map,
             args.legacy,
             args.category,
             args.route_id,
@@ -998,7 +1113,8 @@ def main(argv: list[str] | None = None) -> int:
     if modes != 1:
         return fail(
             "specify exactly one of --tier, --id, --ids, --profile, "
-            "--applicable, --legacy, --validate, --category, --route, --groups",
+            "--applicable, --legacy, --validate, --validate-fact-map, "
+            "--category, --route, --groups",
             2,
         )
 
@@ -1011,6 +1127,15 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{len(errors)} validation error(s)", file=sys.stderr)
                 return 1
             print("catalog ok")
+            return 0
+        if args.validate_fact_map:
+            errors = validate_fact_map()
+            if errors:
+                for error in errors:
+                    print(f"error: {error}", file=sys.stderr)
+                print(f"{len(errors)} fact-map error(s)", file=sys.stderr)
+                return 1
+            print("fact-map ok")
             return 0
         if args.legacy:
             print(dump_json(as_legacy_catalog()), end="")

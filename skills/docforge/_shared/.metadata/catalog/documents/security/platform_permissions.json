@@ -22,11 +22,12 @@
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "entry-catalog",
   "write_order": 79,
   "provenance_mode": "sections",
   "audit_profile": "risk",
   "dominant_form": "table",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "template_file": "content/security/templates/platform-permissions.md",
   "compact_group": "security_compact",
   "compact_order": 13

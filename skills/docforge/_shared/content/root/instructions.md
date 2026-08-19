@@ -5,6 +5,15 @@ Writing-craft instructions for `root` group documents. Routes:
 - `changelog` → [Changelog](#changelog-writing-craft)
 - `root_readme` → [Root README](#root-readme-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+plain and outcome-first, a non-specialist finishes the first paragraph. Name
+what a linked document owns before linking it ("the under-a-minute verified
+first result is `quickstart`'s job"), never a bare "see `foo.md`." What each
+link owns, and why it is linked rather than restated here, is each contract's
+`## Owns / links` table, not this section.
+
 ## Changelog writing craft
 
 Build entries from released tags and history, then translate only material
@@ -24,17 +33,6 @@ supported operational contract.
 - **Renders:** the categorized entries themselves — version, release date,
   material user-visible change.
 - **Trigger:** never — a chronological lookup document; no illustration.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Released versions, dates, user-visible changes, compatibility notes | `release-notes` | the product-facing view of released impact is owned there |
-| A change needing procedure depth | the owning guide (`migration`, `api-versioning`) | linked, never embedded |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.
 
 ## Root README writing craft
 
@@ -57,15 +55,3 @@ omit unknown operational metadata rather than presenting a placeholder as fact.
 - **Trigger:** never an architecture diagram — the routing table is the only
   visual, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Purpose, audience, verified quick start, routing | `quickstart` | the under-a-minute verified first result is owned there |
-| Environment choices, prerequisites, recovery | `setup-guide` | linked when the quick start would need them |
-| The full reader-question routing | `docs-index` | the documentation index owns the complete routing table |
-
-## Voice
-
-- **Voice:** plain and outcome-first; a non-specialist finishes the first paragraph.

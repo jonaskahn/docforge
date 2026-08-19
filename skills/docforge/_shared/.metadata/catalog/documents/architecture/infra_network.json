@@ -15,16 +15,18 @@
     },
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/network.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph",
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "answer-first",
   "write_order": 19,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": "flowchart",
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/network.md",
   "compact_group": "architecture_compact",
   "compact_order": 23

@@ -91,10 +91,12 @@ exist.
   [`../../references/illustration.md`](../../references/illustration.md),
   router documents use prose and links exclusively.
 
-## Connections
+## Linking craft
 
-| This document owns | Links to | Because |
-|---|---|---|
-| Section introduction, at-a-glance, scope, reading paths, and child map | every listed child document | the index routes; each child owns its own facts, never restated here |
-| — | its parent index, if nested | keeps the router chain traceable from the repository root down |
-| Nothing else | — | a router that starts explaining a child's content in its own line has stopped being a router — move that detail into the child |
+Every link on this page names the child's reader question, never its title
+restated. Write the child map as "who wants to know X → this document," not
+"see `foo.md`" — a path is never the visible link text. Keep the reading-path
+table above the child map: a reader choosing a task should not have to scan
+the full map first. What each child owns and why this document only links to
+it, rather than restating it, is the contract's `## Owns / links` table, not
+this section.

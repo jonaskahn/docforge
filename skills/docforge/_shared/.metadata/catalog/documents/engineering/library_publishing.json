@@ -21,10 +21,12 @@
     "git_history"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "executable-procedure",
   "write_order": 57,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
   "dominant_form": null,
+  "contract_revision": "3.0.0",
   "template_file": "content/engineering/templates/publishing.md",
   "compact_group": "engineering_compact",
   "compact_order": 12

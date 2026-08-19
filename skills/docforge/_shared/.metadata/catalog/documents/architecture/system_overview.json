@@ -11,12 +11,13 @@
     "selectors": {},
     "condition": "multi_flow_repo"
   },
-  "instruction_file": "content/architecture/instructions/system-overview.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "flow_graph",
     "code_graph"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "answer-first",
   "write_order": 17,
   "nav_order": 29,
   "provenance_mode": "sections",
@@ -28,7 +29,7 @@
     "arc42": "runtime-scenarios",
     "mermaid": "complementary"
   },
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "compact_group": "architecture_compact",
   "compact_order": 11,
   "illustration_views": [

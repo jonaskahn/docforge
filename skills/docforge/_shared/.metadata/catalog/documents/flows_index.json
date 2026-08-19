@@ -16,6 +16,7 @@
     "code_graph"
   ],
   "target_depth": "orientation",
+  "answer_shape": "coverage-matrix",
   "write_order": 21,
   "nav_order": 30,
   "provenance_mode": "sections",
@@ -23,7 +24,7 @@
   "dominant_form": null,
   "template_file": "content/flows/flow-index.template.md",
   "title": "Flows",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "compact_group": "flows_compact",
   "compact_order": 51
 }

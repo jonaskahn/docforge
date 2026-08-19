@@ -22,10 +22,12 @@
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "executable-procedure",
   "write_order": 41,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
   "dominant_form": null,
+  "contract_revision": "3.0.0",
   "presentation": {
     "primary_audience": "beginners"
   },

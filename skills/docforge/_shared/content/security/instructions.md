@@ -9,6 +9,15 @@ Writing-craft instructions for `security` group documents. Routes:
 - `threat_model` → [Threat-model](#threat-model-writing-craft)
 - `threat_register` → [Threat-register](#threat-register-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+precise, hedge only where evidence is thin, never alarmist. Name what a
+linked document owns before the link ("the bounded DFD and narrative this
+register scores are owned there," never "see `threat-model`"). What each
+side of a link owns, and why it is linked rather than restated, is each
+contract's `## Owns / links` table, not this section.
+
 ## Api-authentication writing craft
 
 Open with the authoritative schema, export, or generator that defines the public
@@ -41,18 +50,6 @@ synthetic placeholder.
   and the credential table, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The public surface and compatibility boundary | `api-reference` | the schema or generator that defines it is owned there |
-| Quota contracts | `api-rate-limits` | owned there, linked not restated |
-| Shared error contracts | `api-errors` | owned there, linked not restated |
-
-## Voice
-
-- **Voice:** precise; hedge only where evidence is thin; never alarmist.
-
 ## Data-handling writing craft
 
 For each data-class lifecycle row, cite repository evidence for collection, use,
@@ -84,17 +81,6 @@ individual's name as a security contact — use the role or the channel from
 - **Trigger:** never — the table plus prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Data classes, lifecycle, access boundaries, deletion | `threat-model` | classifications are referenced there, never restated |
-| The security contact role or channel | `security-policy` | owned there, referenced not restated |
-
-## Voice
-
-- **Voice:** precise; hedge only where evidence is thin; never alarmist.
-
 ## Platform-permissions writing craft
 
 Pair each manifest or entitlement declaration with provenance for request timing,
@@ -123,17 +109,6 @@ authoritative.
   revocation recovery.
 - **Trigger:** never — the permission table is primary, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Requested capabilities, request timing, denial fallback, revocation recovery | `platform-compatibility` | platform minimums and degradation are owned there |
-| The data a granted permission unlocks | `data-handling` | access boundaries per class are owned there |
-
-## Voice
-
-- **Voice:** precise; hedge only where evidence is thin; never alarmist.
 
 ## Security-policy writing craft
 
@@ -172,17 +147,6 @@ not an analysis.
 - **Trigger:** only when an evidenced lifecycle needs three or more states —
   disclosure policy is procedural prose, per
   [`../../references/illustration.md`](../../references/illustration.md).
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Scope, reporting procedure, response commitments, safe harbor | `threat-model` | technical analysis is owned there; this page is procedure, not analysis |
-| Scored threats and exhaustive interactions | `threat-register` | owned there, never restated on this page |
-
-## Voice
-
-- **Voice:** precise; hedge only where evidence is thin; never alarmist.
 
 ## Threat-model writing craft
 
@@ -223,18 +187,6 @@ effectiveness. Trust boundaries are zones or crossings, not process nodes.
   STRIDE pass, per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| The bounded DFD, STRIDE matrix, threats, responses | `threat-register` | scores and exhaustive interactions are owned there, never this narrative |
-| Data classifications | `data-handling` | owned there, linked not restated |
-| Disclosure workflow | `security-policy` | owned there; kept out of this document |
-
-## Voice
-
-- **Voice:** precise; hedge only where evidence is thin; never alarmist.
-
 ## Threat-register writing craft
 
 Generate this dynamic document only after a recorded high-criticality trigger
@@ -251,13 +203,3 @@ one. Link back to `threat-model` for the bounded DFD and narrative.
   likelihood, impact, control, and owner.
 - **Trigger:** never — the bounded DFD and narrative are owned by
   `threat-model`, linked not redrawn.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Scored threats, controls, owners | `threat-model` | the bounded DFD and narrative this register scores are owned there |
-
-## Voice
-
-- **Voice:** precise; hedge only where evidence is thin; never alarmist.

@@ -20,11 +20,12 @@
     "code_graph"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "lookup",
   "write_order": 205,
   "provenance_mode": "sections",
   "audit_profile": "agent-view",
   "dominant_form": null,
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "presentation": {
     "related_docs": "none"
   },

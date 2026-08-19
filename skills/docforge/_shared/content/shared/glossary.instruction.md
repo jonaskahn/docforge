@@ -27,9 +27,9 @@ Covers both `glossary` (repository-scoped) and `portfolio_glossary`
 - **Trigger:** never — per
   [`../../references/illustration.md`](../../references/illustration.md).
 
-## Connections
+## Linking craft
 
-| This document owns | Links to | Because |
-|---|---|---|
-| Term and its precise definition | the document that owns the concept in depth (e.g. a `concept` or `flow` document) | the glossary is a pointer, not an explanation — one owner per fact |
-| A portfolio-scoped term | the clearest member-repo glossary entry | avoids re-defining a term the portfolio glossary only needs to disambiguate across repos |
+Name the owning document by what it owns, not by its filename: "the concept's
+full model lives there," never "see `concept.md`." What each glossary entry
+owns and why it links rather than restates is each contract's
+`## Owns / links` table, not this section.

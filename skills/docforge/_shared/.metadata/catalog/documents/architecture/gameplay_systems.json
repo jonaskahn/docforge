@@ -15,15 +15,17 @@
     },
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/gameplay-systems.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "entry-catalog",
   "write_order": 18,
   "provenance_mode": "sections",
   "audit_profile": "architecture",
   "dominant_form": null,
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/gameplay-systems.md",
   "compact_group": "architecture_compact",
   "compact_order": 19

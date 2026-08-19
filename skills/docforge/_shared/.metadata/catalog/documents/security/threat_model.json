@@ -16,6 +16,7 @@
     "code_graph"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "answer-first",
   "write_order": 77,
   "provenance_mode": "sections",
   "audit_profile": "risk",
@@ -24,7 +25,7 @@
     "stride": "full-element",
     "mermaid": "annotated"
   },
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "template_file": "content/security/templates/threat-model.md",
   "compact_group": "security_compact",
   "compact_order": 2,

@@ -2,9 +2,21 @@
 
 - [`references/docs-tree.md`](references/docs-tree.md): paths, naming, tiers,
   placement.
-- [`content/README.md`](content/README.md): must-present content, keep-out
-  boundaries, mode, and depth — one contract per document type, routed by
-  group.
+- [`content/README.md`](content/README.md): the universal contract,
+  typed-profile behavior, and boundaries across the content tree; risk-register
+  routing points to `content/fact-map.md`.
+- `content/<group>/contracts/` (or `<group>/<id>.contract.md` for small
+  groups): per-document-type reader question, mode, depth, shape,
+  must-present, keep-out, and fact ownership.
+- [`content/fact-map.md`](content/fact-map.md): contested fact-class
+  arbitration between document types, where two or more types could each
+  plausibly claim the same fact.
+- [`references/progressive-disclosure.md`](references/progressive-disclosure.md):
+  the altitude vocabulary (L0–L3) and the stop test; per-shape travel order
+  lives in `document-shapes.md`.
+- [`references/document-shapes.md`](references/document-shapes.md): the
+  closed shape vocabulary, per-shape travel order, completeness rule, and
+  stop test.
 - [`references/graph/`](references/graph/README.md): provider dispatch and
   selection.
 - [`references/document-composition.md`](references/document-composition.md):
@@ -49,10 +61,10 @@
   tiers, and placement above).
 - [`workflows/revision.md`](workflows/revision.md): document retirement and
   current-template conformance enforcement.
-- `content/<group>/instructions.md` (merged, one section per document), or
-  `content/<group>/instructions/` where per-document files remain
-  (architecture) and `agent-context/agents-kernel.instruction.md` (single
-  shared instruction): document-specific writing craft only.
+- `content/<group>/instructions.md` (merged, one section per document) and
+  `agent-context/agents-kernel.instruction.md` (single shared instruction):
+  writing craft and linking craft only — per-document
+  fact ownership lives in the contract, not here.
 - `content/<group>/templates/`: output scaffolds only.
 
 When a rule changes, update its owner and replace other repetitions with a

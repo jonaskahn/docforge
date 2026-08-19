@@ -20,13 +20,14 @@
     "code_graph"
   ],
   "target_depth": "orientation",
+  "answer_shape": "router",
   "write_order": 47,
   "provenance_mode": "sections",
   "audit_profile": "router",
   "dominant_form": null,
   "template_file": "content/product/templates/po-readme.md",
   "title": "Product Owner documentation",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "compact_group": "po_compact",
   "compact_order": 11
 }

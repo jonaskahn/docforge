@@ -16,9 +16,11 @@
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "answer-first",
   "write_order": 102,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
   "dominant_form": "flowchart",
+  "contract_revision": "3.0.0",
   "template_file": "content/portfolio/templates/system-context.md"
 }

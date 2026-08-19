@@ -143,8 +143,29 @@ class CompactFoldTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stderr)
                     payload = json.loads(result.stdout)
                     self.assertEqual(payload["id"], "engineering_compact")
-                    self.assertIn("## setup_guide", payload["contract"])
-                    self.assertIn("## testing_guide", payload["contract"])
+                    contract = payload["contract"]
+                    self.assertIn("## setup_guide", contract)
+                    self.assertIn("## testing_guide", contract)
+                    # A member contract's own `#` title is redundant with the
+                    # injected `## <member id>` heading and is dropped; its
+                    # `##` sections demote to `###` so the composed contract
+                    # stays a real two-level outline rather than flattening
+                    # eight members' sections into siblings of each other. The
+                    # header contract's own `##` sections (describing the
+                    # compact type itself) legitimately precede the member
+                    # H2s -- only the trailing run must equal the member ids.
+                    h1_lines = [line for line in contract.splitlines() if line.startswith("# ")]
+                    self.assertEqual(len(h1_lines), 1, "only the header contract keeps an H1")
+                    h2_lines = [line[3:].strip() for line in contract.splitlines() if line.startswith("## ")]
+                    member_ids = list(dict.fromkeys(m["id"] for m in payload["compact"]["members"]))
+                    self.assertEqual(
+                        h2_lines[-len(member_ids):], member_ids,
+                        "the trailing H2 run is the member ids, in first-appearance order",
+                    )
+                    self.assertTrue(
+                        set(h2_lines[:-len(member_ids)]).isdisjoint(member_ids),
+                        "a header H2 must never collide with a member id",
+                    )
                     members = payload["compact"]["members"]
                     # No manifest is given, so this is the catalog's full
                     # roster: the tier-driven core followed by the

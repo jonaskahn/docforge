@@ -9,7 +9,7 @@ System architecture: structure, boundaries, and integration surfaces.
 ## Contents
 
 - [contracts/](contracts/README.md) — 28 contracts
-- [instructions/](instructions/README.md) — 26 instructions
+- [instructions.md](instructions.md) — merged writing craft for 26 document types, one section per document; `contract_system` and `host_integration` route to shared instructions instead (each pairs with a document in another group)
 - [templates/](templates/README.md) — 27 templates
 
 ## Boundaries

@@ -11,11 +11,12 @@
     "selectors": {},
     "condition": null
   },
-  "instruction_file": "content/architecture/instructions/architecture-high-level.md",
+  "instruction_file": "content/architecture/instructions.md",
   "requires": [
     "code_graph"
   ],
   "target_depth": "orientation",
+  "answer_shape": "answer-first",
   "write_order": 10,
   "nav_order": 21,
   "provenance_mode": "sections",
@@ -26,7 +27,7 @@
     "arc42": "building-block-l1",
     "mermaid": "complementary"
   },
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "template_file": "content/architecture/templates/architecture-high-level.md",
   "compact_group": "architecture_compact",
   "compact_order": 2,

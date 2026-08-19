@@ -13,10 +13,12 @@
   },
   "instruction_file": "content/security/instructions.md",
   "requires": [],
-  "target_depth": "router",
+  "target_depth": "orientation",
+  "answer_shape": "answer-first",
   "write_order": 75,
   "provenance_mode": "sections",
   "audit_profile": "risk",
   "dominant_form": null,
+  "contract_revision": "3.0.0",
   "template_file": "content/security/templates/root-security.md"
 }

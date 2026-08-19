@@ -23,7 +23,9 @@ This file owns mechanical and whole-tree acceptance.
 - no dead relative links;
 - no invented claims or untyped external unknowns;
 - no links into Docforge's internal `references/` directory;
-- one primary mode and the catalog's must-present/keep-out contract;
+- one primary mode, the shape its record declares
+  ([`document-shapes.md`](document-shapes.md)), and every numbered row of its
+  contract's `Must present` and `Keep out` tables;
 - agent-context outputs contain no documentation references of any kind:
   Markdown links, URLs, `@` imports, peer-agent or human-document references,
   and bare generated-document paths are all defects; plain source/configuration
@@ -42,10 +44,12 @@ This file owns mechanical and whole-tree acceptance.
   (vocabulary and confinement craft: [`host-neutrality.md`](host-neutrality.md)).
 
 Mechanical success does not complete a document; the independent audit in
-`document-audit.md` does. Voice and level discipline
-([`progressive-disclosure.md`](progressive-disclosure.md)) are judged there, not
+`document-audit.md` does. Voice, level discipline
+([`progressive-disclosure.md`](progressive-disclosure.md)), and shape
+discipline ([`document-shapes.md`](document-shapes.md)) are judged there, not
 here — no script can tell an L1 section that sprouted L2 detail from one written
-at the right altitude.
+at the right altitude, or a document that quietly abandoned its shape's travel
+order partway through.
 
 ## Whole-tree checks
 
@@ -90,6 +94,10 @@ at the right altitude.
     `dominant_form`: anything other than `table` or `null` requires at least
     one `mermaid` or structural `text` fence. Count follows declared
     obligations, never document length.
+11. **Fact-map agreement:** for every row of
+    [`../content/fact-map.md`](../content/fact-map.md), the owner's contract
+    claims the fact class in its `Owns / links` table, and every contested
+    type's `Keep out` table routes that fact to the owner.
 
 `scaffold_docs.{py,js} --audit` must exit nonzero on any mechanical defect and
 zero on a clean tree. If a whole-tree correction changes one document,

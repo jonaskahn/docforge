@@ -21,13 +21,14 @@
     "flow_graph"
   ],
   "target_depth": "orientation",
+  "answer_shape": "merged-section-spine",
   "write_order": 43,
   "nav_order": 15,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": null,
   "template_file": "content/compact/templates/business-analyst.template.md",
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "compact_target": "docs/business-analyst.md",
   "compact_members": [
     "ba_index",

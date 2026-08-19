@@ -48,6 +48,24 @@ const ALLOWED_VIEW_FORMS = new Set(
 );
 const VIEW_DEPTHS = new Set(["orientation", "working", "deep-dive", "reference", "router"]);
 const TARGET_DEPTHS = new Set(["orientation", "deep-dive", "reference", "router"]);
+// The closed shape vocabulary (see references/document-shapes.md). `null` is
+// permitted only for the one non-Markdown template output (claude-settings.json).
+const ALLOWED_ANSWER_SHAPES = new Set([
+  null,
+  undefined,
+  "answer-first",
+  "ordered-narrative",
+  "executable-procedure",
+  "diagnostic-path",
+  "lookup",
+  "entry-catalog",
+  "coverage-matrix",
+  "router",
+  "merged-section-spine",
+  "fixed-frame",
+]);
+// A router-depth document routes; it never also carries the answer itself.
+const ROUTER_SHAPES = new Set(["router", "entry-catalog"]);
 const MODEL_DEPTHS = {
   c4: ["context", "container", "component", "component-evidence"],
   arc42: ["context", "building-block-l1", "building-block-l2", "runtime-scenarios"],
@@ -69,6 +87,7 @@ const REQUIRED_DOC_FIELDS = [
   "template_file",
   "requires",
   "target_depth",
+  "answer_shape",
   "write_order",
   "provenance_mode",
   "audit_profile",
@@ -349,6 +368,20 @@ function manifestCompactMembers(repo, docId) {
   return null;
 }
 
+const ATX_HEADING = /^(#{1,5})(\s+\S)/gm;
+
+// A member contract is a standalone document: one `#` title, then its own
+// `##` sections. Nested under the composed file's `## <member id>` those
+// sections become siblings of the heading that names them, so eight members
+// render as twenty-four same-named `##` blocks. Drop the title — the
+// injected heading already names the member — and demote the rest one
+// level, so the composed contract is a real two-level outline.
+function demoteMemberContract(text) {
+  const lines = text.replace(/^\s+/, "").split("\n");
+  if (lines.length && lines[0].startsWith("# ")) lines.shift();
+  return lines.join("\n").trim().replace(ATX_HEADING, (_, hashes, rest) => `#${hashes}${rest}`);
+}
+
 // Compose the merged file's content contract at route time: the group's
 // short header contract plus each member's existing contract as a named
 // section, in `compact_members` order. Member contracts are reused, never
@@ -378,6 +411,7 @@ function composedCompactContract(detail, repo = null) {
       template: member.template_file,
       requires: member.requires || [],
       target_depth: member.target_depth === undefined ? null : member.target_depth,
+      answer_shape: member.answer_shape === undefined ? null : member.answer_shape,
       model_depth: member.model_depth || {},
       dominant_form: member.dominant_form === undefined ? null : member.dominant_form,
       illustration_views: member.illustration_views || [],
@@ -393,7 +427,7 @@ function composedCompactContract(detail, repo = null) {
     // their own `## <member id>` block.
     if (memberContract && !seenMembers.has(memberId) && fs.existsSync(path.join(SKILL_ROOT, memberContract))) {
       seenMembers.add(memberId);
-      const text = fs.readFileSync(path.join(SKILL_ROOT, memberContract), "utf8").trimEnd();
+      const text = demoteMemberContract(fs.readFileSync(path.join(SKILL_ROOT, memberContract), "utf8"));
       parts.push(`## ${memberId}\n\n${text}`);
     }
   }
@@ -424,6 +458,7 @@ function route(value, audiences = [], repo = null) {
     workflow: ROUTE_WORKFLOW,
     requires: detail.requires || [],
     target_depth: detail.target_depth,
+    answer_shape: detail.answer_shape === undefined ? null : detail.answer_shape,
     audit_profile: detail.audit_profile,
     dominant_form: detail.dominant_form === undefined ? null : detail.dominant_form,
     illustration_views: detail.illustration_views || [],
@@ -776,6 +811,21 @@ function validate() {
     if (!ALLOWED_DOMINANT_FORMS.has(doc.dominant_form)) {
       errors.push(`${docId}: invalid dominant_form ${JSON.stringify(doc.dominant_form)}`);
     }
+    // answer_shape is required (REQUIRED_DOC_FIELDS above); null is valid
+    // only for the one non-Markdown template output. Beyond the enum, it
+    // must agree with its two paired fields.
+    {
+      const shape = doc.answer_shape;
+      if (!ALLOWED_ANSWER_SHAPES.has(shape)) {
+        errors.push(`${docId}: invalid answer_shape ${JSON.stringify(shape)}`);
+      } else if ((selection.mode === "compact") !== (shape === "merged-section-spine")) {
+        errors.push(`${docId}: merged-section-spine and selection.mode compact must agree`);
+      } else if (doc.target_depth === "router" && !ROUTER_SHAPES.has(shape)) {
+        errors.push(
+          `${docId}: target_depth router requires answer_shape ${[...ROUTER_SHAPES].sort().join(" or ")}`,
+        );
+      }
+    }
     errors.push(...validateIllustrationViews(doc, docId));
     const summary = doc.summary;
     if (!summary || typeof summary !== "string" || summary.length > 160) {
@@ -935,6 +985,72 @@ function validatePresentation(value, label, errors, options = {}) {
   }
 }
 
+const FACT_MAP_PATH = "content/fact-map.md";
+const FACT_MAP_ROW_RE = /^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|$/gm;
+const KEEP_OUT_SECTION_RE = /## Keep out\n\n([\s\S]*?)\n\n## /;
+
+function keepOutTargets(contractText) {
+  const match = KEEP_OUT_SECTION_RE.exec(contractText);
+  if (!match) return [];
+  const targets = [];
+  for (const line of match[1].split("\n")) {
+    if (!line.startsWith("|") || line.includes("---")) continue;
+    const cells = line.replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+    if (cells.length >= 2) targets.push(cells[cells.length - 1]);
+  }
+  return targets;
+}
+
+// Every row of `content/fact-map.md` names a fact class one document type
+// owns and one or more others are contested against. Agreement means: each
+// contested type's `## Keep out` table routes that fact to the owner —
+// otherwise the map and the contracts it describes have drifted apart.
+function validateFactMap() {
+  const errors = [];
+  const factMapFile = path.join(SKILL_ROOT, FACT_MAP_PATH);
+  if (!fs.existsSync(factMapFile)) return [`missing ${FACT_MAP_PATH}`];
+  const text = fs.readFileSync(factMapFile, "utf8");
+  const rows = [...text.matchAll(FACT_MAP_ROW_RE)];
+  if (!rows.length) return [`${FACT_MAP_PATH}: no data rows found`];
+  for (const [, fact, owner, contested] of rows) {
+    let ownerDetail;
+    try {
+      ownerDetail = loadType(owner);
+    } catch {
+      errors.push(`fact-map row ${JSON.stringify(fact.trim())}: unknown owner id ${JSON.stringify(owner)}`);
+      continue;
+    }
+    const ownerContract = ownerDetail.contract_file;
+    if (!ownerContract || !fs.existsSync(path.join(SKILL_ROOT, ownerContract))) {
+      errors.push(`fact-map row ${JSON.stringify(fact.trim())}: owner ${JSON.stringify(owner)} has no contract file`);
+      continue;
+    }
+    for (const contestedId of [...contested.matchAll(/`([^`]+)`/g)].map((m) => m[1])) {
+      let contestedDetail;
+      try {
+        contestedDetail = loadType(contestedId);
+      } catch {
+        errors.push(`fact-map row ${JSON.stringify(fact.trim())}: unknown contested id ${JSON.stringify(contestedId)}`);
+        continue;
+      }
+      const contestedContract = contestedDetail.contract_file;
+      if (!contestedContract || !fs.existsSync(path.join(SKILL_ROOT, contestedContract))) {
+        errors.push(`fact-map row ${JSON.stringify(fact.trim())}: contested id ${JSON.stringify(contestedId)} has no contract file`);
+        continue;
+      }
+      const contestedText = fs.readFileSync(path.join(SKILL_ROOT, contestedContract), "utf8");
+      const targets = keepOutTargets(contestedText);
+      if (!targets.some((target) => target.includes(`\`${owner}\``))) {
+        errors.push(
+          `fact-map row ${JSON.stringify(fact.trim())}: ${JSON.stringify(contestedId)}'s Keep out `
+          + `does not route to owner ${JSON.stringify(owner)}`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 function parseArgs(argv) {
   const args = {
     shape: [],
@@ -968,6 +1084,7 @@ function parseArgs(argv) {
     else if (arg === "--include-dynamic") args.includeDynamic = true;
     else if (arg === "--legacy") args.legacy = true;
     else if (arg === "--validate") args.validate = true;
+    else if (arg === "--validate-fact-map") args.validateFactMap = true;
     else if (arg === "--category") args.category = next();
     else if (arg === "--route") args.routeId = next();
     else if (arg === "--repo") args.repo = next();
@@ -990,6 +1107,7 @@ function main(argv = process.argv.slice(2)) {
     args.profile,
     args.applicable,
     args.validate,
+    args.validateFactMap,
     args.legacy,
     args.category,
     args.routeId,
@@ -997,7 +1115,7 @@ function main(argv = process.argv.slice(2)) {
   ].filter(Boolean).length;
   if (modes !== 1) {
     return fail(
-      "specify exactly one of --tier, --id, --ids, --profile, --applicable, --legacy, --validate, --category, --route, --groups",
+      "specify exactly one of --tier, --id, --ids, --profile, --applicable, --legacy, --validate, --validate-fact-map, --category, --route, --groups",
       2,
     );
   }
@@ -1010,6 +1128,16 @@ function main(argv = process.argv.slice(2)) {
         return 1;
       }
       process.stdout.write("catalog ok\n");
+      return 0;
+    }
+    if (args.validateFactMap) {
+      const errors = validateFactMap();
+      if (errors.length) {
+        for (const error of errors) process.stderr.write(`error: ${error}\n`);
+        process.stderr.write(`${errors.length} fact-map error(s)\n`);
+        return 1;
+      }
+      process.stdout.write("fact-map ok\n");
       return 0;
     }
     if (args.legacy) {
@@ -1095,6 +1223,8 @@ module.exports = {
   PRESENTATION_VALUES,
   GROUP_SUMMARIES,
   ALLOWED_DOMINANT_FORMS,
+  ALLOWED_ANSWER_SHAPES,
+  ROUTER_SHAPES,
 };
 
 if (require.main === module) {

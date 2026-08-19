@@ -21,11 +21,12 @@
     "git_history"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "executable-procedure",
   "write_order": 43,
   "provenance_mode": "sections",
   "audit_profile": "procedure",
   "dominant_form": null,
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "template_file": "content/product/templates/migration.md",
   "compact_group": "product_compact",
   "compact_order": 52

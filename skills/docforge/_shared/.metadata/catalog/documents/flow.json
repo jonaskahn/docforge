@@ -20,6 +20,7 @@
     ".docforge/flow-index.json"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "ordered-narrative",
   "write_order": 22,
   "provenance_mode": "sections",
   "audit_profile": "flow",
@@ -27,7 +28,7 @@
   "model_depth": {
     "mermaid": "annotated"
   },
-  "contract_revision": "2.24.0",
+  "contract_revision": "3.0.0",
   "template_file": "content/flows/flow.template.md",
   "compact_group": "flows_compact",
   "compact_order": 52,

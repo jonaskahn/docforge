@@ -16,9 +16,11 @@
     "git_history"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "fixed-frame",
   "write_order": 103,
   "provenance_mode": "sections",
   "audit_profile": "portfolio",
   "dominant_form": null,
+  "contract_revision": "3.0.0",
   "template_file": "content/shared/adr.template.md"
 }

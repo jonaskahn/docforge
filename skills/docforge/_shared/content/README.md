@@ -1,6 +1,6 @@
 # Content
 
-Contracts, instructions, and templates for every catalog document, organized by group. This directory owns must-present material, keep-out boundaries, primary mode, target depth, and writing craft; selection, paths, evidence capabilities, write order, and audit profiles are machine-readable via `query_catalog` against `.metadata/catalog/`.
+Contracts, instructions, and templates for every catalog document, organized by group. This directory owns the reader question, must-present material, keep-out boundaries, primary mode, target depth, shape, per-document fact ownership, and writing craft; selection, paths, evidence capabilities, write order, and audit profiles are machine-readable via `query_catalog` against `.metadata/catalog/`.
 
 ## Load this when
 
@@ -28,17 +28,18 @@ Contracts, instructions, and templates for every catalog document, organized by 
 
 Every substantive document must:
 
-- answer the reader question implied by its type;
-- reveal that answer top-down, per
-  [`../references/progressive-disclosure.md`](../references/progressive-disclosure.md):
-  the outcome before the mechanism, every part named before any part is
-  explained;
+- answer the reader question its contract names;
+- reveal that answer at the altitudes its contract's `At` column assigns, in
+  the travel order its shape declares, per
+  [`../references/progressive-disclosure.md`](../references/progressive-disclosure.md)
+  and [`../references/document-shapes.md`](../references/document-shapes.md);
 - record the repository evidence used by each section in provenance; render it
   according to [`../references/evidence-presentation.md`](../references/evidence-presentation.md);
 - describe current behavior, boundaries, failure modes, and adjacent systems;
 - keep rationale in decision records and volatile lookup facts in reference
   documents;
 - link to facts owned elsewhere instead of repeating them;
+- hold exactly one shape, declared in its contract and in its catalog record;
 - contain no unresolved scaffold markers.
 
 Router/index documents orient and link. Procedure documents are executable in
@@ -55,15 +56,14 @@ Code, output, configuration, and diagrams follow
 
 ## Risk-register routing
 
-Route each bound by who can change it and whether it is user-visible: fixable by
-us later → `tech-debt-register`; imposed from outside and immovable →
-`constraints`; deliberate or accepted and user-visible → `limitations-register`.
-Never cross-file them. For `threat-model`, keep the analysis proportionate; the
-accepted-risk section is the reviewer's signal that analysis was performed.
-When more rigor is warranted, use a trust-boundary data-flow with STRIDE per
-element and one response per threat (mitigate / eliminate / transfer / accept)
-tied to a testable control — link `data-handling` classifications; do not
-restate the inventory.
+Which of `tech-debt-register`, `constraints`, or `limitations-register` a
+bound belongs to is arbitrated in
+[`fact-map.md`](fact-map.md); never cross-file them. For `threat-model`, keep
+the analysis proportionate; the accepted-risk section is the reviewer's
+signal that analysis was performed. When more rigor is warranted, use a
+trust-boundary data-flow with STRIDE per element and one response per threat
+(mitigate / eliminate / transfer / accept) tied to a testable control — link
+`data-handling` classifications; do not restate the inventory.
 
 ## Typed profile behavior
 
@@ -95,8 +95,7 @@ must not redefine this contract.
 
 Every content-contract, instruction, and template file referenced by `.metadata/catalog/` lives under this tree. No group duplicates a shared artifact; no artifact lives outside its owning group or `shared/`.
 
-Instruction files are either a merged `<group>/instructions.md` (one `##`
-section per document, routes listed in its preamble) or per-document files
-under `<group>/instructions/` (architecture) — both wired by exact path from
-catalog records. `shared/` instruction files stay separate: each is
-referenced by records across groups.
+Every group's writing craft lives in one merged `<group>/instructions.md`
+(one `##` section per document, routes listed in its preamble), wired by
+exact path from catalog records. `shared/` instruction files stay separate:
+each is referenced by records across groups.

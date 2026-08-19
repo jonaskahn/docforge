@@ -17,10 +17,12 @@
     "manifests"
   ],
   "target_depth": "deep-dive",
+  "answer_shape": "entry-catalog",
   "write_order": 78,
   "provenance_mode": "sections",
   "audit_profile": "risk",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/security/templates/data-handling.md",
   "compact_group": "security_compact",
   "compact_order": 3

@@ -5,6 +5,16 @@ Writing-craft instructions for `flows` group documents. Routes:
 - `flows_index` → [Flow index (`flow-index`)](#flow-index-flow-index-writing-craft)
 - `flow` → [Flow (`flow`)](#flow-flow-writing-craft)
 
+## Voice and linking craft
+
+Voice for this group is owned by [`voice.md`](../../references/voice.md):
+narrative and ordered, one idea per sentence, the branch right under the step
+that creates it. When linking to a fact another document owns — the
+flow-index row, a promoted subfile, a shared business rule, an architecture
+boundary — name what that document owns before the link, never "see
+`foo.md`." What each side of a link owns, and why it is linked rather than
+restated, is each contract's `## Owns / links` table, not this section.
+
 ## Flow index (`flow-index`) writing craft
 
 Every candidate row includes an evidence locator, confidence basis, and explicit
@@ -33,17 +43,8 @@ here; those belong solely to the `flow` document once it exists.
 - **Trigger:** never — orientation depth caps this document at prose plus
   the table itself, per [`illustration.md`](../../references/illustration.md).
 
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Discovery status, role, area, confidence, reach for every candidate | each `standalone`/`main` row's `flow` document | the index routes; the flow document owns the actual steps |
-| — | `.docforge/flow-index.json` (declared as the machine-readable source of truth) | this document is the human-readable projection of that file, never a second source of truth |
-| A `member` row's `composed_into` id | the parent flow document's matching H2 section | keeps composed members traceable without duplicating their content here |
-
-## Voice
-
-- **Voice:** narrative and ordered; one idea per sentence; branch beside its step.
+This document is the human-readable projection of
+`.docforge/flow-index.json`, never a second source of truth for it.
 
 ## Flow (`flow`) writing craft
 
@@ -87,17 +88,14 @@ its folded counterpart at
 [`flow.compact.example.md`](../shared/exemplars/flow.compact.example.md). Read
 them when a field's intent is unclear; they are craft references, not templates.
 
-## Level discipline
+## Section-to-altitude mapping
 
-This document is ordered per
-[`progressive-disclosure.md`](../../references/progressive-disclosure.md).
-
-| Level | Sections |
-|---|---|
-| L0 — answer | the opening paragraph and `**Guarantee:**` |
-| L1 — shape | `## Trigger and actors`, `## Happy path` and its diagram |
-| L2 — detail | `## Branches and rules`, `## Failure and recovery`, `## Observability` |
-| L3 — boundary | `## Outcome`, `## Why it works this way`, the `Related` footer |
+The contract's `## Must present` `At` column names the altitude; this maps it
+onto this type's actual section names: L0 is the opening paragraph and
+`**Guarantee:**`; L1 is `## Trigger and actors` and `## Happy path` with its
+diagram; L2 is `## Branches and rules`, `## Failure and recovery`, and
+`## Observability`; L3 is `## Outcome`, `## Why it works this way`, and the
+`Related` footer.
 
 The guarantee appears twice on purpose — once at L0 so a reader who stops at
 the top is still correct, once in full under `## Outcome`. That is the only
@@ -161,20 +159,6 @@ reconstructed rationale is worse than a shorter document. In particular:
   sections by phase, each step scored 1-5 with the actor who experiences it.
 - **Trigger:** once the happy path passes about four steps, or as soon as any branch exists —
   per [`illustration.md`](../../references/illustration.md)'s deep-dive budget.
-
-## Connections
-
-| This document owns | Links to | Because |
-|---|---|---|
-| Trigger, actors, ordered steps, branches, failures, outcome | its `flow-index` row in `docs/flows/README.md` | the index tracks discovery status/priority/confidence, never the steps themselves — one owner per fact |
-| — (once promoted) | its own `business-analyst.md` subfile | BA rules and requirement traceability link back to this flow; they never restate its steps |
-| — (once promoted) | its own `engineering.md` subfile | implementation mechanism links back; this document keeps only a one-line gist |
-| A business rule referenced by 3+ flows | the rule's own document | never duplicated per-flow; link, don't restate |
-| A step that crosses a system boundary named in `architecture-high-level` | the relevant architecture block | avoids re-deriving the box diagram inside flow prose |
-
-## Voice
-
-- **Voice:** narrative and ordered; one idea per sentence; branch beside its step.
 
 ## Composition and folders
 

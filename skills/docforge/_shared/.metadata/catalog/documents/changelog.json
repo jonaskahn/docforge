@@ -16,9 +16,11 @@
     "git_history"
   ],
   "target_depth": "reference",
+  "answer_shape": "entry-catalog",
   "write_order": 90,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": null,
+  "contract_revision": "3.0.0",
   "template_file": "content/root/changelog.template.md"
 }

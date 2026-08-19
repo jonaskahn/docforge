@@ -21,10 +21,12 @@
     "manifests"
   ],
   "target_depth": "reference",
+  "answer_shape": "lookup",
   "write_order": 42,
   "provenance_mode": "sections",
   "audit_profile": "standard",
   "dominant_form": "table",
+  "contract_revision": "3.0.0",
   "template_file": "content/product/templates/localization.md",
   "compact_group": "product_compact",
   "compact_order": 15
