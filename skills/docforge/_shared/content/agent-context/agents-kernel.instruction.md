@@ -31,13 +31,19 @@ useful.
 
 - Use the same kernel template for both root kernel outputs. Each is a
   complete, concise duplicate containing project purpose and stack, verified
-  commands, a durable repository map, precedence, hard boundaries, local
-  conventions, and validation expectations.
+  commands, a durable repository map, precedence, working rules, hard
+  boundaries, local conventions, and validation expectations.
 - Omit the optional conventions section when no non-obvious convention is
   evidenced. Do not add a deeper-context section.
 - Preserve the kernel rubric's section order: Commands, Repository Map,
-  Precedence, Boundaries, optional Conventions, and Validation. The final
-  line states the observable working condition.
+  Precedence, Working Rules, Boundaries, optional Conventions, and
+  Validation. The final line states the observable working condition.
+- Working Rules carries the behavioral editing disciplines as terse,
+  observable imperatives — state assumptions and ask when uncertain, write
+  the minimum non-speculative change, touch only what the task requires in
+  the existing style, and loop to verifiable success criteria. Never drop
+  the section; keep its caution-over-speed tradeoff sentence so readers know
+  when judgment may relax it.
 - Keep each kernel within the `agents-kernel` audit-profile line budget and
   pass the dedicated kernel rubric. Front-load commands and safety
   boundaries.

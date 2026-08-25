@@ -15,7 +15,7 @@ GOLDEN = """\
 
 A TypeScript service with an HTTP API, domain layer, and PostgreSQL store.
 
-<!-- docforge-provenance v2.24.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->
+<!-- docforge-provenance v2.25.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->
 
 ## Commands
 
@@ -42,6 +42,20 @@ Dependency direction: `src/api` may depend on `src/core`; `src/core` must not de
 2. Follow the user's task requirements.
 3. Follow the repository rules stated here.
 4. If instructions conflict or evidence is missing, stop and ask.
+
+## Working Rules
+
+- State assumptions before implementing; if uncertain, ask.
+- Present competing interpretations; never pick silently.
+- If a simpler approach exists, say so and push back when warranted.
+- Write minimum code that solves the problem — nothing speculative.
+- No abstractions, configurability, or error handling beyond the request.
+- Touch only what the task requires; match existing style.
+- Remove only orphans your own change created; leave unrelated code alone.
+- Define verifiable success criteria first; loop until they pass.
+- Reproduce a bug with a failing test, then make it pass.
+
+These rules bias toward caution over speed; use judgment on trivial tasks.
 
 ## Boundaries
 
@@ -160,7 +174,7 @@ npm run build
                     self.assertTrue(any("destructive commands" in detail for detail in details))
 
     def test_forbidden_references_are_detected_in_prose_fences_and_comments(self) -> None:
-        provenance = "<!-- docforge-provenance v2.24.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->"
+        provenance = "<!-- docforge-provenance v2.25.0 | graph abc1234 | 2026-08-01 | regenerate: re-run the coding-agents audience -->"
         cases = {
             "markdown-link": (
                 GOLDEN.replace(
@@ -208,6 +222,75 @@ npm run build
                 ]
                 self.assertTrue(matches, payload)
 
+    def test_working_rules_section_is_enforced(self) -> None:
+        rules_block = """## Working Rules
+
+- State assumptions before implementing; if uncertain, ask.
+- Present competing interpretations; never pick silently.
+- If a simpler approach exists, say so and push back when warranted.
+- Write minimum code that solves the problem — nothing speculative.
+- No abstractions, configurability, or error handling beyond the request.
+- Touch only what the task requires; match existing style.
+- Remove only orphans your own change created; leave unrelated code alone.
+- Define verifiable success criteria first; loop until they pass.
+- Reproduce a bug with a failing test, then make it pass.
+
+These rules bias toward caution over speed; use judgment on trivial tasks.
+
+"""
+        cases = {
+            "missing-section": (
+                GOLDEN.replace(rules_block, ""),
+                {"missing-section"},
+                [],
+            ),
+            "gutted-content": (
+                GOLDEN.replace(
+                    """- State assumptions before implementing; if uncertain, ask.
+- Present competing interpretations; never pick silently.
+- If a simpler approach exists, say so and push back when warranted.
+- Write minimum code that solves the problem — nothing speculative.
+- No abstractions, configurability, or error handling beyond the request.
+- Touch only what the task requires; match existing style.
+- Remove only orphans your own change created; leave unrelated code alone.
+- Define verifiable success criteria first; loop until they pass.
+- Reproduce a bug with a failing test, then make it pass.""",
+                    "- Keep diffs small.\n- Be helpful.",
+                ),
+                {"missing-working-rule"},
+                ["think first", "minimal scope", "verified goals"],
+            ),
+        }
+        for name, (dirty, expected_kinds, details) in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                returncode, payload = self._payload(Path(tmp), dirty)
+                self.assertEqual(returncode, 1, payload)
+                kinds = {item["kind"] for item in payload["defects"]}
+                self.assertTrue(expected_kinds.issubset(kinds), payload)
+                if details:
+                    seen = {item["detail"] for item in payload["defects"]}
+                    for detail in details:
+                        self.assertIn(f"Working Rules must cover {detail}", seen)
+
+    def test_working_rules_out_of_order_is_detected(self) -> None:
+        dirty = GOLDEN.replace(
+            "## Working Rules\n\n",
+            "",
+            1,
+        ).replace(
+            "## Validation",
+            "## Working Rules\n\n"
+            "- State assumptions before implementing; if uncertain, ask.\n"
+            "- Write minimum code that solves the problem — nothing speculative.\n"
+            "- Define verifiable success criteria first; loop until they pass.\n\n"
+            "## Validation",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            returncode, payload = self._payload(Path(tmp), dirty)
+        self.assertEqual(returncode, 1, payload)
+        kinds = {item["kind"] for item in payload["defects"]}
+        self.assertIn("section-order", kinds, payload)
+
     def test_nonblank_line_budget_is_enforced(self) -> None:
         nonblank = sum(bool(line.strip()) for line in GOLDEN.splitlines())
         padding = "\n".join(
@@ -249,7 +332,7 @@ class AgentsKernelCanonicalTemplateTests(unittest.TestCase):
         headings = [line.removeprefix("## ") for line in template.splitlines() if line.startswith("## ")]
         self.assertEqual(
             headings,
-            ["Commands", "Repository Map", "Precedence", "Boundaries", "Conventions", "Validation"],
+            ["Commands", "Repository Map", "Precedence", "Working Rules", "Boundaries", "Conventions", "Validation"],
         )
         self.assertLessEqual(sum(bool(line.strip()) for line in template.splitlines()), 80)
 

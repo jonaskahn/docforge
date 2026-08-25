@@ -71,9 +71,12 @@ the generated documentation navigation graph.
 
 Both root kernels are full concise duplicates. Each directly states the
 project purpose and stack, verified commands, durable repository map and
-entry points, precedence, hard boundaries, non-obvious evidenced conventions,
-and validation expectations. Neither includes a deeper-context section. Both
-pass the `agents-kernel` size and content rubric.
+entry points, precedence, working rules (behavioral editing disciplines:
+assumptions surfaced before coding, minimal non-speculative changes,
+surgical edits that match existing style, verifiable success criteria),
+hard boundaries, non-obvious evidenced conventions, and validation
+expectations. Neither includes a deeper-context section. Both pass the
+`agents-kernel` size and content rubric.
 
 ### Local preferences and settings
 

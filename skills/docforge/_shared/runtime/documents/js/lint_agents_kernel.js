@@ -20,8 +20,8 @@ const MARKDOWN_LINK_RE = /!?\[([^\]\r\n]*)\]\(([^)\r\n]*)\)/g;
 const AT_IMPORT_RE = /(?<![\w@])@((?:(?:\.{1,2}\/|\/)?[\w.~+-]+)(?:\/[\w.~+-]+)*\/?(?:#[\w.~:-]+)?)/g;
 const DOC_PATH_RE = /(?<![\w@])((?:(?:\.{1,2}\/|\/)?(?:[\w.~+-]+\/)*[\w.~+-]+\.(?:md|mdx|markdown|rst|adoc|asciidoc)(?:#[\w.~:-]+)?|docs\/[\w.~+/-]*))(?![\w./-])/gi;
 const DOCUMENT_SUFFIXES = new Set([".md", ".mdx", ".markdown", ".rst", ".adoc", ".asciidoc"]);
-const REQUIRED_SECTIONS = ["Commands", "Repository map", "Precedence", "Boundaries", "Validation"];
-const SECTION_ORDER = ["Commands", "Repository map", "Precedence", "Boundaries", "Conventions", "Validation"];
+const REQUIRED_SECTIONS = ["Commands", "Repository map", "Precedence", "Working rules", "Boundaries", "Validation"];
+const SECTION_ORDER = ["Commands", "Repository map", "Precedence", "Working rules", "Boundaries", "Conventions", "Validation"];
 const MAX_NONBLANK_LINES = 80;
 const LINE_WARNING_AT = 68;
 const GUARD_RE = /\b(?:never|must not|do not|without)\b/i;
@@ -30,6 +30,9 @@ const VALIDATION_ACTION_RE = /\b(?:disable|skip|bypass|remove)\w*\b/i;
 const VALIDATION_TARGET_RE = /\b(?:test|validation|check)\w*\b/i;
 const DESTRUCTIVE_RE = /\bdestructive\b/i;
 const APPROVAL_RE = /\b(?:approval|permission|ask)\w*\b/i;
+const THINK_FIRST_RE = /\b(?:assumption\w*|uncertain\w*|interpretation\w*)\b/i;
+const MINIMAL_SCOPE_RE = /\b(?:minimum|speculative|only what)\b/i;
+const VERIFIED_GOALS_RE = /\b(?:success\s+criteri\w*|verif\w+|failing\s+test\w*|reproduc\w+)\b/i;
 
 function cleanReference(raw) {
   return raw.trim().replace(/^[`"'<>]+|[`"'<>]+$/g, "").replace(/[.,;:!?]+$/g, "");
@@ -234,6 +237,24 @@ function safetyDefects(lines, sections) {
     }));
 }
 
+function workingRuleDefects(lines, sections) {
+  const rules = sectionFor(sections, "Working rules");
+  if (!rules) return [];
+  const body = lines.slice(rules.start, rules.end);
+  const checks = {
+    "think first": body.some((line) => THINK_FIRST_RE.test(line)),
+    "minimal scope": body.some((line) => MINIMAL_SCOPE_RE.test(line)),
+    "verified goals": body.some((line) => VERIFIED_GOALS_RE.test(line)),
+  };
+  return Object.entries(checks)
+    .filter(([_name, present]) => !present)
+    .map(([name]) => ({
+      kind: "missing-working-rule",
+      line: rules.line,
+      detail: `Working Rules must cover ${name}`,
+    }));
+}
+
 function checkAgentsKernel(filePath, repoDir = null) {
   // Retained for API compatibility. References are never resolved against disk
   // now that every document reference is a defect.
@@ -284,6 +305,7 @@ function checkAgentsKernel(filePath, repoDir = null) {
   defects.push(...requiredSectionDefects(sections));
   defects.push(...commandDefects(lines, sections, blocks));
   defects.push(...safetyDefects(lines, sections));
+  defects.push(...workingRuleDefects(lines, sections));
 
   if (blocks.length > 1) {
     defects.push({

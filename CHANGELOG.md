@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Generated kernels gain a mechanically enforced Working Rules section.**
+  `AGENTS.md` and `CLAUDE.md` now carry the behavioral editing disciplines
+  that reduce common LLM coding mistakes — surface assumptions and ask when
+  uncertain, write the minimum non-speculative change, touch only what the
+  task requires in the existing style, and loop to verifiable success
+  criteria — as a fixed `## Working Rules` section between Precedence and
+  Boundaries, plus the caution-over-speed tradeoff line so readers know when
+  judgment may relax it. `lint_agents_kernel.{py,js}` enforces the section
+  the way it enforces Boundaries safety rules: required in
+  `SECTION_ORDER`, and its body must cover *think first*, *minimal scope*,
+  and *verified goals* (`missing-working-rule` defects otherwise; Python and
+  Node parity). Template, contract (`Must present` row 4), instruction, and
+  the coding-agents profile reference all name it. `contract_revision`
+  bumps to **3.1.0** for both kernel records. The compact topic view
+  (`docs/agents.md`) is unchanged.
+
 - **Flow budgets now scale with the repository.** The flow pipeline used flat
   defaults — `--max-flows` 15 and `--main-limit` 15 — which systematically
   under-covered large repos (a 900-source-file repo with 1,300 entry points

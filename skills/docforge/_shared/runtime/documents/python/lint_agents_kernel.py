@@ -40,6 +40,7 @@ REQUIRED_SECTIONS = (
     "Commands",
     "Repository map",
     "Precedence",
+    "Working rules",
     "Boundaries",
     "Validation",
 )
@@ -47,6 +48,7 @@ SECTION_ORDER = (
     "Commands",
     "Repository map",
     "Precedence",
+    "Working rules",
     "Boundaries",
     "Conventions",
     "Validation",
@@ -59,6 +61,16 @@ VALIDATION_ACTION_RE = re.compile(r"\b(?:disable|skip|bypass|remove)\w*\b", re.I
 VALIDATION_TARGET_RE = re.compile(r"\b(?:test|validation|check)\w*\b", re.IGNORECASE)
 DESTRUCTIVE_RE = re.compile(r"\bdestructive\b", re.IGNORECASE)
 APPROVAL_RE = re.compile(r"\b(?:approval|permission|ask)\w*\b", re.IGNORECASE)
+THINK_FIRST_RE = re.compile(
+    r"\b(?:assumption\w*|uncertain\w*|interpretation\w*)\b", re.IGNORECASE
+)
+MINIMAL_SCOPE_RE = re.compile(
+    r"\b(?:minimum|speculative|only what)\b", re.IGNORECASE
+)
+VERIFIED_GOALS_RE = re.compile(
+    r"\b(?:success\s+criteri\w*|verif\w+|failing\s+test\w*|reproduc\w+)\b",
+    re.IGNORECASE,
+)
 
 
 def _clean_reference(raw: str) -> str:
@@ -277,6 +289,27 @@ def _safety_defects(lines: list[str], sections: list[dict]) -> list[dict]:
     ]
 
 
+def _working_rule_defects(lines: list[str], sections: list[dict]) -> list[dict]:
+    rules = _section(sections, "Working rules")
+    if rules is None:
+        return []
+    body = lines[rules["start"]:rules["end"]]
+    checks = {
+        "think first": any(THINK_FIRST_RE.search(line) for line in body),
+        "minimal scope": any(MINIMAL_SCOPE_RE.search(line) for line in body),
+        "verified goals": any(VERIFIED_GOALS_RE.search(line) for line in body),
+    }
+    return [
+        {
+            "kind": "missing-working-rule",
+            "line": rules["line"],
+            "detail": f"Working Rules must cover {name}",
+        }
+        for name, present in checks.items()
+        if not present
+    ]
+
+
 def lint_agents_kernel(path: Path, repo: Path | None = None) -> dict:
     # Retained for API compatibility. References are never resolved against
     # disk now that every document reference is a defect.
@@ -335,6 +368,7 @@ def lint_agents_kernel(path: Path, repo: Path | None = None) -> dict:
     defects.extend(_required_section_defects(sections))
     defects.extend(_command_defects(lines, sections, blocks))
     defects.extend(_safety_defects(lines, sections))
+    defects.extend(_working_rule_defects(lines, sections))
 
     if len(blocks) > 1:
         defects.append({

@@ -6,7 +6,7 @@
 |---|---|---|
 | Orientation | orientation | fixed-frame |
 
-External authority: the AGENTS.md kernel convention. Both root kernel outputs (`AGENTS.md` and `CLAUDE.md`) are complete, self-contained duplicates of this same rubric, in this fixed section order — a redirect chain between them is a defect, not an optimization.
+External authority: the AGENTS.md kernel convention. Both root kernel outputs (`AGENTS.md` and `CLAUDE.md`) are complete, self-contained duplicates of this same rubric, in this fixed section order — Commands, Repository Map, Precedence, Working Rules, Boundaries, optional Conventions, Validation — a redirect chain between them is a defect, not an optimization.
 
 ## Must present
 
@@ -15,9 +15,10 @@ External authority: the AGENTS.md kernel convention. Both root kernel outputs (`
 | 1 | `## Commands` — verified commands, front-loaded | fixed order, first | an invented command |
 | 2 | `## Repository Map` — a durable repository map and entry points | fixed order, second | a volatile symbol inventory in place of durable paths |
 | 3 | `## Precedence` — which instructions win when sources conflict | fixed order, third | precedence left unstated |
-| 4 | `## Boundaries` — hard boundaries, front-loaded alongside commands | fixed order, fourth | a boundary softened into a suggestion |
-| 5 | `## Conventions` (optional) — evidenced conventions, omitted when none is evidenced | fixed order, fifth | an empty Conventions section left in place of omitting it |
-| 6 | `## Validation` — the observable working condition, as the final line | fixed order, last | validation left implicit |
+| 4 | `## Working Rules` — behavioral editing disciplines: assumptions surfaced before coding, minimal non-speculative changes, surgical edits that match existing style, verifiable success criteria looped to green | fixed order, fourth | a discipline omitted or softened into a suggestion |
+| 5 | `## Boundaries` — hard boundaries, front-loaded alongside commands | fixed order, fifth | a boundary softened into a suggestion |
+| 6 | `## Conventions` (optional) — evidenced conventions, omitted when none is evidenced | fixed order, sixth | an empty Conventions section left in place of omitting it |
+| 7 | `## Validation` — the observable working condition, as the final line | fixed order, last | validation left implicit |
 
 ## Keep out
 

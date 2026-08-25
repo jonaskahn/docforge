@@ -29,6 +29,20 @@ Dependency direction: {{evidence-backed layer order and forbidden direction.}}
 3. Follow the repository rules stated here.
 4. If instructions conflict or evidence is missing, stop and ask.
 
+## Working Rules
+
+- State assumptions before implementing; if uncertain, ask.
+- Present competing interpretations; never pick silently.
+- If a simpler approach exists, say so and push back when warranted.
+- Write minimum code that solves the problem — nothing speculative.
+- No abstractions, configurability, or error handling beyond the request.
+- Touch only what the task requires; match existing style.
+- Remove only orphans your own change created; leave unrelated code alone.
+- Define verifiable success criteria first; loop until they pass.
+- Reproduce a bug with a failing test, then make it pass.
+
+These rules bias toward caution over speed; use judgment on trivial tasks.
+
 ## Boundaries
 
 - Always: {{evidenced project directive.}}
