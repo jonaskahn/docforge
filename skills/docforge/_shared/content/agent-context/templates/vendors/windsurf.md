@@ -1,0 +1,3 @@
+<!-- docforge-provenance v{{skill_version}} | graph {{graph_hash_short}} | {{graph_analyzed_date}} | regenerate: re-run the coding-agents audience -->
+
+{{Resolved agents-kernel template body without its leading level-1 heading, as a full self-contained duplicate of the kernel content; never a pointer or an import.}}

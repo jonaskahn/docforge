@@ -1,5 +1,7 @@
 # `agents-tech-debt`
 
+Inherits [topic-view-commons.md](../references/topic-view-commons.md).
+
 **Reader question** — "Where in this codebase is it unsafe to make a naive edit, and why?"
 
 | Mode | Depth | Shape |

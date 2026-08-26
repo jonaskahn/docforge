@@ -1,5 +1,7 @@
 # `agents-testing`
 
+Inherits [topic-view-commons.md](../references/topic-view-commons.md).
+
 **Reader question** — "What command actually runs this project's tests, and how do I run just one?"
 
 | Mode | Depth | Shape |

@@ -71,6 +71,10 @@ VERIFIED_GOALS_RE = re.compile(
     r"\b(?:success\s+criteri\w*|verif\w+|failing\s+test\w*|reproduc\w+)\b",
     re.IGNORECASE,
 )
+BOUNDARY_GROUP_RE = re.compile(r"^Always:\s*$|^Ask first:\s*$|^Never:\s*$")
+ALLCAPS_DIRECTIVE_RE = re.compile(
+    r"\b(?:MUST|NEVER|ALWAYS)\b"
+)
 
 
 def _clean_reference(raw: str) -> str:
@@ -265,18 +269,36 @@ def _safety_defects(lines: list[str], sections: list[dict]) -> list[dict]:
     if boundaries is None:
         return []
     body = lines[boundaries["start"]:boundaries["end"]]
+    never_guarded: list[str] = []
+    other: list[str] = []
+    current_group: str | None = None
+    for line in body:
+        stripped = line.strip()
+        if BOUNDARY_GROUP_RE.match(stripped):
+            current_group = stripped.rstrip(":")
+            continue
+        if current_group == "Never":
+            never_guarded.append(line)
+        elif current_group in ("Always", "Ask first") and GUARD_RE.search(line):
+            other.append(line)
     checks = {
-        "secrets": any(GUARD_RE.search(line) and SECRET_RE.search(line) for line in body),
+        "secrets": any(SECRET_RE.search(line) for line in never_guarded)
+        or any(GUARD_RE.search(line) and SECRET_RE.search(line) for line in other),
         "validation": any(
+            VALIDATION_ACTION_RE.search(line) and VALIDATION_TARGET_RE.search(line)
+            for line in never_guarded
+        )
+        or any(
             GUARD_RE.search(line)
             and VALIDATION_ACTION_RE.search(line)
             and VALIDATION_TARGET_RE.search(line)
-            for line in body
+            for line in other
         ),
         "destructive commands": any(
             DESTRUCTIVE_RE.search(line) and APPROVAL_RE.search(line)
-            for line in body
-        ),
+            for line in other
+        )
+        or any(DESTRUCTIVE_RE.search(line) for line in never_guarded),
     }
     return [
         {
@@ -308,6 +330,78 @@ def _working_rule_defects(lines: list[str], sections: list[dict]) -> list[dict]:
         for name, present in checks.items()
         if not present
     ]
+
+
+def _boundary_grouping_defects(lines: list[str], sections: list[dict]) -> list[dict]:
+    """Boundaries must carry three colon-led groups in order: Always, Ask first, Never."""
+    boundaries = _section(sections, "Boundaries")
+    if boundaries is None:
+        return []
+    body = lines[boundaries["start"]:boundaries["end"]]
+    groups = [
+        match.group(0).rstrip(":").strip()
+        for line in body
+        if (match := BOUNDARY_GROUP_RE.match(line.strip()))
+    ]
+    expected = ["Always", "Ask first", "Never"]
+    found = [group for group in expected if group in groups]
+    defects: list[dict] = []
+    if len(found) < len(expected):
+        missing = [group for group in expected if group not in groups]
+        defects.append({
+            "kind": "boundary-grouping",
+            "line": boundaries["line"],
+            "detail": f"Boundaries must carry the three colon-led groups; missing {', '.join(missing)}",
+        })
+        return defects
+    positions = [groups.index(group) for group in expected]
+    if positions != sorted(positions):
+        defects.append({
+            "kind": "boundary-grouping",
+            "line": boundaries["line"],
+            "detail": f"Boundaries groups must appear in the order Always, Ask first, Never; found {', '.join(groups)}",
+        })
+    return defects
+
+
+def _allcaps_defects(lines: list[str], sections: list[dict]) -> list[dict]:
+    """Reject MUST/NEVER/ALWAYS as standalone words outside the Boundaries body."""
+    boundaries = _section(sections, "Boundaries")
+    defects: list[dict] = []
+    for index, line in enumerate(lines):
+        if boundaries is not None and boundaries["start"] <= index < boundaries["end"]:
+            continue
+        if ALLCAPS_DIRECTIVE_RE.search(line):
+            defects.append({
+                "kind": "kernel-allcaps",
+                "line": index + 1,
+                "detail": line.strip()[:80],
+            })
+    return defects
+
+
+def _tagline_defects(lines: list[str], sections: list[dict]) -> list[dict]:
+    """The first non-blank prose line after each required H2 must be a bold tagline."""
+    defects: list[dict] = []
+    for section in sections:
+        title = section["title"]
+        canonical = _canonical_title(title)
+        if canonical is None or canonical == "Commands":
+            continue
+        body = lines[section["start"]:section["end"]]
+        first_prose = next(
+            (line for line in body if line.strip()), None
+        )
+        if first_prose is None:
+            continue
+        stripped = first_prose.strip()
+        if not (stripped.startswith("**") and stripped.endswith("**")):
+            defects.append({
+                "kind": "missing-tagline",
+                "line": section["start"] + 1,
+                "detail": f"{title}: first prose line is not a bold tagline",
+            })
+    return defects
 
 
 def lint_agents_kernel(path: Path, repo: Path | None = None) -> dict:
@@ -369,6 +463,9 @@ def lint_agents_kernel(path: Path, repo: Path | None = None) -> dict:
     defects.extend(_command_defects(lines, sections, blocks))
     defects.extend(_safety_defects(lines, sections))
     defects.extend(_working_rule_defects(lines, sections))
+    defects.extend(_boundary_grouping_defects(lines, sections))
+    defects.extend(_allcaps_defects(lines, sections))
+    defects.extend(_tagline_defects(lines, sections))
 
     if len(blocks) > 1:
         defects.append({

@@ -64,6 +64,41 @@
       "id": "agents_glossary",
       "path": "agents_glossary.json",
       "summary": "Self-contained definitions for evidenced domain and flow terms with their code context"
+    },
+    {
+      "id": "agents_layer_rule",
+      "path": "agents_layer_rule.json",
+      "summary": "Per-layer scoped rules under .agents/rules/<layer-slug>.md with evidenced conventions, hotspots, and a verified validation command"
+    },
+    {
+      "id": "vendor_codex",
+      "path": "vendor_codex.json",
+      "summary": "Codex shim: verbatim AGENTS.md copy at .codex/instructions.md with provenance header"
+    },
+    {
+      "id": "vendor_cursor",
+      "path": "vendor_cursor.json",
+      "summary": "Cursor shim: AGENTS.md content without H1 at .cursor/rules/agents.mdc with alwaysApply frontmatter"
+    },
+    {
+      "id": "vendor_copilot",
+      "path": "vendor_copilot.json",
+      "summary": "GitHub Copilot shim: verbatim AGENTS.md copy at .github/copilot-instructions.md with provenance header"
+    },
+    {
+      "id": "vendor_windsurf",
+      "path": "vendor_windsurf.json",
+      "summary": "Windsurf shim: AGENTS.md content without H1 at .windsurf/rules/agents.md with provenance header"
+    },
+    {
+      "id": "vendor_aider",
+      "path": "vendor_aider.json",
+      "summary": "Aider shim: verbatim AGENTS.md at CONVENTIONS.md plus an additive merge of the .aider.conf.yml read list"
+    },
+    {
+      "id": "vendor_gemini",
+      "path": "vendor_gemini.json",
+      "summary": "Gemini shim: one-line @AGENTS.md pointer at GEMINI.md"
     }
   ]
 }

@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+- **Kernel Boundaries restructured into Always / Ask first / Never.**
+  The single flat list is now three colon-led groups so an agent can tell at
+  a glance what it may do freely, what needs confirmation first, and what it
+  must not do. `lint_agents_kernel.{py,js}` enforces the structure
+  (`boundary-grouping` defects) and adds two style rubric checks:
+  `kernel-allcaps` rejects bare `MUST`/`NEVER`/`ALWAYS` directives outside
+  the Boundaries body, and `missing-tagline` requires each required H2
+  section (except Commands) to open with a bold one-line summary.
+  `contract_revision` bumps to **3.2.0** for both kernel records.
+
+- **Compact topic view linting.** New `lint_compact_topics.{py,js}`
+  rejects `cross-topic-mention` (one section's topic name appearing in
+  another) and `cross-topic-pointer` ("see also", "as described in", …)
+  inside the seven-section compact `docs/agents.md`, keeping topic isolation
+  mechanical rather than prose-only.
+
+- **Per-layer scoped rules.** A new `agents-layer-rule` contract + template
+  generates `.agents/rules/<layer-slug>.md` files — vendor-neutral rules
+  scoped to one repository layer — gated on the `layers_available`
+  condition so they only materialize when the manifest records layers.
+
+- **Multi-vendor fan-out.** Seven vendor shim contracts + templates
+  (Codex, Cursor, Copilot, Windsurf, Aider, Gemini, alongside the existing
+  Claude shim) emit vendor-specific context files from the same kernel.
+  A new `vendors` profile dimension drives selection: records with a
+  non-empty `selectors.vendors` only materialize when the run's
+  `--vendor <id>` flag matches. No `--vendor` → no shims; explicit picks
+  fan out exactly those vendors.
+
+- **Topic-view commons reference.** Six of seven topic contracts now inherit
+  `references/topic-view-commons.md` (isolation, shape, evidence
+  discipline); the flow contract is deliberately excluded per its own
+  isolation guarantees.
+
+- **Catalog grows to 148 document types** (was 141) with the new layer-rule,
+  vendor-shim, and commons-reference records registered in both the
+  agent-context group index and the root catalog index.
+
 - **Generated kernels gain a mechanically enforced Working Rules section.**
   `AGENTS.md` and `CLAUDE.md` now carry the behavioral editing disciplines
   that reduce common LLM coding mistakes — surface assumptions and ask when

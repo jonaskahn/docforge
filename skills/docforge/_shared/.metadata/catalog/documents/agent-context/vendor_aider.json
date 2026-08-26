@@ -1,0 +1,35 @@
+{
+  "id": "vendor_aider",
+  "type": "vendor-shim",
+  "summary": "Aider shim: verbatim AGENTS.md at CONVENTIONS.md plus an additive merge of the .aider.conf.yml read list",
+  "contract_file": "content/agent-context/contracts/vendors/aider-shim.md",
+  "path": "CONVENTIONS.md",
+  "secondary_paths": [".aider.conf.yml"],
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ],
+      "vendors": [
+        "aider"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [],
+  "target_depth": "reference",
+  "answer_shape": "fixed-frame",
+  "write_order": 224,
+  "provenance_mode": "manifest",
+  "audit_profile": "shim",
+  "dominant_form": null,
+  "contract_revision": "1.0.0",
+  "presentation": {
+    "related_docs": "none"
+  },
+  "template_file": "content/agent-context/templates/vendors/aider.md"
+}

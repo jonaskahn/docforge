@@ -1,0 +1,72 @@
+[
+  {
+    "id": "claude",
+    "order": 10,
+    "aliases": [
+      "claude-code",
+      "anthropic"
+    ],
+    "signals": [],
+    "query_hints": [
+      "AGENTS.md, CLAUDE.md, .claude/settings.json"
+    ]
+  },
+  {
+    "id": "codex",
+    "order": 20,
+    "aliases": [
+      "openai"
+    ],
+    "signals": [],
+    "query_hints": [
+      ".codex/instructions.md"
+    ]
+  },
+  {
+    "id": "cursor",
+    "order": 30,
+    "aliases": [],
+    "signals": [],
+    "query_hints": [
+      ".cursor/rules/"
+    ]
+  },
+  {
+    "id": "copilot",
+    "order": 40,
+    "aliases": [
+      "github-copilot"
+    ],
+    "signals": [],
+    "query_hints": [
+      ".github/copilot-instructions.md"
+    ]
+  },
+  {
+    "id": "windsurf",
+    "order": 50,
+    "aliases": [],
+    "signals": [],
+    "query_hints": [
+      ".windsurf/rules/"
+    ]
+  },
+  {
+    "id": "aider",
+    "order": 60,
+    "aliases": [],
+    "signals": [],
+    "query_hints": [
+      "CONVENTIONS.md, .aider.conf.yml"
+    ]
+  },
+  {
+    "id": "gemini",
+    "order": 70,
+    "aliases": [],
+    "signals": [],
+    "query_hints": [
+      "GEMINI.md"
+    ]
+  }
+]

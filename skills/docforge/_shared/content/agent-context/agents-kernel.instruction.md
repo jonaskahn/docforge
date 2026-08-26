@@ -44,9 +44,15 @@ useful.
   the existing style, and loop to verifiable success criteria. Never drop
   the section; keep its caution-over-speed tradeoff sentence so readers know
   when judgment may relax it.
+- Boundaries carries three colon-led groups — `Always:`, `Ask first:`,
+  `Never:` — in that order. `Always:` and `Ask first:` are conditional on
+  evidence; `Never:` always carries the secrets, validation-disable, and
+  destructive-command prohibitions. Never soften a boundary into a
+  suggestion; every group must keep at least one bullet.
 - Keep each kernel within the `agents-kernel` audit-profile line budget and
   pass the dedicated kernel rubric. Front-load commands and safety
-  boundaries.
+  boundaries; keep the three Boundaries groups (`Always:`, `Ask first:`,
+  `Never:`) present and in that order.
 
 ## Topic views
 

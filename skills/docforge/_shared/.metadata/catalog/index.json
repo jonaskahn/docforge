@@ -6,7 +6,8 @@
     "platforms": "profiles/platforms.json",
     "frameworks": "profiles/frameworks.json",
     "concerns": "profiles/concerns.json",
-    "audiences": "profiles/audiences.json"
+    "audiences": "profiles/audiences.json",
+    "vendors": "profiles/vendors.json"
   },
   "presentation_defaults": {
     "source_evidence": "provenance-only",
@@ -153,6 +154,12 @@
       "record": "documents/agent-context/agents_kernel.json"
     },
     {
+      "id": "agents_layer_rule",
+      "tier": "spine",
+      "path": ".agents/rules/<layer-slug>.md",
+      "record": "documents/agent-context/agents_layer_rule.json"
+    },
+    {
       "id": "agents_patterns",
       "tier": "spine",
       "path": "docs/agents/patterns.md",
@@ -187,6 +194,42 @@
       "tier": "spine",
       "path": "CLAUDE.md",
       "record": "documents/agent-context/claude_shim.json"
+    },
+    {
+      "id": "vendor_aider",
+      "tier": "spine",
+      "path": "CONVENTIONS.md",
+      "record": "documents/agent-context/vendor_aider.json"
+    },
+    {
+      "id": "vendor_codex",
+      "tier": "spine",
+      "path": ".codex/instructions.md",
+      "record": "documents/agent-context/vendor_codex.json"
+    },
+    {
+      "id": "vendor_copilot",
+      "tier": "spine",
+      "path": ".github/copilot-instructions.md",
+      "record": "documents/agent-context/vendor_copilot.json"
+    },
+    {
+      "id": "vendor_cursor",
+      "tier": "spine",
+      "path": ".cursor/rules/agents.mdc",
+      "record": "documents/agent-context/vendor_cursor.json"
+    },
+    {
+      "id": "vendor_gemini",
+      "tier": "spine",
+      "path": "GEMINI.md",
+      "record": "documents/agent-context/vendor_gemini.json"
+    },
+    {
+      "id": "vendor_windsurf",
+      "tier": "spine",
+      "path": ".windsurf/rules/agents.md",
+      "record": "documents/agent-context/vendor_windsurf.json"
     },
     {
       "id": "ai_integration",

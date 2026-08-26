@@ -76,7 +76,7 @@ MODEL_DEPTHS = {
 }
 MODEL_DEPTH_ORDER = ("c4", "arc42", "stride", "adr", "prov", "mermaid")
 CONTRACT_REVISION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
-PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
+PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences", "vendors"]
 REQUIRED_DOC_FIELDS = {
     "id",
     "type",

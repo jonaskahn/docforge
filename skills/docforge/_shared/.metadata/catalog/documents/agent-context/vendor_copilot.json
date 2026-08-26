@@ -1,0 +1,34 @@
+{
+  "id": "vendor_copilot",
+  "type": "vendor-shim",
+  "summary": "GitHub Copilot shim: verbatim AGENTS.md copy at .github/copilot-instructions.md with provenance header",
+  "contract_file": "content/agent-context/contracts/vendors/copilot-shim.md",
+  "path": ".github/copilot-instructions.md",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ],
+      "vendors": [
+        "copilot"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [],
+  "target_depth": "reference",
+  "answer_shape": "fixed-frame",
+  "write_order": 222,
+  "provenance_mode": "manifest",
+  "audit_profile": "shim",
+  "dominant_form": null,
+  "contract_revision": "1.0.0",
+  "presentation": {
+    "related_docs": "none"
+  },
+  "template_file": "content/agent-context/templates/vendors/copilot.md"
+}

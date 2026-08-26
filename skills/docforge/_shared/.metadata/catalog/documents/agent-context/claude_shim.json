@@ -12,6 +12,8 @@
       "audiences": [
         "coding-agents"
       ]
+      ,
+      "vendors": []
     },
     "condition": null
   },
@@ -26,7 +28,7 @@
   "provenance_mode": "manifest",
   "audit_profile": "agents-kernel",
   "dominant_form": null,
-  "contract_revision": "3.1.0",
+  "contract_revision": "3.2.0",
   "presentation": {
     "related_docs": "none"
   },

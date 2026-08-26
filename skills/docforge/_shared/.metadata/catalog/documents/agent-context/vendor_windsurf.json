@@ -1,0 +1,34 @@
+{
+  "id": "vendor_windsurf",
+  "type": "vendor-shim",
+  "summary": "Windsurf shim: AGENTS.md content without H1 at .windsurf/rules/agents.md with provenance header",
+  "contract_file": "content/agent-context/contracts/vendors/windsurf-shim.md",
+  "path": ".windsurf/rules/agents.md",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ],
+      "vendors": [
+        "windsurf"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [],
+  "target_depth": "reference",
+  "answer_shape": "fixed-frame",
+  "write_order": 223,
+  "provenance_mode": "manifest",
+  "audit_profile": "shim",
+  "dominant_form": null,
+  "contract_revision": "1.0.0",
+  "presentation": {
+    "related_docs": "none"
+  },
+  "template_file": "content/agent-context/templates/vendors/windsurf.md"
+}

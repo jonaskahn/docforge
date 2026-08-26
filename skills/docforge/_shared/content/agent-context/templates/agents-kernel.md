@@ -45,12 +45,17 @@ These rules bias toward caution over speed; use judgment on trivial tasks.
 
 ## Boundaries
 
-- Always: {{evidenced project directive.}}
-- Ask first: {{operation requiring explicit approval.}}
-- Never commit secrets, credentials, or local environment values.
-- Never disable tests, validation, or checks to force success.
-- Never run destructive commands without explicit approval.
-{{One or two additional evidenced project-specific boundaries, if present.}}
+Always:
+- {{evidenced project directive.}}
+
+Ask first:
+- {{operation requiring explicit approval.}}
+
+Never:
+- Commit secrets, credentials, or local environment values.
+- Disable tests, validation, or checks to force success.
+- Run destructive commands without explicit approval.
+- {{additional evidenced project-specific prohibition, if present.}}
 
 ## Conventions
 

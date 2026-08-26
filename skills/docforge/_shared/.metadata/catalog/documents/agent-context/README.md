@@ -26,6 +26,13 @@ Use the entries below to locate a document definition, then resolve it with `que
 - `agents_tech_debt` — Self-contained known limitations, editing hazards, affected source paths, and safe handling constraints → [index.json](index.json)
 - `agents_flow` — Self-contained trigger-to-effect flow lookup grounded in declared flow evidence → [index.json](index.json)
 - `agents_glossary` — Self-contained definitions for evidenced domain and flow terms with their code context → [index.json](index.json)
+- `agents_layer_rule` — Per-layer scoped rules under .agents/rules/<layer-slug>.md with evidenced conventions, hotspots, and a verified validation command → [index.json](index.json)
+- `vendor_codex` — Codex shim: verbatim AGENTS.md copy at .codex/instructions.md with provenance header → [index.json](index.json)
+- `vendor_cursor` — Cursor shim: AGENTS.md content without H1 at .cursor/rules/agents.mdc with alwaysApply frontmatter → [index.json](index.json)
+- `vendor_copilot` — GitHub Copilot shim: verbatim AGENTS.md copy at .github/copilot-instructions.md with provenance header → [index.json](index.json)
+- `vendor_windsurf` — Windsurf shim: AGENTS.md content without H1 at .windsurf/rules/agents.md with provenance header → [index.json](index.json)
+- `vendor_aider` — Aider shim: verbatim AGENTS.md at CONVENTIONS.md plus an additive merge of the .aider.conf.yml read list → [index.json](index.json)
+- `vendor_gemini` — Gemini shim: one-line @AGENTS.md pointer at GEMINI.md → [index.json](index.json)
 
 ## Boundaries
 

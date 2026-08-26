@@ -183,10 +183,11 @@ function makeDocument(definition, origins, evidence = [], catalogId = null, audi
   }
   return document;
 }
-const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
+const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences", "vendors"];
 const ORIGIN_KINDS = {
   shapes: "shape", platforms: "platform", frameworks: "framework",
   concerns: "concern", audiences: "audience",
+  vendors: "vendor",
 };
 function normalizeProfiles(catalog, raw) {
   const normalized = {};
@@ -209,6 +210,13 @@ function normalizeProfiles(catalog, raw) {
 }
 function matchingOrigins(rule, profiles) {
   const origins = [];
+  const requiredVendors = (rule.selectors || {}).vendors || [];
+  if (
+    requiredVendors.length
+    && !requiredVendors.some((vendor) => (profiles.vendors || []).includes(vendor))
+  ) {
+    return origins;
+  }
   for (const dimension of PROFILE_DIMENSIONS) {
     const accepted = (rule.selectors || {})[dimension] || [];
     for (const value of profiles[dimension] || []) {
@@ -398,11 +406,11 @@ function parseArgs(argv) {
   const command = argv[0];
   const knownCommands = new Set(["init", "preview", "add", "set", "presentation", "audit", "status", "set-graph", "set-repository", "reconcile", "finish", "unmanaged", "retire"]);
   if (!knownCommands.has(command)) throw new Error(`unknown command: ${argv[0]}`);
-  const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "group", "overlay", "evidence", "doc"]);
+  const repeatable = new Set(["shape", "platform", "framework", "concern", "audience", "vendor", "group", "overlay", "evidence", "doc"]);
   const boolean = new Set(["force", "keep-tmp", "reset", "dry-run", "json"]);
   const allowed = {
-    init: new Set(["repo", "tier", "scale-class", "layout", "shape", "platform", "framework", "concern", "audience", "group", "overlay", "name", "force", "graph-provider"]),
-    preview: new Set(["repo", "tier", "layout", "scale-class", "shape", "platform", "framework", "concern", "audience", "group", "json"]),
+    init: new Set(["repo", "tier", "scale-class", "layout", "shape", "platform", "framework", "concern", "audience", "vendor", "group", "overlay", "name", "force", "graph-provider"]),
+    preview: new Set(["repo", "tier", "layout", "scale-class", "shape", "platform", "framework", "concern", "audience", "vendor", "group", "json"]),
     add: new Set(["repo", "type", "id", "path", "title", "evidence"]),
     set: new Set(["repo", "id", "status"]),
     presentation: new Set(["repo", "id", "primary-audience", "code", "related-docs", "repository-paths", "reset"]),
@@ -415,7 +423,7 @@ function parseArgs(argv) {
     unmanaged: new Set(["repo", "action", "path", "dry-run"]),
     retire: new Set(["repo", "doc", "mode", "dry-run"]),
   }[command];
-  const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], group: [], overlay: [], evidence: [], doc: [] };
+  const result = { command, shape: [], platform: [], framework: [], concern: [], audience: [], vendor: [], group: [], overlay: [], evidence: [], doc: [] };
   for (let i = 1; i < argv.length; i++) {
     const token = argv[i];
     if (!token.startsWith("--")) throw new Error(`unexpected argument: ${token}`);
@@ -506,6 +514,7 @@ function cmdInit(args) {
       shapes: args.shape, platforms: args.platform, frameworks: args.framework,
       concerns: args.concern,
       audiences: args.audience.length ? args.audience : ["engineers", "beginners"],
+      vendors: (args.vendor || []),
     });
   } catch (error) {
     return fail(error.message, 2);
@@ -1447,6 +1456,7 @@ function cmdPreview(args) {
       shapes: args.shape, platforms: args.platform, frameworks: args.framework,
       concerns: args.concern,
       audiences: (args.audience && args.audience.length) ? args.audience : ["engineers", "beginners"],
+      vendors: (args.vendor && args.vendor) || [],
     });
   } catch (error) {
     return fail(error.message, 2);

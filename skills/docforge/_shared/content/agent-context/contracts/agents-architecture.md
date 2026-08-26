@@ -1,5 +1,7 @@
 # `agents-architecture`
 
+Inherits [topic-view-commons.md](../references/topic-view-commons.md).
+
 **Reader question** — "What are this repository's components, entry points, and dependency directions, without opening a file?"
 
 | Mode | Depth | Shape |

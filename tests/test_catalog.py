@@ -24,7 +24,7 @@ class CatalogRecordTests(unittest.TestCase):
 
     def test_document_type_count_and_unique_ids(self) -> None:
         document_types = self.index["document_types"]
-        self.assertEqual(len(document_types), 141)
+        self.assertEqual(len(document_types), 148)
         ids = [entry["id"] for entry in document_types]
         self.assertEqual(len(ids), len(set(ids)), "duplicate document ids in index.json")
 
@@ -246,6 +246,9 @@ class CatalogRecordTests(unittest.TestCase):
             "root_readme", "changelog", "docs_index", "contributing_root",
             "security_root", "agents_kernel", "claude_shim", "claude_local",
             "claude_settings",
+            "agents_layer_rule",
+            "vendor_codex", "vendor_cursor", "vendor_copilot",
+            "vendor_windsurf", "vendor_aider", "vendor_gemini",
         }
         missing = []
         for row in self.index["document_types"]:
@@ -352,6 +355,9 @@ class OrphanContentFileTests(unittest.TestCase):
         # any single catalog record.
         referenced.add("content/shared/audit-report.template.md")
         referenced.add("content/shared/audience-deepdive.template.md")
+        # Shared rubric referenced by every topic-view contract via an
+        # "Inherits" link; not routed through a single catalog record.
+        referenced.add("content/agent-context/references/topic-view-commons.md")
 
         content_root = SKILL_ROOT / "content"
         orphans = []

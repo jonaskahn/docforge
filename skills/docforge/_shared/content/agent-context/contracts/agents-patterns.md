@@ -1,5 +1,7 @@
 # `agents-patterns`
 
+Inherits [topic-view-commons.md](../references/topic-view-commons.md).
+
 **Reader question** — "What implementation shapes repeat in this codebase, and where do I see one done right?"
 
 | Mode | Depth | Shape |

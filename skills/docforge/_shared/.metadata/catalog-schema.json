@@ -86,7 +86,8 @@
         "platforms": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "frameworks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "concerns": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-        "audiences": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+        "audiences": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "vendors": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
       },
       "additionalProperties": false
     },

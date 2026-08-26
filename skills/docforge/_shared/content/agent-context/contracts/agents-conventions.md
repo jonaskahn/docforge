@@ -1,5 +1,7 @@
 # `agents-conventions`
 
+Inherits [topic-view-commons.md](../references/topic-view-commons.md).
+
 **Reader question** — "What safety, naming, structural, and workflow rules does this repository actually enforce?"
 
 | Mode | Depth | Shape |

@@ -1,5 +1,7 @@
 # `agents-glossary`
 
+Inherits [topic-view-commons.md](../references/topic-view-commons.md).
+
 **Reader question** — "What does this repository mean by this term, without opening the human glossary?"
 
 | Mode | Depth | Shape |

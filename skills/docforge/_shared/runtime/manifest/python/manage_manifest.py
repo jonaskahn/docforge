@@ -244,13 +244,14 @@ def make_document(
     return document
 
 
-PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"]
+PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences", "vendors"]
 ORIGIN_KINDS = {
     "shapes": "shape",
     "platforms": "platform",
     "frameworks": "framework",
     "concerns": "concern",
     "audiences": "audience",
+    "vendors": "vendor",
 }
 
 
@@ -277,6 +278,12 @@ def normalize_profiles(catalog: dict, raw: dict[str, list[str]]) -> dict[str, li
 
 def matching_origins(rule: dict, profiles: dict[str, list[str]]) -> list[dict]:
     origins: list[dict] = []
+    # The vendors dimension is an opt-in hard gate: a record that names one or
+    # more vendors only materializes when the run selected at least one of
+    # them. Other dimensions are additive; vendors is not.
+    required_vendors = rule.get("selectors", {}).get("vendors", [])
+    if required_vendors and not set(required_vendors) & set(profiles.get("vendors", [])):
+        return origins
     for dimension in PROFILE_DIMENSIONS:
         selected = profiles.get(dimension, [])
         accepted = rule.get("selectors", {}).get(dimension, [])
@@ -600,6 +607,7 @@ def cmd_init(args: argparse.Namespace) -> int:
             "frameworks": args.framework,
             "concerns": args.concern,
             "audiences": args.audience or ["engineers", "beginners"],
+            "vendors": getattr(args, "vendor", []) or [],
         })
     except ValueError as exc:
         return fail(str(exc), 2)
@@ -1637,6 +1645,7 @@ def cmd_preview(args: argparse.Namespace) -> int:
         "shapes": args.shape, "platforms": args.platform,
         "frameworks": args.framework, "concerns": args.concern,
         "audiences": args.audience or ["engineers", "beginners"],
+        "vendors": getattr(args, "vendor", []) or [],
     }
     try:
         profiles = normalize_profiles(catalog, selected)
@@ -1758,6 +1767,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--framework", action="append", default=[])
     init.add_argument("--concern", action="append", default=[])
     init.add_argument("--audience", action="append", default=[])
+    init.add_argument("--vendor", action="append", default=[], help="AI coding-agent vendors whose shims to write (repeatable).")
     init.add_argument(
         "--group", action="append", default=[],
         help="Restrict this run to these catalog groups (repeatable, aliases accepted). Omit for every group.",
@@ -1778,6 +1788,7 @@ def build_parser() -> argparse.ArgumentParser:
     preview.add_argument("--framework", action="append", default=[])
     preview.add_argument("--concern", action="append", default=[])
     preview.add_argument("--audience", action="append", default=[])
+    preview.add_argument("--vendor", action="append", default=[], help="AI coding-agent vendors whose shims to project (repeatable).")
     preview.add_argument(
         "--group", action="append", default=[],
         help="Project the tree for these catalog groups only (repeatable, aliases accepted).",

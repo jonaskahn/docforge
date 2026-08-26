@@ -12,6 +12,8 @@
       "audiences": [
         "coding-agents"
       ]
+      ,
+      "vendors": []
     },
     "condition": null
   },

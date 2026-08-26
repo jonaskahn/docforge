@@ -52,6 +52,11 @@ layout, and target readers — Human, AI coding agents, or Both — then tier,
 profiles, and audience), summarizes, and waits for your confirm before
 writing anything.
 
+Agent-context output covers `AGENTS.md` / `CLAUDE.md` /
+`.claude/settings.json`, per-layer scoped rules under `.agents/rules/`,
+vendor shims for Codex / Cursor / Copilot / Windsurf / Aider / Gemini
+(opt-in via `--vendor <id>`), and topic views under `docs/agents/`.
+
 | | |
 |---|---|
 | `/docforge` | intake → plan → write |

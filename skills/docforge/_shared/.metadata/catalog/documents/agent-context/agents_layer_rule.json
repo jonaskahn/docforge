@@ -1,0 +1,34 @@
+{
+  "id": "agents_layer_rule",
+  "type": "agents-layer-rule",
+  "summary": "Per-layer scoped rules under .agents/rules/<layer-slug>.md with evidenced conventions, hotspots, and a verified validation command",
+  "contract_file": "content/agent-context/contracts/agents-layer-rule.md",
+  "path": ".agents/rules/<layer-slug>.md",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ],
+      "vendors": []
+    },
+    "condition": "layers_available"
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "answer_shape": "lookup",
+  "write_order": 210,
+  "provenance_mode": "manifest",
+  "audit_profile": "agent-view",
+  "dominant_form": null,
+  "contract_revision": "1.0.0",
+  "presentation": {
+    "related_docs": "none"
+  },
+  "template_file": "content/agent-context/templates/agents-layer-rule.md"
+}

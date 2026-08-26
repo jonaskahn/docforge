@@ -29,6 +29,8 @@ npm run build
 
 ## Repository Map
 
+**Durable paths only.**
+
 - `src/api`: HTTP routes and request validation.
 - `src/core`: Domain rules and application services.
 - `src/store`: Persistence adapters and migrations.
@@ -38,12 +40,16 @@ Dependency direction: `src/api` may depend on `src/core`; `src/core` must not de
 
 ## Precedence
 
+**Conflicts stop for a question.**
+
 1. Preserve safety constraints and explicit approval requirements.
 2. Follow the user's task requirements.
 3. Follow the repository rules stated here.
 4. If instructions conflict or evidence is missing, stop and ask.
 
 ## Working Rules
+
+**Think before editing.**
 
 - State assumptions before implementing; if uncertain, ask.
 - Present competing interpretations; never pick silently.
@@ -59,18 +65,29 @@ These rules bias toward caution over speed; use judgment on trivial tasks.
 
 ## Boundaries
 
-- Always run the focused test for the changed area.
-- Ask first before deleting a shared branch or applied migration.
-- Never commit secrets, credentials, or local environment values.
-- Never disable tests, validation, or checks to force success.
-- Never run destructive commands without explicit approval.
+**Three tiers. No exceptions.**
+
+Always:
+- Run the focused test for the changed area.
+
+Ask first:
+- Before deleting a shared branch or applied migration.
+
+Never:
+- Commit secrets, credentials, or local environment values.
+- Disable tests, validation, or checks to force success.
+- Run destructive commands without explicit approval.
 
 ## Conventions
+
+**Match the existing shape.**
 
 - Keep request parsing in `src/api` and domain decisions in `src/core`.
 - Use the existing store adapter boundary for persistence changes.
 
 ## Validation
+
+**Every command exits zero.**
 
 - Minimum for a focused change: `npm test -- --runInBand`
 - Required before completion: `npm run lint && npm test && npm run build`
@@ -151,12 +168,13 @@ npm run build
             ),
             "safety": (
                 GOLDEN.replace(
-                    "- Never commit secrets, credentials, or local environment values.\n"
-                    "- Never disable tests, validation, or checks to force success.\n"
-                    "- Never run destructive commands without explicit approval.",
+                    "Never:\n"
+                    "- Commit secrets, credentials, or local environment values.\n"
+                    "- Disable tests, validation, or checks to force success.\n"
+                    "- Run destructive commands without explicit approval.",
                     "- Keep changes focused.\n"
                     "- Preserve existing behavior.\n"
-                    "- Report unexpected failures.",
+                    "- Report unexpected failures.\n",
                 ),
                 {"missing-safety-rule"},
             ),
@@ -224,6 +242,8 @@ npm run build
 
     def test_working_rules_section_is_enforced(self) -> None:
         rules_block = """## Working Rules
+
+**Think before editing.**
 
 - State assumptions before implementing; if uncertain, ask.
 - Present competing interpretations; never pick silently.

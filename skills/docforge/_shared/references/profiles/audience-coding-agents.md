@@ -15,6 +15,9 @@ AGENTS.md
 CLAUDE.md
 CLAUDE.local.md
 .claude/settings.json
+.agents/rules/
+|-- <layer-slug>.md   # one per code-graph layer, when at least 1 layer has at least 2 files
+\-- README.md         # index when at least 2 layer rules are emitted
 docs/agents/
 |-- architecture.md
 |-- patterns.md
@@ -43,11 +46,32 @@ docs/agents.md       # architecture, patterns, testing, conventions,
 template, target depth, and audit profile; each materializes the full concise
 kernel.
 
+## Vendor fan-out
+
+The kernel and the .agents/rules/<layer>.md files are the source of truth and
+are always emitted regardless of vendor selection. Vendor shims are thin
+per-vendor pointers that reference the kernel (and, where supported, the
+rules directory). The intake multi-select chooses which shims to write; the
+default set is claude, codex. The full set of supported vendors is claude,
+codex, cursor, copilot, windsurf, aider, gemini.
+
+Each vendor's shim is the smallest artifact that lets that vendor's agent
+find the kernel. Adding a new vendor requires a contracts/vendors/<vendor>-shim.md,
+a templates/vendors/<vendor>.md, and a vendor-shim catalog record. The kernel
+records gain an empty selection.selectors.vendors array by default; the
+runtime intersects the catalog's vendor list with the intake-picked (or
+--vendors-picked) set before materializing shims.
+
 Architecture, patterns, and both kernels use `code_graph`; testing and both
 kernels use manifests. Conventions is selected only when a conventions source
 exists. Flow and glossary require `flow_graph`. A missing required capability
 marks only the affected output `skipped`; `requires` gates evidence, not
 selection.
+
+Per-layer scoped rules are selected when the code graph exposes at least one
+layer with at least two file nodes; otherwise the layer-rule record resolves to
+`skipped`. The layer slug derives from the longest common directory prefix
+shared by at least 70 percent of the layer's files.
 
 ## Permanent isolation
 

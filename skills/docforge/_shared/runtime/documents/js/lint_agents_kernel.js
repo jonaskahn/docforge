@@ -33,6 +33,8 @@ const APPROVAL_RE = /\b(?:approval|permission|ask)\w*\b/i;
 const THINK_FIRST_RE = /\b(?:assumption\w*|uncertain\w*|interpretation\w*)\b/i;
 const MINIMAL_SCOPE_RE = /\b(?:minimum|speculative|only what)\b/i;
 const VERIFIED_GOALS_RE = /\b(?:success\s+criteri\w*|verif\w+|failing\s+test\w*|reproduc\w+)\b/i;
+const BOUNDARY_GROUP_RE = /^(Always|Ask first|Never):\s*$/;
+const ALLCAPS_DIRECTIVE_RE = /\b(?:MUST|NEVER|ALWAYS)\b/;
 
 function cleanReference(raw) {
   return raw.trim().replace(/^[`"'<>]+|[`"'<>]+$/g, "").replace(/[.,;:!?]+$/g, "");
@@ -221,12 +223,30 @@ function safetyDefects(lines, sections) {
   const boundaries = sectionFor(sections, "Boundaries");
   if (!boundaries) return [];
   const body = lines.slice(boundaries.start, boundaries.end);
+  const neverGuarded = [];
+  const other = [];
+  let currentGroup = null;
+  for (const line of body) {
+    const match = line.trim().match(BOUNDARY_GROUP_RE);
+    if (match) {
+      currentGroup = match[1];
+      continue;
+    }
+    if (currentGroup === "Never") {
+      neverGuarded.push(line);
+    } else if (currentGroup === "Always" || currentGroup === "Ask first") {
+      if (GUARD_RE.test(line)) other.push(line);
+    }
+  }
   const checks = {
-    secrets: body.some((line) => GUARD_RE.test(line) && SECRET_RE.test(line)),
-    validation: body.some(
+    secrets: neverGuarded.some((line) => SECRET_RE.test(line))
+      || other.some((line) => GUARD_RE.test(line) && SECRET_RE.test(line)),
+    validation: neverGuarded.some((line) => VALIDATION_ACTION_RE.test(line) && VALIDATION_TARGET_RE.test(line))
+      || other.some(
       (line) => GUARD_RE.test(line) && VALIDATION_ACTION_RE.test(line) && VALIDATION_TARGET_RE.test(line),
     ),
-    "destructive commands": body.some((line) => DESTRUCTIVE_RE.test(line) && APPROVAL_RE.test(line)),
+    "destructive commands": neverGuarded.some((line) => DESTRUCTIVE_RE.test(line))
+      || other.some((line) => DESTRUCTIVE_RE.test(line) && APPROVAL_RE.test(line)),
   };
   return Object.entries(checks)
     .filter(([_name, present]) => !present)
@@ -255,6 +275,71 @@ function workingRuleDefects(lines, sections) {
     }));
 }
 
+function boundaryGroupingDefects(lines, sections) {
+  const boundaries = sectionFor(sections, "Boundaries");
+  if (!boundaries) return [];
+  const body = lines.slice(boundaries.start, boundaries.end);
+  const groups = body
+    .map((line) => {
+      const match = line.trim().match(BOUNDARY_GROUP_RE);
+      return match ? match[1] : null;
+    })
+    .filter((group) => group !== null);
+  const expected = ["Always", "Ask first", "Never"];
+  const found = expected.filter((group) => groups.includes(group));
+  const defects = [];
+  if (found.length < expected.length) {
+    const missing = expected.filter((group) => !groups.includes(group));
+    defects.push({
+      kind: "boundary-grouping",
+      line: boundaries.line,
+      detail: "Boundaries must carry the three colon-led groups; missing " + missing.join(", "),
+    });
+    return defects;
+  }
+  const positions = expected.map((group) => groups.indexOf(group));
+  const sorted = [...positions].sort((a, b) => a - b);
+  if (positions.some((position, index) => position !== sorted[index])) {
+    defects.push({
+      kind: "boundary-grouping",
+      line: boundaries.line,
+      detail: "Boundaries groups must appear in the order Always, Ask first, Never; found " + groups.join(", "),
+    });
+  }
+  return defects;
+}
+
+function allcapsDefects(lines, sections) {
+  const boundaries = sectionFor(sections, "Boundaries");
+  const defects = [];
+  lines.forEach((line, index) => {
+    if (boundaries && index >= boundaries.start && index < boundaries.end) return;
+    if (ALLCAPS_DIRECTIVE_RE.test(line)) {
+      defects.push({ kind: "kernel-allcaps", line: index + 1, detail: line.trim().slice(0, 80) });
+    }
+  });
+  return defects;
+}
+
+function taglineDefects(lines, sections) {
+  const defects = [];
+  for (const item of sections) {
+    const canonical = canonicalTitle(item.title);
+    if (canonical === null || canonical === "Commands") continue;
+    const body = lines.slice(item.start, item.end);
+    const firstProse = body.find((line) => line.trim());
+    if (firstProse === undefined) continue;
+    const stripped = firstProse.trim();
+    if (!(stripped.startsWith("**") && stripped.endsWith("**"))) {
+      defects.push({
+        kind: "missing-tagline",
+        line: item.start + 1,
+        detail: item.title + ": first prose line is not a bold tagline",
+      });
+    }
+  }
+  return defects;
+}
 function checkAgentsKernel(filePath, repoDir = null) {
   // Retained for API compatibility. References are never resolved against disk
   // now that every document reference is a defect.
@@ -306,6 +391,9 @@ function checkAgentsKernel(filePath, repoDir = null) {
   defects.push(...commandDefects(lines, sections, blocks));
   defects.push(...safetyDefects(lines, sections));
   defects.push(...workingRuleDefects(lines, sections));
+  defects.push(...boundaryGroupingDefects(lines, sections));
+  defects.push(...allcapsDefects(lines, sections));
+  defects.push(...taglineDefects(lines, sections));
 
   if (blocks.length > 1) {
     defects.push({

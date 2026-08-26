@@ -7,6 +7,8 @@ Python/JS public command with a launcher in
 ## Load this when
 
 - One document needs a mechanical pre-audit → `lint_document`.
+- The document is the compact coding-agent reference and needs its
+  cross-topic isolation checked → `lint_compact_topics`.
 - The document is an `agents-kernel` special output (AGENTS.md or CLAUDE.md) → `lint_agents_kernel`.
 - Previewing the exact manifest tree, materializing one document, or auditing
   the whole tree → `scaffold_docs`.
@@ -21,6 +23,7 @@ Python/JS public command with a launcher in
 |---|---|---|---|
 | `lint_document` | both | CLI | Mechanical lint of one ordinary Docforge document |
 | `lint_agents_kernel` | both | CLI | Rubric lint of an AGENTS/CLAUDE agent-kernel document |
+| `lint_compact_topics` | both | CLI | Cross-topic isolation lint of the compact coding-agent reference |
 | `scaffold_docs` | both | CLI | Dry-run plan, single-document materialization, or tree audit |
 | `harvest_candidates` | both | CLI | Decision and concept candidates from git history and module structure |
 | `link_sources` | both | CLI | Expand repo-relative source links into commit-pinned permalinks |

@@ -1,0 +1,34 @@
+{
+  "id": "vendor_cursor",
+  "type": "vendor-shim",
+  "summary": "Cursor shim: AGENTS.md content without H1 at .cursor/rules/agents.mdc with alwaysApply frontmatter",
+  "contract_file": "content/agent-context/contracts/vendors/cursor-shim.md",
+  "path": ".cursor/rules/agents.mdc",
+  "group": "agent-context",
+  "selection": {
+    "mode": "static",
+    "min_tier": "spine",
+    "selectors": {
+      "audiences": [
+        "coding-agents"
+      ],
+      "vendors": [
+        "cursor"
+      ]
+    },
+    "condition": null
+  },
+  "instruction_file": "content/agent-context/agents-kernel.instruction.md",
+  "requires": [],
+  "target_depth": "reference",
+  "answer_shape": "fixed-frame",
+  "write_order": 221,
+  "provenance_mode": "manifest",
+  "audit_profile": "shim",
+  "dominant_form": null,
+  "contract_revision": "1.0.0",
+  "presentation": {
+    "related_docs": "none"
+  },
+  "template_file": "content/agent-context/templates/vendors/cursor.mdc"
+}

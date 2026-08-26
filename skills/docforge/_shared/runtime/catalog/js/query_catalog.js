@@ -25,7 +25,7 @@ const COMPACT_DYNAMIC_CAP = 6;
 const INDEX_PATH = path.join(CATALOG_DIR, "index.json");
 const TYPES_DIR = path.join(CATALOG_DIR, "types");
 const PROFILES_DIR = path.join(CATALOG_DIR, "profiles");
-const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences"];
+const PROFILE_DIMENSIONS = ["shapes", "platforms", "frameworks", "concerns", "audiences", "vendors"];
 // `timeline`, `mindmap`, `sankey`, `treemap`, and `C4` are documented by Mermaid
 // as experimental ("the syntax and properties can change in future releases"),
 // and `architecture-beta` / `block-beta` still require a `-beta` keyword. A

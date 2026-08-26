@@ -297,9 +297,36 @@ and wait for explicit confirmation before reconciling the manifest.
      [`planning.md`](planning.md) "Target readers → init flags"; never
      invent another flag combination for agent-context documents.
    - Confirmation summary gains one line: `Target readers: Both — AI
-     coding agent context included` | `Target readers: AI coding agents
-     — agent-context scope only` | `Target readers: Human readers — no
-     agent context generated`.
+    coding agent context included` | `Target readers: AI coding agents
+    — agent-context scope only` | `Target readers: Human readers — no
+    agent context generated`.
+
+3a. **Vendor fan-out.** Ask only when **Target readers** is `Both` or
+   `AI coding agents` — there is nothing to fan out when the run emits
+   no agent-context at all. Multi-select with an empty default (no shims
+   beyond the always-on Claude output). Each pick turns into a
+   `--vendor <id>` flag passed through to `init` / `preview`:
+
+   - **Codex** — `AGENTS.md` sibling already in scope; adds the Codex
+     shim. The kernel is identical; only the delivery shape changes.
+   - **Cursor** — emits `.cursor/rules/<kernel>.mdc`; pick when the
+     team uses Cursor's project-rules feature.
+   - **Copilot** — emits `.github/copilot-instructions.md` for
+     GitHub Copilot Workspace / Chat.
+   - **Windsurf** — emits `.windsurfrules`.
+   - **Aider** — emits `.aider.conf.yml` companion + a per-repo
+     `AIDER.md` the tool reads on `--read`.
+   - **Gemini** — emits `GEMINI.md` for Google's Gemini Code Assist.
+   - *(None)* — the default. Skipping the pick is an honest answer,
+     not a missing one: Claude-only output already ships via
+     `AGENTS.md` / `CLAUDE.md` / `CLAUDE.local.md` /
+     `.claude/settings.json`.
+
+   Confirmation summary gains one line: `Vendor fan-out: <ids or
+   none>`. A later widen must re-ask the question; a re-run on the
+   same scope does not. See
+   [`../references/profiles/audience-coding-agents.md`](../references/profiles/audience-coding-agents.md)
+   "Vendor fan-out" for the per-vendor delivery shape.
 
 ### Turn 2 — Scope
 

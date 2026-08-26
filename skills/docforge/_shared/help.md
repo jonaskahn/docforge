@@ -17,6 +17,7 @@ equivalent Python/Node tools.
 | `--plan-only` | Analyze and show the plan / dry-run tree; do not write or re-ground document bodies |
 | `--auto-accept` | Display plans/trees/results, then continue without routine conversational pauses (never waives side-effect gates: provider install, graph build, manifest init, file archive/delete, or the flow selection gate) |
 | `--no-dashboard` | Skip the automatic dashboard build/serve at run completion — suppresses both the forced serve and, in compact layout, the dashboard offer; render later with `/docforge-dashboard` |
+| `--vendor <id>` | Repeatable: emit shim context files for the named AI coding-agent vendor(s) in addition to Claude. Accepted ids: `codex`, `cursor`, `copilot`, `windsurf`, `aider`, `gemini`. Omitting the flag produces no additional shims (Claude-only output is unchanged) |
 | `--help` | Show this reference and stop |
 
 Example: `/docforge --plan-only`.
