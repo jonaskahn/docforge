@@ -379,6 +379,52 @@ pipeline runs through the selection gate and the structure update, writing
 the flow index and its main-standalone stubs (metadata, not document
 bodies), then stops before the write phase.
 
+## Agent-context selection gate (write-start)
+
+The agent-context selection gate is the write-start step for the
+`coding-agents` scope, and it always re-asks which agent documents to
+**add**, **update**, or **remove** — per document, never a silent default.
+It fires on a fresh start whenever Target readers (or the revise equivalent)
+selected `Both` or `AI coding agents`, after the plan gate is confirmed and
+before the first agent-context document is materialized. `--auto-accept`
+never waives it, matching the flow gate: which agent documents exist is a
+scope decision. Only the pause on the structure update that follows the gate
+honors the execution mode.
+
+The gate builds one row per agent-context document in scope: the root
+kernels (`AGENTS.md` / `CLAUDE.md`), each topic view (`agents_architecture`,
+`agents_patterns`, `agents_testing`, `agents_conventions`,
+`agents_tech_debt`, `agents_flow`, `agents_glossary`), each vendor shim
+(`claude_shim` plus the picked `--vendor` shims), `.agents/rules/` layer
+rules, and `CLAUDE.local.md` / `.claude/settings.json`. Each row is a
+tri-state:
+
+- **Add** — not yet written / not yet selected; will be scaffolded and
+  written. Default for every document the confirmed scope already selects.
+- **Update** — already written; will be re-grounded (blocking sections, or
+  the full template rewrite through steps 1a/1b in
+  [`revision.md`](revision.md) when structure drifted). Default for
+  written documents with fresh provenance.
+- **Remove** — written and currently selected, now dropped. Routes through
+  the separately-approved retirement step in
+  [`revision.md`](revision.md) "Retirement" (move to
+  `.docforge/obsolete/<year>/` by default, or delete). Never under
+  `--auto-accept`.
+
+Every row carries a one-line reason (which section is stale, which template
+drifted, which type is newly selected, or "in scope" for a fresh start).
+Compact layout: `docs/agents.md` presents each of its seven merged topic
+sections as its own row — Update a section, drop an individual section
+(Remove), or keep — and the whole-file Add / Remove remains for the compact
+entry itself.
+
+The gate's answers apply mechanically: **Add** and **Update** stay in
+`write_order` and are written normally; **Remove** drops the document from
+selection (`reconcile --audience coding-agents` / `--vendor` set change,
+then the approved `retire` move). On a fresh start every in-scope document
+defaults to **Add** and the user confirms or edits the set; nothing is
+silently assumed.
+
 Next: for each document in `write_order`, proceed to
 [`writing.md`](writing.md), which opens every document with the structure
 summary and execution card it owns.

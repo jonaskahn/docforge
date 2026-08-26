@@ -486,6 +486,23 @@ go ([`../references/graph/flow-derivation.md`](../references/graph/flow-derivati
 "Selection gate and write-back"). Only the execution-mode pauses around
 the gate honor the flag.
 
+**Agent-context selection is a mandatory gate — `--auto-accept` never
+waives it.** Whenever a revise touches the `coding-agents` scope (the
+manifest records the `coding-agents` audience, or the run is
+`/docforge-revise agents`), Docforge re-asks which agent documents to
+**add**, **update**, or **remove** — per document, never a silent default.
+The gate runs after the flow pipeline gate and before the annotated plan
+tree, so the tree already reflects the final add/remove set. Rows are
+pre-populated from `check_staleness` (blocking `STALE` /
+`MISSING` / `NO_BLOB` / `UNTRACKED` → **Update**; fresh → baseline
+unchanged) plus catalog additions (a newly selected type → **Add**), each
+with a one-line reason. Compact layout: `docs/agents.md` presents each
+of its seven merged topic sections as its own row. **Remove** routes
+through the separately-approved retirement step (move to
+`.docforge/obsolete/<year>/` by default, or delete), never under
+`--auto-accept`. See [planning.md](planning.md) "Agent-context selection
+gate (write-start)" for the full row construction and apply semantics.
+
 [`intake.md`](intake.md) "Scope intake" owns the exact per-dimension rule —
 which of Scope, Tier, Profiles, Output audience, and Execution mode get
 asked versus reported as an unchanged baseline fact. Two exceptions live
@@ -610,6 +627,27 @@ catalog contract revision `2.25.0` therefore rewrites any older routed or
 importing form through steps 1a and 1b without a conversion prompt.
 Standard and compact layout switches remain content-preserving under the
 normal split/merge mechanics.
+
+**Per-document add / update / remove gate.** Any revise that touches the
+`coding-agents` scope — a natural-language update / refresh of an
+agent-context document, `/docforge-revise agents`, or a structural revise
+over a manifest that records the `coding-agents` audience — stops at the
+agent-context selection gate before writing (see [planning.md](planning.md)
+"Agent-context selection gate (write-start)"). The gate re-asks, per
+document, whether each agent-context output is **added**, **updated**, or
+**removed**, never accepting a silent default. The rows come from the
+catalog document set (root kernels, topic views, vendor shims,
+`.agents/rules/` layer rules, `CLAUDE.local.md`, `.claude/settings.json`),
+pre-populated by `check_staleness` verdicts and template-drift detection.
+**Remove** routes through the separately-approved retirement step in
+Retirement below (move to `.docforge/obsolete/<year>/` by default, or
+delete) — never under `--auto-accept`, consistent with the flow gate.
+Applying the answers: **Add** and **Update** stay in `write_order` and are
+written normally; **Remove** drops the document from selection
+(`reconcile --audience coding-agents` / vendor-set change) and then the
+approved `retire` move. Compact layout presents each of the seven merged
+topic sections as its own row, so individual topics can be updated or
+dropped without retiring the whole `docs/agents.md` file.
 
 ## Annotated plan tree
 
@@ -769,6 +807,14 @@ keep-self-managed / archive triage first
 ([`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
 documents") and apply it with `manage_manifest.{py,js} unmanaged`, then
 update the doc wherever it now lives.
+
+**Agent-context named update.** When the named document is an agent-context output,
+run the agent-context selection gate before writing, exactly as on a structural revise:
+the gate re-asks whether each in-scope agent document is added / updated / removed,
+pre-populated by `check_staleness` verdicts and template-drift detection
+([`planning.md`](planning.md) "Agent-context selection gate (write-start)").
+A `Remove` row routes through the separately-approved retirement step, never a
+silent deletion.
 
 1. Run `migrate_metadata.{py,js}` first — see [`validation.md`](validation.md)
    "Manifest and provenance" (unconditional, even for a single-document

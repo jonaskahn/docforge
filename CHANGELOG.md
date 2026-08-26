@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Agent-context add/update/remove selection gate.** Fresh starts and
+  every revise / refresh that touches the `coding-agents` scope now re-ask,
+  per document, whether each agent-context output (root kernels, topic views,
+  vendor shims, `.agents/rules/` layer rules, `CLAUDE.local.md`,
+  `.claude/settings.json`) is **added**, **updated**, or **removed** — a
+  mandatory write-start gate never waived by `--auto-accept`, matching the
+  flow gate. Rows are pre-populated from `check_staleness` verdicts and
+  catalog additions; **Remove** routes through the separately-approved
+  retirement step. Compact layout presents each of the seven
+  `docs/agents.md` sections as its own row. Documented in planning.md
+  (write-start), revision.md (revise + named update), and intake.md
+  (target readers + audience drop).
+
 - **Kernel Boundaries restructured into Always / Ask first / Never.**
   The single flat list is now three colon-led groups so an agent can tell at
   a glance what it may do freely, what needs confirmation first, and what it

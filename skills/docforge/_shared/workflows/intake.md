@@ -296,6 +296,14 @@ and wait for explicit confirmation before reconciling the manifest.
    - **The pick maps to init flags exactly** — single canonical mapping:
      [`planning.md`](planning.md) "Target readers → init flags"; never
      invent another flag combination for agent-context documents.
+   - **The agent-context selection gate re-asks per document at write
+     time.** Target readers and vendor fan-out decide the *scope*; the
+     write-start agent-context gate then confirms which specific agent
+     documents are added / updated / removed before any agent-context
+     output is written ([`planning.md`](planning.md) "Agent-context
+     selection gate (write-start)"). Never present the per-document
+     tri-state here in Turn 1 — the gate is a write-start step, not an
+     intake question.
    - Confirmation summary gains one line: `Target readers: Both — AI
     coding agent context included` | `Target readers: AI coding agents
     — agent-context scope only` | `Target readers: Human readers — no
@@ -411,6 +419,13 @@ baseline facts at the top of the pack, never as controls.
      (consequence: `removes AGENTS.md, CLAUDE.md, and the agent views`).
      Repair: `/docforge-revise agents` ([`revision.md`](revision.md)),
      never `Add` here.
+   - **The write-start agent-context gate owns the per-document drop.**
+     The audience control above decides the *audience*; which specific
+     agent documents are removed is confirmed at the agent-context
+     selection gate before any write ([`planning.md`](planning.md)
+     "Agent-context selection gate (write-start)"), where each written
+     agent output is a `Remove` row routing through the separately-
+     approved retirement step — never a silent deletion here.
    - **New or plan-only** (audience unresolved): required, unless the
      reader pick is `AI coding agents` — then skip this question and
      state tier, profiles, audiences as baseline facts (see Target
