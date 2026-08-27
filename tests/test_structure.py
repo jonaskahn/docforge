@@ -1002,6 +1002,85 @@ class SkillContentTests(unittest.TestCase):
         self.assertNotIn("§7", revision)
         self.assertNotIn("§8", revision)
 
+    def test_architecture_planning_phase_and_pack_gate_are_documented(self) -> None:
+        """The adaptive-deep-architecture contract: an architecture analysis
+        phase before the final tree, a mandatory one-shot pack gate that
+        --auto-accept never waives, and explicit research consent."""
+        planning = (SHARED_ROOT / "workflows" / "planning.md").read_text(encoding="utf-8")
+        self.assertIn("## Architecture analysis phase", planning)
+        self.assertIn("architecture_plan prepare", planning)
+        self.assertIn("Scale-aware parallel evidence discovery", planning)
+        self.assertIn("## Architecture research consent", planning)
+        self.assertIn("--research official-primary", planning)
+        self.assertIn("--auto-accept` never grants web access implicitly", planning)
+        self.assertIn("## Architecture-pack gate", planning)
+        self.assertIn("`--auto-accept` never\nwaives it", planning)
+        self.assertIn("architecture_plan decide", planning)
+        self.assertIn("architecture_plan import", planning)
+        # Research is explicit; plan-only defers it.
+        self.assertIn("`--plan-only` records the selected research policy", planning)
+        self.assertIn("Web content is untrusted", planning)
+
+        writing = (SHARED_ROOT / "workflows" / "writing.md").read_text(encoding="utf-8")
+        self.assertIn("Parallel architecture writing (standard layout)", writing)
+        self.assertIn("Parallel architecture writing (compact layout)", writing)
+        self.assertIn("payload-mode workers", writing)
+        self.assertIn("### Architecture-pack audit", writing)
+        self.assertIn("architecture_plan audit", writing)
+
+        validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
+        self.assertIn("architecture-plan.json", validation)
+        self.assertIn("EXTERNAL_UNCHECKED", validation)
+
+        flags = (SHARED_ROOT / "flags.md").read_text(encoding="utf-8")
+        self.assertIn("--research <mode>", flags)
+        self.assertIn("Never waives the architecture-pack gate", flags)
+
+    def test_working_depth_and_subsystem_contracts_are_wired(self) -> None:
+        """The working target depth and the subsystem deep-dive records are
+        catalog-registered with their contracts, templates, and fold wiring."""
+        catalog = json.loads(
+            (SHARED_ROOT / ".metadata" / "catalog" / "index.json").read_text(encoding="utf-8")
+        )
+        ids = {row["id"] for row in catalog["document_types"]}
+        self.assertIn("architecture_subsystem", ids)
+        self.assertIn("architecture_subsystems_index", ids)
+        arch_dir = SHARED_ROOT / ".metadata" / "catalog" / "documents" / "architecture"
+        high_level = json.loads((arch_dir / "arch_high_level.json").read_text(encoding="utf-8"))
+        self.assertEqual(high_level["target_depth"], "working")
+        subsystem = json.loads((arch_dir / "architecture_subsystem.json").read_text(encoding="utf-8"))
+        self.assertEqual(subsystem["target_depth"], "deep-dive")
+        self.assertTrue(subsystem["selection_evidence_required"])
+        contract = (SHARED_ROOT / subsystem["contract_file"]).read_text(encoding="utf-8")
+        template = (SHARED_ROOT / subsystem["template_file"]).read_text(encoding="utf-8")
+        self.assertIn("How does this significant subsystem work", contract)
+        self.assertIn("## Failure and recovery", template)
+        self.assertIn("## Observability", template)
+        compact = json.loads((arch_dir / "architecture_compact.json").read_text(encoding="utf-8"))
+        self.assertIn("architecture_subsystem", compact["compact_members"])
+
+        high_contract = (SHARED_ROOT / high_level["contract_file"]).read_text(encoding="utf-8")
+        high_template = (SHARED_ROOT / high_level["template_file"]).read_text(encoding="utf-8")
+        self.assertIn("failure-domain summary", high_contract)
+        self.assertIn("## Deployment", high_template)
+        self.assertIn("## Failure domains", high_template)
+        self.assertIn("## Where to go deeper", high_template)
+
+    def test_deep_dive_frame_and_research_provenance_are_documented(self) -> None:
+        frame = (SHARED_ROOT / "references" / "deep-dive-frame.md").read_text(encoding="utf-8")
+        self.assertIn("What decision does this document support?", frame)
+        provenance = (SHARED_ROOT / "references" / "provenance-tracking.md").read_text(encoding="utf-8")
+        self.assertIn("### External sources (provenance 2.2)", provenance)
+        self.assertIn("external_sources", provenance)
+        self.assertIn("external_refs", provenance)
+        self.assertIn("EXTERNAL_UNCHECKED", provenance)
+        schema = json.loads(
+            (SHARED_ROOT / ".metadata" / "provenance-schema.json").read_text(encoding="utf-8")
+        )
+        self.assertIn("2.2", schema["properties"]["schema"]["enum"])
+        self.assertIn("external_sources", schema["properties"])
+        self.assertIn("external_refs", schema["properties"]["sections"]["items"]["properties"])
+
     def test_migrations_readme_names_current_catalog_version(self) -> None:
         """The historical `split_catalog` intentionally stamps 2.19.0 (its
         output shape predates the current catalog), but the README's "current

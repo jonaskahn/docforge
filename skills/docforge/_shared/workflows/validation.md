@@ -62,8 +62,9 @@ only.
 
 `.docforge/manifest.json` is the sole plan, state, provenance, and audit
 record. Its schema version is `3.10`. There is no second manifest or shadow
-state file — `.docforge/flow-index.json` (the flow ledger) and the
-provenance sidecars are the only other persistent records.
+state file — `.docforge/flow-index.json` (the flow ledger), the provenance
+sidecars, and `.docforge/architecture-plan.json` (the architecture ledger,
+schema 1.0) are the only other persistent records.
 
 **Migration is unconditional.** Every invocation that touches an existing
 manifest — every `/docforge-revise` path regardless of scope argument,
@@ -96,13 +97,13 @@ newest schema. A legacy
 manifest of any pre-3.0 version (1.1 `project_context` / `document_groups`,
 2.0 flat `documents` with overlays, or another shape) is re-registered by
 the same command: written documents are adopted as `generated` with
-provenance 2.1, bodies and source hashes preserved, and plan entries kept;
+provenance 2.2, bodies and source hashes preserved, and plan entries kept;
 adopted documents are never `complete` (no independent audit survived) and
 still need the revision path to re-ground, lint, and audit them. Older or
 malformed metadata requires re-grounding rather than a silent rewrite. When
 migration reports `FAILED` for a document, the agent must regenerate that
 document's provenance (status is already `in_progress`): re-ground claims,
-stamp concrete provenance 2.1, lint, and audit before completion. See
+stamp concrete provenance 2.2, lint, and audit before completion. See
 [`../references/provenance-tracking.md`](../references/provenance-tracking.md).
 
 Check staleness with:
@@ -139,8 +140,18 @@ Verdicts:
 - `PARTIAL` — identifies `STALE`, `MISSING`, `NO_BLOB`, or the non-blocking
   `COSMETIC` sources for one section (a `COSMETIC` source's normalized or
   range-scoped hash still matches; it does not require re-grounding).
+- `EXTERNAL_UNCHECKED` — the document carries section-level `external_refs`;
+  reported alongside the repository verdict and never counted as Git-hash
+  freshness. Non-blocking.
 - `UNPARSEABLE` — malformed document frontmatter.
 - `UNTRACKED` — provenance is absent, empty, or legacy.
+
+On revise, external sources are re-fetched only when research remains
+authorized. If research is declined or unavailable, preserve unchanged
+references but do not update claims that require revalidation — mark those
+sections `needs_review`. If approved research is unavailable, notify the
+user and continue repository-only where the contract permits; required
+external facts remain explicit gaps.
 
 Synchronization reads every matching manifest path, including root
 documents, and changes only each document's provenance section — the folder
@@ -149,12 +160,17 @@ before the sidecar store is moved automatically.
 
 ## Completion criteria
 
-A document is `complete` only with a passing `cold-pass` audit record. A
-run is complete only when every selected document is `complete`, explicitly
+A document is `complete` only with a passing `cold-pass` audit record. A run
+is complete only when every selected document is `complete`, explicitly
 `skipped`, or `retired` (out of scope — the entry is preserved, the file
 moved or deleted by the approved retirement step; a `retired` document
 carries no whole-tree-gate coverage expectations, exactly like `skipped`),
-and the whole-tree gate above exits zero.
+the whole-tree gate above exits zero, and — when the architecture group has
+selected documents — the architecture-pack audit recorded
+`PASS` (`architecture_plan status --repo <repo>` reports
+`Pack audit: passed`; see [`writing.md`](writing.md) "Architecture-pack
+audit"). A failed or pending pack audit blocks the architecture group's
+completion.
 
 **A targeted revise** (a revise invocation carrying a stated task clause;
 see [`revision.md`](revision.md) "Revise objective") is complete under a

@@ -27,7 +27,7 @@ from _support import (
     run,
 )
 
-SCHEMA_VERSION = "2.1"
+SCHEMA_VERSION = "2.2"
 SIDECAR_ROOT = ".docforge/provenance"
 
 

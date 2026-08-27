@@ -54,6 +54,7 @@ Always put the command/subcommand before flags (e.g.
 | `migrate_metadata` | Idempotent metadata / provenance upgrade |
 | `flow_index` | Harvest / revise / organize / render flow matrix |
 | `derive_flow_graph` | Provisional flow-graph prepare/write |
+| `architecture_plan` | Architecture-pack ledger: `prepare` / `import` / `decide` / `status` / `validate` / `audit` |
 | `diagnose_graphs` | Multi-provider graph readiness report |
 | `read_graph` | JSON code-graph probe helpers (not DB providers) |
 | `lint_document` | Mechanical document lint |

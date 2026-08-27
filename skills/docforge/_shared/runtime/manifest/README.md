@@ -22,7 +22,7 @@ commands with launchers in [`runtime/cli/`](../cli/README.md).
 | `manage_manifest` | both | CLI | `init` / `preview` / `add` / `set` / `presentation` / `audit` / `status` / `set-graph` / `reconcile` / `retire` / `unmanaged` / `finish` |
 | `check_staleness` | both | CLI | Provenance blob drift report (raw / normalized / range-scoped); optional provenance sync |
 | `hash_evidence` | both | CLI | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one cited source |
-| `migrate_metadata` | both | CLI | Idempotent manifest 3.10 / provenance 2.1 upgrade + sidecar moves |
+| `migrate_metadata` | both | CLI | Idempotent manifest 3.10 / provenance 2.2 upgrade + sidecar moves |
 
 ## Details
 

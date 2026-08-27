@@ -5,7 +5,7 @@
 
   <p><code>[ insert repository :: generate documentation :: no invented lore ]</code></p>
 
-  [![Version](https://img.shields.io/badge/version-2.25.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
+  [![Version](https://img.shields.io/badge/version-2.26.0-10b981?style=flat-square)](.claude-plugin/plugin.json)
   [![Agent Skill](https://img.shields.io/badge/format-Agent_Skill-10b981?style=flat-square)](https://agentskills.io)
   [![MIT License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 </div>
@@ -51,6 +51,14 @@ Plain language works — *"Document this repository from scratch"*,
 layout, and target readers — Human, AI coding agents, or Both — then tier,
 profiles, and audience), summarizes, and waits for your confirm before
 writing anything.
+
+Architecture documentation is planned as an evidence-specific document pack:
+a scale-aware discovery phase selects subsystem deep dives under
+`docs/architecture/subsystems/`, confirmed once at a mandatory
+architecture-pack gate. External web research is explicit-authorized only via
+`--research official-primary | official-only | off`, and every external
+source is tracked in provenance 2.2 and reported `EXTERNAL_UNCHECKED` — never
+as Git-hash freshness.
 
 Agent-context output covers `AGENTS.md` / `CLAUDE.md` /
 `.claude/settings.json`, per-layer scoped rules under `.agents/rules/`,

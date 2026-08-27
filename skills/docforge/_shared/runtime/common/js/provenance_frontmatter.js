@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 "use strict";
-/* Restricted YAML frontmatter codec for Docforge provenance 2.0.
+/* Restricted YAML frontmatter codec for Docforge provenance 2.2.
  * Emits a deterministic YAML subset and parses that subset plus plain
  * unquoted scalars. Standard library / Node built-ins only.
  */
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = "2.1";
-const SUPPORTED_SCHEMA_VERSIONS = new Set(["2.0", "2.1"]);
+const SCHEMA_VERSION = "2.2";
+const SUPPORTED_SCHEMA_VERSIONS = new Set(["2.0", "2.1", "2.2"]);
 const LEGACY_SCHEMA = "1.0";
 const GENERATOR_NAME = "docforge";
-const GENERATOR_VERSION = "2.25.0";
+const GENERATOR_VERSION = "2.26.0";
 const PROVENANCE_FIELDS = new Set([
   "schema", "doc_id", "path", "generated_at", "generator", "tier",
   "target_depth", "graph", "sections",
 ]);
-const OPTIONAL_FIELDS = new Set(["git_commit", "content_hash", "review"]);
+const OPTIONAL_FIELDS = new Set(["git_commit", "content_hash", "review", "external_sources"]);
 const SOURCE_ROLES = new Set(["code", "config", "manifest", "doc", "test", "history"]);
 const FLOW_VALUES = new Set(["native", "derived", "none"]);
 const BLOB = /^[0-9a-f]{40}$/;
@@ -26,16 +26,21 @@ const CONTENT_HASH = /^sha256:[0-9a-f]{64}$/;
 const PROVENANCE_KEY_ORDER = [
   "schema", "doc_id", "path", "generated_at", "generator",
   "tier", "target_depth", "git_commit", "content_hash", "review",
-  "graph", "sections",
+  "graph", "sections", "external_sources",
 ];
 const GENERATOR_KEY_ORDER = ["name", "version"];
 const GRAPH_KEY_ORDER = ["provider", "flow"];
-const SECTION_KEY_ORDER = ["id", "sources", "unresolved"];
+const SECTION_KEY_ORDER = ["id", "sources", "unresolved", "external_refs"];
 const SOURCE_KEY_ORDER = [
   "path", "git_blob", "git_blob_normalized", "evidence_range", "range_blob", "role",
 ];
 const EVIDENCE_RANGE_KEY_ORDER = ["start", "end"];
 const REVIEW_KEY_ORDER = ["mode", "verdict", "report"];
+const EXTERNAL_SOURCE_KEY_ORDER = [
+  "id", "url", "title", "publisher", "kind", "accessed_at",
+  "version", "locator",
+];
+const EXTERNAL_REF_KEY_ORDER = ["source_id", "relation", "supports"];
 
 class YamlCodecError extends Error {
   constructor(message) {
@@ -233,7 +238,11 @@ function emitMapping(lines, mapping, keyOrder, indent) {
             ? SECTION_KEY_ORDER
             : ("git_blob" in item)
               ? SOURCE_KEY_ORDER
-              : Object.keys(item);
+              : (!("source_id" in item) && "url" in item)
+                ? EXTERNAL_SOURCE_KEY_ORDER
+                : ("source_id" in item)
+                  ? EXTERNAL_REF_KEY_ORDER
+                  : Object.keys(item);
           for (const itemKey of itemOrder) {
             if (!(itemKey in item)) continue;
             const itemValue = item[itemKey];
@@ -247,7 +256,12 @@ function emitMapping(lines, mapping, keyOrder, indent) {
                 for (const nested of itemValue) {
                   if (nested && typeof nested === "object" && !Array.isArray(nested)) {
                     let nestedFirst = true;
-                    for (const nestedKey of SOURCE_KEY_ORDER) {
+                    const nestedOrder = ("git_blob" in nested)
+                      ? SOURCE_KEY_ORDER
+                      : ("source_id" in nested)
+                        ? EXTERNAL_REF_KEY_ORDER
+                        : Object.keys(nested);
+                    for (const nestedKey of nestedOrder) {
                       if (!(nestedKey in nested)) continue;
                       const nestedBullet = nestedFirst ? "- " : "  ";
                       nestedFirst = false;

@@ -1,0 +1,33 @@
+{
+  "id": "architecture_subsystems_index",
+  "type": "folder-index",
+  "summary": "Section overview for architecture subsystems: what subsystems are, scope, and the reader question each deep dive answers",
+  "contract_file": "content/shared/folder-index.contract.md",
+  "path": "docs/architecture/subsystems/README.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "static",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": null,
+    "requires_children": [
+      "architecture-subsystem"
+    ]
+  },
+  "instruction_file": "content/shared/folder-index.instruction.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "orientation",
+  "answer_shape": "router",
+  "write_order": 11,
+  "nav_order": 22,
+  "provenance_mode": "sections",
+  "audit_profile": "router",
+  "dominant_form": null,
+  "template_file": "content/shared/section-readme.template.md",
+  "title": "Architecture subsystems",
+  "contract_revision": "3.1.0",
+  "compact_group": "architecture_compact",
+  "compact_order": 3
+}

@@ -117,12 +117,22 @@ Diligence or higher.
    and one intra-block runtime scenario with its error path. Do not repeat the
    high-level map; go one level deeper only where the decomposition changes a
    reader's judgment.
-4. `## Constraints` — `constraints` (hard bounds with source and design
+4. `## Subsystem deep dives` — one `##` section per selected subsystem the
+   manifest recorded in `compact_members` (up to six), each carrying every
+   field of the `architecture-subsystem` contract at one line per repeated
+   instance: parent block, responsibility and non-responsibilities, boundary,
+   component map, invariant, failure boundary, one runtime scenario with its
+   error path, observability, and where it lives. Do not re-decompose a block
+   the high-level section already names; go one level deeper only where the
+   decomposition changes a reader's judgment. Additional subsystem candidates
+   beyond the six-section cap stay rows in the file's candidate matrix and
+   route to their standard-layout paths.
+5. `## Constraints` — `constraints` (hard bounds with source and design
    implication; deliberate non-goals). Keep temporary shortcuts and
    user-visible limitations out — those are owned elsewhere.
-5. `## Dependencies` — `dependencies-inventory` (direct
+6. `## Dependencies` — `dependencies-inventory` (direct
    dependencies/integrations, purpose, criticality, failure behavior).
-6. `## Technical debt` — `tech-debt-register` (shortcut, consequence,
+7. `## Technical debt` — `tech-debt-register` (shortcut, consequence,
    evidence, remediation direction). Keep hard constraints out — those belong
    in `## Constraints` above.
 

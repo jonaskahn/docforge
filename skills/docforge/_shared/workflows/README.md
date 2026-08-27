@@ -13,8 +13,8 @@ Canonical workflow ownership: [`../ownership.md`](../ownership.md).
   questions**, confirmation gate, graph provider choice.
 - A task with tier/profiles/flags already given, or continuing after intake
   confirmation → [planning.md](planning.md): inspection, tier/profile
-  selection, dynamic discovery, manifest init, dry-run tree, plan
-  checkpoint.
+  selection, dynamic discovery, architecture analysis phase and pack gate,
+  manifest init, dry-run tree, plan checkpoint.
 - Materializing the next document in `write_order`, or continuing an
   incomplete run → [writing.md](writing.md): execution card, evidence,
   scaffolding, provenance, status transitions, independent audit.
@@ -33,8 +33,8 @@ Canonical workflow ownership: [`../ownership.md`](../ownership.md).
 
 `/docforge` and `/docforge-revise` share flags:
 [`../flags.md`](../flags.md) (`--plan-only`, `--auto-accept`,
-`--no-dashboard`). There is no `--resume` or `--status` skill flag — see
-[`../flags.md`](../flags.md).
+`--no-dashboard`, `--research`). There is no `--resume` or `--status` skill
+flag — see [`../flags.md`](../flags.md).
 
 ## Boundaries
 

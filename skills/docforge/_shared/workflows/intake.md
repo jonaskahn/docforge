@@ -603,6 +603,13 @@ Lines:
    The corrected count arrives at the gate's structure update, never
    silently.
 
+   **Subsystem deep dives are not inside this projection either.** They are
+   evidence-driven and confirmed at the architecture-pack gate
+   ([`planning.md`](planning.md) "Architecture-pack gate"), not at intake.
+   State that on the summary:
+
+   `Architecture deep dives: pending the architecture-pack gate — subsystem candidates are discovered during the architecture analysis phase.`
+
 2. **Ablation.** Name any single selection responsible for **25% or
    more** of the projected documents, using `preview`'s ablation count —
    how many documents disappear if that value is dropped. Reader pick
@@ -712,7 +719,13 @@ effects:
   documents; on `/docforge-revise`, the structure update / dry-run tree
   is shown.
 - `--auto-accept` and `--no-dashboard`: no intake-specific effect beyond
-  [`../flags.md`](../flags.md).
+  [`../flags.md`](../flags.md). `--auto-accept` never grants web access —
+  research consent is always explicit.
+- `--research <official-primary|official-only|off>`: authorizes external web
+  research for the architecture planning phase. Without it, the plan
+  checkpoint shows material external questions and asks before any web
+  access. On `/docforge --plan-only`, the policy is recorded in the
+  architecture ledger but research is deferred to a writing run.
 
 Structural revise uses `/docforge-revise` (never `/docforge --revise`).
 

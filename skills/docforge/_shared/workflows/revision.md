@@ -618,12 +618,37 @@ repair rather than failing:
 - Declined → stop with `nothing in scope for
 'agents'`. Never add either silently.
 
+### Architecture revision
+
+`/docforge-revise architecture` refreshes only the affected ledger blocks and
+documents, never the whole architecture corpus:
+
+1. **Resume from the persisted ledger.** Load `.docforge/architecture-plan.json`
+   (schema 1.0) instead of re-planning from scratch. Re-run
+   `architecture_plan validate --repo <repo>` to confirm the ledger is
+   mechanically sound, then apply the revise scope to the affected
+   documents.
+2. **Research stays gated.** External sources are re-fetched only when
+   research remains authorized for the run (an explicit `--research` flag).
+   If research is declined or unavailable, preserve unchanged external
+   references but mark sections whose claims require revalidation as
+   `needs_review` — never update them from memory.
+3. **Only affected blocks re-ground.** A subsystem change re-grounds that
+   subsystem's document and the ledger rows it owns; unrelated architecture
+   documents keep `FRESH` provenance and are not regenerated. Cross-block
+   edges that the change touches are checked in the pack audit.
+4. **Pack audit repeats.** After the affected documents pass their
+   individual audits, repeat the architecture-pack audit
+   (`architecture_plan audit --repo <repo> --verdict <PASS|FAIL>
+   --report <path>`) so cross-document consistency is re-established. The
+   architecture group cannot complete without it.
+
 ### Agent-context revision
 
 Agent-context isolation never changes with scope. Outputs remain
 self-contained and zero-reference whether revised alone, alongside
 human-facing documentation, or after the selected area set changes. The
-catalog contract revision `2.25.0` therefore rewrites any older routed or
+catalog contract revision `2.26.0` therefore rewrites any older routed or
 importing form through steps 1a and 1b without a conversion prompt.
 Standard and compact layout switches remain content-preserving under the
 normal split/merge mechanics.
@@ -747,7 +772,7 @@ detection or rediscovery, writes no documents, never starts the dashboard.
 
 1. Run the read-only preview:
    `migrate_metadata.{py,js} --repo <repo> --dry-run`.
-2. Migration is unconditional — upgrade to 3.10 / provenance 2.1; see
+2. Migration is unconditional — upgrade to 3.10 / provenance 2.2; see
    [`validation.md`](validation.md) "Manifest and provenance" for the full
    version list, sidecar moves, scale-record backfill, and legacy
    re-registration mechanics; the `--dry-run` preview lists the moves

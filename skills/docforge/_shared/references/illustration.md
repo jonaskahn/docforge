@@ -134,9 +134,10 @@ that requirement extends to the whole figure, not only its edges:
 The depth vocabulary is defined in
 [`depth-and-audience.md`](depth-and-audience.md): Orientation, Working depth,
 Deep dive, Reference, and Router. Catalog machine values include `orientation`,
-`deep-dive`, `reference`, and `router`; do not invent `target_depth: working`.
-Apply the Working depth budget to content whose purpose is ordered behavior,
-important rules, inputs/outputs, and common failures.
+`working`, `deep-dive`, `reference`, and `router`; `working` is a valid
+`target_depth` and carries the eight-element Working depth budget. Apply the
+Working depth budget to content whose purpose is ordered behavior, important
+rules, inputs/outputs, and common failures.
 
 The budget bounds a single illustration. **There is no cap on how many
 illustrations a document may carry.** Every illustration must earn its place

@@ -13,7 +13,7 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.25.0";
+const CATALOG_VERSION = "2.26.0";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--group", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
@@ -26,6 +26,7 @@ const PUBLIC_CONTRACTS = {
   query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo", "--group", "--groups"],
   generate_indexes: ["--write", "--check"],
   dashboard: ["start", "export", "status", "stop", "--force", "--plan-only", "--no-open", "--port"],
+  architecture_plan: ["prepare", "import", "decide", "status", "validate", "audit", "--repo", "--manifest", "--json", "--analysis", "--select", "--decline", "--research-policy", "--verdict", "--report"],
 };
 
 function validate() {
@@ -59,6 +60,15 @@ function validate() {
     const sameSet = schemaVersions.size === supported.size && [...supported].every((v) => schemaVersions.has(v));
     if (!sameSet) {
       errors.push(`provenance schema must allow exactly ${[...supported].sort().join(", ")}`);
+    }
+  }
+  const architecturePlanSchemaPath = path.join(metadata, "architecture-plan-schema.json");
+  if (!fs.existsSync(architecturePlanSchemaPath)) {
+    errors.push("architecture-plan-schema.json is missing");
+  } else {
+    const architecturePlanSchema = readJson(architecturePlanSchemaPath);
+    if ((((architecturePlanSchema.properties || {}).schema || {}).const) !== "1.0") {
+      errors.push("architecture plan schema must require version 1.0");
     }
   }
   if (catalog.version !== CATALOG_VERSION) errors.push(`catalog version must be ${CATALOG_VERSION}`);

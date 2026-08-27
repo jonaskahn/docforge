@@ -1,0 +1,53 @@
+{
+  "id": "architecture_subsystem",
+  "type": "architecture-subsystem",
+  "summary": "One architecturally significant subsystem deep dive: boundary, mechanisms, runtime behavior, failure/recovery, observability, change pressures",
+  "contract_file": "content/architecture/contracts/architecture-subsystem.md",
+  "path": "docs/architecture/subsystems/{slug}.md",
+  "group": "architecture",
+  "selection": {
+    "mode": "dynamic",
+    "min_tier": "diligence",
+    "selectors": {},
+    "condition": "discovered_subsystem"
+  },
+  "instruction_file": "content/architecture/instructions.md",
+  "requires": [
+    "code_graph"
+  ],
+  "target_depth": "deep-dive",
+  "answer_shape": "answer-first",
+  "write_order": 12,
+  "provenance_mode": "sections",
+  "audit_profile": "architecture",
+  "dominant_form": "sequenceDiagram",
+  "model_depth": {
+    "c4": "component-evidence",
+    "arc42": "runtime-scenarios",
+    "mermaid": "annotated"
+  },
+  "contract_revision": "3.1.0",
+  "template_file": "content/architecture/templates/architecture-subsystem.md",
+  "selection_evidence_required": true,
+  "compact_group": "architecture_compact",
+  "compact_order": 52,
+  "illustration_views": [
+    {
+      "form": "flowchart",
+      "section": "Components",
+      "question": "which components sit inside this subsystem, and in which direction may they depend",
+      "depth": "working"
+    },
+    {
+      "form": "sequenceDiagram",
+      "section": "Runtime scenarios",
+      "question": "in what order do components collaborate on one significant path, including its material failure branch"
+    },
+    {
+      "form": "erDiagram",
+      "section": "Data and state",
+      "question": "which durable entities does this subsystem own, and how do they relate",
+      "required": false
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "$schema": "../../category-index-schema.json",
-  "version": "2.25.0",
+  "version": "2.26.0",
   "category": "architecture",
   "purpose": "System architecture: structure, boundaries, and integration surfaces.",
   "source": "../../index.json",
@@ -26,9 +26,19 @@
       "summary": "Module/component responsibilities and their interfaces (or, for `infrastructure-platform`, resource-group / stack responsibilities and apply order); one..."
     },
     {
+      "id": "architecture_subsystems_index",
+      "path": "architecture_subsystems_index.json",
+      "summary": "Section overview for architecture subsystems: what subsystems are, scope, and the reader question each deep dive answers"
+    },
+    {
       "id": "architecture_constraints",
       "path": "architecture_constraints.json",
       "summary": "Hard bounds with source and design implication; deliberate non-goals"
+    },
+    {
+      "id": "architecture_subsystem",
+      "path": "architecture_subsystem.json",
+      "summary": "One architecturally significant subsystem deep dive: boundary, mechanisms, runtime behavior, failure/recovery, observability, change pressures"
     },
     {
       "id": "dependencies",

@@ -4,6 +4,7 @@ Writing-craft instructions for `architecture` group documents. Routes:
 
 - `arch_high_level` → [High-level architecture writing craft](#high-level-architecture-writing-craft)
 - `arch_low_level` → [Low-level architecture writing craft](#low-level-architecture-writing-craft)
+- `architecture_subsystem` → [Subsystem deep-dive writing craft](#subsystem-deep-dive-writing-craft)
 - `system_overview` → [System-overview writing craft](#system-overview-writing-craft)
 - `concept` → [Concept writing craft](#concept-writing-craft)
 - `architecture_constraints` → [Constraints writing craft](#constraints-writing-craft)
@@ -45,9 +46,12 @@ Voice for this group is owned by [`voice.md`](../../references/voice.md): declar
   "Building blocks" is the Container diagram (the deployable pieces inside
   that box). Keep the zoom consistent within each section — never let a
   container-level block sprout component-level detail; that belongs in
-  low-level.md.
+  low-level.md or a subsystem deep dive.
 - Open with a one-paragraph system frame: what this is, at the highest level,
-  and the business capability it owns.
+  the business capability it owns, and the top architectural drivers that
+  shaped its structure. Apply the shared completeness frame from
+  [`../../references/deep-dive-frame.md`](../../references/deep-dive-frame.md)
+  where relevant.
 - Move from context to blocks to communication and boundaries in that order —
   a reader should be able to draw the box diagram from the prose alone.
 - Carry **both** C4 views as separate diagrams: a Context diagram in "System in
@@ -56,12 +60,19 @@ Voice for this group is owned by [`voice.md`](../../references/voice.md): declar
   questions — who borders this system, then what runs inside it. One diagram
   standing in for both is the most common way this document ends up thinner
   than the prose it sits above.
+- Add a C4 deployment view when execution spans multiple nodes, processes,
+  devices, environments, or containers; state an explicit omission when it
+  does not.
 - Name responsibilities with strong verbs ("owns," "validates," "routes"),
   not passive nouns ("handling," "management"). Put invariants in a visually
   distinct section.
+- Carry a compact failure-domain summary (failed element, blast radius,
+  degradation, recovery owner) when execution spans multiple nodes or
+  processes; state an explicit omission when it does not.
 - Keep the document stable by design: a claim a routine refactor would falsify
   is written too close to the code and belongs in low-level.md.
-- Finish with links to low-level detail, decisions, and operational
+- Finish with a routing map to the selected subsystem and specialized
+  architecture documents, and links to decisions and operational
   consequences. Name the forces that shaped this shape in one short paragraph —
   the constraint, the scale it was built for, the integration it had to live
   with — and link the record that settled each. The argument and the rejected
@@ -69,44 +80,55 @@ Voice for this group is owned by [`voice.md`](../../references/voice.md): declar
   still know *why this shape*, which is what
   [`progressive-disclosure.md`](../../references/progressive-disclosure.md)
   calls the document's L3 boundary.
-- Order the document per that same reference: the capability at L0 before any
-  structure, context and containers at L1, per-edge and per-boundary detail at
-  L2, stability and rationale at L3.
+- Order the document per that same reference: the capability and drivers at L0
+  before any structure, context and containers at L1, per-edge and
+  per-boundary detail at L2, stability and rationale at L3.
 - Every relationship is directional and uses a specific active verb. Name its
   protocol or channel when evidence establishes one; otherwise say `unknown`.
   Never combine the C4 Context and Container zooms in a single diagram — they
   are two diagrams, one per section.
+- Quality/change drivers appear only when supported by requirements, limits,
+  benchmarks, tests, or extension points — never as estimated figures.
 
 ## Illustration
 
-Two views, one per section, each answering a different question. Splitting is
+The declared views, each answering a different question. Splitting is
 the remedy for density, never a violation: per
 [`illustration.md`](../../references/illustration.md), complexity goes into
 more diagrams, never into a bigger one.
 
-- **Form:** a Mermaid `flowchart` in each of the two sections.
+- **Form:** a Mermaid `flowchart` in each of the context, container, and
+  (conditional) deployment sections.
 - **Renders:** *context* — this system as one box among its neighbors, naming
   each neighbor and the contract between them, never an internal;
   *containers* — the deployable blocks inside that box and how they
-  communicate, each labeled with its implementing technology.
+  communicate, each labeled with its implementing technology; *deployment* —
+  how running software instances map onto nodes, processes, devices,
+  environments, or containers.
 - **Trigger:** context, always. Containers, whenever more than one deployable
   block exists — which is every repository that ships more than a single
-  process. The container table beside it stays: it carries technology,
-  interface, boundary, and routing columns the diagram cannot.
+  process. Deployment, whenever execution spans multiple nodes, processes,
+  devices, environments, or containers. The container table beside it stays:
+  it carries technology, interface, boundary, and routing columns the diagram
+  cannot.
 - **Decomposed in column:** the container table's routing column, not a third
   diagram — coherence (illustration.md) rules out spending another picture on
   "where do I go to see inside this block" when a table cell answers it at
-  zero illustration cost. Name the low-level whitebox that decomposes that
-  block, or `—` when it has none.
-- **Budget:** the orientation bound applies per diagram, not per document. If
-  either view exceeds it, split by business or functional area rather than
-  dropping the view.
+  zero illustration cost. Name the low-level whitebox or subsystem deep dive
+  that decomposes that block, or `—` when it has none.
+- **Budget:** the working-depth bound (eight elements) applies per diagram,
+  not per document. If either view exceeds it, split by business or
+  functional area rather than dropping the view.
 
 ## Low-level architecture writing craft
 
 - This is C4's Component level (Level 3) — the zoom-in on the containers
   named in high-level.md — so component boundaries here trace back to a
   block named there, never a parallel decomposition.
+- This document is the **whole-system integration map**, not an exhaustive
+  subsystem dump: name every selected whitebox before decomposing any one,
+  trace cross-whitebox wiring to high-level relationships, and state every
+  high-level block that is intentionally not decomposed.
 - Organize by subsystem responsibility, not directory traversal: a folder
   holding three unrelated responsibilities gets three write-ups, not one.
 - Per subsystem, explain inputs, state transitions, outputs, failure
@@ -123,7 +145,10 @@ more diagrams, never into a bigger one.
 - `arch_low_level` is a component zoom-in and must trace each component to a
   high-level block. `concept` is a durable subsystem topic: define its
   responsibility, relationships, invariant, and failure boundary without
-  forcing a parent-component decomposition.
+  forcing a parent-component decomposition. A block that earned a subsystem
+  deep dive is named here and linked, never re-decomposed — unless the
+  repository is small and no subsystem deep dive was selected, in which case
+  up to three whiteboxes may be decomposed inline.
 - State only dependency semantics for data; link persistence or datasets for
   their model and storage mechanics.
 - For each non-obvious failure, name evidence and the symptom or escalation
@@ -148,15 +173,17 @@ templates.
 
 The contract's `## Must present` `At` column names the altitude; this maps it
 onto this type's actual section names: L0 is the opening framing and the
-decisions this decomposition supports; L1 is `## Layout` and
-`## Selected whiteboxes`; L2 is `## Components`, `## Module wiring`,
-`## Runtime scenario`, `## Quality and change scenarios`, and `## Data model`;
-L3 is `## Significant subsystems` and `## Cross-cutting concerns`.
+decisions this decomposition supports; L1 is `## Layout`,
+`## Selected whiteboxes`, and `## Blocks not decomposed`; L2 is
+`## Components`, `## Module wiring`, `## Runtime scenario`,
+`## Quality and change scenarios`, and `## Data model`; L3 is
+`## Significant subsystems` and `## Cross-cutting concerns`.
 
 `## Selected whiteboxes` names every block worth decomposing before
 `## Components` explains any one of them. A whitebox entry that starts
 describing its own components has jumped a level — that prose belongs under the
-component's own sub-heading.
+component's own sub-heading. `## Blocks not decomposed` states, per high-level
+block with no decomposition, that it is intentionally not decomposed and why.
 
 Choose runtime scenarios from four areas rather than from whatever the graph
 surfaced first: an important use case or feature; an interaction at a critical
@@ -195,6 +222,49 @@ views with one stated question each; it is never dropped to fit.
 Selecting *which* whiteboxes and scenarios to draw is the judgment call:
 document the important, surprising, risky, or volatile ones and leave the
 normal and standardized parts out.
+
+## Subsystem deep-dive writing craft
+
+- One subsystem, one bounded question: how this significant subsystem works,
+  where its responsibility ends, and how it behaves under failure or change.
+  Apply the shared completeness frame from
+  [`../../references/deep-dive-frame.md`](../../references/deep-dive-frame.md).
+- Open by naming the parent high-level block and the architectural decisions
+  this decomposition supports — never mechanism first.
+- State responsibility and explicit non-responsibilities before any component.
+- Per component, state responsibility and public contract; name the permitted
+  dependency direction and the forbidden dependencies.
+- Name the inputs, outputs, public contracts, and adjacent systems in the
+  boundary section — a reader must see where this subsystem ends.
+- Write one or more significant runtime scenarios, each with a successful
+  outcome **and** a material failure branch.
+- State state/data/transaction/consistency behavior when the subsystem holds
+  state; state failure containment, retry, rollback, degradation, and
+  escalation boundaries with evidence.
+- Name observability signals and the operational handoff — where control
+  moves to operations or a runbook owner.
+- State security/trust implications when the subsystem crosses a boundary.
+- Evidence every scaling, performance, resource, and anticipated-change
+  scenario; delete the section rather than estimate.
+- Close with stable implementation locations, unknowns, open risks, and links
+  to owning specialized documents.
+- No fixed section is added merely to pad the document: an inapplicable
+  concern is omitted, and an expected-but-unevidenced concern is stated as an
+  evidence gap.
+
+## Illustration
+
+Three declared views, each in its own section:
+
+| View | Form | Renders | Trigger |
+|---|---|---|---|
+| Component map | Mermaid `flowchart` | the components inside this subsystem and the permitted dependency direction between them | three or more components |
+| Runtime scenario | Mermaid `sequenceDiagram` | one significant path across components, with its outcome and a material error path | one or more scenarios — never one per code path |
+| Data and state | Mermaid `erDiagram` | durable entities this subsystem owns and their relationships | when a persistent model materially shapes the design; otherwise prose |
+
+The deep-dive budget bounds each view separately (at most 5 sequence
+participants, 8 ER entities). A view that exceeds its bound splits into two
+views with one stated question each; it is never dropped to fit.
 
 ## System-overview writing craft
 

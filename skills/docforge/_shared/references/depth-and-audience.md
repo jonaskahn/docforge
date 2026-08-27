@@ -9,11 +9,14 @@ judgment.
   links. Section READMEs at this depth are self-introductions: what the
   section is, its scope, a reading path, and the reader question each child
   answers — without summarizing child content or carrying child-owned facts.
-- **Working depth:** ordered behavior, important rules, inputs/outputs, common
-  failures, and a success or verification condition — the minimum mechanism
-  needed to execute or maintain the work safely. (Catalog machine values are
-  `orientation`, `deep-dive`, `reference`, `router`; working depth is the
-  content budget applied across standard documents.)
+- **Working depth (`working`):** enough mechanism, deployment, relationships,
+  failures, and verification to maintain the system safely — ordered
+  behavior, important rules, inputs/outputs, common failures, and a success
+  or verification condition, plus any deployment mapping and failure domains
+  that a maintainer needs. `working` is a valid catalog `target_depth`
+  (machine value), distinct from `orientation`, `deep-dive`, `reference`,
+  and `router`; it is the minimum mechanism needed to execute or maintain
+  the work safely.
 - **Deep dive (`deep-dive`):** mechanism, invariants, edge cases, failure containment,
   observability, adjacent dependencies, and the evidence or uncertainty behind
   material claims. Name the boundary at which recovery, escalation, or another

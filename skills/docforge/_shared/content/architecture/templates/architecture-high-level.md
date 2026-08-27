@@ -3,12 +3,16 @@
 _Last reviewed: {{YYYY-MM-DD}}_
 
 <!-- L0 — the answer. A reader who stops here must be able to state the
-capability this system owns. See ../../../references/progressive-disclosure.md. -->
+capability this system owns and the drivers that shaped its structure. See
+../../../references/progressive-disclosure.md and the deep-dive frame in
+../../../references/deep-dive-frame.md. -->
 
 **In one sentence:** {{the business capability this system owns, stated before any structure}}
 
-{{One paragraph: what this system is, at the highest level of abstraction, and the
-business capability it owns.}}
+{{One paragraph: what this system is, at the highest level of abstraction, the
+business capability it owns, and the top architectural drivers that shaped its
+structure (the constraint it lives under, the scale it was built for, the
+integration it had to live with).}}
 
 ## System in context
 
@@ -46,8 +50,9 @@ goes to low-level.md, never into this view; see
 ../../../references/progressive-disclosure.md rule 3._
 
 The major parts and what each is responsible for. One or two sentences each — behaviour,
-not code. Deep mechanism lives in [low-level.md](low-level.md) and
-[concepts/](concepts/README.md). For `infrastructure-platform` repos, a "block" reads
+not code. Deep mechanism lives in [low-level.md](low-level.md),
+[concepts/](concepts/README.md), and
+[subsystems/](subsystems/README.md). For `infrastructure-platform` repos, a "block" reads
 as a provisioned resource or environment (a VPC, a managed database, a compute pool),
 not application code.
 
@@ -57,7 +62,7 @@ cites [reference/tech-stack.md](../reference/tech-stack.md); an unproven choice 
 
 | Block | Responsibility | Technology | External interface | Boundary it owns | Decomposed in |
 |---|---|---|---|---|---|
-| {{block}} | {{active responsibility}} | {{stack or unknown}} | {{protocol/channel}} | {{trust / API / data boundary, if any}} | [low-level.md](low-level.md#{{whitebox-anchor}}) or `—` |
+| {{block}} | {{active responsibility}} | {{stack or unknown}} | {{protocol/channel}} | {{trust / API / data boundary, if any}} | [low-level.md](low-level.md#{{whitebox-anchor}}), [subsystems/](subsystems/README.md) or `—` |
 
 The table carries technology, interface, and boundary per block; the diagram
 carries what a table cannot — which block talks to which, in which direction.
@@ -77,24 +82,69 @@ flowchart LR
 block's absence would stop the system. If this view outgrows its budget, split
 it by functional area — never drop it.}}
 
+## Deployment
+
+_Delete this section when execution does not span multiple nodes, processes,
+devices, environments, or containers — state that omission explicitly instead._
+
+_C4 deployment view: how the running software instances from Containers map onto
+infrastructure nodes. One node per environment or deployment target; show what
+runs there and what crosses between nodes._
+
+```mermaid
+flowchart LR
+  accTitle:Deployment for {{this system}}
+  accDescr: {{One sentence: which nodes exist and which running instances are deployed to each.}}
+  NodeA["{{environment / node}}"] -->|"{{active verb · protocol}}"| NodeB["{{environment / node}}"]
+  NodeB -->|"{{active verb · protocol}}"| NodeC["{{datastore node}}"]
+```
+
+{{One or two sentences: which deployment mapping matters and why, and which
+node's loss would stop the system.}}
+
 ## Relationship matrix
 
 <!-- L2 — per-edge detail. -->
 
 _One row per material edge between blocks, or between a block and an external actor —
-directional, one specific active verb._
+directional, one specific active verb, protocol-grounded or `unknown`, with a single
+owner._
 
-| Origin | Destination | Action | Protocol / channel |
-|---|---|---|---|
-| {{block}} | {{block or external actor}} | {{specific active verb}} | {{evidenced protocol or unknown}} |
+| Origin | Destination | Action | Protocol / channel | Owner |
+|---|---|---|---|---|
+| {{block}} | {{block or external actor}} | {{specific active verb}} | {{evidenced protocol or unknown}} | {{owning document or component}} |
 
 ## Boundaries and invariants
 
 <!-- L2 — per-boundary detail. -->
 
 {{State stable boundary and invariant facts. A relationship must have a
-one-sentence rationale. For detailed flow, link
+one-sentence rationale. An invariant is stated as an absence-based fact a reader
+cannot recover by reading code ("never retries a non-idempotent write"), not a
+description of current behavior. For detailed flow, link
 [data-flow.md](data-flow.md) rather than repeating it.}}
+
+## Failure domains
+
+_Delete this section when the system runs as a single process on a single node
+and no failure domain is evidenced — state that omission explicitly instead._
+
+{{A compact failure-domain summary: the failed element, how wide the blast radius
+is, how the system degrades, and who owns recovery. One row per material failure
+domain; detailed failure taxonomies belong to low-level.md or the subsystem deep
+dives, never here.}}
+
+| Failed element | Blast radius | Degradation | Recovery owner |
+|---|---|---|---|
+| {{element}} | {{how wide the failure reaches}} | {{how the system degrades}} | {{who recovers and how}} |
+
+## Quality and change drivers
+
+<!-- L3 — the boundary. -->
+
+{{The requirements, limits, benchmarks, tests, or extension points that drove the
+shape — each evidenced. Delete this section when the repository evidences no such
+driver; never estimate a figure.}}
 
 ## Stable by design
 
@@ -102,6 +152,18 @@ one-sentence rationale. For detailed flow, link
 
 {{This document changes once or twice a year. If a claim here would be falsified by a
 routine refactor, it is written too close to the code — move that detail to low-level.md.}}
+
+## Where to go deeper
+
+{{A routing map to the selected specialized architecture documents and subsystem
+deep dives. One row per destination: the document, and the reader question it
+answers that this document deliberately leaves out.}}
+
+| Document | Answers |
+|---|---|
+| [low-level.md](low-level.md) | {{the component zoom-in question}} |
+| [subsystems/](subsystems/README.md) | {{the subsystem deep-dive questions}} |
+| {{specialized document}} | {{the question it owns}} |
 
 ## Why it is like this
 

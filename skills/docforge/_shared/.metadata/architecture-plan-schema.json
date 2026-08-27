@@ -1,0 +1,251 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Docforge Architecture Plan 1.0",
+  "type": "object",
+  "required": [
+    "schema",
+    "project",
+    "system",
+    "documents",
+    "research",
+    "adjudication",
+    "audit"
+  ],
+  "properties": {
+    "schema": {"const": "1.0"},
+    "project": {
+      "type": "object",
+      "required": ["scale", "layout", "tier", "profiles", "graph_lock"],
+      "properties": {
+        "scale": {"type": "string"},
+        "layout": {"enum": ["standard", "compact"]},
+        "tier": {"type": "string"},
+        "profiles": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+        "graph_lock": {
+          "anyOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["provider", "flow"],
+              "properties": {
+                "provider": {"type": "string"},
+                "flow": {"enum": ["native", "derived", "none"]}
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "system": {
+      "type": "object",
+      "required": [
+        "capability",
+        "drivers",
+        "actors",
+        "external_systems",
+        "deployable_blocks",
+        "subsystem_candidates",
+        "deployment_nodes",
+        "relationships",
+        "invariants",
+        "trust_boundaries",
+        "failure_domains",
+        "quality_constraints",
+        "conflicts"
+      ],
+      "properties": {
+        "capability": {"type": "string"},
+        "drivers": {"type": "array", "items": {"type": "string"}},
+        "actors": {"type": "array", "items": {"type": "string"}},
+        "external_systems": {"type": "array", "items": {"type": "string"}},
+        "deployable_blocks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "technology", "parent"],
+            "properties": {
+              "id": {"type": "string"},
+              "name": {"type": "string"},
+              "technology": {"type": "string"},
+              "parent": {"type": ["string", "null"]}
+            },
+            "additionalProperties": false
+          }
+        },
+        "subsystem_candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "parent", "evidence", "confidence"],
+            "properties": {
+              "id": {"type": "string"},
+              "name": {"type": "string"},
+              "parent": {"type": "string"},
+              "evidence": {"type": "string"},
+              "confidence": {"enum": ["high", "medium", "low"]}
+            },
+            "additionalProperties": false
+          }
+        },
+        "deployment_nodes": {"type": "array", "items": {"type": "string"}},
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["origin", "destination", "action", "protocol", "evidence"],
+            "properties": {
+              "origin": {"type": "string"},
+              "destination": {"type": "string"},
+              "action": {"type": "string"},
+              "protocol": {"type": "string"},
+              "evidence": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "invariants": {"type": "array", "items": {"type": "string"}},
+        "trust_boundaries": {"type": "array", "items": {"type": "string"}},
+        "failure_domains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["element", "blast_radius", "degradation", "recovery_owner"],
+            "properties": {
+              "element": {"type": "string"},
+              "blast_radius": {"type": "string"},
+              "degradation": {"type": "string"},
+              "recovery_owner": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "quality_constraints": {"type": "array", "items": {"type": "string"}},
+        "conflicts": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "reader_question",
+          "fact_owner",
+          "parent_blocks",
+          "evidence_questions",
+          "required_capabilities",
+          "external_research_questions",
+          "dependencies",
+          "batch",
+          "rationale",
+          "state"
+        ],
+        "properties": {
+          "id": {"type": "string"},
+          "path": {"type": "string"},
+          "reader_question": {"type": "string"},
+          "fact_owner": {"type": "string"},
+          "parent_blocks": {"type": "array", "items": {"type": "string"}},
+          "evidence_questions": {"type": "array", "items": {"type": "string"}},
+          "required_capabilities": {"type": "array", "items": {"type": "string"}},
+          "external_research_questions": {"type": "array", "items": {"type": "string"}},
+          "dependencies": {"type": "array", "items": {"type": "string"}},
+          "batch": {"type": "integer"},
+          "rationale": {"type": "string"},
+          "state": {"enum": ["proposed", "selected", "declined"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "research": {
+      "type": "object",
+      "required": ["policy", "authorized", "questions", "sources"],
+      "properties": {
+        "policy": {"enum": ["official-primary", "official-only", "off"]},
+        "authorized": {"type": "boolean"},
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["question", "documents", "expected_sources", "why_repo_cannot_answer"],
+            "properties": {
+              "question": {"type": "string"},
+              "documents": {"type": "array", "items": {"type": "string"}},
+              "expected_sources": {"type": "array", "items": {"type": "string"}},
+              "why_repo_cannot_answer": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "url", "title", "kind", "accessed_at"],
+            "properties": {
+              "id": {"type": "string"},
+              "url": {"type": "string", "pattern": "^https?://"},
+              "title": {"type": "string"},
+              "publisher": {"type": "string"},
+              "kind": {"enum": ["standard", "official-doc", "vendor-doc", "primary-research"]},
+              "accessed_at": {"type": "string", "format": "date-time"},
+              "version": {"type": "string"},
+              "locator": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "adjudication": {
+      "type": "object",
+      "required": ["proposals", "adjudicator", "merged", "omitted", "expansions"],
+      "properties": {
+        "proposals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["agent", "documents"],
+            "properties": {
+              "agent": {"type": "string"},
+              "documents": {"type": "array", "items": {"type": "string"}}
+            },
+            "additionalProperties": false
+          }
+        },
+        "adjudicator": {"type": ["string", "null"]},
+        "merged": {"type": "array", "items": {"type": "string"}},
+        "omitted": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "rationale"],
+            "properties": {
+              "id": {"type": "string"},
+              "rationale": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "expansions": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "audit": {
+      "type": "object",
+      "required": ["status", "verdict", "report"],
+      "properties": {
+        "status": {"enum": ["pending", "passed", "failed"]},
+        "verdict": {"enum": ["PASS", "FAIL", null]},
+        "report": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

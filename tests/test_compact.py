@@ -304,7 +304,10 @@ class CompactFoldTests(unittest.TestCase):
             # child until discovery seeds one. Compact folds the same subject
             # as a `##` section inside a merged file, which costs no folder, so
             # it keeps the member. That is the one intended difference.
-            dynamic_only_indexes = {"decisions_index", "concepts_index", "runbooks_index"}
+            dynamic_only_indexes = {
+                "decisions_index", "concepts_index", "runbooks_index",
+                "architecture_subsystems_index",
+            }
             self.assertEqual((unfolded | kept) - dynamic_only_indexes, standard_ids)
             self.assertTrue(dynamic_only_indexes <= unfolded)
             self.assertFalse(dynamic_only_indexes & standard_ids)
@@ -581,11 +584,12 @@ class CompactWithProfilesTests(unittest.TestCase):
                         "docs/architecture.md: missing link to docs/architecture/state.md",
                         audit.stdout,
                     )
-                    # Linking the spilled child clears that finding.
+                    # Linking the spilled children clears that finding.
                     architecture = repo / "docs" / "architecture.md"
                     architecture.write_text(
                         architecture.read_text(encoding="utf-8")
-                        + "\n- [State](architecture/state.md)\n",
+                        + "\n- [State](architecture/state.md)\n"
+                        + "\n- [Rendering](architecture/rendering.md)\n",
                         encoding="utf-8",
                     )
                     after = run(runtime, "scaffold_docs", "--repo", str(repo),

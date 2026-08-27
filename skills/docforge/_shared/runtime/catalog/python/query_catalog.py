@@ -48,7 +48,7 @@ ALLOWED_DOMINANT_FORMS = {
 # A declared view is always a real illustration, so `table` is not a view form.
 ALLOWED_VIEW_FORMS = ALLOWED_DOMINANT_FORMS - {None, "table"}
 VIEW_DEPTHS = {"orientation", "working", "deep-dive", "reference", "router"}
-TARGET_DEPTHS = {"orientation", "deep-dive", "reference", "router"}
+TARGET_DEPTHS = {"orientation", "working", "deep-dive", "reference", "router"}
 # The closed shape vocabulary (see references/document-shapes.md). `null` is
 # permitted only for the one non-Markdown template output (claude-settings.json).
 ALLOWED_ANSWER_SHAPES = {
@@ -93,7 +93,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.25.0"
+CATALOG_VERSION = "2.26.0"
 PRESENTATION_VALUES = {
     "code": {"contract-only", "task-focused"},
     "related_docs": {"none", "compact", "traceability"},

@@ -132,6 +132,17 @@ function check(manifest, repo, sectionFilter, skipped = new Set(), documentFilte
     } else {
       results.push({ doc: doc.path, status: "FRESH" });
     }
+    const externalRefs = [];
+    for (const section of matching) {
+      for (const ref of section.external_refs || []) externalRefs.push(ref);
+    }
+    if (externalRefs.length) {
+      results.push({
+        doc: doc.path,
+        status: "EXTERNAL_UNCHECKED",
+        detail: `${externalRefs.length} external reference(s) not re-validated`,
+      });
+    }
   }
   return { results, clean };
 }
@@ -196,6 +207,7 @@ function main() {
       if (!outcome.results.length) console.log("no documents matched.");
       for (const result of outcome.results) {
         if (result.status === "FRESH") console.log(`FRESH      ${result.doc}`);
+        else if (result.status === "EXTERNAL_UNCHECKED") console.log(`EXTERNAL_UNCHECKED  ${result.doc}  (${result.detail})`);
         else if (result.status === "UNTRACKED") console.log(`UNTRACKED  ${result.doc}  (${result.detail})`);
         else if (result.status === "UNPARSEABLE") console.log(`UNPARSEABLE  ${result.doc}  (${result.detail})`);
         else console.log(`PARTIAL    ${result.doc}  section=${result.section}  ${result.file_status}: ${result.file}`);

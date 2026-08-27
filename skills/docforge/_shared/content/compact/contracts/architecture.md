@@ -41,6 +41,13 @@ At Spine every section here is Orientation/Explanation; the Diligence-only secti
 | `worker_triggers` | spine + worker-serverless |
 | `data_contracts_index` | spine + data-pipeline |
 | `dataset` (one section per discovered dataset) | spine + data-pipeline (`discovered_dataset`) |
+| `architecture_subsystem` (up to six sections for discovered subsystems) | diligence (`discovered_subsystem`) |
+
+Up to six selected subsystem deep dives fold into this document as `##`
+sections; additional subsystem candidates remain rows in the merged file's
+candidate matrix unless the project switches to standard layout, where each
+subsystem gets its own file under `docs/architecture/subsystems/`. The
+architecture-pack gate must state this loss of depth before confirmation.
 
 ## Must present
 
@@ -55,6 +62,7 @@ At Spine every section here is Orientation/Explanation; the Diligence-only secti
 | 7 | At Diligence: the dependency inventory | `## Dependencies` | operational-failure framing owned by tech-stack, restated here |
 | 8 | At Diligence: the tech-debt register | `## Tech debt` | a user-visible limitation filed as tech debt |
 | 9 | Every profile- or shape-gated member section that was actually selected, each carrying its own contract's fields in full | `## {{Member}}` | a shape-gated member appearing when its selector was never evidenced |
+| 10 | At Diligence: up to six selected subsystem deep-dive sections, each carrying the `architecture-subsystem` contract's fields | `## {{Subsystem}}` | a folded subsystem section whose internals were written from nothing |
 
 ## Keep out
 
@@ -64,6 +72,7 @@ At Spine every section here is Orientation/Explanation; the Diligence-only secti
 | Invented architecture not grounded in source | nowhere — omit rather than invent |
 | Direct source-file navigation | provenance |
 | User-visible limitations inside tech debt | `limitations` |
+| A subsystem internals that exceeded the six-section fold cap | the standard-layout `docs/architecture/subsystems/` paths, linked from the candidate matrix |
 
 ## Owns / links
 

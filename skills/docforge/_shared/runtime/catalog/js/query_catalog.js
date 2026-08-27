@@ -47,7 +47,7 @@ const ALLOWED_VIEW_FORMS = new Set(
   [...ALLOWED_DOMINANT_FORMS].filter((form) => form && form !== "table"),
 );
 const VIEW_DEPTHS = new Set(["orientation", "working", "deep-dive", "reference", "router"]);
-const TARGET_DEPTHS = new Set(["orientation", "deep-dive", "reference", "router"]);
+const TARGET_DEPTHS = new Set(["orientation", "working", "deep-dive", "reference", "router"]);
 // The closed shape vocabulary (see references/document-shapes.md). `null` is
 // permitted only for the one non-Markdown template output (claude-settings.json).
 const ALLOWED_ANSWER_SHAPES = new Set([
@@ -92,7 +92,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.25.0";
+const CATALOG_VERSION = "2.26.0";
 const PRESENTATION_VALUES = {
   code: new Set(["contract-only", "task-focused"]),
   related_docs: new Set(["none", "compact", "traceability"]),

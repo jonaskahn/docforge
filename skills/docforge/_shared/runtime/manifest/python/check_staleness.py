@@ -155,6 +155,15 @@ def check(
                 clean = False
         else:
             results.append({"doc": doc["path"], "status": "FRESH"})
+        external_refs = [
+            ref for section in matching
+            for ref in section.get("external_refs", [])
+        ]
+        if external_refs:
+            results.append({
+                "doc": doc["path"], "status": "EXTERNAL_UNCHECKED",
+                "detail": f"{len(external_refs)} external reference(s) not re-validated",
+            })
     return results, clean
 
 
@@ -202,6 +211,8 @@ def main() -> int:
         for result in results:
             if result["status"] == "FRESH":
                 print(f"FRESH      {result['doc']}")
+            elif result["status"] == "EXTERNAL_UNCHECKED":
+                print(f"EXTERNAL_UNCHECKED  {result['doc']}  ({result['detail']})")
             elif result["status"] == "UNTRACKED":
                 print(f"UNTRACKED  {result['doc']}  ({result['detail']})")
             elif result["status"] == "UNPARSEABLE":

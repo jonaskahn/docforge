@@ -363,7 +363,7 @@ file ending in `.md` / `.mdx` that live under `docs/` **or at the repository
 root** (a path with no `/`). Root-level documents (for example `README.md`,
 `CHANGELOG.md`, `CONTRIBUTING.md`, `AGENTS.md`, `SECURITY.md`) become pages
 under `/docs/root/<slug>` so `docs/` pages can link to them and resolve.
-Root files are only included when they carry docforge provenance (2.1): in
+Root files are only included when they carry docforge provenance (2.2): in
 the folder sidecar for section-provenance documents, and in the manifest for
 `provenance_mode: manifest` documents such as `AGENTS.md` (see
 [`../runtime/dashboard/README.md`](../runtime/dashboard/README.md)
@@ -372,6 +372,16 @@ gitignored, machine-local preferences, and must never become a shared page
 even when it carries provenance. Machine JSON, planned/skipped docs,
 subdirectory-rooted docs outside `docs/`, and untracked Markdown are
 excluded.
+
+**External provenance.** Provenance panels separate repository evidence from
+external references. Section-level `external_refs` (provenance 2.2) are
+rendered in their own panel — reader-visible external links appear only when
+they materially explain a standard, framework contract, vendor guarantee, or
+research concept — never in the repository-evidence panel, and never stamped
+with Git-hash freshness. Sources used only to shape Docforge's method stay in
+provenance and the internal reference, not in reader-facing pages.
+`check_staleness` reports external refs as `EXTERNAL_UNCHECKED`; the dashboard
+never presents them as fresh.
 
 | Source | Content output | URL |
 |---|---|---|

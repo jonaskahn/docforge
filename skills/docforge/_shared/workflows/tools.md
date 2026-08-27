@@ -108,7 +108,7 @@ inline from the absolute cartridge root with `query_catalog --validate`,
 - `check_staleness.{py,js}`: `--document <id|path>`, `--section`, JSON
   output, and provenance sync.
 - `migrate_metadata.{py,js}`: dry-run, report, and idempotent metadata
-  upgrade to manifest 3.10 / provenance 2.1. Mechanics:
+  upgrade to manifest 3.10 / provenance 2.2. Mechanics:
   [`validation.md`](validation.md) "Manifest and provenance" and
   [`../runtime/manifest/README.md`](../runtime/manifest/README.md).
 - `flow_index.{py,js}`: harvest, revise (label/candidate dedup, compact
@@ -122,6 +122,13 @@ inline from the absolute cartridge root with `query_catalog --validate`,
   `manifest["graph"]`, not whatever artifact happens to be on disk. UA
   graphs are read in place and GitNexus flows arrive as the
   auto-discovered `.docforge/tmp/gitnexus-flows.json` interchange.
+- `architecture_plan.{py,js}`: the architecture-pack ledger —
+  `prepare` (read-only pack, no web access), `import` (validate and
+  deterministically write `.docforge/architecture-plan.json`),
+  `decide` (record the confirmed pack and research policy),
+  `status`, `validate`, and `audit` (record the pack-audit result).
+  See [`planning.md`](planning.md) "Architecture analysis phase" and
+  [`../runtime/architecture/README.md`](../runtime/architecture/README.md).
 - `validate_metadata.{py,js}`: registry/schema/path/version/peer
   validation, including generated-router drift (`generate_indexes
   --check`).

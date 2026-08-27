@@ -24,7 +24,7 @@ class DepthLadderTests(unittest.TestCase):
             f"This paragraph explains what diagram {i} shows and why the relationship matters.\n\n"
             for i in range(6)
         )
-        for depth in ("orientation", "deep-dive", "reference", "router"):
+        for depth in ("orientation", "working", "deep-dive", "reference", "router"):
             with self.subTest(depth=depth):
                 self.assertEqual(illustration_defects(document, depth), [])
 

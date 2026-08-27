@@ -12,7 +12,7 @@ Choose the subject area below, then use its generated group index to identify a 
 
 - root — Root-level entrypoints: repository README, changelog, and the docs index. (3 documents, flat)
 - [product/](product/index.json) — Product surface: overview, quickstart, and audience-specific product views. (21 documents)
-- [architecture/](architecture/index.json) — System architecture: structure, boundaries, and integration surfaces. (33 documents)
+- [architecture/](architecture/index.json) — System architecture: structure, boundaries, and integration surfaces. (35 documents)
 - flows — End-to-end flow documentation derived from the flow index. (3 documents, flat)
 - [engineering/](engineering/index.json) — Engineering practices: conventions, testing, and tech debt. (9 documents)
 - [operations/](operations/index.json) — Deployment, observability, and operational runbooks. (13 documents)

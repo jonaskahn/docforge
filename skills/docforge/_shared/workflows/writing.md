@@ -71,6 +71,40 @@ merge-editing each worker's provenance payload into its folder sidecar when
 to the independent audit (see Independent audit), which may also run
 concurrently with serial recording.
 
+### Parallel architecture writing (standard layout)
+
+After the architecture ledger and manifest are frozen, architecture
+documents follow the standard-layout parallel contract:
+
+1. Scaffold ancestor indexes serially; set statuses serially.
+2. Spawn one independent writer per architecture artifact where
+   dependencies permit. Each writer receives its route, contract, template,
+   depth, audience, and voice; **only its ledger slice**; canonical block and
+   relationship IDs; owned and forbidden fact classes; bounded evidence
+   questions; approved external sources; illustration obligations; its
+   target file; and its acceptance checks.
+3. Writers never edit the manifest, indexes, sidecars, sibling documents, or
+   the architecture ledger. They may run concurrently even when documents
+   cross-link, because the ledger freezes canonical identities; the
+   orchestrator adds final links after all targets exist.
+4. Merge provenance and state transitions serially; finalize section indexes
+   after children complete.
+
+### Parallel architecture writing (compact layout)
+
+Compact architecture targets one merged file, so direct parallel editing
+would collide. Use **payload-mode workers**:
+
+- Each worker independently writes one selected architecture section and
+  returns Markdown plus provenance; workers do not edit `docs/architecture.md`.
+- The orchestrator validates each payload, then merges sections
+  deterministically by catalog/compact order.
+- Provenance is merged serially.
+- Up to six subsystem sections fold into the compact architecture document;
+  additional subsystem candidates remain in the displayed candidate matrix
+  unless the user switches to standard layout. The pack gate must show this
+  loss of depth before confirmation.
+
 For the next document in `write_order` (serial mode):
 
 0. Immediately before materializing it, show the current structure summary
@@ -134,7 +168,7 @@ For the next document in `write_order` (serial mode):
 
 4. Set it `in_progress`, re-ground every required claim, replace all
    scaffold markers and provenance tokens, and stamp complete provenance
-   2.1. Re-ground in this order — native tool first, whole-file read last:
+   2.2. Re-ground in this order — native tool first, whole-file read last:
 
    1. Read the session's locked provider from `manifest["graph"]`
       (`.docforge/manifest.json`). Never re-detect and never re-ask; it was
@@ -277,6 +311,34 @@ completion verdict. Full audit procedure:
 Independent artifact-only audits may run concurrently, but their manifest
 results are recorded serially by the orchestrator as required by
 [`../references/parallel-execution.md`](../references/parallel-execution.md).
+
+### Architecture-pack audit
+
+For architecture groups, run one cold, artifact-only audit agent per finished
+document (concurrently where possible); auditors receive no writer reasoning.
+After individual passes, run a final **architecture-pack audit** that
+verifies:
+
+- every ledger block has exactly one reader-facing owner or an explicit
+  omission;
+- subsystem parents exist in high-level architecture;
+- cross-block edges agree across high-level, low-level, and subsystem
+  documents;
+- names, directions, protocols, deployment nodes, and trust boundaries do
+  not conflict;
+- specialized documents own their fact classes without duplication;
+- every selected document is reachable from the architecture index;
+- external references comply with the approved research policy;
+- unsupported detail is marked unknown;
+- no document passes merely because it is long or has enough headings.
+
+Record the result with `architecture_plan audit --repo <repo> --verdict
+<PASS|FAIL> --report <path>`. A failed pack audit sends affected documents to
+`needs_review`; corrections may fan out as another parallel artifact-only
+wave, followed by fresh cold audits and a repeated pack audit. Architecture
+groups cannot complete without a passing pack audit — the whole-tree gate
+also refuses a completed architecture group whose ledger audit is not
+`passed`.
 
 ## Bottom-up README closeout
 

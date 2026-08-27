@@ -18,6 +18,7 @@ equivalent Python/Node tools.
 | `--auto-accept` | Display plans/trees/results, then continue without routine conversational pauses (never waives side-effect gates: provider install, graph build, manifest init, file archive/delete, or the flow selection gate) |
 | `--no-dashboard` | Skip the automatic dashboard build/serve at run completion — suppresses both the forced serve and, in compact layout, the dashboard offer; render later with `/docforge-dashboard` |
 | `--vendor <id>` | Repeatable: emit shim context files for the named AI coding-agent vendor(s) in addition to Claude. Accepted ids: `codex`, `cursor`, `copilot`, `windsurf`, `aider`, `gemini`. Omitting the flag produces no additional shims (Claude-only output is unchanged) |
+| `--research <mode>` | Authorize external web research for this run. Modes: `official-primary` (recommended; standards + official docs + primary research), `official-only`, `off`. An explicit flag is prior user confirmation; without it, material external questions are shown and confirmed before any web access, and `--auto-accept` never grants web access implicitly. `--plan-only` records the policy but defers research to a writing run |
 | `--help` | Show this reference and stop |
 
 Example: `/docforge --plan-only`.

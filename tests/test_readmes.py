@@ -51,7 +51,7 @@ class ReadmeScaffoldTests(unittest.TestCase):
             entry = sidecar["files"]["README.md"]
             self.assertEqual(entry["id"], "architecture_index")
             self.assertEqual(entry["title"], "Architecture")
-            self.assertEqual(entry["provenance"]["schema"], "2.1")
+            self.assertEqual(entry["provenance"]["schema"], "2.2")
             self.assertIn("## At a glance", body)
             for heading in ("## Scope and boundaries", "## Start here", "## Detailed documentation"):
                 self.assertIn(heading, body)

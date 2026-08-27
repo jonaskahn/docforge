@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Restricted YAML frontmatter codec for Docforge provenance 2.0.
+"""Restricted YAML frontmatter codec for Docforge provenance 2.2.
 
 Emits a deterministic YAML subset (2-space indent, fixed key order, every
 scalar double-quoted). Parses that subset plus plain unquoted scalars.
@@ -14,16 +14,16 @@ import json
 import re
 from typing import Any
 
-SCHEMA_VERSION = "2.1"
-SUPPORTED_SCHEMA_VERSIONS = frozenset({"2.0", "2.1"})
+SCHEMA_VERSION = "2.2"
+SUPPORTED_SCHEMA_VERSIONS = frozenset({"2.0", "2.1", "2.2"})
 LEGACY_SCHEMA = "1.0"
 GENERATOR_NAME = "docforge"
-GENERATOR_VERSION = "2.25.0"
+GENERATOR_VERSION = "2.26.0"
 PROVENANCE_FIELDS = {
     "schema", "doc_id", "path", "generated_at", "generator", "tier",
     "target_depth", "graph", "sections",
 }
-OPTIONAL_FIELDS = {"git_commit", "content_hash", "review"}
+OPTIONAL_FIELDS = {"git_commit", "content_hash", "review", "external_sources"}
 SOURCE_ROLES = {"code", "config", "manifest", "doc", "test", "history"}
 FLOW_VALUES = {"native", "derived", "none"}
 BLOB = re.compile(r"^[0-9a-f]{40}$")
@@ -34,16 +34,21 @@ FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 PROVENANCE_KEY_ORDER = [
     "schema", "doc_id", "path", "generated_at", "generator",
     "tier", "target_depth", "git_commit", "content_hash", "review",
-    "graph", "sections",
+    "graph", "sections", "external_sources",
 ]
 GENERATOR_KEY_ORDER = ["name", "version"]
 GRAPH_KEY_ORDER = ["provider", "flow"]
-SECTION_KEY_ORDER = ["id", "sources", "unresolved"]
+SECTION_KEY_ORDER = ["id", "sources", "unresolved", "external_refs"]
 SOURCE_KEY_ORDER = [
     "path", "git_blob", "git_blob_normalized", "evidence_range", "range_blob", "role",
 ]
 EVIDENCE_RANGE_KEY_ORDER = ["start", "end"]
 REVIEW_KEY_ORDER = ["mode", "verdict", "report"]
+EXTERNAL_SOURCE_KEY_ORDER = [
+    "id", "url", "title", "publisher", "kind", "accessed_at",
+    "version", "locator",
+]
+EXTERNAL_REF_KEY_ORDER = ["source_id", "relation", "supports"]
 
 
 class YamlCodecError(ValueError):
@@ -259,6 +264,11 @@ def migrate_v1_to_v2(
     return migrated
 
 
+def nested_key_has_blob(nested: dict) -> bool:
+    """True when a nested list item is a source (carries a git_blob)."""
+    return "git_blob" in nested
+
+
 def _emit_mapping(lines: list[str], mapping: dict, key_order: list[str], indent: int) -> None:
     prefix = " " * indent
     for key in key_order:
@@ -287,6 +297,8 @@ def _emit_mapping(lines: list[str], mapping: dict, key_order: list[str], indent:
                     item_order = (
                         SECTION_KEY_ORDER if "sources" in item
                         else SOURCE_KEY_ORDER if "git_blob" in item
+                        else EXTERNAL_SOURCE_KEY_ORDER if "source_id" not in item and "url" in item
+                        else EXTERNAL_REF_KEY_ORDER if "source_id" in item
                         else list(item.keys())
                     )
                     for item_key in item_order:
@@ -303,7 +315,14 @@ def _emit_mapping(lines: list[str], mapping: dict, key_order: list[str], indent:
                                 for nested in item_value:
                                     if isinstance(nested, dict):
                                         nested_first = True
-                                        for nested_key in SOURCE_KEY_ORDER:
+                                        nested_order = (
+                                            SOURCE_KEY_ORDER
+                                            if nested_key_has_blob(nested)
+                                            else EXTERNAL_REF_KEY_ORDER
+                                            if "source_id" in nested
+                                            else list(nested.keys())
+                                        )
+                                        for nested_key in nested_order:
                                             if nested_key not in nested:
                                                 continue
                                             nested_bullet = "- " if nested_first else "  "

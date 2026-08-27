@@ -22,7 +22,7 @@ from runtime.catalog.python import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
-CATALOG_VERSION = "2.25.0"
+CATALOG_VERSION = "2.26.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--group", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
@@ -36,6 +36,7 @@ PUBLIC_CONTRACTS = {
     "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo", "--group", "--groups"],
     "generate_indexes": ["--write", "--check"],
     "dashboard": ["start", "export", "status", "stop", "--force", "--plan-only", "--no-open", "--port"],
+    "architecture_plan": ["prepare", "import", "decide", "status", "validate", "audit", "--repo", "--manifest", "--json", "--analysis", "--select", "--decline", "--research-policy", "--verdict", "--report"],
 }
 
 
@@ -66,6 +67,13 @@ def validate() -> list[str]:
         schema_versions = set(provenance_schema.get("properties", {}).get("schema", {}).get("enum", []))
         if schema_versions != set(SUPPORTED_SCHEMA_VERSIONS):
             errors.append(f"provenance schema must allow exactly {', '.join(sorted(SUPPORTED_SCHEMA_VERSIONS))}")
+    architecture_plan_schema_path = metadata / "architecture-plan-schema.json"
+    if not architecture_plan_schema_path.is_file():
+        errors.append("architecture-plan-schema.json is missing")
+    else:
+        architecture_plan_schema = read_json(architecture_plan_schema_path)
+        if architecture_plan_schema.get("properties", {}).get("schema", {}).get("const") != "1.0":
+            errors.append("architecture plan schema must require version 1.0")
     if catalog.get("version") != CATALOG_VERSION:
         errors.append(f"catalog version must be {CATALOG_VERSION}")
     if catalog_schema.get("properties", {}).get("version", {}).get("const") != CATALOG_VERSION:

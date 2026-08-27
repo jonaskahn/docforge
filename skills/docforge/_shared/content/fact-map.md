@@ -38,6 +38,8 @@ file owns only the named, contested cases.
 | A domain concept's meaning, invariants, lifecycle | `concept` | `arch_low_level` | `arch_low_level` references a concept by name, never redefines it |
 | System context and container boundaries | `arch_high_level` | `arch_low_level` | `arch_low_level` does not restate the high-level map |
 | Component decomposition and intra-block runtime scenario | `arch_low_level` | `arch_high_level` | `arch_high_level` keeps component detail out entirely |
+| One significant subsystem's boundary, mechanisms, runtime behavior, failure/recovery, observability | `architecture_subsystem` | `arch_low_level`, `arch_high_level` | the subsystem deep dive owns its internals; `arch_low_level` traces the cross-whitebox edge and links, never restates; `arch_high_level` names the block and routes to it |
+| Which subsystem documents exist and one reader question each | `architecture_subsystems_index` | `architecture_subsystem` | the index routes; each subsystem document owns its own content |
 | Signals, correlation path, alert intent | `observability` | `runbook` | `runbook` links to `observability` rather than re-describing signals |
 | Symptom-to-resolution diagnosis for an incident | `runbook` | `observability` | `observability` does not walk a diagnosis path |
 | Retry, backoff, and job-specific reliability guarantees | `worker_reliability` | `runbook` | a worker's own retry contract lives there, not duplicated per runbook |

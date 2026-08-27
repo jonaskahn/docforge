@@ -42,18 +42,18 @@ migration rather than treating it as current.
 
 ## The provenance object
 
-Restricted YAML provenance 2.1, the sidecar entry's `provenance` field (a
+Restricted YAML provenance 2.2, the sidecar entry's `provenance` field (a
 pre-migration document instead carries this at byte one of the file, under a
 `docforge_provenance` key):
 
 ```yaml
-schema: "2.1"
+schema: "2.2"
 doc_id: "architecture_constraints"
 path: "docs/architecture/constraints.md"
 generated_at: "2026-07-27T09:12:44Z"
 generator:
   name: "docforge"
-  version: "2.25.0"
+  version: "2.26.0"
 tier: "diligence"
 target_depth: "deep-dive"
 git_commit: "9f1c0aa4e2b7d3915c6f0b8ad24e7c31b5a0e6d2"
@@ -61,6 +61,15 @@ content_hash: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789
 graph:
   provider: "gitnexus"
   flow: "native"
+external_sources:
+  - id: "ext-c4-deployment"
+    url: "https://c4model.com/diagrams/deployment"
+    title: "Deployment diagram"
+    publisher: "C4 model"
+    kind: "official-doc"
+    accessed_at: "2026-08-27T00:00:00Z"
+    version: "current at access"
+    locator: "Scope"
 sections:
   - id: "ceilings"
     sources:
@@ -72,6 +81,10 @@ sections:
           end: "58"
         range_blob: "c81e728d9d4c2f636f067f89cc14862c6c47f4b7"
         role: "code"
+    external_refs:
+      - source_id: "ext-c4-deployment"
+        relation: "method"
+        supports: "The deployment view maps running software instances onto infrastructure nodes."
     unresolved: []
 ```
 
@@ -83,8 +96,8 @@ in `runtime/cli/python/provenance_store.py` /
 itself. A pre-migration document's inline block is a deterministic YAML
 subset: 2-space indent, fixed key order, and every scalar double-quoted, with
 anchors, aliases, block scalars, multi-document markers, and non-empty flow
-collections all rejected. `schema` is `2.0` or `2.1`; new writes stamp `2.1`,
-and existing `2.0` documents never need to change.
+collections all rejected. `schema` is `2.0`, `2.1`, or `2.2`; new writes
+stamp `2.2`, and existing `2.0` / `2.1` documents never need to change.
 
 - `doc_id` and `path` identify the manifest entry.
 - `generated_at` and optional `git_commit` identify the write activity.
@@ -95,7 +108,43 @@ and existing `2.0` documents never need to change.
 - `tier` and `target_depth` carry the content contract.
 - `graph.provider` names the selected provider and `graph.flow` is `native`,
   `derived`, or `none`.
-- `graph_snapshot` is not part of provenance 2.1.
+- `graph_snapshot` is not part of provenance 2.2.
+- Optional `external_sources` lists the primary or official sources an
+  authorized research pass consulted (see "External sources" below).
+- Each section's optional `external_refs` ties a claim-supporting statement
+  to one external source.
+
+### External sources (provenance 2.2)
+
+External research is explicit-authorized only (a `--research` flag on the
+invocation; see [`../workflows/planning.md`](../workflows/planning.md)
+"Architecture research consent"). When a document's section uses an external
+source, the top-level `external_sources` array carries the source facts and
+the section's `external_refs` records which statement each source supports.
+
+Every external source carries: `id` (unique), `url` (HTTP/HTTPS), `title`,
+`kind`, `accessed_at` (RFC3339), and optional `publisher`, `version`, and
+`locator`. Allowed `kind` values: `standard`, `official-doc`, `vendor-doc`,
+`primary-research`. Allowed `relation` values per `external_refs` entry:
+`primary-source`, `supporting-source`, `method`, `terminology`. Each
+`external_refs.supports` is a concise statement of what the source supports.
+
+Validation (mechanical, in `provenance-schema.json` and the staleness
+reporting) enforces unique IDs, valid URL schemes, RFC3339 access times,
+reference resolution (every `source_id` resolves to an `external_sources`
+entry), approved source classes, and a non-empty `supports` statement.
+Repository-behavior claims that use an external reference must still carry
+repository evidence in the same section — an external source explains a
+standard, platform guarantee, protocol semantics, or vendor behavior; it
+never overrides repository evidence about what the project actually
+implements.
+
+External references are reported as `EXTERNAL_UNCHECKED` by staleness
+tooling — they never masquerade as Git-hash freshness. A document whose
+repository sources are `FRESH` but whose sections carry external refs reports
+both. On revise, external sources are re-fetched only when research remains
+authorized; otherwise unchanged references are preserved and claims that
+require revalidation are marked `needs_review`.
 
 Written documents also carry a **public** identity beside `provenance` in the
 sidecar entry (or above `docforge_provenance` in a pre-migration document's
@@ -144,7 +193,7 @@ node runtime/cli/js/migrate_metadata.js --repo <repo>
 # deno run -A runtime/cli/js/migrate_metadata.js --repo <repo>
 ```
 
-The command is idempotent. It rewrites convertible frontmatter to YAML 2.1,
+The command is idempotent. It rewrites convertible frontmatter to YAML 2.2,
 preserves section evidence (inferring source `role` and adding empty
 `unresolved` when absent), migrates embedded manifest provenance objects,
 seeds each document's catalog-owned public `description` (from the catalog
@@ -218,6 +267,11 @@ tokenized, or inconsistent with the manifest. `git_blob_normalized`,
 - `UNPARSEABLE`: the document's provenance cannot be parsed during
   synchronization (sidecar entry or pre-migration frontmatter).
 - `UNTRACKED`: provenance is missing, empty, or legacy.
+- `EXTERNAL_UNCHECKED`: the document carries one or more section-level
+  `external_refs`. Reported alongside the repository verdict (a `FRESH`
+  document with external refs reports both) and **never** counted as Git-hash
+  freshness. Non-blocking: it does not force re-grounding and never blocks
+  `check_staleness`'s exit code on its own.
 
 Use `--document <id|path>` to limit sync and the report to one manifest entry,
 and `--section <id>` to filter sections. Single-document update / refresh

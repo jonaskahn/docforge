@@ -31,6 +31,17 @@ any component below. -->
 _Repeat per high-level block worth a component-level decomposition — not every block
 named in high-level.md needs one._
 
+## Blocks not decomposed
+
+<!-- L1 — the shape. A clear statement for every high-level block deliberately not
+decomposed here, so a silent omission never reads as "handled". -->
+
+_State, per high-level block with no decomposition in this document: that it is
+intentionally not decomposed, and why (its boundary is simple enough to hold
+without a component zoom, its internals are owned by a subsystem deep dive, or
+its mechanism is owned by a specialized document). A small repository with no
+subsystem deep dive may instead fully decompose up to three whiteboxes inline._
+
 ### {{High-level parent block}}
 
 **Motivation for decomposition:** {{what decision, review, diagnosis, or risk judgment this decomposition enables.}}
@@ -175,12 +186,17 @@ which entity owns the write path.}}
 
 ## Significant subsystems
 
-The ones worth a full deep-dive get their own folder under
-[concepts/](concepts/README.md):
+The ones worth a full deep-dive get their own document under
+[subsystems/](subsystems/README.md):
 
 | Subsystem | Deep-dive |
 |---|---|
-| {{name}} | [concepts/{{slug}}/](concepts/{{slug}}/README.md) |
+| {{name}} | [subsystems/{{slug}}.md](subsystems/{{slug}}.md) |
+
+When no subsystem earns a deep dive (small repositories), the deep dives this
+section would name are instead decomposed inline above — state that here
+("no subsystem earned a deep dive; up to three whiteboxes are decomposed
+inline").
 
 ## Cross-cutting concerns
 

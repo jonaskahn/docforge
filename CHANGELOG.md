@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+- **Adaptive, deep architecture generation.** Architecture documentation is
+  now planned as an evidence-specific document pack (`.docforge/architecture-plan.json`,
+  schema 1.0), not one broad prompt. A new `architecture_plan.{py,js}`
+  runtime (`prepare` / `import` / `decide` / `status` / `validate` / `audit`,
+  byte-identical parity) drives a scale-aware evidence phase (3/6/8 parallel
+  workers by small/medium/large), independent document-pack proposals with an
+  adjudicator, and one **mandatory architecture-pack gate** integrated into
+  the plan checkpoint — never waived by `--auto-accept`. Web research is
+  **explicitly authorized only** via `--research official-primary |
+  official-only | off`; `--plan-only` records the policy and defers research.
+
+- **Subsystem deep dives.** New catalog records `architecture_subsystem`
+  (dynamic, deep-dive, `selection_evidence_required`) and
+  `architecture_subsystems_index` (selected only once a child exists) give
+  significant subsystems their own bounded documents under
+  `docs/architecture/subsystems/` — boundary, mechanisms, runtime scenarios
+  with material error paths, failure/recovery, observability, and change
+  pressures. Up to six fold into the compact architecture document.
+  `arch_high_level` moves to **working** depth (now a valid `target_depth`)
+  with a C4 deployment view and a failure-domain summary; `arch_low_level`
+  becomes the whole-system integration map naming every selected whitebox
+  before decomposing any, and stating every block intentionally not
+  decomposed. A shared deep-dive frame
+  (`references/deep-dive-frame.md`) enforces semantic completeness across all
+  architecture explanations.
+
+- **Provenance 2.2.** Current write schema is 2.2 (2.0 / 2.1 still read
+  unchanged) with normalized top-level `external_sources` and section-level
+  `external_refs`, validated for unique IDs, HTTP(S) URLs, RFC3339 access
+  times, reference resolution, approved source classes, and concise
+  `supports` statements. `check_staleness` reports external references as
+  `EXTERNAL_UNCHECKED` — never masquerading as Git-hash freshness. On revise,
+  external sources are re-fetched only when research remains authorized.
+
+- **Architecture-pack audit.** After individual cold audits, a final pack
+  audit verifies one owner per block (or an explicit omission), subsystem
+  parent traceability, cross-document edge agreement, research-policy
+  compliance, and that no document passes on length or heading count.
+  Recorded via `architecture_plan audit`; architecture groups cannot
+  complete without a passing pack audit.
+
+- **Release 2.26.0.** Catalog, provenance, schemas, plugin and marketplace
+  metadata, runtime documentation, and README bumped from 2.25.0.
+
 - **Agent-context add/update/remove selection gate.** Fresh starts and
   every revise / refresh that touches the `coding-agents` scope now re-ask,
   per document, whether each agent-context output (root kernels, topic views,

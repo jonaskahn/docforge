@@ -74,11 +74,53 @@ sequenceDiagram
 its successful outcome, and its error path. Every message above maps to a
 named component.}}
 
+## Subsystem deep dives
+
+_Diligence and higher only, when selected subsystem deep dives fold here (up to
+six). Omit this heading entirely when no subsystem earned a deep dive or the
+project uses standard layout — there each subsystem keeps its own file under
+`docs/architecture/subsystems/`. Each section below carries every field of the
+`architecture-subsystem` contract; nothing nests past `##`._
+
+**{{Subsystem}}** — **Parent block:** {{the high-level block this decomposes}} ·
+**Responsibility:** {{what it owns and where its responsibility ends}} ·
+**Non-responsibilities:** {{what a neighbor owns}} · **Boundary:** {{inputs,
+outputs, and adjacent systems}} · **Invariant:** {{what is always enforced or
+deliberately absent}} · **Failure boundary:** {{what it contains, and what a
+caller must handle}}
+
+```mermaid
+flowchart LR
+  accTitle:Component map for {{subsystem}}
+  accDescr: {{One sentence: which components this subsystem contains and how they depend on each other.}}
+  Inbound["{{component}}"] -->|"{{active verb}}"| Core["{{component}}"]
+  Core -->|"{{active verb}}"| Outbound["{{component}}"]
+```
+
+```mermaid
+sequenceDiagram
+  accTitle:Runtime scenario — {{significant path}}
+  accDescr: {{One sentence: which components collaborate, in what order, and how the path can fail.}}
+  participant A as {{component}}
+  participant B as {{component}}
+  A->>B: {{specific action}}
+  alt {{success condition}}
+    B-->>A: {{outcome}}
+  else {{material error}}
+    B-->>A: {{safe failure behavior}}
+  end
+```
+
+{{One or two sentences: why this subsystem matters, its successful outcome, and
+its material error path. Every message above maps to a named component.}}
+
+_Repeat the section block per folded subsystem, up to the six-section cap.
+Subsystem candidates beyond the cap stay rows in the file's candidate matrix
+and route to their standard-layout paths._
+
 ## Constraints
 
-_Diligence and higher only — omit this section entirely at Spine._
-
-| Constraint | Limit | Source | Why it exists | What lifting it would take |
+_Diligence and higher only — omit this section entirely at Spine._| Constraint | Limit | Source | Why it exists | What lifting it would take |
 |---|---|---|---|---|
 | {{e.g. throughput}} | {{the ceiling}} | {{platform limit, regulation, contract, physics}} | {{the design choice behind it}} | {{the change required}} |
 

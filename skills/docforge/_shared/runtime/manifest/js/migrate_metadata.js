@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-/* Migrate Docforge manifest metadata to 3.10 / provenance 2.0.
+/* Migrate Docforge manifest metadata to 3.10 / provenance 2.2.
  *
  * Upgrades manifest 3.9 (seeding each document's catalog-owned
  * `dominant_form`) and manifest 3.3 (seeding the project's
@@ -14,7 +14,7 @@
  * preserving section evidence), and re-registers any older legacy manifest —
  * 1.1 (`project_context` / `document_groups`), 2.0 (flat `documents` with
  * overlay profiles), or any other pre-3.0 shape — as 3.10: written documents
- * are adopted as `generated` with provenance 2.0, bodies preserved, and plan
+ * are adopted as `generated` with provenance 2.2, bodies preserved, and plan
  * entries kept. When a document cannot be converted to complete provenance
  * 2.0 (missing or unparseable frontmatter, conversion failure, or incomplete
  * result for a written document), write a best-effort scaffold, mark the

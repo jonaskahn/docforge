@@ -29,6 +29,8 @@ that lists every script, its purpose, and when to use it:
   precondition checks.
 - [`flows/`](flows/README.md) — flow-index harvesting and provisional
   derivation: `flow_index`, `derive_flow_graph`.
+- [`architecture/`](architecture/README.md) — architecture-pack ledger:
+  `architecture_plan`.
 - [`manifest/`](manifest/README.md) — manifest lifecycle and migration:
   `manage_manifest`, `migrate_metadata`, `check_staleness`.
 - [`documents/`](documents/README.md) — scaffolding and linting:

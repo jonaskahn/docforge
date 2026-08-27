@@ -1,6 +1,6 @@
 {
   "$schema": "catalog-index-schema.json",
-  "version": "2.25.0",
+  "version": "2.26.0",
   "profiles": {
     "shapes": "profiles/shapes.json",
     "platforms": "profiles/platforms.json",
@@ -260,6 +260,18 @@
       "tier": "diligence",
       "path": "docs/architecture/low-level.md",
       "record": "documents/architecture/arch_low_level.json"
+    },
+    {
+      "id": "architecture_subsystems_index",
+      "tier": "diligence",
+      "path": "docs/architecture/subsystems/README.md",
+      "record": "documents/architecture/architecture_subsystems_index.json"
+    },
+    {
+      "id": "architecture_subsystem",
+      "tier": "diligence",
+      "path": "docs/architecture/subsystems/{slug}.md",
+      "record": "documents/architecture/architecture_subsystem.json"
     },
     {
       "id": "architecture_compact",

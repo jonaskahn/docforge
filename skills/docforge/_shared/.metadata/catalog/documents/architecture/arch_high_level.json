@@ -15,7 +15,7 @@
   "requires": [
     "code_graph"
   ],
-  "target_depth": "orientation",
+  "target_depth": "working",
   "answer_shape": "answer-first",
   "write_order": 10,
   "nav_order": 21,
@@ -27,7 +27,7 @@
     "arc42": "building-block-l1",
     "mermaid": "complementary"
   },
-  "contract_revision": "3.0.0",
+  "contract_revision": "3.1.0",
   "template_file": "content/architecture/templates/architecture-high-level.md",
   "compact_group": "architecture_compact",
   "compact_order": 2,
@@ -42,6 +42,13 @@
       "section": "Containers and blackboxes",
       "question": "which deployable blocks run inside, and how do they communicate",
       "depth": "working"
+    },
+    {
+      "form": "flowchart",
+      "section": "Deployment",
+      "question": "how do running software instances map onto nodes, processes, devices, environments, or containers",
+      "depth": "working",
+      "required": false
     }
   ]
 }
