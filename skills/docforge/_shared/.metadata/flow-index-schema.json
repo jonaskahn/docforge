@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Docforge Flow Index 1.3",
+  "title": "Docforge Flow Index 1.4",
   "type": "object",
   "required": [
     "version",
@@ -13,7 +13,7 @@
   ],
   "properties": {
     "version": {
-      "const": "1.3"
+      "const": "1.4"
     },
     "generated_at": {
       "type": "string",
@@ -161,6 +161,29 @@
               "audited",
               null
             ]
+          },
+          "surface_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "surface_confidence": {
+            "enum": [
+              "confirmed",
+              "candidate",
+              null
+            ]
+          },
+          "analysis_ready": {
+            "type": "boolean"
           },
           "entry_ref": {
             "type": "object",

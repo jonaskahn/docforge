@@ -213,18 +213,18 @@ def ordered_paths(
     try:
         rows = connection.execute(
             """
-            WITH RECURSIVE walk(node, depth, trail) AS (
-              SELECT e.target, 1, '>' || e.target || '>'
+            WITH RECURSIVE walk(node, depth, trail, edge_kind) AS (
+              SELECT e.target, 1, '>' || e.target || '>', e.kind
                 FROM edges e
                WHERE e.source = ? AND e.kind IN ('references', 'calls')
               UNION ALL
-              SELECT e.target, w.depth + 1, w.trail || e.target || '>'
+              SELECT e.target, w.depth + 1, w.trail || e.target || '>', e.kind
                 FROM walk w JOIN edges e ON e.source = w.node
                WHERE e.kind IN ('references', 'calls')
                  AND w.depth < ?
                  AND instr(w.trail, '>' || e.target || '>') = 0
             )
-            SELECT w.depth, w.trail, n.id, n.name, n.qualified_name,
+            SELECT w.depth, w.trail, w.edge_kind, n.id, n.name, n.qualified_name,
                    n.kind, n.file_path, n.start_line
               FROM walk w JOIN nodes n ON n.id = w.node
              ORDER BY w.depth, n.qualified_name
@@ -248,6 +248,7 @@ def ordered_paths(
             "file": row["file_path"],
             "line": row["start_line"],
             "kind": row["kind"],
+            "edgeType": row["edge_kind"],
         }
         parent = _parent_trail(trail)
         children.setdefault(parent, []).append(trail)

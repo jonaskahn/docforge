@@ -8,12 +8,12 @@ CLI launcher.
 
 from __future__ import annotations
 
-FLOW_INDEX_VERSION = "1.3"
-SUPPORTED_FLOW_INDEX_VERSIONS = ("1.1", "1.2", "1.3")
+FLOW_INDEX_VERSION = "1.4"
+SUPPORTED_FLOW_INDEX_VERSIONS = ("1.1", "1.2", "1.3", "1.4")
 
 
 def upgrade_index(index: dict) -> dict:
-    """Additively upgrade a 1.1/1.2 flow index to the current schema.
+    """Additively upgrade a 1.1–1.3 flow index to the current schema.
 
     Mutates and returns the same dict. Raises ValueError on unsupported
     versions; a current index passes through untouched."""
@@ -39,5 +39,13 @@ def upgrade_index(index: dict) -> dict:
                 if row.get("status") == "documented" or bool(row.get("written"))
                 else "not-analyzed",
             )
+    if version in {"1.1", "1.2", "1.3"}:
+        for row in index.get("flows", []):
+            if not isinstance(row, dict):
+                continue
+            # 1.4's topology links are optional evidence, never fabricated by
+            # migration. Empty values make an upgraded legacy row unambiguous.
+            row.setdefault("surface_ref", None)
+            row.setdefault("evidence_refs", [])
     index["version"] = FLOW_INDEX_VERSION
     return index

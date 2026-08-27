@@ -202,7 +202,7 @@ def build_interchange(query) -> dict:
         "RETURN p.id AS processId, p.heuristicLabel AS name, "
         "p.entryPointId AS entry, p.terminalId AS terminal, "
         "p.processType AS type, s.id AS stepId, s.filePath AS file, "
-        "s.name AS symbol, r.order AS ord ORDER BY p.id, r.order"
+        "s.name AS symbol, s.startLine AS line, r.order AS ord ORDER BY p.id, r.order"
     )):
         pid = str(row.get("processId"))
         record = processes.setdefault(pid, {
@@ -220,6 +220,7 @@ def build_interchange(query) -> dict:
             "nodeId": row.get("stepId"),
             "filePath": row.get("file"),
             "symbol": row.get("symbol"),
+            "line": row.get("line") if isinstance(row.get("line"), int) else None,
         })
 
     for row in rows_or(query(

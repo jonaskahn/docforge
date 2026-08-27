@@ -4,10 +4,13 @@
 
 const fs = require("fs");
 const path = require("path");
+const { spawnSync } = require("child_process");
 const { fail, loadManifest } = require("../../common/js/_util.js");
 const scale = require("../../common/js/scale.js");
 
 const ANALYSIS_REL = path.join(".docforge", "flow-analysis.json");
+const INVESTIGATION_REL = path.join(".docforge", "flow-investigation.json");
+const FLOW_EVIDENCE_REL = path.join(".docforge", "flow-evidence.json");
 const SCHEMA_VERSION = 3;
 const LEGACY_SCHEMA_VERSIONS = new Set([1, 2]);
 const EVIDENCE_WORKERS_BY_SCALE = { small: 3, medium: 6, large: 8 };
@@ -124,7 +127,9 @@ function defaultAnalysis(repo, manifestPath = null) {
   const klass = scaleClass(repo, manifestPath);
   return {
     schemaVersion: SCHEMA_VERSION,
-    source: path.resolve(repo),
+    // Python's Path.resolve() follows macOS's /private tmp symlink; use the
+    // same canonical path so the schema-v3 stdout is actually paired.
+    source: fs.realpathSync(repo),
     generated_at: nowIso(),
     research_policy: null,
     workers: {
@@ -181,6 +186,18 @@ function validateAnalysis(data, repo = null, allowEmpty = false) {
   const flows = data.flows;
   if (!Array.isArray(flows)) { errors.push("flows must be an array"); return errors; }
   if (!flows.length && !allowEmpty) errors.push("flows must contain at least one analyzed flow");
+  const evidenceEntries = new Map();
+  const evidenceIds = new Set();
+  if (repo && fs.existsSync(path.join(repo, FLOW_EVIDENCE_REL))) {
+    try {
+      const topology = JSON.parse(fs.readFileSync(path.join(repo, FLOW_EVIDENCE_REL), "utf8"));
+      for (const item of topology.evidence || []) if (item && typeof item === "object" && item.id) evidenceIds.add(String(item.id));
+      for (const entry of topology.entry_points || []) {
+        if (!entry || typeof entry !== "object") continue;
+        for (const ref of entry.evidence_refs || []) evidenceEntries.set(String(ref), entry);
+      }
+    } catch { errors.push("flow evidence is not valid JSON"); }
+  }
   const flowIds = new Set();
   const proposalIds = new Set();
   const childIds = new Set();
@@ -196,6 +213,18 @@ function validateAnalysis(data, repo = null, allowEmpty = false) {
     if (flow.analysis_state === "legacy-needs-analysis") {
       if (!flow.legacy_evidence || typeof flow.legacy_evidence !== "object") errors.push(`flow ${id}: legacy_evidence is required for legacy migration`);
       return;
+    }
+    const refs = flow.evidence_refs === undefined ? [] : flow.evidence_refs;
+    if (!Array.isArray(refs) || refs.some((ref) => typeof ref !== "string")) {
+      errors.push(`flow ${id}: evidence_refs must be an array of strings`);
+    } else if (evidenceIds.size) {
+      for (const ref of refs) {
+        if (!evidenceIds.has(ref)) errors.push(`flow ${id}: dangling evidence_ref ${ref}`);
+        const entry = evidenceEntries.get(ref);
+        if (["ready", "audited"].includes(flow.analysis_state) && entry && !entry.analysis_ready) {
+          errors.push(`flow ${id}: referenced topology is not analysis-ready`);
+        }
+      }
     }
     for (const key of ["reader_question", "characteristics", "trigger", "guarantee", "terminal_outcomes", "actors", "steps", "document_design"]) {
       if (!(key in flow)) errors.push(`flow ${id}: missing required field '${key}'`);
@@ -272,10 +301,60 @@ function validateAnalysis(data, repo = null, allowEmpty = false) {
 }
 
 function printErrors(errors) { for (const error of errors) console.error(`error: ${error}`); }
+function refreshPreflight(repo) {
+  let locked = null;
+  const manifest = path.join(repo, ".docforge", "manifest.json");
+  try {
+    const data = JSON.parse(fs.readFileSync(manifest, "utf8"));
+    locked = data.graph && data.graph.provider ? String(data.graph.provider) : null;
+  } catch { /* preflight falls back to on-disk provider */ }
+  const provider = ["codegraph", "gitnexus"].includes(locked) ? locked
+    : (fs.existsSync(path.join(repo, ".docforge", "tmp", "gitnexus-flows.json")) ? "gitnexus"
+      : (fs.existsSync(path.join(repo, ".codegraph", "codegraph.db")) ? "codegraph" : null));
+  const source = provider === "gitnexus" ? path.join(repo, ".docforge", "tmp", "gitnexus-flows.json")
+    : (provider === "codegraph" ? path.join(repo, ".codegraph", "codegraph.db") : null);
+  if (!provider || !source || !fs.existsSync(source)) return null;
+  const script = path.join(__dirname, "..", "..", "cli", "python", "flow_preflight.py");
+  const result = spawnSync("python3", [script, "prepare", "--repo", repo], { encoding: "utf8" });
+  return result.error || result.status !== 0 ? (result.stderr || (result.error && result.error.message) || "preflight command failed").trim() : null;
+}
 function runPrepare(repo, manifestPath) {
+  const preflightError = refreshPreflight(repo);
   const data = defaultAnalysis(repo, manifestPath);
   const errors = validateAnalysis(data, null, true);
   if (errors.length) { printErrors(errors); return 1; }
+  // stdout stays the v3 scaffold. The branch-preserving structural companion
+  // is persisted for the investigator rather than flattened into a card.
+  const evidencePath = path.join(repo, FLOW_EVIDENCE_REL);
+  const investigation = { schemaVersion: "1.0", generated_at: nowIso(), source: evidencePath, entries: [], unresolved_gaps: [] };
+  if (fs.existsSync(evidencePath)) {
+    try {
+      const ledger = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
+      const variants = (ledger.path_variants || []).filter((item) => item && typeof item === "object");
+      const gaps = (ledger.evidence_gaps || []).filter((item) => item && typeof item === "object");
+      for (const entry of ledger.entry_points || []) {
+        if (!entry || typeof entry !== "object") continue;
+        const trigger = entry.trigger && typeof entry.trigger === "object" ? entry.trigger : {};
+        const subtype = trigger.subtype || "unresolved";
+        investigation.entries.push({
+          entry_ref: entry.id, surface_ref: entry.surface_ref, evidence_refs: entry.evidence_refs || [],
+          topology_variants: variants.filter((item) => item.entry_ref === entry.id).map((item) => item.id),
+          analysis_ready: Boolean(entry.analysis_ready),
+          questions: [
+            `What guards and rejection branches apply to this ${subtype} entry?`,
+            "Which verified state changes occur on each retained path?",
+            "What terminal outcomes, failures, and recovery behavior are evidenced?",
+          ],
+          unresolved_gaps: gaps.filter((item) => item.entry_ref === entry.id).map((item) => item.id),
+        });
+      }
+      investigation.unresolved_gaps = gaps;
+    } catch { investigation.unresolved_gaps = [{ type: "invalid-ledger", message: "flow-evidence.json could not be read" }]; }
+  } else if (preflightError) {
+    investigation.unresolved_gaps = [{ type: "preflight-refresh-failed", message: preflightError }];
+  }
+  fs.mkdirSync(path.dirname(path.join(repo, INVESTIGATION_REL)), { recursive: true });
+  fs.writeFileSync(path.join(repo, INVESTIGATION_REL), dumpJson(investigation), "utf8");
   process.stdout.write(dumpJson(data)); return 0;
 }
 function runImport(repo, sourcePath) {

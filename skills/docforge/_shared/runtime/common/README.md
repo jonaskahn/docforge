@@ -23,7 +23,7 @@ they exist to be imported, not executed.
 - Naming special outputs that bypass normal provenance → `special_files`.
 - Classifying project scale (`small` / `medium` / `large`) and suggesting a
   layout → `scale`.
-- Upgrading a 1.1/1.2 flow index to 1.3 (shared by `flow_index` and
+- Upgrading a 1.1–1.3 flow index to 1.4 (shared by `flow_index` and
   `migrate_metadata`) → `flow_index_schema`.
 - Deciding whether a symbol name, file path, or graph layer reads as an entry
   surface (shared by `flow_index` and the graph sources) → `entry_vocabulary`.
@@ -45,7 +45,7 @@ All are paired libraries (Python snake_case / JS camelCase exports).
 | `provenance_store` | Folder-mirrored JSON sidecar store: sidecar-first reads, entry writes, inline-to-sidecar moves | mixes — writes `.docforge/provenance/` and strips migrated frontmatter |
 | `repo_identity` | Declared repository web base, forge flavor, and pinned-commit permalink construction | yes |
 | `special_files` | Constants: special output names and their template sources | yes |
-| `flow_index_schema` | Flow-index schema versioning and the additive 1.1/1.2→1.3 upgrade, shared by the flows runtime and metadata migration | yes |
+| `flow_index_schema` | Flow-index schema versioning and the additive 1.1–1.3→1.4 upgrade, shared by the flows runtime and metadata migration | yes |
 | `entry_vocabulary` | Entry-surface vocabulary: entry/surface name regexes, entry path segments, and the graph-layer word list | yes |
 | `scale` | Three-way project scale classification from the existing inventory walk + confirmed profile count; suggests `compact`/`standard` layout | yes |
 

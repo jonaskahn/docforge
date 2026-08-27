@@ -19,6 +19,8 @@ from runtime.common.python._util import dump_json, fail, load_manifest
 from runtime.common.python import scale
 
 ANALYSIS_REL = Path(".docforge/flow-analysis.json")
+INVESTIGATION_REL = Path(".docforge/flow-investigation.json")
+FLOW_EVIDENCE_REL = Path(".docforge/flow-evidence.json")
 SCHEMA_VERSION = 3
 LEGACY_SCHEMA_VERSIONS = {1, 2}
 EVIDENCE_WORKERS_BY_SCALE = {"small": 3, "medium": 6, "large": 8}
@@ -225,6 +227,21 @@ def validate_analysis(data: dict, repo: Path | None = None, allow_empty: bool = 
     flow_ids: set[str] = set()
     proposal_ids: set[str] = set()
     child_ids: set[str] = set()
+    evidence_entries: dict[str, dict] = {}
+    evidence_ids: set[str] = set()
+    if repo is not None and (repo / FLOW_EVIDENCE_REL).is_file():
+        try:
+            topology = json.loads((repo / FLOW_EVIDENCE_REL).read_text(encoding="utf-8"))
+            evidence_ids = {
+                str(item.get("id")) for item in topology.get("evidence", [])
+                if isinstance(item, dict) and item.get("id")
+            }
+            for entry in topology.get("entry_points", []):
+                if isinstance(entry, dict):
+                    for ref in entry.get("evidence_refs", []):
+                        evidence_entries[str(ref)] = entry
+        except (OSError, json.JSONDecodeError):
+            errors.append("flow evidence is not valid JSON")
     for position, flow in enumerate(flows, start=1):
         if not isinstance(flow, dict):
             errors.append(f"flows[{position}] must be an object")
@@ -246,6 +263,16 @@ def validate_analysis(data: dict, repo: Path | None = None, allow_empty: bool = 
             if not isinstance(flow.get("legacy_evidence"), dict):
                 errors.append(f"flow {flow_id}: legacy_evidence is required for legacy migration")
             continue
+        refs = flow.get("evidence_refs", [])
+        if refs is not None and (not isinstance(refs, list) or any(not isinstance(ref, str) for ref in refs)):
+            errors.append(f"flow {flow_id}: evidence_refs must be an array of strings")
+        if evidence_ids and isinstance(refs, list):
+            for ref in refs:
+                if ref not in evidence_ids:
+                    errors.append(f"flow {flow_id}: dangling evidence_ref {ref}")
+                entry = evidence_entries.get(ref)
+                if state in {"ready", "audited"} and entry is not None and not entry.get("analysis_ready"):
+                    errors.append(f"flow {flow_id}: referenced topology is not analysis-ready")
         for required in (
             "reader_question", "characteristics", "trigger", "guarantee",
             "terminal_outcomes", "actors", "steps", "document_design",
@@ -351,12 +378,61 @@ def validate_analysis(data: dict, repo: Path | None = None, allow_empty: bool = 
 
 
 def run_prepare(repo: Path, manifest_path: str | None) -> int:
+    # Starting an investigation refreshes graph-backed topology first, so the
+    # companion pack below is useful even when flow_index harvest has not been
+    # invoked in this run. Understand Anything remains untouched.
+    preflight_error = None
+    try:
+        from runtime.flows.python.flow_preflight import prepare_if_available
+        _, errors = prepare_if_available(repo)
+        if errors:
+            preflight_error = "; ".join(errors)
+    except (ImportError, OSError, ValueError) as error:
+        preflight_error = str(error)
     analysis = default_analysis(repo, manifest_path)
     errors = validate_analysis(analysis, allow_empty=True)
     if errors:
         for error in errors:
             print(f"error: {error}", file=__import__("sys").stderr)
         return 1
+    # Keep stdout exactly the schema-v3 analysis scaffold expected by existing
+    # investigators, while handing them a persistent structural companion.
+    # This avoids turning topology branches into a premature linear narrative.
+    evidence_path = repo / FLOW_EVIDENCE_REL
+    investigation = {
+        "schemaVersion": "1.0", "generated_at": now_iso(), "source": str(evidence_path),
+        "entries": [], "unresolved_gaps": [],
+    }
+    if evidence_path.is_file():
+        try:
+            ledger = json.loads(evidence_path.read_text(encoding="utf-8"))
+            variants = [item for item in ledger.get("path_variants", []) if isinstance(item, dict)]
+            gaps = [item for item in ledger.get("evidence_gaps", []) if isinstance(item, dict)]
+            for entry in ledger.get("entry_points", []):
+                if not isinstance(entry, dict):
+                    continue
+                trigger = entry.get("trigger") if isinstance(entry.get("trigger"), dict) else {}
+                subtype = trigger.get("subtype") or "unresolved"
+                questions = [
+                    f"What guards and rejection branches apply to this {subtype} entry?",
+                    "Which verified state changes occur on each retained path?",
+                    "What terminal outcomes, failures, and recovery behavior are evidenced?",
+                ]
+                investigation["entries"].append({
+                    "entry_ref": entry.get("id"), "surface_ref": entry.get("surface_ref"),
+                    "evidence_refs": entry.get("evidence_refs", []),
+                    "topology_variants": [item.get("id") for item in variants if item.get("entry_ref") == entry.get("id")],
+                    "analysis_ready": bool(entry.get("analysis_ready")), "questions": questions,
+                    "unresolved_gaps": [item.get("id") for item in gaps if item.get("entry_ref") == entry.get("id")],
+                })
+            investigation["unresolved_gaps"] = gaps
+        except (OSError, json.JSONDecodeError):
+            investigation["unresolved_gaps"] = [{"type": "invalid-ledger", "message": "flow-evidence.json could not be read"}]
+    elif preflight_error:
+        investigation["unresolved_gaps"] = [{"type": "preflight-refresh-failed", "message": preflight_error}]
+    target = repo / INVESTIGATION_REL
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(dump_json(investigation), encoding="utf-8")
     print(dump_json(analysis), end="")
     return 0
 

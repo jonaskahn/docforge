@@ -528,7 +528,7 @@ def backfill_project_scale(repo: Path, tier: str = "diligence") -> dict:
 
 
 def migrate_flow_index(repo: Path, dry_run: bool) -> dict | None:
-    """Upgrade a 1.1/1.2 flow index to 1.3 as part of metadata migration.
+    """Upgrade a 1.1–1.3 flow index to 1.4 as part of metadata migration.
 
     One bare revise leaves every metadata artifact at the newest schema —
     manifest, provenance sidecars, and now the flow ledger. The upgrade is

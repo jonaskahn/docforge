@@ -479,7 +479,7 @@ function backfillProjectScale(repo, tier = "diligence") {
   return record;
 }
 
-// Upgrade a 1.1/1.2 flow index to 1.3 as part of metadata migration. One bare
+// Upgrade a 1.1–1.3 flow index to 1.4 as part of metadata migration. One bare
 // revise leaves every metadata artifact at the newest schema — manifest,
 // provenance sidecars, and now the flow ledger. The upgrade is the same
 // additive merge `flow_index` performs on load; an absent, unparseable, or

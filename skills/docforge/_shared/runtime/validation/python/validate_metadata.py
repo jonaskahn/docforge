@@ -33,6 +33,7 @@ PUBLIC_CONTRACTS = {
     "hash_evidence": ["--repo", "--path", "--range", "--json"],
     "flow_index": ["harvest", "revise", "update", "import", "apply-analysis", "render", "organize", "emit", "apply", "--repo", "--main-limit", "--output", "--organization", "--id", "--priority", "--status", "--summary", "--written", "--analysis"],
     "flow_analysis": ["prepare", "import", "decide", "status", "validate", "audit", "--repo", "--manifest", "--json", "--analysis", "--select", "--decline", "--approve-decomposition", "--research-policy", "--verdict", "--report"],
+    "flow_preflight": ["prepare", "import", "status", "validate", "--repo", "--json", "--input", "--evidence", "--analysis"],
     "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
     "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo", "--group", "--groups"],
     "generate_indexes": ["--write", "--check"],
@@ -124,15 +125,15 @@ def validate() -> list[str]:
         sidecar_schema = read_json(sidecar_schema_path)
         if sidecar_schema.get("properties", {}).get("schema", {}).get("const") != "1.0":
             errors.append("provenance sidecar schema must require version 1.0")
-    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.3":
-        errors.append("flow index schema must require version 1.3")
+    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.4":
+        errors.append("flow index schema must require version 1.4")
     flow_item = (
         flow_index_schema.get("properties", {})
         .get("flows", {})
         .get("items", {})
         .get("properties", {})
     )
-    for field in ("display_name", "family", "doc_role", "composed_into", "doc_path", "parent_flow", "analysis_state"):
+    for field in ("display_name", "family", "doc_role", "composed_into", "doc_path", "parent_flow", "analysis_state", "surface_ref", "evidence_refs"):
         if field not in flow_item:
             errors.append(f"flow index schema must define flow.{field}")
     for field in ("summary", "written_at"):

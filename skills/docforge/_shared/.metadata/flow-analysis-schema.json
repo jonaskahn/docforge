@@ -38,6 +38,8 @@
           "reader_question": {"type": "string"},
           "parent_flow": {"type": ["string", "null"]},
           "analysis_state": {"enum": ["not-analyzed", "legacy-needs-analysis", "analyzing", "ready", "audited"]},
+          "surface_ref": {"type": ["string", "null"]},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
           "decision": {"enum": ["proposed", "selected", "declined"]},
           "legacy_evidence": {"type": "object"},
           "characteristics": {

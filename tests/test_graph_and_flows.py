@@ -443,7 +443,7 @@ class FlowIndexTests(unittest.TestCase):
                     elif row.get("priority") == "deferred" or row.get("doc_role") == "index_only":
                         self.assertFalse(stub.is_file(), stub)
                 self.assertEqual(stub_count, 1)
-                self.assertEqual(revised["version"], "1.3")
+                self.assertEqual(revised["version"], "1.4")
 
                 render = run(runtime, "flow_index", "render", "--repo", str(repo))
                 self.assertEqual(render.returncode, 0, render.stderr)
@@ -501,7 +501,7 @@ class FlowIndexTests(unittest.TestCase):
                 )
                 self.assertEqual(harvest.returncode, 0, harvest.stderr)
                 index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(index["version"], "1.3")
+                self.assertEqual(index["version"], "1.4")
                 slugs = {row["slug"] for row in index["flows"]}
                 self.assertIn("highlight-save", slugs)
                 self.assertIn("content-save", slugs)
@@ -625,7 +625,7 @@ class FlowIndexTests(unittest.TestCase):
                 )
                 self.assertEqual(harvest.returncode, 0, harvest.stderr)
                 index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(index["version"], "1.3")
+                self.assertEqual(index["version"], "1.4")
                 self.assertEqual(index["summary"]["written"], 0)
                 main_row = next(row for row in index["flows"] if row["priority"] == "main")
                 deferred_row = next(row for row in index["flows"] if row["priority"] == "deferred")
@@ -642,7 +642,7 @@ class FlowIndexTests(unittest.TestCase):
                 )
                 self.assertEqual(revised.returncode, 0, revised.stderr)
                 upgraded = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(upgraded["version"], "1.3")
+                self.assertEqual(upgraded["version"], "1.4")
                 self.assertIn("written", upgraded["summary"])
 
                 # Promote the deferred row through the selection gate.
@@ -750,7 +750,7 @@ class FlowIndexTests(unittest.TestCase):
                 )
                 self.assertEqual(imported.returncode, 0, imported.stderr)
                 index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(index["version"], "1.3")
+                self.assertEqual(index["version"], "1.4")
                 self.assertEqual(index["summary"]["total"], 2)
                 self.assertEqual(index["summary"]["main"], 1)
                 self.assertEqual(index["summary"]["deferred"], 1)
@@ -962,7 +962,7 @@ class UaFlowChainTests(unittest.TestCase):
 
 
 class GitnexusOrderedStepTests(unittest.TestCase):
-    def test_ordered_steps_are_kept_and_merged_across_shared_entries(self) -> None:
+    def test_ordered_steps_stay_independent_across_shared_entries(self) -> None:
         payload = {
             "routes": [],
             "communities": [{"id": "c-api", "heuristicLabel": "API"}],
@@ -986,11 +986,13 @@ class GitnexusOrderedStepTests(unittest.TestCase):
                 repo = Path(tmp)
                 write_gitnexus_interchange(repo, payload)
                 row = _flow_row(_harvest_index(runtime, repo), "listItems")
-                steps = row["evidence"][0]["steps"]
-                # n1 is shared by both processes and must appear once.
-                self.assertEqual([step["symbol"] for step in steps],
-                                 ["listItems", "fetch", "query", "read"])
-                self.assertEqual(row["reach"]["steps"], 4)
+                variants = row["evidence"][0]["pathVariants"]
+                self.assertEqual([item["processId"] for item in variants], ["p1", "p2"])
+                self.assertEqual(
+                    [[step["symbol"] for step in item["steps"]] for item in variants],
+                    [["listItems", "fetch", "query"], ["listItems", "read"]],
+                )
+                self.assertEqual(row["reach"]["steps"], 3)
 
     def test_interchange_without_steps_falls_back_to_step_count(self) -> None:
         payload = {
@@ -1005,7 +1007,7 @@ class GitnexusOrderedStepTests(unittest.TestCase):
                 write_gitnexus_interchange(repo, payload)
                 row = _flow_row(_harvest_index(runtime, repo), "run")
                 self.assertEqual(row["reach"]["steps"], 7)
-                self.assertNotIn("steps", row["evidence"][0])
+                self.assertEqual(row["evidence"][0]["pathVariants"][0]["steps"], [])
 
     def test_ready_flow_source_without_its_interchange_fails_loudly(self) -> None:
         """An indexed native flow source going unread is a setup gap, not an

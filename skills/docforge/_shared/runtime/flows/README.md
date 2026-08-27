@@ -1,13 +1,16 @@
 # Flows runtime
 
-Flow-candidate harvesting and provisional flow-graph derivation. `flow_index`
-maintains the durable `.docforge/flow-index.json`; `derive_flow_graph` bridges
+Flow-candidate harvesting, surface-aware preflight, and provisional flow-graph derivation. `flow_index`
+maintains the durable `.docforge/flow-index.json`; `flow_preflight` maintains
+the lossless `.docforge/flow-evidence.json`; `derive_flow_graph` bridges
 a code graph into a provisional, agent-produced flow graph when no native flow
 graph exists. Both are paired Python/JS public commands.
 
 ## Load this when
 
 - Discovering every evidence-backed flow candidate → `flow_index harvest`.
+- Building or refreshing runtime-surface topology before selection →
+  `flow_preflight prepare`.
 - Re-running the flow index with preserved state → `flow_index revise`.
 - Applying the write-start selection gate (promote / demote / skip rows) or
   writing back a completed flow's summary → `flow_index update`.
@@ -24,6 +27,7 @@ graph exists. Both are paired Python/JS public commands.
 |---|---|---|---|
 | `flow_index` | both | CLI | Harvest/revise/update/import/organize/render the durable flow candidate index |
 | `flow_analysis` | both | CLI | Prepare/import/decide/status/validate/audit the adaptive deep flow pack (schema v3) |
+| `flow_preflight` | both | CLI | Prepare/import/status/validate the persistent runtime-surface topology ledger (schema 1.0) |
 | `derive_flow_graph` | both | CLI | Prepare context + write a provisional flow graph |
 | `budgets` | both | Module | Scale-aware flow budget defaults read from `project.scale.class` |
 
@@ -66,6 +70,29 @@ New packs always use schema v3. V1/V2 packs remain readable but their flows
 become `legacy-needs-analysis`; the migration preserves legacy evidence without
 synthesizing missing deep facts.
 
+### `flow_preflight`
+
+```sh
+python3 runtime/cli/python/flow_preflight.py <prepare|import|status|validate> --repo <repo> \
+  [--json] [--input <enrichment.json>]
+```
+
+`prepare` records runtime surfaces (request/event/schedule/UI/command/library/
+lifecycle/operation/internal), provider provenance, graph roots, independent
+path variants, terminals, divergence/rejoin/cycle markers, and typed gaps in
+the committed `.docforge/flow-evidence.json`. It reuses manifest profiles,
+`detect_profiles`, and the architecture ledger when available. `import` adds
+MCP/source enrichment without replacing unchanged entries; entry-specific
+fingerprints leave unaffected enrichment in place and mark changed entries
+stale/not-analyzed. `status` reports complete, stale, ambiguous, and unresolved
+entries. `validate` rejects dangling topology/provenance, while incomplete
+candidates remain selectable but cannot become analysis-ready.
+
+`flow_index harvest` and `revise`, plus `flow_analysis prepare`, refresh this
+ledger automatically whenever their locked/on-disk CodeGraph or GitNexus input
+is readable. The explicit command remains useful for inspection and importing
+targeted MCP/source enrichment.
+
 `--main-limit` (harvest / revise / import) defaults are **scale-aware**: the
 deep-dive document budget follows `project.scale.class` from the manifest
 (small 15, medium 25, large 40; fallback 15 when the manifest is missing or
@@ -87,9 +114,12 @@ GitNexus MCP or the offline lbug reader, see
 
 - `harvest` — reads Understand Anything graphs, the discovered GitNexus
   interchange, and git
-  history; **writes** `.docforge/flow-index.json` (schema 1.3). With a GitNexus
-  interchange it also writes `.docforge/tmp/communities.md|.json`. Does not create
-  flow-document stubs.
+  history; **writes** `.docforge/flow-index.json` (schema 1.4). With a GitNexus
+  interchange it also writes `.docforge/tmp/communities.md|.json`. When a
+  CodeGraph/GitNexus preflight ledger exists, it consumes that ledger first;
+  legacy provider readers remain a compatibility fallback. Main-flow ranking is
+  coverage then score: one strong candidate per runtime surface is reserved
+  before the remaining budget is ranked. Does not create flow-document stubs.
 - `revise` — re-harvests, preserves `documented`/`skipped` state and written
   `summary`/`written_at` fields, refreshes `docs/flows/` placeholder stubs,
   deletes orphan scaffolds; never overwrites a completed non-placeholder
@@ -157,5 +187,5 @@ this when a native UA/GitNexus flow graph is available.
 Flow *mechanics* live here; provider readiness and selection policy live in
 [`../graph/README.md`](../graph/README.md) and
 [`../../references/graph/flow-derivation.md`](../../references/graph/flow-derivation.md).
-Artifacts: `.docforge/flow-index.json`, `.docforge/flow-analysis.json`,
+Artifacts: `.docforge/flow-evidence.json`, `.docforge/flow-index.json`, `.docforge/flow-analysis.json`,
 `.docforge/tmp/` files, `docs/flows/`.

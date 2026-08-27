@@ -84,7 +84,7 @@ function buildInterchange(query, rowsOr) {
     "MATCH (s)-[r:CodeRelation {type:'STEP_IN_PROCESS'}]->(p:Process) " +
       "RETURN p.id AS processId, p.heuristicLabel AS name, p.entryPointId AS entry, " +
       "p.terminalId AS terminal, p.processType AS type, s.id AS stepId, " +
-      "s.filePath AS file, s.name AS symbol, r.order AS ord ORDER BY p.id, r.order"
+      "s.filePath AS file, s.name AS symbol, s.startLine AS line, r.order AS ord ORDER BY p.id, r.order"
   ))) {
     const pid = String(row.processId);
     if (!processes.has(pid)) {
@@ -104,6 +104,7 @@ function buildInterchange(query, rowsOr) {
       nodeId: row.stepId,
       filePath: row.file,
       symbol: row.symbol,
+      line: Number.isInteger(row.line) ? row.line : null,
     });
   }
 

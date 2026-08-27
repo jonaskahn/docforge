@@ -23,7 +23,7 @@ parity directly.
   flow-index harvest/revise/organize/render.
 - `test_flow_analysis.py` — v3 prepare/import/decide/status/validate/audit
   parity, legacy migration, reference/cycle rejection, adaptive designs, and
-  flow-index 1.3 decomposition application.
+  flow-index 1.4 surface-evidence/decomposition application.
 - `test_routing.py` — `--category`/`--route` resolution, unknown-id/group
   exit codes, and legacy-mode field-leak guards.
 - `test_cli_parity.py` — same command, same fixture, across Python and Node;

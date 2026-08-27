@@ -53,6 +53,7 @@ DERIVED_FLOW_GRAPH_REL = TMP_REL / "flow-graph.json"
 # The deep analysis pack, kept outside tmp/ so it survives the run that
 # produced it — the flow writer reads its steps/branches/rules/failures.
 ANALYSIS_PACK_REL = Path(".docforge/flow-analysis.json")
+FLOW_EVIDENCE_REL = Path(".docforge/flow-evidence.json")
 UA_DIRS = (".ua", ".understand-anything")
 BARE_VERBS = frozenset({
     "get", "save", "create", "update", "delete", "execute", "init", "count",
@@ -167,8 +168,12 @@ def candidate(
     confidence: str = "candidate",
     steps: int = 0,
     boundaries: int = 0,
+    surface_ref: str | None = None,
+    evidence_refs: list[str] | None = None,
+    surface_confidence: str | None = None,
+    analysis_ready: bool | None = None,
 ) -> dict:
-    return {
+    value = {
         "name": name,
         "entry_ref": {
             "kind": kind,
@@ -181,6 +186,17 @@ def candidate(
         "confidence": confidence,
         "reach": {"steps": int(steps or 0), "boundaries": int(boundaries or 0), "churn": 0},
     }
+    # Additive 1.4 fields: absent on legacy/UA rows so Understand Anything's
+    # established interchange remains semantically unchanged.
+    if surface_ref is not None:
+        value["surface_ref"] = surface_ref
+    if evidence_refs is not None:
+        value["evidence_refs"] = list(evidence_refs)
+    if surface_confidence is not None:
+        value["surface_confidence"] = surface_confidence
+    if analysis_ready is not None:
+        value["analysis_ready"] = analysis_ready
+    return value
 
 
 def build_ua_locator_index(knowledge_path: Path | None) -> dict[str, list[dict]]:
@@ -421,10 +437,19 @@ def harvest_gitnexus(path: Path) -> list[dict]:
         str(item.get("id")): item.get("heuristicLabel") or item.get("name")
         for item in doc.get("communities", []) if isinstance(item, dict)
     }
+    grouped: dict[str, list[dict]] = {}
+    for process in doc.get("processes", []):
+        if isinstance(process, dict):
+            entry = process.get("entryPointId") or process.get("entry_point_id")
+            if entry:
+                grouped.setdefault(str(entry), []).append(process)
     rows: list[dict] = []
-    for route in doc.get("routes", []):
+    routes = [item for item in doc.get("routes", []) if isinstance(item, dict)]
+    for route in routes:
         if not isinstance(route, dict):
             continue
+        if any(gitnexus_route_matches(route, entry_id, split_symbol_id(entry_id)[1]) for entry_id in grouped):
+            continue  # merged into the matching process entry below
         signature = str(route.get("path") or route.get("route") or route.get("name") or route.get("id"))
         file_path = route.get("filePath")
         rows.append(candidate(
@@ -438,14 +463,9 @@ def harvest_gitnexus(path: Path) -> list[dict]:
             steps=1,
         ))
 
-    grouped: dict[str, list[dict]] = {}
-    for process in doc.get("processes", []):
-        if isinstance(process, dict):
-            entry = process.get("entryPointId") or process.get("entry_point_id")
-            if entry:
-                grouped.setdefault(str(entry), []).append(process)
     for entry_id, processes in grouped.items():
         file_path, symbol = split_symbol_id(entry_id)
+        matching_routes = [item for item in routes if gitnexus_route_matches(item, entry_id, symbol)]
         terminals = sorted({
             str(item.get("terminalId") or item.get("terminal_id"))
             for item in processes if item.get("terminalId") or item.get("terminal_id")
@@ -472,20 +492,22 @@ def harvest_gitnexus(path: Path) -> list[dict]:
             "processIds": sorted(str(item.get("id")) for item in processes if item.get("id")),
             "terminalIds": terminals,
         }
-        # GitNexus models ordered STEP_IN_PROCESS relations. When the
-        # interchange carries them, keep the sequence — reducing a native
-        # ordered process to its length is what left flow documents with a
-        # step count and no steps.
-        ordered = gitnexus_process_steps(processes)
-        if ordered:
-            evidence["steps"] = ordered
-        step_count = len(ordered) or max(
+        if matching_routes:
+            evidence["routes"] = [{"id": item.get("id"), "path": item.get("path") or item.get("route")}
+                                  for item in matching_routes]
+        # A Process is one independent ordered execution variant. Never fuse
+        # two terminals sharing an entry point into a made-up single sequence.
+        variants = gitnexus_process_variants(processes)
+        if variants:
+            evidence["pathVariants"] = variants
+        step_count = max((len(item["steps"]) for item in variants), default=0) or max(
             int(item.get("stepCount") or item.get("steps") or 0) for item in processes
         )
+        signature = str(matching_routes[0].get("path") or matching_routes[0].get("route")) if matching_routes else entry_id
         rows.append(candidate(
-            name=name,
-            kind=infer_kind(name, file_path),
-            signature=entry_id,
+            name=str(matching_routes[0].get("name") or signature) if matching_routes else name,
+            kind="http" if matching_routes else infer_kind(name, file_path),
+            signature=signature,
             file_path=file_path,
             symbol=symbol,
             area=", ".join(labels) or processes[0].get("communityLabel"),
@@ -496,29 +518,24 @@ def harvest_gitnexus(path: Path) -> list[dict]:
     return rows
 
 
-def gitnexus_process_steps(processes: list[dict]) -> list[dict]:
-    """Flatten the ordered steps of every process sharing one entry point.
+def gitnexus_route_matches(route: dict, entry_id: str, symbol: str | None) -> bool:
+    values = {str(route.get(key) or "") for key in ("id", "symbol", "name", "path", "route")}
+    return entry_id in values or bool(symbol and symbol in values)
 
-    The interchange's `steps` field is optional, so an older interchange (or
-    one produced before the reader emitted steps) simply yields [] and the
-    caller falls back to `stepCount`. Steps are renumbered across the merged
-    processes so a reader sees one continuous sequence, and de-duplicated by
-    node id because processes sharing an entry share their early hops."""
-    ordered: list[dict] = []
-    seen: set = set()
+
+def gitnexus_process_variants(processes: list[dict]) -> list[dict]:
+    """Preserve each native Process as its own ordered path variant."""
+    variants: list[dict] = []
     for process in processes:
         raw = process.get("steps")
         if not isinstance(raw, list):
             continue
+        ordered: list[dict] = []
         for step in sorted(
             (item for item in raw if isinstance(item, dict)),
             key=lambda item: (item.get("order") if isinstance(item.get("order"), int) else 0),
         ):
             node_id = step.get("nodeId") or step.get("node_id")
-            key = str(node_id or f"{step.get('filePath')}:{step.get('symbol')}")
-            if key in seen:
-                continue
-            seen.add(key)
             record = {"order": len(ordered) + 1, "nodeId": node_id}
             for source_key, target_key in (
                 ("filePath", "filePath"), ("file_path", "filePath"),
@@ -527,7 +544,13 @@ def gitnexus_process_steps(processes: list[dict]) -> list[dict]:
                 if step.get(source_key) is not None and target_key not in record:
                     record[target_key] = step[source_key]
             ordered.append(record)
-    return ordered
+        variants.append({
+            "processId": str(process.get("id") or ""), "steps": ordered,
+            "terminalId": process.get("terminalId") or process.get("terminal_id"),
+            "type": process.get("processType") or process.get("process_type") or "native-process",
+            "communities": list(process.get("communities") or []),
+        })
+    return variants
 
 
 def unique_area(*areas: str | None) -> str:
@@ -581,6 +604,15 @@ def fold_row(current: dict, row: dict) -> None:
         current["reach"].get("churn", 0), row["reach"].get("churn", 0)
     )
     current["area"] = unique_area(current.get("area"), row.get("area"))
+    # Stable ledger IDs survive a merge with a legacy compatibility row.
+    if row.get("surface_ref") and not current.get("surface_ref"):
+        current["surface_ref"] = row["surface_ref"]
+    if row.get("evidence_refs"):
+        current["evidence_refs"] = sorted(set(current.get("evidence_refs", [])) | set(row["evidence_refs"]))
+    if row.get("surface_confidence") == "confirmed":
+        current["surface_confidence"] = "confirmed"
+    if row.get("analysis_ready") is False:
+        current["analysis_ready"] = False
     if row.get("summary") and not current.get("summary"):
         current["summary"] = row["summary"]
         current["written_at"] = row.get("written_at")
@@ -660,6 +692,7 @@ def score(row: dict) -> int:
         + min(row["reach"]["steps"], 20) * 5
         + min(row["reach"].get("churn", 0), 20) * 2
         + min(len(row["evidence"]), 3) * 20
+        + (100 if row.get("analysis_ready") else 0)
     )
 
 
@@ -726,6 +759,24 @@ def finalize(rows: list[dict], main_limit: int, repo: Path | None = None) -> lis
     for row in rows:
         row["rank"] = score(row)
     rows.sort(key=lambda item: (-item["rank"], item["name"].lower(), row_key(item)))
+    # Coverage precedes score. Reserve one main slot per strongly evidenced
+    # surface before a large API surface can consume the whole budget.
+    selected: set[int] = set()
+    for surface in sorted({str(row.get("surface_ref")) for row in rows
+                           if row.get("surface_ref") and row.get("surface_confidence") == "confirmed"}):
+        for index, row in enumerate(rows):
+            if row.get("surface_ref") == surface:
+                selected.add(index)
+                break
+    if len(selected) > max(main_limit, 0):
+        selected = set(sorted(selected, key=lambda index: (
+            -rows[index]["rank"], str(rows[index].get("surface_ref")),
+            ",".join(rows[index].get("evidence_refs", [])), row_key(rows[index]),
+        ))[:max(main_limit, 0)])
+    for index in range(len(rows)):
+        if len(selected) >= max(main_limit, 0):
+            break
+        selected.add(index)
     used: dict[str, int] = {}
     for index, row in enumerate(rows):
         base = base_slug_for(row)
@@ -733,7 +784,7 @@ def finalize(rows: list[dict], main_limit: int, repo: Path | None = None) -> lis
         slug = base if used[base] == 1 else f"{base}-{used[base]}"
         row["slug"] = slug
         row["id"] = f"flow-{slug}"
-        priority = "main" if index < max(main_limit, 0) else "deferred"
+        priority = "main" if index in selected else "deferred"
         row["priority"] = priority
         row["status"] = priority
         row["display_name"] = row.get("name") or slug
@@ -1124,6 +1175,94 @@ def find_gitnexus_interchange(repo: Path) -> Path | None:
     return path if path.is_file() else None
 
 
+def find_flow_evidence(repo: Path) -> Path | None:
+    """The persistent preflight ledger, preferred for graph-backed providers."""
+    path = repo / FLOW_EVIDENCE_REL
+    return path if path.is_file() else None
+
+
+def harvest_flow_evidence(repo: Path, provider: str) -> tuple[list[dict], list[str]]:
+    """Materialize compact catalog rows from the lossless topology ledger."""
+    path = find_flow_evidence(repo)
+    if path is None:
+        return [], []
+    try:
+        ledger = read_json(path)
+    except ValueError:
+        return [], []
+    if ledger.get("schemaVersion") != "1.0" or ledger.get("provider", {}).get("id") != provider:
+        return [], []
+    # Never use an orphaned/old ledger as if it were a current graph read.
+    # `prepare_if_available` normally refreshed it above; this protects direct
+    # callers and a graph that disappeared between preflight and harvest.
+    try:
+        from runtime.flows.python.flow_preflight import source_fingerprint
+        if ledger.get("provider", {}).get("fingerprint") != source_fingerprint(repo, provider):
+            return [], []
+    except ImportError:
+        return [], []
+    surfaces = {item.get("id"): item for item in ledger.get("runtime_surfaces", []) if isinstance(item, dict)}
+    variants = [item for item in ledger.get("path_variants", []) if isinstance(item, dict)]
+    nodes = {item.get("id"): item for item in ledger.get("topology_nodes", []) if isinstance(item, dict)}
+    terminals = {item.get("id"): item for item in ledger.get("terminals", []) if isinstance(item, dict)}
+    gaps = [item for item in ledger.get("evidence_gaps", []) if isinstance(item, dict)]
+    rows: list[dict] = []
+    for entry in ledger.get("entry_points", []):
+        if not isinstance(entry, dict):
+            continue
+        trigger = entry.get("trigger") if isinstance(entry.get("trigger"), dict) else {}
+        loc = entry.get("locator") if isinstance(entry.get("locator"), dict) else {}
+        entry_id = entry.get("id")
+        entry_variants = [item for item in variants if item.get("entry_ref") == entry_id]
+        required = [item for item in gaps if item.get("entry_ref") == entry_id and item.get("required")]
+        surface = surfaces.get(entry.get("surface_ref"), {})
+        def variant_summary(variant: dict) -> dict:
+            terminal_node = (terminals.get(variant.get("terminal_ref")) or {}).get("node_ref")
+            steps = []
+            for order, node_ref in enumerate(variant.get("ordered_nodes") or [], start=1):
+                if node_ref in set(entry.get("graph_root_refs") or []) or node_ref == terminal_node:
+                    continue
+                node = nodes.get(node_ref) or {}
+                loc = node.get("locator") if isinstance(node.get("locator"), dict) else {}
+                step = {"order": len(steps) + 1, "nodeId": loc.get("node_id"),
+                        "symbol": loc.get("symbol"), "filePath": loc.get("file_path")}
+                if loc.get("line") is not None:
+                    step["line"] = loc["line"]
+                steps.append({key: value for key, value in step.items() if value is not None})
+            return {"id": variant.get("id"), "processId": variant.get("process_id"),
+                    "terminalId": terminal_node, "type": variant.get("type"),
+                    "communities": variant.get("communities") or [], "steps": steps}
+        summaries = [variant_summary(item) for item in sorted(
+            entry_variants, key=lambda item: (str(item.get("process_id") or ""), str(item.get("id") or ""))
+        )]
+        evidence = {
+            "provider": provider, "artifact": str(FLOW_EVIDENCE_REL),
+            "nodeId": loc.get("node_id") or entry_id,
+            "topology": {"pathVariants": [item.get("id") for item in entry_variants],
+                         "terminals": [item.get("terminal_ref") for item in entry_variants],
+                         "gaps": [item.get("id") for item in required]},
+        }
+        if summaries:
+            evidence["pathVariants"] = summaries
+            # Compatibility-friendly compact chain for consumers that only
+            # render a linear hint; the complete independent variants remain
+            # beside it and in the ledger.
+            longest = sorted(summaries, key=lambda item: (-len(item["steps"]), str(item.get("id"))))[0]
+            evidence["steps"] = longest["steps"]
+        rows.append(candidate(
+            name=str(entry.get("name") or trigger.get("signature") or entry_id),
+            kind=normalize_kind(str(trigger.get("subtype") or "internal"), str(trigger.get("signature") or entry.get("name") or ""), loc.get("file_path")),
+            signature=str(trigger.get("signature") or entry.get("name") or entry_id),
+            file_path=loc.get("file_path"), symbol=loc.get("symbol"), area=module_from_path(loc.get("file_path")),
+            evidence=evidence, confidence="confirmed" if surface.get("confidence") == "confirmed" else "candidate",
+            steps=max((int(item.get("step_count") or 0) or len(item.get("ordered_nodes") or []) - 1 for item in entry_variants), default=0),
+            boundaries=0, surface_ref=entry.get("surface_ref"), evidence_refs=entry.get("evidence_refs") or [],
+            surface_confidence=surface.get("confidence"), analysis_ready=bool(entry.get("analysis_ready")) and not required,
+        ))
+    source = ".codegraph/codegraph.db" if provider == "codegraph" else str(GITNEXUS_FLOWS_REL)
+    return rows, [source]
+
+
 def unread_flow_sources(repo: Path, harvested: list[str]) -> list[str]:
     """Remediation lines for a source that advertises `flow_graph`, has its
     index built, and still contributed nothing to this harvest.
@@ -1193,6 +1332,9 @@ def harvest_understand_anything(repo: Path, _main_limit: int) -> tuple[list[dict
 
 def harvest_gitnexus_provider(repo: Path, _main_limit: int) -> tuple[list[dict], list[str]]:
     """GitNexus rows from the auto-discovered interchange, if it was produced."""
+    rows, sources = harvest_flow_evidence(repo, "gitnexus")
+    if rows:
+        return rows, sources
     interchange = find_gitnexus_interchange(repo)
     if interchange is None:
         return [], []
@@ -1202,6 +1344,9 @@ def harvest_gitnexus_provider(repo: Path, _main_limit: int) -> tuple[list[dict],
 def harvest_codegraph_provider(repo: Path, main_limit: int) -> tuple[list[dict], list[str]]:
     """CodeGraph rows: structural (entry + ordered call chain), not business
     flows — `import --analysis` still layers the semantics on top."""
+    rows, sources = harvest_flow_evidence(repo, "codegraph")
+    if rows:
+        return rows, sources
     rows = harvest_codegraph(repo, main_limit)
     return rows, ([".codegraph/codegraph.db"] if rows else [])
 
@@ -1244,6 +1389,19 @@ def collect_candidates(
     rows: list[dict] = []
     sources: list[str] = []
     notes: list[str] = []
+    # Fresh harvest/revise starts by refreshing the structural ledger whenever
+    # the selected CodeGraph/GitNexus artifact is locally readable. This is not
+    # a new gate: a failed refresh is visible and the compatibility reader is
+    # still allowed to supply candidates.
+    try:
+        from runtime.flows.python.flow_preflight import prepare_if_available
+        preflight, preflight_errors = prepare_if_available(args.repo)
+        if preflight is not None:
+            notes.append("refreshed surface-aware flow preflight evidence before candidate selection")
+        elif preflight_errors:
+            notes.append("surface-aware preflight could not be refreshed; using compatibility reader: " + "; ".join(preflight_errors))
+    except (ImportError, OSError, ValueError) as error:
+        notes.append(f"surface-aware preflight could not be refreshed; using compatibility reader: {error}")
     if locked_provider and locked_provider in HARVESTERS:
         rows, sources = HARVESTERS[locked_provider](args.repo, args.main_limit)
         if not rows:
@@ -1270,6 +1428,18 @@ def collect_candidates(
             # it when the native providers produced nothing at all.
             if rows and name == "gitnexus":
                 break
+
+    if rows and find_flow_evidence(args.repo) is None:
+        legacy_provider = (
+            locked_provider if locked_provider in {"codegraph", "gitnexus"}
+            else ("gitnexus" if any("gitnexus-flows.json" in source for source in sources)
+                  else "codegraph" if any("codegraph" in source for source in sources) else None)
+        )
+        if legacy_provider:
+            notes.append(
+                f"{legacy_provider} legacy flow reader is a compatibility fallback; "
+                "run flow_preflight prepare to persist lossless runtime-surface evidence."
+            )
 
     # `revise` needs the interchange path itself, independent of who harvested.
     return rows, sources, find_gitnexus_interchange(args.repo), notes
@@ -2049,7 +2219,7 @@ def cmd_apply_analysis(args: argparse.Namespace) -> int:
         row["analysis_state"] = (
             "legacy-needs-analysis"
             if legacy or flow.get("analysis_state") == "legacy-needs-analysis"
-            else "ready"
+            else ("ready" if row.get("analysis_ready") is not False else "not-analyzed")
         )
         row["parent_flow"] = flow.get("parent_flow")
         if flow.get("name"):

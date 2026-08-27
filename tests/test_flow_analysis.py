@@ -1,4 +1,4 @@
-"""Adaptive flow-analysis v3 ledger and flow-index 1.3 integration."""
+"""Adaptive flow-analysis v3 ledger and flow-index 1.4 integration."""
 
 from __future__ import annotations
 
@@ -196,7 +196,7 @@ class FlowIndex13Tests(unittest.TestCase):
                 result = run(runtime, "flow_index", "apply-analysis", "--repo", str(repo))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 index = json.loads((repo / ".docforge" / "flow-index.json").read_text())
-                self.assertEqual(index["version"], "1.3")
+                self.assertEqual(index["version"], "1.4")
                 rows = {row["id"]: row for row in index["flows"]}
                 self.assertEqual(rows["flow-checkout"]["analysis_state"], "ready")
                 self.assertEqual(rows["flow-child"]["parent_flow"], "flow-checkout")

@@ -47,6 +47,7 @@ const DERIVED_FLOW_GRAPH_REL = path.join(TMP_REL, "flow-graph.json");
 // The deep analysis pack, kept outside tmp/ so it survives the run that
 // produced it — the flow writer reads its steps/branches/rules/failures.
 const ANALYSIS_PACK_REL = path.join(".docforge", "flow-analysis.json");
+const FLOW_EVIDENCE_REL = path.join(".docforge", "flow-evidence.json");
 const UA_DIRS = [".ua", ".understand-anything"];
 const BARE_VERBS = new Set([
   "get", "save", "create", "update", "delete", "execute", "init", "count",
@@ -128,8 +129,9 @@ function normalizeKind(value, signature, filePath = null) {
   };
   return aliases[String(value || "").toLowerCase()] || inferKind(signature, filePath);
 }
-function candidate({ name, kind, signature, filePath, symbol, area, evidence, confidence = "candidate", steps = 0, boundaries = 0 }) {
-  return {
+function candidate({ name, kind, signature, filePath, symbol, area, evidence, confidence = "candidate", steps = 0, boundaries = 0,
+  surfaceRef = null, evidenceRefs = null, surfaceConfidence = null, analysisReady = null }) {
+  const value = {
     name,
     entry_ref: { kind, signature, filePath: filePath || null, symbol: symbol || null },
     area: area || "Unclassified",
@@ -137,6 +139,11 @@ function candidate({ name, kind, signature, filePath, symbol, area, evidence, co
     confidence,
     reach: { steps: Number(steps || 0), boundaries: Number(boundaries || 0), churn: 0 },
   };
+  if (surfaceRef !== null) value.surface_ref = surfaceRef;
+  if (evidenceRefs !== null) value.evidence_refs = [...evidenceRefs];
+  if (surfaceConfidence !== null) value.surface_confidence = surfaceConfidence;
+  if (analysisReady !== null) value.analysis_ready = analysisReady;
+  return value;
 }
 /** Index the UA knowledge graph's code nodes by lowercased symbol name.
  *
@@ -327,9 +334,18 @@ function harvestGitnexus(target) {
   const communities = new Map((doc.communities || [])
     .filter((item) => item && typeof item === "object")
     .map((item) => [String(item.id), item.heuristicLabel || item.name]));
+  const grouped = new Map();
+  for (const process of doc.processes || []) {
+    if (!process || typeof process !== "object") continue;
+    const entry = process.entryPointId || process.entry_point_id;
+    if (!entry) continue;
+    if (!grouped.has(String(entry))) grouped.set(String(entry), []);
+    grouped.get(String(entry)).push(process);
+  }
   const rows = [];
   for (const route of doc.routes || []) {
     if (!route || typeof route !== "object") continue;
+    if ([...grouped.keys()].some((entryId) => gitnexusRouteMatches(route, entryId, splitSymbolId(entryId)[1]))) continue;
     const signature = String(route.path || route.route || route.name || route.id);
     rows.push(candidate({
       name: String(route.name || signature),
@@ -342,16 +358,9 @@ function harvestGitnexus(target) {
       steps: 1,
     }));
   }
-  const grouped = new Map();
-  for (const process of doc.processes || []) {
-    if (!process || typeof process !== "object") continue;
-    const entry = process.entryPointId || process.entry_point_id;
-    if (!entry) continue;
-    if (!grouped.has(String(entry))) grouped.set(String(entry), []);
-    grouped.get(String(entry)).push(process);
-  }
   for (const [entryId, processes] of grouped.entries()) {
     const [filePath, symbol] = splitSymbolId(entryId);
+    const matchingRoutes = (doc.routes || []).filter((route) => route && typeof route === "object" && gitnexusRouteMatches(route, entryId, symbol));
     const terminals = [...new Set(processes.map((item) => item.terminalId || item.terminal_id).filter(Boolean).map(String))].sort();
     const communityIds = new Set(processes.flatMap((item) => item.communities || []).map((value) => String(value).replace(/^'|'$/g, "")));
     const labels = [...new Set([...communityIds].filter((value) => communities.get(value)).map((value) => String(communities.get(value))))].sort((a, b) => a.localeCompare(b));
@@ -364,17 +373,17 @@ function harvestGitnexus(target) {
       processIds: processes.map((item) => item.id).filter(Boolean).map(String).sort(),
       terminalIds: terminals,
     };
-    // GitNexus models ordered STEP_IN_PROCESS relations. When the interchange
-    // carries them, keep the sequence — reducing a native ordered process to
-    // its length is what left flow documents with a step count and no steps.
-    const ordered = gitnexusProcessSteps(processes);
-    if (ordered.length) evidence.steps = ordered;
-    const stepCount = ordered.length
+    if (matchingRoutes.length) evidence.routes = matchingRoutes.map((route) => ({ id: route.id, path: route.path || route.route }));
+    // Each Process remains an independent ordered execution variant; shared
+    // prefixes never become a fictional concatenated path.
+    const variants = gitnexusProcessVariants(processes);
+    if (variants.length) evidence.pathVariants = variants;
+    const stepCount = Math.max(0, ...variants.map((item) => item.steps.length))
       || Math.max(...processes.map((item) => Number(item.stepCount || item.steps || 0)));
     rows.push(candidate({
-      name,
-      kind: inferKind(name, filePath),
-      signature: entryId,
+      name: matchingRoutes.length ? String(matchingRoutes[0].name || matchingRoutes[0].path || matchingRoutes[0].route) : name,
+      kind: matchingRoutes.length ? "http" : inferKind(name, filePath),
+      signature: matchingRoutes.length ? String(matchingRoutes[0].path || matchingRoutes[0].route) : entryId,
       filePath,
       symbol,
       area: labels.join(", ") || processes[0].communityLabel,
@@ -386,27 +395,23 @@ function harvestGitnexus(target) {
   return rows;
 }
 
-/** Flatten the ordered steps of every process sharing one entry point.
- *
- * The interchange's `steps` field is optional, so an older interchange (or one
- * produced before the reader emitted steps) simply yields [] and the caller
- * falls back to `stepCount`. Steps are renumbered across the merged processes
- * so a reader sees one continuous sequence, and de-duplicated by node id
- * because processes sharing an entry share their early hops. */
-function gitnexusProcessSteps(processes) {
-  const ordered = [];
-  const seen = new Set();
+function gitnexusRouteMatches(route, entryId, symbol) {
+  const values = new Set([route.id, route.symbol, route.name, route.path, route.route].map((value) => String(value || "")));
+  return values.has(String(entryId)) || Boolean(symbol && values.has(String(symbol)));
+}
+
+/** Preserve each native Process as its own ordered path variant. */
+function gitnexusProcessVariants(processes) {
+  const variants = [];
   for (const process of processes) {
     if (!Array.isArray(process.steps)) continue;
+    const ordered = [];
     const sorted = process.steps
       .filter((item) => item && typeof item === "object")
       .slice()
       .sort((a, b) => (Number.isInteger(a.order) ? a.order : 0) - (Number.isInteger(b.order) ? b.order : 0));
     for (const step of sorted) {
       const nodeId = step.nodeId || step.node_id;
-      const key = String(nodeId || `${step.filePath}:${step.symbol}`);
-      if (seen.has(key)) continue;
-      seen.add(key);
       const record = { order: ordered.length + 1, nodeId };
       for (const [sourceKey, targetKey] of [
         ["filePath", "filePath"], ["file_path", "filePath"],
@@ -418,8 +423,14 @@ function gitnexusProcessSteps(processes) {
       }
       ordered.push(record);
     }
+    variants.push({
+      processId: String(process.id || ""), steps: ordered,
+      terminalId: process.terminalId || process.terminal_id || null,
+      type: process.processType || process.process_type || "native-process",
+      communities: [...(process.communities || [])],
+    });
   }
-  return ordered;
+  return variants;
 }
 function uniqueArea(...areas) {
   const labels = [];
@@ -464,6 +475,10 @@ function foldRow(current, row) {
   current.reach.boundaries = Math.max(current.reach.boundaries, row.reach.boundaries);
   current.reach.churn = Math.max(current.reach.churn || 0, row.reach.churn || 0);
   current.area = uniqueArea(current.area, row.area);
+  if (row.surface_ref && !current.surface_ref) current.surface_ref = row.surface_ref;
+  if (row.evidence_refs) current.evidence_refs = [...new Set([...(current.evidence_refs || []), ...row.evidence_refs])].sort();
+  if (row.surface_confidence === "confirmed") current.surface_confidence = "confirmed";
+  if (row.analysis_ready === false) current.analysis_ready = false;
   if (row.summary && !current.summary) {
     current.summary = row.summary;
     current.written_at = row.written_at;
@@ -533,7 +548,8 @@ function score(row) {
     + Math.min(row.reach.boundaries, 5) * 80
     + Math.min(row.reach.steps, 20) * 5
     + Math.min(row.reach.churn || 0, 20) * 2
-    + Math.min(row.evidence.length, 3) * 20;
+    + Math.min(row.evidence.length, 3) * 20
+    + (row.analysis_ready ? 100 : 0);
 }
 function addChurn(repo, rows) {
   const result = spawnSync("git", ["-C", repo, "log", "-n", "200", "--name-only", "--pretty=format:"], { encoding: "utf8" });
@@ -578,6 +594,27 @@ function finalize(rows, mainLimit, repo = null) {
   if (repo) addChurn(repo, rows);
   for (const row of rows) row.rank = score(row);
   rows.sort((a, b) => b.rank - a.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()) || rowKey(a).localeCompare(rowKey(b)));
+  // Coverage comes before score: reserve one main candidate for each strong
+  // runtime surface, then spend the remaining budget in deterministic rank
+  // order. This keeps a large HTTP surface from hiding jobs/CLI/UI roots.
+  let selected = new Set();
+  const surfaces = [...new Set(rows
+    .filter((row) => row.surface_ref && row.surface_confidence === "confirmed")
+    .map((row) => String(row.surface_ref)))].sort();
+  for (const surface of surfaces) {
+    const index = rows.findIndex((row) => row.surface_ref === surface);
+    if (index >= 0) selected.add(index);
+  }
+  if (selected.size > Math.max(mainLimit, 0)) {
+    selected = new Set([...selected].sort((left, right) => {
+      const a = rows[left]; const b = rows[right];
+      return (b.rank - a.rank)
+        || String(a.surface_ref).localeCompare(String(b.surface_ref))
+        || (a.evidence_refs || []).join(",").localeCompare((b.evidence_refs || []).join(","))
+        || rowKey(a).localeCompare(rowKey(b));
+    }).slice(0, Math.max(mainLimit, 0)));
+  }
+  for (let index = 0; index < rows.length && selected.size < Math.max(mainLimit, 0); index++) selected.add(index);
   const used = new Map();
   rows.forEach((row, index) => {
     const base = baseSlugFor(row);
@@ -585,7 +622,7 @@ function finalize(rows, mainLimit, repo = null) {
     const slug = used.get(base) === 1 ? base : `${base}-${used.get(base)}`;
     row.slug = slug;
     row.id = `flow-${slug}`;
-    const priority = index < Math.max(mainLimit, 0) ? "main" : "deferred";
+    const priority = selected.has(index) ? "main" : "deferred";
     row.priority = priority;
     row.status = priority;
     row.display_name = row.name || slug;
@@ -936,6 +973,93 @@ function findGitnexusInterchange(repo) {
   return target;
 }
 
+function findFlowEvidence(repo) {
+  const target = path.join(repo, FLOW_EVIDENCE_REL);
+  return fs.existsSync(target) && fs.statSync(target).isFile() ? target : null;
+}
+
+function refreshPreflight(repo, lockedProvider = null) {
+  const provider = ["codegraph", "gitnexus"].includes(lockedProvider) ? lockedProvider
+    : (findGitnexusInterchange(repo) ? "gitnexus"
+      : (fs.existsSync(path.join(repo, ".codegraph", "codegraph.db")) ? "codegraph" : null));
+  const source = provider === "gitnexus" ? findGitnexusInterchange(repo)
+    : (provider === "codegraph" ? path.join(repo, ".codegraph", "codegraph.db") : null);
+  if (!provider || !source || !fs.existsSync(source)) return { refreshed: false, error: null };
+  const script = path.join(__dirname, "..", "..", "cli", "python", "flow_preflight.py");
+  const result = spawnSync("python3", [script, "prepare", "--repo", repo], { encoding: "utf8" });
+  if (result.error || result.status !== 0) {
+    return { refreshed: false, error: (result.stderr || (result.error && result.error.message) || "preflight command failed").trim() };
+  }
+  return { refreshed: true, error: null };
+}
+
+/** Reduce the persistent topology ledger to a document-catalog candidate.
+ * Required evidence gaps keep the row selectable but explicitly unready. */
+function harvestFlowEvidence(repo, provider) {
+  const target = findFlowEvidence(repo);
+  if (!target) return [[], []];
+  let ledger;
+  try { ledger = readJson(target); } catch { return [[], []]; }
+  if (ledger.schemaVersion !== "1.0" || !ledger.provider || ledger.provider.id !== provider) return [[], []];
+  const source = provider === "gitnexus" ? findGitnexusInterchange(repo)
+    : (provider === "codegraph" ? path.join(repo, ".codegraph", "codegraph.db") : null);
+  if (!source || !fs.existsSync(source)) return [[], []];
+  const raw = fs.readFileSync(source);
+  const fingerprint = {
+    path: provider === "gitnexus" ? ".docforge/tmp/gitnexus-flows.json" : ".codegraph/codegraph.db",
+    sha256: crypto.createHash("sha256").update(raw).digest("hex"), bytes: raw.length,
+  };
+  if (JSON.stringify(ledger.provider.fingerprint || null) !== JSON.stringify(fingerprint)) return [[], []];
+  const surfaces = new Map((ledger.runtime_surfaces || []).filter((item) => item && typeof item === "object").map((item) => [item.id, item]));
+  const variants = (ledger.path_variants || []).filter((item) => item && typeof item === "object");
+  const nodes = new Map((ledger.topology_nodes || []).filter((item) => item && typeof item === "object").map((item) => [item.id, item]));
+  const terminals = new Map((ledger.terminals || []).filter((item) => item && typeof item === "object").map((item) => [item.id, item]));
+  const gaps = (ledger.evidence_gaps || []).filter((item) => item && typeof item === "object");
+  const rows = [];
+  for (const entry of (ledger.entry_points || [])) {
+    if (!entry || typeof entry !== "object") continue;
+    const trigger = entry.trigger && typeof entry.trigger === "object" ? entry.trigger : {};
+    const loc = entry.locator && typeof entry.locator === "object" ? entry.locator : {};
+    const entryVariants = variants.filter((item) => item.entry_ref === entry.id);
+    const required = gaps.filter((item) => item.entry_ref === entry.id && item.required);
+    const surface = surfaces.get(entry.surface_ref) || {};
+    const roots = new Set(entry.graph_root_refs || []);
+    const summaries = entryVariants.slice().sort((a, b) => String(a.process_id || "").localeCompare(String(b.process_id || "")) || String(a.id).localeCompare(String(b.id))).map((variant) => {
+      const terminalNode = (terminals.get(variant.terminal_ref) || {}).node_ref;
+      const steps = [];
+      for (const nodeRef of variant.ordered_nodes || []) {
+        if (roots.has(nodeRef) || nodeRef === terminalNode) continue;
+        const loc = (nodes.get(nodeRef) || {}).locator || {};
+        const step = { order: steps.length + 1, nodeId: loc.node_id, symbol: loc.symbol, filePath: loc.file_path };
+        if (loc.line !== undefined && loc.line !== null) step.line = loc.line;
+        for (const key of Object.keys(step)) if (step[key] === undefined || step[key] === null) delete step[key];
+        steps.push(step);
+      }
+      return { id: variant.id, processId: variant.process_id, terminalId: terminalNode, type: variant.type, communities: variant.communities || [], steps };
+    });
+    const evidence = {
+      provider, artifact: FLOW_EVIDENCE_REL, nodeId: loc.node_id || entry.id,
+      topology: { pathVariants: entryVariants.map((item) => item.id), terminals: entryVariants.map((item) => item.terminal_ref), gaps: required.map((item) => item.id) },
+    };
+    if (summaries.length) {
+      evidence.pathVariants = summaries;
+      evidence.steps = summaries.slice().sort((a, b) => (b.steps.length - a.steps.length) || String(a.id).localeCompare(String(b.id)))[0].steps;
+    }
+    rows.push(candidate({
+      name: String(entry.name || trigger.signature || entry.id),
+      kind: normalizeKind(String(trigger.subtype || "internal"), String(trigger.signature || entry.name || ""), loc.file_path),
+      signature: String(trigger.signature || entry.name || entry.id),
+      filePath: loc.file_path, symbol: loc.symbol, area: moduleFromPath(loc.file_path),
+      evidence,
+      confidence: surface.confidence === "confirmed" ? "confirmed" : "candidate",
+      steps: Math.max(0, ...entryVariants.map((item) => Number(item.step_count || 0) || Math.max(0, (item.ordered_nodes || []).length - 1))),
+      boundaries: 0, surfaceRef: entry.surface_ref, evidenceRefs: entry.evidence_refs || [],
+      surfaceConfidence: surface.confidence, analysisReady: Boolean(entry.analysis_ready) && !required.length,
+    }));
+  }
+  return [rows, [provider === "codegraph" ? ".codegraph/codegraph.db" : GITNEXUS_FLOWS_REL]];
+}
+
 function relativeOrString(target, repo) {
   const relative = path.relative(path.resolve(repo), String(target));
   return relative.startsWith("..") ? String(target) : relative;
@@ -1046,6 +1170,8 @@ function harvestUnderstandAnything(repo) {
 
 /** GitNexus rows from the auto-discovered interchange, if it was produced. */
 function harvestGitnexusProvider(repo) {
+  const [ledgerRows, ledgerSources] = harvestFlowEvidence(repo, "gitnexus");
+  if (ledgerRows.length) return [ledgerRows, ledgerSources];
   const interchange = findGitnexusInterchange(repo);
   if (!interchange) return [[], []];
   return [harvestGitnexus(interchange), [path.relative(repo, interchange).split(path.sep).join("/")]];
@@ -1054,6 +1180,8 @@ function harvestGitnexusProvider(repo) {
 /** CodeGraph rows: structural (entry + ordered call chain), not business flows —
  * `import --analysis` still layers the semantics on top. */
 function harvestCodegraphProvider(repo, mainLimit) {
+  const [ledgerRows, ledgerSources] = harvestFlowEvidence(repo, "codegraph");
+  if (ledgerRows.length) return [ledgerRows, ledgerSources];
   const rows = harvestCodegraph(repo, mainLimit);
   return [rows, rows.length ? [".codegraph/codegraph.db"] : []];
 }
@@ -1097,6 +1225,9 @@ function collectCandidates(args) {
   let rows = [];
   let sources = [];
   const notes = [];
+  const preflight = refreshPreflight(args.repo, lockedProvider);
+  if (preflight.refreshed) notes.push("refreshed surface-aware flow preflight evidence before candidate selection");
+  else if (preflight.error) notes.push(`surface-aware preflight could not be refreshed; using compatibility reader: ${preflight.error}`);
   if (lockedProvider && HARVESTERS[lockedProvider]) {
     [rows, sources] = HARVESTERS[lockedProvider](args.repo, args.main_limit);
     if (!rows.length) {
@@ -1125,6 +1256,16 @@ function collectCandidates(args) {
       // CodeGraph is structural, not native flow evidence — only reach for it
       // when the native providers produced nothing at all.
       if (rows.length && name === "gitnexus") break;
+    }
+  }
+
+  if (rows.length && !findFlowEvidence(args.repo)) {
+    const legacyProvider = ["codegraph", "gitnexus"].includes(lockedProvider)
+      ? lockedProvider
+      : (sources.some((source) => String(source).includes("gitnexus-flows.json")) ? "gitnexus"
+        : (sources.some((source) => String(source).includes("codegraph")) ? "codegraph" : null));
+    if (legacyProvider) {
+      notes.push(`${legacyProvider} legacy flow reader is a compatibility fallback; run flow_preflight prepare to persist lossless runtime-surface evidence.`);
     }
   }
 
@@ -1835,7 +1976,7 @@ function cmdApplyAnalysis(args) {
     const row = byId.get(flowId);
     if (!row) continue;
     row.analysis_state = legacy || flow.analysis_state === "legacy-needs-analysis"
-      ? "legacy-needs-analysis" : "ready";
+      ? "legacy-needs-analysis" : (row.analysis_ready === false ? "not-analyzed" : "ready");
     row.parent_flow = flow.parent_flow || null;
     if (flow.name) {
       row.name = String(flow.name);
