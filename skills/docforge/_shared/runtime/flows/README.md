@@ -23,6 +23,7 @@ graph exists. Both are paired Python/JS public commands.
 | Script | js/py | Kind | Purpose |
 |---|---|---|---|
 | `flow_index` | both | CLI | Harvest/revise/update/import/organize/render the durable flow candidate index |
+| `flow_analysis` | both | CLI | Prepare/import/decide/status/validate/audit the adaptive deep flow pack (schema v3) |
 | `derive_flow_graph` | both | CLI | Prepare context + write a provisional flow graph |
 | `budgets` | both | Module | Scale-aware flow budget defaults read from `project.scale.class` |
 
@@ -35,11 +36,35 @@ Emitted flow documents and stubs follow `project.provenance_storage`:
 emits inline frontmatter.
 
 ```sh
-python3 runtime/cli/python/flow_index.py <harvest|revise|update|import|organize|render> --repo <repo> \
+python3 runtime/cli/python/flow_index.py <harvest|revise|update|import|apply-analysis|organize|render> --repo <repo> \
   [--main-limit N] [--output <path>] [--organization <json>] \
   [--id <flow-id>] [--priority main|deferred] [--status main|deferred|placeholder|skipped] \
   [--summary <text>] [--written] [--analysis <flow-analysis.json>]
 ```
+
+`apply-analysis` reads the frozen v3 pack, updates matching rows' canonical
+names, hierarchy, and `analysis_state`, and adds only approved decomposition
+children. It runs before the serial `update` and `manage_manifest add` steps.
+
+### `flow_analysis`
+
+The persistent `.docforge/flow-analysis.json` ledger owns adaptive per-flow
+evidence and document design: reader question, trigger, guarantee, actors,
+terminal outcomes, ordered source-located steps, decisions/waits/loops/joins,
+characteristic modules, failure and residual state, conflicts, gaps, research
+questions, and decomposition proposals.
+
+```sh
+python3 runtime/cli/python/flow_analysis.py <prepare|import|decide|status|validate|audit> --repo <repo> \
+  [--manifest <path>] [--json] [--analysis <path>] \
+  [--select <ids>] [--decline <ids>] [--approve-decomposition <proposal-ids>] \
+  [--research-policy official-primary|official-only|off] \
+  [--verdict PASS|FAIL] [--report <path>]
+```
+
+New packs always use schema v3. V1/V2 packs remain readable but their flows
+become `legacy-needs-analysis`; the migration preserves legacy evidence without
+synthesizing missing deep facts.
 
 `--main-limit` (harvest / revise / import) defaults are **scale-aware**: the
 deep-dive document budget follows `project.scale.class` from the manifest
@@ -62,7 +87,7 @@ GitNexus MCP or the offline lbug reader, see
 
 - `harvest` — reads Understand Anything graphs, the discovered GitNexus
   interchange, and git
-  history; **writes** `.docforge/flow-index.json` (schema 1.2). With a GitNexus
+  history; **writes** `.docforge/flow-index.json` (schema 1.3). With a GitNexus
   interchange it also writes `.docforge/tmp/communities.md|.json`. Does not create
   flow-document stubs.
 - `revise` — re-harvests, preserves `documented`/`skipped` state and written
@@ -124,6 +149,7 @@ this when a native UA/GitNexus flow graph is available.
 | Script | Documented callers | Programmatic callers |
 |---|---|---|
 | `flow_index` | [`workflows/revision.md`](../../workflows/revision.md), [`workflows/tools.md`](../../workflows/tools.md), [`references/graph/graph-sources.md`](../../references/graph/graph-sources.md), [`references/graph/flow-derivation.md`](../../references/graph/flow-derivation.md) | `manifest/manage_manifest add` (flow docs update the index) |
+| `flow_analysis` | [`workflows/planning.md`](../../workflows/planning.md), [`workflows/writing.md`](../../workflows/writing.md), [`workflows/revision.md`](../../workflows/revision.md) | `flow_index apply-analysis` consumes approved hierarchy/readiness |
 | `derive_flow_graph` | [`workflows/revision.md`](../../workflows/revision.md), [`references/graph/flow-derivation.md`](../../references/graph/flow-derivation.md), [`references/graph/adding-a-graph-source.md`](../../references/graph/adding-a-graph-source.md) | `graph/precheck_graph` (remediation step), `graph/graph_storage` (write helpers) |
 
 ## Boundaries
@@ -131,4 +157,5 @@ this when a native UA/GitNexus flow graph is available.
 Flow *mechanics* live here; provider readiness and selection policy live in
 [`../graph/README.md`](../graph/README.md) and
 [`../../references/graph/flow-derivation.md`](../../references/graph/flow-derivation.md).
-Artifacts: `.docforge/flow-index.json`, `.docforge/tmp/` files, `docs/flows/`.
+Artifacts: `.docforge/flow-index.json`, `.docforge/flow-analysis.json`,
+`.docforge/tmp/` files, `docs/flows/`.

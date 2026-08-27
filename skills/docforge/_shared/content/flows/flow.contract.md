@@ -1,5 +1,7 @@
 # `flow`
 
+<!-- contract_revision: 3.1.0 -->
+
 **Reader question** — "What happens, in order, when this trigger fires, and what am I guaranteed?"
 
 | Mode | Depth | Shape |
@@ -12,6 +14,7 @@ Sequence is the spine: a reader arrives mid-question and travels forward through
 
 | # | Element | At | Done wrong |
 |---|---|---|---|
+| 0 | The per-flow analysis card is `ready`; its exact section order, modules, and diagram questions are consumed before writing | L0 | a previous flow or the scaffold decides this flow's shape |
 | 1 | The guarantee, stated before any mechanism | L0 | mechanism explained before the guarantee is stated |
 | 2 | Trigger and actors, split by what the initiator can see | L1 | actors listed flat, initiator visibility not distinguished |
 | 3 | Ordered happy-path steps, each one hop with a `file:line` grounding | L1 | a subsystem paraphrase standing in for a step |
@@ -19,6 +22,7 @@ Sequence is the spine: a reader arrives mid-question and travels forward through
 | 5 | Failures, each assigned one of the evidenced categories (rejected decision, awaited event, timeout, interruption, cancellation) | L2 | a technical retry the caller never observes written up as a failure mode |
 | 6 | Data in play, timing/limits, and the observability signal, each only where evidenced | L2 | an estimated timeout or invented signal in place of an honest omission |
 | 7 | The outcome, restated in full, and the force that shaped this flow's shape when a decision record exists | L3 | speculative rationale with no decision record and no visible constraint |
+| 8 | The flow-index row still has `analysis_state: ready` when writing begins | L0 | prose starts from a legacy, incomplete, or still-adjudicating analysis card |
 
 ## Keep out
 
@@ -31,6 +35,7 @@ Sequence is the spine: a reader arrives mid-question and travels forward through
 | BA rules and requirement traceability, once promoted | the flow's `business-analyst.md` subfile |
 | The business-recognizable narrative of the same work | `ba_process_flows` |
 | Feature value, status, or audience framing | `po_features` |
+| Fixed section names copied from the scaffold or another flow | the per-flow `document_design.section_order` |
 
 ## Owns / links
 

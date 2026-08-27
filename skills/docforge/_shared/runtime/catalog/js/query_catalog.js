@@ -92,7 +92,7 @@ const REQUIRED_DOC_FIELDS = [
   "provenance_mode",
   "audit_profile",
 ];
-const CATALOG_VERSION = "2.26.0";
+const CATALOG_VERSION = "2.27.0";
 const PRESENTATION_VALUES = {
   code: new Set(["contract-only", "task-focused"]),
   related_docs: new Set(["none", "compact", "traceability"]),
@@ -463,6 +463,7 @@ function route(value, audiences = [], repo = null) {
     dominant_form: detail.dominant_form === undefined ? null : detail.dominant_form,
     illustration_views: detail.illustration_views || [],
     contract_revision: detail.contract_revision === undefined ? null : detail.contract_revision,
+    requires_analysis: Boolean(detail.requires_analysis),
     model_depth: modelDepth,
     primary_audience: primaryAudience,
     presentation,
@@ -775,6 +776,9 @@ function validate() {
     }
     if (doc.contract_revision !== undefined && (typeof doc.contract_revision !== "string" || !CONTRACT_REVISION_RE.test(doc.contract_revision))) {
       errors.push(`${docId}: contract_revision must be MAJOR.MINOR.PATCH`);
+    }
+    if (doc.requires_analysis !== undefined && typeof doc.requires_analysis !== "boolean") {
+      errors.push(`${docId}: requires_analysis must be boolean`);
     }
     if (doc.presentation !== undefined) {
       validatePresentation(doc.presentation, `${docId}: presentation`, errors, { audienceIds });

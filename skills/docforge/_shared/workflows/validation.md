@@ -90,7 +90,8 @@ said `compact`) — a legacy tree written at standard paths is never
 silently folded to compact. A present record is never overwritten — its
 measurement `signals` are refreshed on upgrade with the 3.7 dependency and
 flow fields, while `class`, `layout`, and `decided_by` stand. The same run
-upgrades a 1.1 `.docforge/flow-index.json` to 1.2 (additive: version plus
+upgrades a 1.1/1.2 `.docforge/flow-index.json` to 1.3 (additive: version,
+`parent_flow`, and conservative `analysis_state`, plus
 the `summary.written` count), so one bare revise leaves every persistent
 record — manifest, provenance sidecars, and the flow ledger — at the
 newest schema. A legacy

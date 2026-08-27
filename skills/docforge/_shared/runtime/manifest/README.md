@@ -97,8 +97,9 @@ the 3.7 `declared_dependencies` and `flow_candidates` fields) — and
 re-registers older
 shapes; adopts legacy written documents, scaffolds incomplete provenance,
 clears failed audits, demotes incomplete written documents to `in_progress`.
-The same run upgrades a 1.1 `.docforge/flow-index.json` to 1.2 (additive:
-version plus the `summary.written` count; absent/unparseable indexes are
+The same run upgrades a 1.1/1.2 `.docforge/flow-index.json` to 1.3 (additive:
+version, `parent_flow`, conservative `analysis_state`, and the
+`summary.written` count; absent/unparseable indexes are
 skipped silently) and moves any pre-migration document's inline frontmatter
 into the folder sidecars (`.docforge/provenance/<folder>.json`) and strips
 it from the markdown. `--dry-run` is read-only; `--report` changes output

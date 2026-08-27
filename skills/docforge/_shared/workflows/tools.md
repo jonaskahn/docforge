@@ -117,11 +117,20 @@ inline from the absolute cartridge root with `query_catalog --validate`,
   demote / skip; and the post-audit summary write-back on documented
   rows), import (derived candidates from agent flow analysis when the
   code graph has no native flows), and render the
-  flow matrix (schema 1.2; a 1.1 index upgrades additively on load).
+  flow matrix, plus `apply-analysis` for frozen names, hierarchy, and
+  readiness (schema 1.3; 1.1/1.2 indexes upgrade additively on load).
   No provider flags: harvest reads the provider locked in
   `manifest["graph"]`, not whatever artifact happens to be on disk. UA
   graphs are read in place and GitNexus flows arrive as the
   auto-discovered `.docforge/tmp/gitnexus-flows.json` interchange.
+- `flow_analysis.{py,js}`: the adaptive flow-pack ledger — `prepare --repo
+  <repo> [--manifest <path>] [--json]` emits a scale-aware v3 skeleton;
+  `import --repo <repo> --analysis <path>` validates and writes
+  `.docforge/flow-analysis.json`; `decide --select <id>... --decline <id>...
+  --approve-decomposition <proposal-id>... --research-policy <mode>` records
+  the combined gate; `status [--json]`, `validate`, and `audit --verdict
+  PASS|FAIL --report <path>` inspect and close the pack. V1/V2 inputs remain
+  readable as `legacy-needs-analysis`; migration never invents missing facts.
 - `architecture_plan.{py,js}`: the architecture-pack ledger —
   `prepare` (read-only pack, no web access), `import` (validate and
   deterministically write `.docforge/architecture-plan.json`),

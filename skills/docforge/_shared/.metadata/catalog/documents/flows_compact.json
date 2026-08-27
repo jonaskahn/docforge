@@ -25,7 +25,8 @@
   "audit_profile": "flow",
   "dominant_form": null,
   "template_file": "content/compact/templates/flows.template.md",
-  "contract_revision": "3.0.0",
+  "contract_revision": "3.1.0",
+  "requires_analysis": true,
   "compact_target": "docs/flows.md",
   "compact_members": [
     "flows_index",

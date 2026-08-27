@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["version", "tiers", "profiles", "groups", "capabilities", "documents"],
   "properties": {
-    "version": {"const": "2.26.0"},
+    "version": {"const": "2.27.0"},
     "tiers": {"type": "array", "items": {"$ref": "#/definitions/namedOrder"}},
     "profiles": {
       "type": "object",
@@ -188,6 +188,7 @@
           "additionalProperties": false
         },
         "contract_revision": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+        "requires_analysis": {"type": "boolean"},
         "selection_evidence_required": {"type": "boolean"},
         "compact_group": {"type": "string"},
         "compact_target": {"type": "string"},

@@ -23,8 +23,8 @@ The candidate matrix comes first, holding every discovered flow whether or not i
 | 2 | At-a-glance flow shape: the areas work moves through | `## At a glance` | detail a folded section owns |
 | 3 | Scope and boundaries, naming adjacent sections and linking every unmerged document in this folder | `## Scope and boundaries` | a promised link to an unmaterialized path |
 | 4 | The complete candidate matrix: entry reference, area, confidence, reach, priority, status — every candidate, expanded or not | `## Flow candidate matrix` | dropping deferred rows, so coverage stops being stated |
-| 5 | Per folded flow, in `compact_order`: guarantee before mechanism, trigger, actors, ordered steps, branches with conditions, rules, failures each with its category, outcome — plus data in play, timing and limits, and observability where evidenced | `## {{Flow name}}` | milestone sub-headings; a field silently omitted |
-| 6 | Every field of the `flow` contract, repeated blocks collapsed to one line per instance, contract level order kept, nothing nested past `##` | `## {{Flow name}}` | summarized, not condensed: a folded flow that lost its failure categories or branch conditions |
+| 5 | Per folded flow: its v3 reader question, guarantee before mechanism, exact adaptive section order, selected modules, diagram questions, terminal outcomes, residual state, recovery, and evidence gaps | `## {{Flow name}}` | a fixed happy-path/failures shell or default sequence diagram |
+| 6 | Every evidenced obligation of the `flow` contract, repeated blocks collapsed to one line per instance, analysis order kept, nothing nested past `##` | `## {{Flow name}}` | summarized, not condensed: a folded flow that lost a selected module, failure branch, or gap |
 
 ## Keep out
 
@@ -32,6 +32,7 @@ The candidate matrix comes first, holding every discovered flow whether or not i
 |---|---|
 | A speculative flow with no evidence row | nowhere — it is not a candidate |
 | A deferred candidate written up as if analyzed | the matrix, status `matrix only` |
+| A flow whose index row is not `analysis_state: ready` | the v3 analysis and cold-review phase |
 | An implementation walkthrough of a single function | `arch_low_level` |
 | Direct source-file navigation | provenance |
 | Business rule definitions | `ba_business_rules` |

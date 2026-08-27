@@ -56,19 +56,19 @@ that it has not been analyzed here — it is never a flow that was ruled out.
 exactly once, even if extraction fails repeatedly; a receipt that never reaches
 `stored` leaves no row behind.
 
-**Trigger:** user action — an authenticated `POST /v1/receipts` carrying the
+**Request boundary:** user action — an authenticated `POST /v1/receipts` carrying the
 image and a target report id · **Initiated by:** the employee who incurred the
 expense · **Preconditions:** the report exists and is open.
 
-**Actors:** the expense API answers the employee synchronously; the receipt
+**Visible and hidden participants:** the expense API answers the employee synchronously; the receipt
 bucket, the extraction worker, and the ledger database work behind it, and the
 client polls the receipt id for status.
 
-**Data in play:** reads the report's state and the employee's organization
+**Commit inputs and durable writes:** reads the report's state and the employee's organization
 membership; writes one receipt row, one bucket object, and one line item per
 extracted amount.
 
-**Timing and limits:** images above 10 MB are rejected at the edge; extraction
+**Request and extraction limits:** images above 10 MB are rejected at the edge; extraction
 retries three times with exponential backoff, then dead-letters; a receipt still
 `pending` after 30 minutes is swept by the reconciliation job.
 
@@ -89,7 +89,7 @@ sequenceDiagram
   Worker->>ExpenseAPI: write line items, mark extracted
 ```
 
-**Happy path:**
+**Upload-to-extraction path:**
 
 1. The employee submits the image and the target report id.
 2. The expense API authorizes the employee against the report's organization.
@@ -105,16 +105,16 @@ sequenceDiagram
 Step 4 is the durability boundary: everything before it is discarded on failure,
 everything after it is retried.
 
-**Branches:** a content hash already on the same report returns the existing
+**Retry-safe branches:** a content hash already on the same report returns the existing
 receipt id with `201` and ends the flow, so a client retrying a timed-out
 request is safe · the report closing between authorization and write rejects
 the write at step 4 and leaves the object orphaned for the bucket lifecycle rule.
 
-**Rules:** an employee may file against any open report in their organization,
+**Authorization rule:** an employee may file against any open report in their organization,
 not only their own — ownership is enforced at approval, and that rule is owned
 by the approval flow below.
 
-**Failures:** awaited external event — the OCR provider returns no usable
+**Extraction residue and recovery:** awaited external event — the OCR provider returns no usable
 amounts; detected by the worker's schema check, retried three times, then
 dead-lettered and flagged for manual entry, with the receipt left `stored` and
 its image intact · timeout — extraction never finishes; detected by the
@@ -123,12 +123,12 @@ than swept a third time · system-wide cancellation — the report is cancelled
 mid-extraction; detected by the worker's state check before writing, which stops
 without writing, so no partial line items exist.
 
-**Observability:** a `receipt.extracted` counter tagged with the outcome, and
+**Convergence signals:** a `receipt.extracted` counter tagged with the outcome, and
 the sweep count from the reconciliation job. A sweep count approaching the
 extraction count means the queue is not draining — the earliest visible symptom
 of an OCR outage. Dead-letter depth is the paging signal.
 
-**Outcome:** on success, one `extracted` receipt with one line item per
+**Terminal receipt states:** on success, one `extracted` receipt with one line item per
 recognized amount, visible to the approver; on safe failure, the guarantee still
 holds — never lost, never extracted twice; deferred, the report's pending total
 recalculates asynchronously, so an approver may briefly see the receipt before
@@ -139,17 +139,17 @@ the total updates.
 **Guarantee:** an approved report is immutable and carries the identity of the
 approver; a report that fails approval is left open and unchanged.
 
-**Trigger:** user action — `POST /v1/reports/{id}/approve` · **Initiated by:**
+**Guarded transition request:** user action — `POST /v1/reports/{id}/approve` · **Initiated by:**
 an approver in the report owner's organization · **Preconditions:** the report
 is `submitted` and every receipt on it has left `stored`.
 
-**Actors:** the expense API answers the approver synchronously; the ledger
+**Transition participants:** the expense API answers the approver synchronously; the ledger
 database and the notification worker work behind it.
 
-**Data in play:** reads every line item on the report; writes the report's
+**State read and committed:** reads every line item on the report; writes the report's
 state, the approver identity, and the approved total.
 
-**Timing and limits:** approval is a single transaction with no retry; the
+**Transaction boundary:** approval is a single transaction with no retry; the
 notification is queued and retried five times.
 
 ```mermaid
@@ -168,7 +168,7 @@ sequenceDiagram
   ExpenseAPI->>Notifier: queue employee notification
 ```
 
-**Happy path:**
+**Open-to-approved transition:**
 
 1. The approver calls approve on a submitted report.
 2. The API revalidates the report total against the current line items.
@@ -176,23 +176,23 @@ sequenceDiagram
 4. The API returns the approved total.
 5. A notification to the employee is queued.
 
-**Branches:** a total that no longer matches the one shown to the approver
+**Invalid and stale transitions:** a total that no longer matches the one shown to the approver
 rejects the call and returns the current figure, so approval is never applied to
 a stale view; the report stays `submitted` and the approver can retry.
 
-**Rules:** an approver may not approve their own report — this is the ownership
+**Transition guard:** an approver may not approve their own report — this is the ownership
 rule the submission flow defers to.
 
-**Failures:** decision point — the revalidated total differs from the submitted
+**Rejection residue:** decision point — the revalidated total differs from the submitted
 one; detected in step 2, rejected before any write, leaving the report open ·
 awaited external event — the notification is never delivered; detected by the
 notifier's retry exhaustion, which leaves the approval intact because delivery
 is not part of the approval transaction.
 
-**Observability:** an `approval.rejected` counter tagged with the reason. A
+**Transition signals:** an `approval.rejected` counter tagged with the reason. A
 sustained rise in stale-total rejections means extraction is landing after
 submission, which is a receipts-side problem rather than an approvals one.
 
-**Outcome:** on success, an immutable report carrying its approver and total; on
+**Terminal report states:** on success, an immutable report carrying its approver and total; on
 safe failure, the report is untouched and can be approved again; deferred, the
 employee notification.

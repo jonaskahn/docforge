@@ -648,7 +648,7 @@ documents, never the whole architecture corpus:
 Agent-context isolation never changes with scope. Outputs remain
 self-contained and zero-reference whether revised alone, alongside
 human-facing documentation, or after the selected area set changes. The
-catalog contract revision `2.26.0` therefore rewrites any older routed or
+catalog contract revision `2.27.0` therefore rewrites any older routed or
 importing form through steps 1a and 1b without a conversion prompt.
 Standard and compact layout switches remain content-preserving under the
 normal split/merge mechanics.
@@ -909,7 +909,8 @@ asks". The **flow selection gate** is mandatory ([`../flags.md`](../flags.md));
 only the execution-mode pauses around the gate honor the flag.
 
 Run the canonical pipeline — precheck → harvest/import → organize →
-analyze → selection gate → apply → write → write-back → render — exactly as
+v3 analyze/cold-review/adjudicate → combined selection/research gate →
+apply-analysis → write → pack audit → write-back → render — exactly as
 [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
 "Flow pipeline" specifies (every command and flag, the analysis depth rule,
 the prompt's contents and `--main-limit` budget, the `update`
@@ -926,17 +927,20 @@ Revise differs from a fresh start in five places, and only these:
   catches **missing** candidates only; existing rows keep their stored
   status, priority, organization, `summary`, and `written_at`.
 - **The same answer selects analysis breadth.** Re-analyze → the full deep
-  pack for main-priority standalone rows. Reuse → the deep pack only for
-  missing candidates and for rows promoted from deferred during the
-  prompt; everything else reuses its stored analysis. Deferred rows get
-  summary-level context either way.
+  v3 pack for main-priority standalone rows. Reuse → load
+  `.docforge/flow-analysis.json`, validate it with `flow_analysis validate`,
+  and investigate only missing, stale, `legacy-needs-analysis`, or newly
+  promoted cards. Existing cards preserve their evidence-specific
+  `document_design`; missing deep facts are never synthesized during upgrade.
+  Deferred rows get summary-level context either way.
 - **Per-row actions are add / remove / update**, not the fresh start's
   promote / demote / skip: **add** for missing or newly promoted
   candidates (analyzed first), **remove** for selected rows the user
   drops, **update** for documented flows whose `check_staleness` reports
   blocking sections or whose composition / connections changed. Unchanged
   rows are baseline facts, never re-asked.
-- **Apply order is `revise` → `update` → `manage_manifest add`.** The
+- **Apply order is `revise` → `flow_analysis import/decide` → `flow_index
+  apply-analysis` → `update` → `manage_manifest add`.** The
   re-harvest must land in the real index before `update` touches a row —
   `update` fails on an id the index has never seen. When the added
   documents include flow-related types the manifest's audiences do not
@@ -950,7 +954,10 @@ limits source rework to its blocking / untracked sections
 re-grounds connection, composition, and cross-link sections when the index
 or its neighbors changed, even on `FRESH` blobs — and is rewritten to the
 current `flow` template when its shape has drifted (step 1b), never
-patched in place.
+patched in place. Its reviser reads the existing analysis card first so a prose
+revision does not erase the original evidence boundaries, chosen modules,
+diagram questions, or explicit gaps. If those have changed, re-adjudicate the
+card before touching the artifact.
 
 Distinct from `/docforge-revise <area>`, which does not re-harvest the
 flow index, never asks the flow mode question, and still applies the

@@ -446,11 +446,62 @@ never waives it** ([`../flags.md`](../flags.md)); only the pause on the
 structure update that follows the gate is skipped.
 
 Run the canonical pipeline — precheck → harvest/import → organize →
-analyze → selection gate → apply → write → write-back → render — exactly as
+analyze → combined selection/research gate → apply-analysis → write →
+write-back → render — exactly as
 [`../references/graph/flow-derivation.md`](../references/graph/flow-derivation.md)
 "Flow pipeline" specifies (every command and flag, the analysis depth rule,
 the prompt's contents and `--main-limit` budget, the `update`
 promote/demote/decline mapping).
+
+### Flow analysis phase
+
+After `flow_index harvest` and `flow_index organize`, freeze an evidence-specific
+v3 card for every main standalone candidate before asking which artifacts to
+write:
+
+1. Run `flow_analysis prepare --repo <repo> [--manifest <path>] --json`.
+   The skeleton records the scale-aware concurrency budget: small uses three
+   investigators and two proposal workers, medium uses six and three, and
+   large uses eight and four.
+2. Run one evidence investigator per independent main candidate, concurrently
+   up to the host limit. Each investigator owns one card and records the reader
+   question, trigger, visible and hidden actors, preconditions, guarantee,
+   terminal outcomes, source-located steps, boundaries and handoffs, state
+   changes, decisions, waits, loops, parallel work, joins, applicable modules,
+   failures, residual state, conflicts, evidence gaps, research questions, and
+   an exact document design.
+3. Run one cold skeptical reviewer per card. Reviewers receive evidence and the
+   card, not investigator reasoning, and concentrate on missing branches,
+   unsupported guarantees, concurrency, residual state, recovery, and rejoin
+   points.
+4. Adjudicate serially. Freeze canonical ids, names, boundaries, relationships,
+   section order, diagram questions, and decomposition proposals. A broad flow
+   may propose a parent plus children only for separate guarantees, entry
+   boundaries, failure domains, or operational owners.
+5. Import the frozen pack with `flow_analysis import --repo <repo> --analysis
+   <path>`. Do not synthesize facts while migrating v1/v2 packs; their cards
+   become `legacy-needs-analysis`.
+
+### Combined flow selection and research gate
+
+Present one mandatory checkpoint containing selected and deferred flows,
+reader questions, characteristics, proposed parent/child hierarchies and their
+reasons, exact external questions, affected artifacts, expected source classes,
+section/diagram choices, and estimated writer/research concurrency. No split is
+applied until it is approved here.
+
+Record the answer with `flow_analysis decide --repo <repo> --select <id>...
+--decline <id>... --approve-decomposition <proposal-id>... --research-policy
+official-primary|official-only|off`, then run `flow_index apply-analysis
+--repo <repo>` before the existing serial `flow_index update` and
+`manage_manifest add` steps.
+
+`--auto-accept` never authorizes research and never waives this checkpoint.
+Authorized external questions fan out by deduplicated question cluster;
+standards come first, then official framework/protocol/vendor documentation,
+then primary research. External sources explain external semantics only and
+must be recorded through provenance 2.2; repository evidence alone establishes
+what this project implements.
 
 Fresh start differs from revise in four places, and only these:
 
@@ -462,11 +513,10 @@ Fresh start differs from revise in four places, and only these:
 - **Every candidate is new.** The prompt offers promote / demote / skip,
   not the revise flow's per-row add / remove / update actions, and there
   are no unchanged rows to carry as baseline facts.
-- **One analysis, no reuse.** There is no stored analysis to reuse and no
-  flow-mode question. CodeGraph-only: the single agent analysis taken at
-  harvest time (`derive_flow_graph.{py,js} prepare` → agent →
-  `flow_index.{py,js} import --analysis`) **is** the deep pack; the
-  Analyze phase must not re-run it.
+- **Every flow receives v3 analysis.** There is no stored v3 card to reuse and
+  no flow-mode question. CodeGraph derivation may seed candidates, but its v1/v2
+  graph-analysis payload is legacy evidence; it never substitutes for the v3
+  investigator, cold-review, and adjudication phases above.
 - **The structure update is the corrected projection.** Its document count
   supersedes the intake estimate, which excluded flow documents on purpose
   ([`intake.md`](intake.md) "Confirmation summary"). Honor the execution

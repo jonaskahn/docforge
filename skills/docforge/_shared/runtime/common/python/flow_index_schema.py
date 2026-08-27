@@ -8,22 +8,19 @@ CLI launcher.
 
 from __future__ import annotations
 
-FLOW_INDEX_VERSION = "1.2"
-SUPPORTED_FLOW_INDEX_VERSIONS = ("1.1", "1.2")
+FLOW_INDEX_VERSION = "1.3"
+SUPPORTED_FLOW_INDEX_VERSIONS = ("1.1", "1.2", "1.3")
 
 
 def upgrade_index(index: dict) -> dict:
-    """Additively upgrade a 1.1 flow index to the current schema.
+    """Additively upgrade a 1.1/1.2 flow index to the current schema.
 
     Mutates and returns the same dict. Raises ValueError on unsupported
     versions; a current index passes through untouched."""
     version = str(index.get("version") or "1.1")
-    if version == FLOW_INDEX_VERSION:
-        return index
     if version not in SUPPORTED_FLOW_INDEX_VERSIONS:
         raise ValueError(f"unsupported flow index version: {version}")
-    index["version"] = FLOW_INDEX_VERSION
-    if index.get("summary") and "written" not in index["summary"]:
+    if version == "1.1" and index.get("summary") and "written" not in index["summary"]:
         index["summary"]["written"] = sum(
             1
             for row in index.get("flows", [])
@@ -31,4 +28,16 @@ def upgrade_index(index: dict) -> dict:
             and row.get("status") == "documented"
             and bool(row.get("summary"))
         )
+    if version in {"1.1", "1.2"}:
+        for row in index.get("flows", []):
+            if not isinstance(row, dict):
+                continue
+            row.setdefault("parent_flow", None)
+            row.setdefault(
+                "analysis_state",
+                "ready"
+                if row.get("status") == "documented" or bool(row.get("written"))
+                else "not-analyzed",
+            )
+    index["version"] = FLOW_INDEX_VERSION
     return index

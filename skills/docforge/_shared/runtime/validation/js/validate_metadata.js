@@ -13,7 +13,7 @@ const generateIndexes = require("./generate_indexes.js");
 const SKILL_ROOT = path.resolve(fs.realpathSync(__dirname), "..", "..", "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "..", "..", "..");
 const EXCEPTIONS = SPECIAL_DOC_SOURCES;
-const CATALOG_VERSION = "2.26.0";
+const CATALOG_VERSION = "2.27.0";
 const PUBLIC_CONTRACTS = {
   manage_manifest: ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--group", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
   detect_profiles: ["--repo", "--json", "--emit-gate-pack", "confirmed", "candidate"],
@@ -21,7 +21,8 @@ const PUBLIC_CONTRACTS = {
   precheck_graph: ["--repo", "--need", "code", "flow"],
   check_staleness: ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
   hash_evidence: ["--repo", "--path", "--range", "--json"],
-  flow_index: ["harvest", "revise", "update", "import", "render", "organize", "emit", "apply", "--repo", "--main-limit", "--output", "--organization", "--id", "--priority", "--status", "--summary", "--written", "--analysis"],
+  flow_index: ["harvest", "revise", "update", "import", "apply-analysis", "render", "organize", "emit", "apply", "--repo", "--main-limit", "--output", "--organization", "--id", "--priority", "--status", "--summary", "--written", "--analysis"],
+  flow_analysis: ["prepare", "import", "decide", "status", "validate", "audit", "--repo", "--manifest", "--json", "--analysis", "--select", "--decline", "--approve-decomposition", "--research-policy", "--verdict", "--report"],
   migrate_metadata: ["--repo", "--manifest", "--dry-run", "--report"],
   query_catalog: ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo", "--group", "--groups"],
   generate_indexes: ["--write", "--check"],
@@ -71,6 +72,15 @@ function validate() {
       errors.push("architecture plan schema must require version 1.0");
     }
   }
+  const flowAnalysisSchemaPath = path.join(metadata, "flow-analysis-schema.json");
+  if (!fs.existsSync(flowAnalysisSchemaPath)) {
+    errors.push("flow-analysis-schema.json is missing");
+  } else {
+    const flowAnalysisSchema = readJson(flowAnalysisSchemaPath);
+    if (((flowAnalysisSchema.properties || {}).schemaVersion || {}).const !== 3) {
+      errors.push("flow analysis schema must require version 3");
+    }
+  }
   if (catalog.version !== CATALOG_VERSION) errors.push(`catalog version must be ${CATALOG_VERSION}`);
   if ((((catalogSchema.properties || {}).version || {}).const) !== CATALOG_VERSION) {
     errors.push("catalog schema version disagrees with catalog");
@@ -118,11 +128,11 @@ function validate() {
       errors.push("provenance sidecar schema must require version 1.0");
     }
   }
-  if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.2") {
-    errors.push("flow index schema must require version 1.2");
+  if ((((flowIndexSchema.properties || {}).version || {}).const) !== "1.3") {
+    errors.push("flow index schema must require version 1.3");
   }
   const flowItem = ((((flowIndexSchema.properties || {}).flows || {}).items || {}).properties) || {};
-  for (const field of ["display_name", "family", "doc_role", "composed_into", "doc_path"]) {
+  for (const field of ["display_name", "family", "doc_role", "composed_into", "doc_path", "parent_flow", "analysis_state"]) {
     if (!(field in flowItem)) errors.push(`flow index schema must define flow.${field}`);
   }
   for (const field of ["summary", "written_at"]) {

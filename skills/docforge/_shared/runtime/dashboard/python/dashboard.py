@@ -62,7 +62,7 @@ from runtime.manifest.python.migrate_metadata import (
     migrate as migrate_manifest_metadata,
 )
 
-TOOL_VERSION = "2.26.0"
+TOOL_VERSION = "2.27.0"
 TEMPLATE_VERSION = "1"
 STATE_SCHEMA = 1
 STATE_FILE = ".docforge-dashboard.json"

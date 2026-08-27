@@ -206,7 +206,7 @@ class ProvenanceExternalSourcesTests(unittest.TestCase):
         provenance = {
             "schema": "2.2", "doc_id": "arch_high_level", "path": "docs/architecture/high-level.md",
             "generated_at": "2026-08-27T00:00:00Z",
-            "generator": {"name": "docforge", "version": "2.26.0"},
+            "generator": {"name": "docforge", "version": "2.27.0"},
             "tier": "diligence", "target_depth": "working",
             "graph": {"provider": "gitnexus", "flow": "native"},
             "external_sources": [
@@ -277,7 +277,7 @@ class ProvenanceExternalSourcesTests(unittest.TestCase):
                     "schema": "2.2", "doc_id": "arch_high_level",
                     "path": "docs/architecture/high-level.md",
                     "generated_at": "2026-08-27T00:00:00Z",
-                    "generator": {"name": "docforge", "version": "2.26.0"},
+                    "generator": {"name": "docforge", "version": "2.27.0"},
                     "tier": "diligence", "target_depth": "working",
                     "graph": {"provider": "gitnexus", "flow": "native"},
                     "external_sources": [
@@ -308,7 +308,7 @@ class ProvenanceExternalSourcesTests(unittest.TestCase):
 class WorkingDepthAndSubsystemCatalogTests(unittest.TestCase):
     def test_working_is_a_valid_target_depth(self) -> None:
         catalog = json.loads((SKILL_ROOT / ".metadata" / "catalog" / "index.json").read_text(encoding="utf-8"))
-        self.assertEqual(catalog["version"], "2.26.0")
+        self.assertEqual(catalog["version"], "2.27.0")
         import sys
         sys.path.insert(0, str(SKILL_ROOT))
         from runtime.catalog.python.query_catalog import TARGET_DEPTHS

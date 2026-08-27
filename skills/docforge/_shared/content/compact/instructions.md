@@ -30,11 +30,9 @@ Each merged file keeps its members' own group voice ([`voice.md`](../../referenc
   the number of lines each one gets. A folded flow that loses its failure
   categories, or a folded concept that loses its invariants, has been
   summarized rather than condensed — that is a defect, not a layout.
-- Worked examples of both halves of that rule:
-  [`flow.compact.example.md`](../shared/exemplars/flow.compact.example.md) and
-  [`architecture.compact.example.md`](../shared/exemplars/architecture.compact.example.md),
-  each paired with the standard-layout exemplar it condenses. Read them side by
-  side to see which fields survive folding — all of them.
+- The architecture exemplar demonstrates ordinary condensation. Flows are
+  intentionally excluded from exemplar-shaped writing: their v3 analysis card
+  supplies an evidence-specific order and module set.
 - **Condensing does not reorder.** Each folded section keeps its member's level
   order per
   [`../../references/progressive-disclosure.md`](../../references/progressive-disclosure.md):
@@ -346,13 +344,12 @@ Write the sections in this order:
    reference, area, confidence, reach, priority, and status. Give each row
    with a section below an anchor link to it (`[Checkout](#checkout)`), and
    mark every other row `matrix only` in its status column.
-3. One `##` section per flow the manifest recorded in `compact_members`, in
-   `compact_order`. Write each from the `flow` contract, carrying every one of
-   its fields at one line per repeated instance — a folded flow is a flow
-   document condensed into a shared file, not a summary of one. Keep the
-   contract's level order: the guarantee, then trigger and actors, then the
-   numbered happy path and its diagram, then branches, rules, failures, and
-   observability, then the outcome.
+3. One `##` section per selected flow, merged deterministically from an
+   independent summary payload. Read its ready v3 card and condense the exact
+   `document_design.section_order`, selected modules, diagram questions,
+   terminal outcomes, recovery/residual state, and gaps. A folded flow is its
+   evidence-specific deep dive condensed into a shared file, not a generic
+   happy-path summary.
 
 **The matrix is the coverage statement; the sections are the budget.** The
 manifest carries at most six flow sections
@@ -366,14 +363,12 @@ Spilled siblings live in `docs/flows/`.
 
 ## Illustration
 
-- **Form:** the complete candidate matrix as a Markdown table; per-flow
-  sections use the `flow` contract's form — a Mermaid `sequenceDiagram` by
-  default, a `flowchart` when branch selection is the reader's question.
+- **Form:** the complete candidate matrix as a Markdown table; each flow uses
+  only the forms named in its `document_design.diagrams`.
 - **Renders:** matrix rows with anchor links; each folded flow at full
   deep-dive depth.
-- **Trigger:** per the `flow` contract — the diagram appears once the happy
-  path passes about four steps or any branch exists, within the deep-dive
-  budget.
+- **Trigger:** a diagram appears only when its card records a distinct reader
+  question for that form; there is no default sequence diagram.
 
 ## Writing `docs/operations.md`
 

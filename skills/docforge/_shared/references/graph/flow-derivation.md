@@ -157,17 +157,17 @@ Two limits worth knowing before writing:
 ```sh
 python3 runtime/cli/python/derive_flow_graph.py prepare --repo <repo> \
 node runtime/cli/js/derive_flow_graph.js prepare --repo <repo> \
-# …then the agent/LLM analyzes main flows into .docforge/tmp/flow-analysis.json…
+# …then the agent/LLM derives candidate rows into .docforge/tmp/derived-flow-analysis.json…
 python3 runtime/cli/python/flow_index.py import --repo <repo> \
 node runtime/cli/js/flow_index.js import --repo <repo> \
 # bun  runtime/cli/js/flow_index.js import --repo <repo> \
 # deno run -A runtime/cli/js/flow_index.js import --repo <repo> \
-  --analysis .docforge/tmp/flow-analysis.json [--main-limit 15]
+  --analysis .docforge/tmp/derived-flow-analysis.json [--main-limit 15]
 ```
 
-### The analysis pack (schema 2)
+### Derived candidate interchange (schema 2, legacy evidence)
 
-Write `.docforge/tmp/flow-analysis.json` in this shape. The older v1 shape
+Write `.docforge/tmp/derived-flow-analysis.json` in this shape. The older v1 shape
 (`{name, entryPoint?, domain?, steps[{order, name, path?}]}`) still imports,
 but it has nowhere to put six of the seven facts
 [`../../content/flows/flow.contract.md`](../../content/flows/flow.contract.md)
@@ -204,9 +204,11 @@ outranks a graph-derived one), derives `reach.boundaries` from the distinct
 top-level directories the steps span, and copies steps, branches, rules,
 failures, actors, and outcome into `evidence`.
 
-The validated pack is then persisted to **`.docforge/flow-analysis.json`**,
-outside `tmp/` so it survives the run that produced it; the flow writer reads
-it instead of re-deriving by grep. Rows are finalized (rank / slug / main
+The interchange seeds durable candidate rows. It is not the adaptive v3 deep
+pack and cannot make a row analysis-ready. The subsequent `flow_analysis`
+phase preserves it as legacy evidence while investigators fill the missing
+guarantee, runtime patterns, modules, gaps, and document design. Rows are
+finalized (rank / slug / main
 budget), then merged with the existing index through the same
 state-preserving merge `revise` uses — documented and skipped rows keep
 their status, summaries, and organization; new rows land as `placeholder`
@@ -265,9 +267,9 @@ updates the index; moves or refreshes stubs; and prunes orphan scaffolds.
 ### Layout rules
 
 - **Name** = business outcome; file slug = kebab of that name.
-- **Compose** into one markdown when members are small endpoint/service ops
-  sharing a domain (email create/update/upload/notice → H2 sections under
-  one parent).
+- **Compose or split** only through an approved v3 decomposition proposal.
+  Shared naming or domain is not evidence; separate guarantees, entry
+  boundaries, failure domains, or operational ownership are.
 - **Family folder** when ≥3 documentable siblings or composed parents share a
   domain (`docs/flows/email/…`).
 - **Main budget** (`--main-limit`) still caps deep-dives; members do not
@@ -281,7 +283,7 @@ Human shorthand: **primary** ≈ main + standalone/parent; **secondary** ≈
 member composed into a parent, or deferred index-only. Do not invent a
 parallel priority enum.
 
-## Selection gate and write-back
+## Combined selection/research gate and write-back
 
 Which harvested candidates become deep-dive documents is a **user
 decision at write start** (fresh start: after the plan gate, before
@@ -292,16 +294,22 @@ choose to proceed. See the owning workflows:
 (write-start)" and [`../../workflows/revision.md`](../../workflows/revision.md)
 "`/docforge-revise flow`".
 
-- **Analysis depth.** Main-priority standalone rows get the full deep
-  analysis pack (steps, branches, rules, failures). Deferred rows get
+- **Analysis depth.** Main-priority standalone rows get full v3 cards and cold
+  review. Deferred rows get
   summary-level context only — name, trigger, entry ref, reach, one-line
   evidence — enough to decide promotion. A promoted row is deep-analyzed
   before writing.
-- **Prompt.** Every candidate listed; main standalone pre-selected;
-  deferred promotable; budget = `--main-limit` deep-dives (default follows
+- **Prompt.** Every candidate is listed with its reader question,
+  characteristics, document design, exact external questions, and affected
+  artifacts. Approved decomposition proposals show the parent/child hierarchy
+  and reason. Main standalone rows are pre-selected; deferred rows are
+  promotable; budget = `--main-limit` deep-dives (default follows
   `project.scale.class`: small 15, medium 25, large 40, fallback 15),
   exceeding it needs explicit confirmation.
-- **Apply.** Mechanically with `flow_index.{py,js} update`:
+- **Decide and apply.** Record flow selection, approved decomposition ids, and
+  the explicitly authorized research policy with `flow_analysis decide`, then
+  run `flow_index apply-analysis`. Continue mechanically with
+  `flow_index.{py,js} update`:
   promote → `--priority main --status placeholder`; demote →
   `--priority deferred`; decline → `--status skipped`. The command
   normalizes `doc_role` / `doc_path` to match: promoted rows become
@@ -335,21 +343,26 @@ gate and write-back" above.
 2. **Harvest or import** — native flow evidence: `flow_index.{py,js}
    harvest` (fresh start, re-analyze) or `revise` (reuse). No native
    flow evidence (CodeGraph-only): `derive_flow_graph.{py,js} prepare`,
-   then the agent/LLM analyzes the bounded candidates **once** into
-   `.docforge/tmp/flow-analysis.json`, then `flow_index.{py,js} import
-   --analysis` seeds the derived rows through the same
-   state-preserving merge revise uses. This analysis is the deep pack —
-   step 4 must not re-run it.
+   then the agent/LLM derives bounded candidates into
+   `.docforge/tmp/derived-flow-analysis.json`, then `flow_index.{py,js}
+   import --analysis` seeds the rows through the same state-preserving merge
+   revise uses. This schema-2 payload is discovery evidence, not the v3 deep
+   pack.
 3. **Organize** — `organize emit`, the agent writes
    `.docforge/tmp/flow-organization.json`, `organize apply`. Naming and
    grouping settle before the prompt — the user never chooses among
    bare symbols.
-4. **Analyze** — main-priority **standalone** rows get the full deep
-   pack ("Derive main-flow detail" below); run `derive_flow_graph
-   write` only when a provisional flow graph is required. Deferred rows
-   get summary-level context only. CodeGraph-only: the step-2 analysis
-   is the pack; do not analyze twice.
-5. **Selection gate** — mandatory; prompt, budget, and mapping above.
+4. **Analyze and cold-review** — run `flow_analysis prepare`; investigate one
+   main standalone candidate per worker, cold-review every card, then
+   adjudicate names, boundaries, relationships, modules, exact section order,
+   diagram questions, and decomposition proposals serially. Import the frozen
+   v3 pack with `flow_analysis import`. Deferred rows get summary context but
+   retain explicit gaps.
+5. **Combined selection/research gate** — mandatory. Show selections,
+   deferrals, decomposition hierarchy and reasons, exact external questions,
+   affected artifacts, source classes, document/diagram designs, and expected
+   concurrency. Record the answer with `flow_analysis decide`; `--auto-accept`
+   never authorizes research or decomposition.
 6. **Apply** — in this exact order:
    1. `flow_index.{py,js} revise` into the real index on a revise flow
       (upsert every harvested row, preserve `documented` / `skipped`
@@ -357,16 +370,20 @@ gate and write-back" above.
       for main-priority standalone placeholders, prune orphan
       scaffolds). Fresh start: `harvest` already wrote the real index —
       no revise step.
-   2. `flow_index.{py,js} update` per changed row (promote / demote /
+   2. `flow_index.{py,js} apply-analysis` to freeze approved names,
+      hierarchy, family paths, and analysis readiness.
+   3. `flow_index.{py,js} update` per changed row (promote / demote /
       decline). Never update before revise: newly harvested rows do not
       exist in the real index yet.
-   3. `manage_manifest.{py,js} add --type flow` for each selected
+   4. `manage_manifest.{py,js} add --type flow` for each selected
       standalone.
-   4. Show the annotated plan tree / structure update; honor the
+   5. Show the annotated plan tree / structure update; honor the
       execution-mode checkpoint.
-7. **Write** — flow documents in `write_order`; a spawned writer edits
-   only its own flow document, the index and the manifest stay
-   orchestrator-serial.
+7. **Write and audit** — one writer per independent artifact, queued at the
+   host limit; then one cold auditor per artifact. Children close before
+   parents. Compact layout uses independent summary payloads followed by one
+   deterministic merge. Run `flow_analysis audit` as the final cross-flow
+   pack gate. The index, manifest, sidecars, and links stay serial.
 8. **Write-back** — after lint + independent audit: `flow_index update
    --id <flow-id> --summary "<one-paragraph outcome>" --written`
    (refused unless `documented`).
@@ -385,9 +402,9 @@ document write.
 | Step | Fresh start (planning) | `/docforge-revise flow` |
 |---|---|---|
 | Harvest | `harvest` — full; every row re-derived | Re-analyze: `harvest`; Reuse: `revise` (missing candidates only; stored status, summaries, organization reused) |
-| Analyze | Deep pack for main standalone rows | Re-analyze: full deep pack for main standalone rows; Reuse: deep pack only for missing and newly promoted rows |
-| Gate | Every candidate; main standalone pre-selected; promote / demote / skip | Per-row actions add / remove / update; unchanged rows are baseline facts |
-| Apply | update → add (harvest wrote the index) | revise → update → add |
+| Analyze | New v3 card + cold reviewer per main standalone row | Re-analyze: rebuild v3 cards; Reuse: investigate missing, stale, legacy, and newly promoted cards |
+| Gate | Combined selection, decomposition, and research checkpoint | Same combined checkpoint; unchanged rows are baseline facts |
+| Apply | decide → apply-analysis → update → add | revise → decide → apply-analysis → update → add |
 
 **Tier rule.** The gate fires only for `diligence` and `portfolio`. At
 `spine` the harvest still ran during repository inspection, but
@@ -410,15 +427,17 @@ and validate JSON.
    code-graph digest (see
    [`../../runtime/flows/README.md`](../../runtime/flows/README.md)) in
    `.docforge/tmp/flow-context.json`.
-3. Agent/LLM analyzes **main standalone only**. For each flow record actors,
-   trigger, ordered steps, branches, rules, failures, and outcome — the full
-   schema-2 pack above, which is the only shape with a slot for all seven.
-   Take the step order and each step's `file:line` from the cluster `paths`;
-   supply naming and the branch/rule/failure semantics yourself. Write
-   `.docforge/tmp/flow-analysis.json`.
+3. Run `flow_analysis prepare`, then assign **main standalone only** cards to
+   independent investigators. Each card records the full schema-v3 semantics
+   in `flow-analysis-schema.json`, including characteristics, ordered
+   source-located steps, patterns, applicable modules, residual state,
+   conflicts, evidence gaps, external questions, and document design. Take
+   order and locators from graph paths where available and verify semantics
+   against source.
 4. When a provisional graph is required, run
    `derive_flow_graph.{py,js} write --repo <repo> --analysis
-   .docforge/tmp/flow-analysis.json`.
+   .docforge/tmp/derived-flow-analysis.json` when the provisional graph still
+   needs the legacy interchange.
 5. Treat `.docforge/tmp/flow-graph.json` as provisional. Confirm business
    rules against source before asserting them in deep-dive flow documents.
 6. Rerun `precheck_graph.{py,js} --repo <repo> --need flow` (see

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Adaptive, deep flow documentation (2.27.0).** Flow generation now freezes
+  a schema-v3 `.docforge/flow-analysis.json` card per candidate, with
+  evidence-specific characteristics, ordered source-located steps, runtime
+  patterns, cross-cutting modules, residual state, recovery, conflicts, gaps,
+  research questions, and an exact section/diagram design. New paired
+  `flow_analysis.{py,js}` commands prepare, import, decide, validate, inspect,
+  and audit the pack; v1/v2 evidence remains readable as
+  `legacy-needs-analysis`. Flow-index 1.3 adds hierarchy and analysis state,
+  while `apply-analysis` materializes only confirmed decompositions. Independent
+  investigators, cold card reviewers, research clusters, artifact writers, and
+  cold auditors run in dependency-aware waves; shared metadata stays serial and
+  a cross-flow pack audit is mandatory. The fixed seven-heading template and
+  forced sequence diagram are replaced by a minimal adaptive scaffold and a
+  focused deep-dive reference grounded in C4 dynamic diagrams, BPMN,
+  OpenTelemetry, RFC 9110, CloudEvents, and W3C PROV-O.
+
 - **Adaptive, deep architecture generation.** Architecture documentation is
   now planned as an evidence-specific document pack (`.docforge/architecture-plan.json`,
   schema 1.0), not one broad prompt. A new `architecture_plan.{py,js}`

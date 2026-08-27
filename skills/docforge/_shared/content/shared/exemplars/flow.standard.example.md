@@ -1,9 +1,9 @@
 <!-- CRAFT REFERENCE, NOT A GENERATED ARTIFACT.
 
-A worked `flow` document for a fictional expense service, showing what the
-standard-layout template produces when it is filled well. Read it beside
-../../flows/flow.template.md and ../../flows/instructions.md; update it in the
-same change as either of them.
+A worked `flow` document for a fictional expense service, showing one possible
+request-plus-event design selected by a v3 analysis card. It is not a heading
+pattern. Read it beside ../../flows/flow.template.md,
+../../flows/instructions.md, and ../../../references/flows/flow-deep-dive.md.
 
 Where a real document would link a neighbouring document with a relative path,
 this file names the neighbour in bold instead, so it stays self-contained and
@@ -28,7 +28,7 @@ audit-export flows both read what this one writes.
 exactly once, even if extraction fails repeatedly; a receipt that never reaches
 `stored` leaves no row behind.
 
-## Trigger and actors
+## Request contract and participants
 
 <!-- L1 -->
 
@@ -56,7 +56,7 @@ line-item row per extracted amount.
 is retried three times with exponential backoff, then dead-lettered; a receipt
 that has not left `pending` after 30 minutes is swept by the reconciliation job.
 
-## Happy path
+## From upload to durable extraction
 
 <!-- L1 — steps are named here; what can go wrong is below. -->
 
@@ -97,7 +97,7 @@ sequenceDiagram
   Worker->>ExpenseAPI: write line items, mark extracted
 ```
 
-## Branches and rules
+## Retry-safe request branches
 
 <!-- L2 -->
 
@@ -129,7 +129,7 @@ bucket lifecycle rule to collect. The employee is told the report is closed.
 organization, not only their own — the ownership rule is enforced at approval,
 not at submission, and is owned by the approval flow rather than restated here.
 
-## Failure and recovery
+## Extraction residue and recovery
 
 <!-- L2 — most consequential first. -->
 
@@ -186,7 +186,7 @@ every receipt still in `stored`.
 
 **Escalation boundary:** none; this path is fully automatic.
 
-## Observability
+## How operators see extraction converge
 
 Each extraction emits a `receipt.extracted` counter tagged with the outcome, and
 the reconciliation job emits the number of receipts it swept. A healthy hour
@@ -194,7 +194,7 @@ shows sweeps in the low single digits; a sweep count approaching the extraction
 count means the queue is not draining, which is the earliest visible symptom of
 an OCR outage. The dead-letter queue depth is the paging signal.
 
-## Outcome
+## Terminal receipt states
 
 <!-- L3 -->
 
@@ -218,7 +218,7 @@ receipt submitted
 A single submission fans out to these three terminal outcomes and nothing
 branches further.
 
-## Why it works this way
+## Why the request is content-addressed
 
 Content-addressed keys were adopted when duplicate submissions from mobile
 retries were filling the bucket; the decision record for the retry contract

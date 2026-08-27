@@ -604,7 +604,7 @@ class Manifest39MigrationParityTests(unittest.TestCase):
                     self.assertEqual(scale["decided_by"], "migration")
                     self.assertEqual(scale["detected_layout"], "compact")
                     upgraded_flow = json.loads(flow_index_path.read_text(encoding="utf-8"))
-                    self.assertEqual(upgraded_flow["version"], "1.2")
+                    self.assertEqual(upgraded_flow["version"], "1.3")
                     self.assertEqual(upgraded_flow["summary"]["written"], 1)
                     self.assertEqual(
                         upgraded_flow["flows"][0]["summary"],

@@ -22,7 +22,7 @@ from runtime.catalog.python import query_catalog
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 REPO_ROOT = SKILL_ROOT.parent.parent.parent
-CATALOG_VERSION = "2.26.0"
+CATALOG_VERSION = "2.27.0"
 MARKDOWN_EXCEPTIONS = SPECIAL_DOC_SOURCES
 PUBLIC_CONTRACTS = {
     "manage_manifest": ["init", "add", "set", "presentation", "status", "audit", "set-graph", "reconcile", "retire", "unmanaged", "finish", "--doc", "--repo", "--tier", "--shape", "--platform", "--framework", "--concern", "--audience", "--group", "--type", "--id", "--path", "--evidence", "--status", "--mode", "--verdict", "--report", "--primary-audience", "--code", "--related-docs", "--repository-paths", "--reset", "--graph-provider", "--provider", "--dry-run", "--scale-class", "--layout"],
@@ -31,7 +31,8 @@ PUBLIC_CONTRACTS = {
     "precheck_graph": ["--repo", "--need", "code", "flow"],
     "check_staleness": ["--manifest", "--document", "--section", "--json", "--sync-provenance"],
     "hash_evidence": ["--repo", "--path", "--range", "--json"],
-    "flow_index": ["harvest", "revise", "update", "import", "render", "organize", "emit", "apply", "--repo", "--main-limit", "--output", "--organization", "--id", "--priority", "--status", "--summary", "--written", "--analysis"],
+    "flow_index": ["harvest", "revise", "update", "import", "apply-analysis", "render", "organize", "emit", "apply", "--repo", "--main-limit", "--output", "--organization", "--id", "--priority", "--status", "--summary", "--written", "--analysis"],
+    "flow_analysis": ["prepare", "import", "decide", "status", "validate", "audit", "--repo", "--manifest", "--json", "--analysis", "--select", "--decline", "--approve-decomposition", "--research-policy", "--verdict", "--report"],
     "migrate_metadata": ["--repo", "--manifest", "--dry-run", "--report"],
     "query_catalog": ["--tier", "--id", "--ids", "--profile", "--applicable", "--validate", "--category", "--route", "--repo", "--group", "--groups"],
     "generate_indexes": ["--write", "--check"],
@@ -74,6 +75,13 @@ def validate() -> list[str]:
         architecture_plan_schema = read_json(architecture_plan_schema_path)
         if architecture_plan_schema.get("properties", {}).get("schema", {}).get("const") != "1.0":
             errors.append("architecture plan schema must require version 1.0")
+    flow_analysis_schema_path = metadata / "flow-analysis-schema.json"
+    if not flow_analysis_schema_path.is_file():
+        errors.append("flow-analysis-schema.json is missing")
+    else:
+        flow_analysis_schema = read_json(flow_analysis_schema_path)
+        if flow_analysis_schema.get("properties", {}).get("schemaVersion", {}).get("const") != 3:
+            errors.append("flow analysis schema must require version 3")
     if catalog.get("version") != CATALOG_VERSION:
         errors.append(f"catalog version must be {CATALOG_VERSION}")
     if catalog_schema.get("properties", {}).get("version", {}).get("const") != CATALOG_VERSION:
@@ -116,15 +124,15 @@ def validate() -> list[str]:
         sidecar_schema = read_json(sidecar_schema_path)
         if sidecar_schema.get("properties", {}).get("schema", {}).get("const") != "1.0":
             errors.append("provenance sidecar schema must require version 1.0")
-    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.2":
-        errors.append("flow index schema must require version 1.2")
+    if flow_index_schema.get("properties", {}).get("version", {}).get("const") != "1.3":
+        errors.append("flow index schema must require version 1.3")
     flow_item = (
         flow_index_schema.get("properties", {})
         .get("flows", {})
         .get("items", {})
         .get("properties", {})
     )
-    for field in ("display_name", "family", "doc_role", "composed_into", "doc_path"):
+    for field in ("display_name", "family", "doc_role", "composed_into", "doc_path", "parent_flow", "analysis_state"):
         if field not in flow_item:
             errors.append(f"flow index schema must define flow.{field}")
     for field in ("summary", "written_at"):

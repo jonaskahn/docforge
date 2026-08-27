@@ -1,6 +1,6 @@
 {
   "$schema": "catalog-index-schema.json",
-  "version": "2.26.0",
+  "version": "2.27.0",
   "profiles": {
     "shapes": "profiles/shapes.json",
     "platforms": "profiles/platforms.json",

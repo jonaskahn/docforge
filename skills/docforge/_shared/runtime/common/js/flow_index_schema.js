@@ -7,23 +7,32 @@
  * only: no CLI launcher.
  */
 
-const FLOW_INDEX_VERSION = "1.2";
-const SUPPORTED_FLOW_INDEX_VERSIONS = ["1.1", "1.2"];
+const FLOW_INDEX_VERSION = "1.3";
+const SUPPORTED_FLOW_INDEX_VERSIONS = ["1.1", "1.2", "1.3"];
 
 function upgradeIndex(index) {
-  // Additively upgrade a 1.1 flow index to the current schema. Mutates and
+  // Additively upgrade a 1.1/1.2 flow index to the current schema. Mutates and
   // returns the same object; throws on unsupported versions.
   const version = String(index.version || "1.1");
-  if (version === FLOW_INDEX_VERSION) return index;
   if (!SUPPORTED_FLOW_INDEX_VERSIONS.includes(version)) {
     throw new Error(`unsupported flow index version: ${version}`);
   }
-  index.version = FLOW_INDEX_VERSION;
-  if (index.summary && !("written" in index.summary)) {
+  if (version === "1.1" && index.summary && !("written" in index.summary)) {
     index.summary.written = (index.flows || [])
       .filter((row) => row && row.status === "documented" && Boolean(row.summary))
       .length;
   }
+  if (version === "1.1" || version === "1.2") {
+    for (const row of index.flows || []) {
+      if (!row || typeof row !== "object") continue;
+      if (!("parent_flow" in row)) row.parent_flow = null;
+      if (!("analysis_state" in row)) {
+        row.analysis_state = row.status === "documented" || Boolean(row.written)
+          ? "ready" : "not-analyzed";
+      }
+    }
+  }
+  index.version = FLOW_INDEX_VERSION;
   return index;
 }
 

@@ -93,7 +93,7 @@ REQUIRED_DOC_FIELDS = {
     "provenance_mode",
     "audit_profile",
 }
-CATALOG_VERSION = "2.26.0"
+CATALOG_VERSION = "2.27.0"
 PRESENTATION_VALUES = {
     "code": {"contract-only", "task-focused"},
     "related_docs": {"none", "compact", "traceability"},
@@ -461,6 +461,7 @@ def route(
         "dominant_form": detail.get("dominant_form"),
         "illustration_views": detail.get("illustration_views", []),
         "contract_revision": detail.get("contract_revision"),
+        "requires_analysis": bool(detail.get("requires_analysis", False)),
         "model_depth": model_depth,
         "primary_audience": primary_audience,
         "presentation": presentation,
@@ -796,6 +797,8 @@ def validate() -> list[str]:
         revision = doc.get("contract_revision")
         if revision is not None and (not isinstance(revision, str) or not CONTRACT_REVISION_RE.fullmatch(revision)):
             errors.append(f"{doc_id}: contract_revision must be MAJOR.MINOR.PATCH")
+        if "requires_analysis" in doc and not isinstance(doc["requires_analysis"], bool):
+            errors.append(f"{doc_id}: requires_analysis must be boolean")
         if "presentation" in doc:
             _validate_presentation(doc["presentation"], f"{doc_id}: presentation", errors, audience_ids=audience_ids)
         if "selection_evidence_required" in doc and not isinstance(doc["selection_evidence_required"], bool):

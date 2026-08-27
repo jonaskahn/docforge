@@ -1,5 +1,5 @@
 {
-  "version": "2.26.0",
+  "version": "2.27.0",
   "source": "../index.json",
   "groups": [
     {
@@ -53,7 +53,7 @@
         {
           "id": "flow",
           "path": "flow.json",
-          "summary": "Trigger, actors, ordered steps, branches, rules, failures, outcome"
+          "summary": "Evidence-specific trigger-to-outcome deep dive with adaptive modules and diagrams"
         }
       ],
       "count": 3

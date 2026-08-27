@@ -700,6 +700,14 @@ def apply_org_defaults(row: dict) -> None:
         row["family"] = None
     if "composed_into" not in row:
         row["composed_into"] = None
+    if "parent_flow" not in row:
+        row["parent_flow"] = None
+    if "analysis_state" not in row:
+        row["analysis_state"] = (
+            "ready"
+            if row.get("status") == "documented" or bool(row.get("written"))
+            else "not-analyzed"
+        )
     if row.get("doc_role") not in {"standalone", "member", "index_only"}:
         if priority == "main":
             row["doc_role"] = "standalone"
@@ -754,7 +762,10 @@ def prior_by_key(existing: dict | None) -> dict[str, dict]:
 
 def apply_revise_statuses(rows: list[dict], prior: dict[str, dict]) -> list[dict]:
     """Preserve documented/skipped and organization fields; mark else placeholder."""
-    org_keys = ("display_name", "family", "doc_role", "composed_into", "doc_path")
+    org_keys = (
+        "display_name", "family", "doc_role", "composed_into", "doc_path",
+        "parent_flow", "analysis_state",
+    )
     carry_keys = ("summary", "written_at")
     for row in rows:
         previous = prior.get(row_key(row))
@@ -778,7 +789,7 @@ def apply_revise_statuses(rows: list[dict], prior: dict[str, dict]) -> list[dict
         for key in org_keys:
             if key in previous and previous[key] is not None:
                 row[key] = previous[key]
-            elif key in previous and key in {"family", "composed_into", "doc_path"}:
+            elif key in previous and key in {"family", "composed_into", "doc_path", "parent_flow"}:
                 row[key] = previous[key]
         for key in carry_keys:
             if key in previous and previous[key] is not None:
@@ -1403,6 +1414,20 @@ def cmd_revise(args: argparse.Namespace) -> int:
                 sources.append(source)
     rows = finalize(rows, args.main_limit, args.repo)
     rows = apply_revise_statuses(rows, prior)
+    # Approved decomposition children are analysis-owned candidates and are
+    # not rediscovered by provider harvest. Preserve them until a later
+    # confirmed analysis decision explicitly retires them.
+    present_ids = {row.get("id") for row in rows}
+    if existing is not None:
+        for previous in existing.get("flows", []):
+            if (
+                isinstance(previous, dict)
+                and previous.get("parent_flow")
+                and previous.get("id") not in present_ids
+            ):
+                apply_org_defaults(previous)
+                rows.append(previous)
+                present_ids.add(previous.get("id"))
     stubs = ensure_stubs(args.repo, rows)
     pruned = prune_orphan_stubs(args.repo, rows)
     target = write_index(args.repo, rows, sources)
@@ -1933,6 +1958,122 @@ def cmd_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def _proposal_children(parent: dict, proposal: dict) -> list[dict]:
+    """Normalize v3 decomposition payloads, including the one-child shorthand."""
+    children = proposal.get("proposed_flows")
+    if isinstance(children, list) and children:
+        return [child for child in children if isinstance(child, dict)]
+    # Early v3 drafts used the proposal itself as the proposed child.
+    proposal_id = str(proposal.get("id") or "")
+    if proposal_id.startswith("flow-"):
+        return [{
+            "id": proposal_id,
+            "name": proposal.get("name") or proposal_id,
+            "reader_question": proposal.get("reader_question") or "",
+            "guarantee": proposal.get("guarantee") or "",
+        }]
+    return []
+
+
+def _analysis_child_row(parent_row: dict, parent_flow: dict, proposal: dict, child: dict) -> dict:
+    child_id = str(child["id"])
+    child_slug = child_id.removeprefix("flow-") or slugify(str(child.get("name") or child_id))
+    family_path = str(child.get("family_path") or parent_row.get("slug") or "").strip("/")
+    priority = "deferred" if parent_row.get("priority") == "deferred" else "main"
+    entry = parent_row.get("entry_ref") or {}
+    parent_evidence = parent_row.get("evidence") or []
+    provider = (
+        parent_evidence[0].get("provider")
+        if parent_evidence and isinstance(parent_evidence[0], dict)
+        else "codegraph"
+    )
+    if provider not in {"gitnexus", "understand-anything", "codegraph"}:
+        provider = "codegraph"
+    boundary = str(proposal.get("entry_boundary") or child.get("reader_question") or child_id)
+    return {
+        "id": child_id,
+        "name": str(child.get("name") or child_id),
+        "display_name": str(child.get("name") or child_id),
+        "slug": child_slug,
+        "family": family_path or None,
+        "doc_role": "standalone" if priority == "main" else "index_only",
+        "composed_into": None,
+        "doc_path": default_doc_path(child_slug, family_path) if priority == "main" else None,
+        "parent_flow": parent_flow.get("id"),
+        "analysis_state": "not-analyzed",
+        "entry_ref": {
+            "kind": entry.get("kind") or "internal",
+            "signature": boundary,
+            "filePath": entry.get("filePath"),
+            "symbol": entry.get("symbol"),
+        },
+        "area": parent_row.get("area"),
+        "evidence": [{
+            "provider": provider,
+            "artifact": str(ANALYSIS_PACK_REL),
+            "parentFlow": parent_flow.get("id"),
+            "proposalId": proposal.get("id"),
+            "rationale": proposal.get("rationale"),
+            "guarantee": child.get("guarantee"),
+        }],
+        "confidence": "candidate",
+        "reach": {"steps": 0, "boundaries": 0, "churn": 0},
+        "rank": int(parent_row.get("rank") or 0),
+        "priority": priority,
+        "status": "placeholder",
+    }
+
+
+def cmd_apply_analysis(args: argparse.Namespace) -> int:
+    """Apply frozen v3 names, hierarchy, and readiness to the durable index."""
+    try:
+        analysis = read_json(args.repo / ANALYSIS_PACK_REL)
+        index = upgrade_index(read_json(args.repo / INDEX_REL))
+    except ValueError as error:
+        return fail(str(error), 2)
+    analysis_version = analysis.get("schemaVersion", 1)
+    if analysis_version not in {1, 2, 3}:
+        return fail("flow analysis must use schemaVersion 1, 2, or 3", 2)
+    rows = [row for row in index.get("flows", []) if isinstance(row, dict)]
+    by_id = {row.get("id"): row for row in rows}
+    updated = 0
+    added = 0
+    legacy = analysis_version in {1, 2}
+    for flow in analysis.get("flows", []):
+        if not isinstance(flow, dict):
+            continue
+        flow_id = flow.get("id") or flow.get("flowId")
+        row = by_id.get(flow_id)
+        if row is None:
+            continue
+        row["analysis_state"] = (
+            "legacy-needs-analysis"
+            if legacy or flow.get("analysis_state") == "legacy-needs-analysis"
+            else "ready"
+        )
+        row["parent_flow"] = flow.get("parent_flow")
+        if flow.get("name"):
+            row["name"] = str(flow["name"])
+            row["display_name"] = str(flow["name"])
+        updated += 1
+        if legacy:
+            continue
+        for proposal in flow.get("decomposition_proposals", []):
+            if not isinstance(proposal, dict) or proposal.get("approved") is not True:
+                continue
+            for child in _proposal_children(flow, proposal):
+                child_id = child.get("id")
+                if not child_id or child_id in by_id:
+                    continue
+                child_row = _analysis_child_row(row, flow, proposal, child)
+                rows.append(child_row)
+                by_id[child_id] = child_row
+                added += 1
+    target = write_index(args.repo, rows, list(index.get("sources", [])))
+    print(f"Applied analysis: {updated} flows updated, {added} sub-flows added. ({target})")
+    return 0
+
+
 def cmd_render(args: argparse.Namespace) -> int:
     try:
         index = read_json(args.repo / INDEX_REL)
@@ -1994,6 +2135,10 @@ def build_parser() -> argparse.ArgumentParser:
                                  "small 15, medium 25, large 40 (fallback 15); "
                                  "--main-limit overrides")
     import_cmd.set_defaults(func=cmd_import)
+
+    apply_analysis = sub.add_parser("apply-analysis")
+    apply_analysis.add_argument("--repo", required=True, type=Path)
+    apply_analysis.set_defaults(func=cmd_apply_analysis)
 
     organize = sub.add_parser("organize")
     organize_sub = organize.add_subparsers(dest="organize_command", required=True)

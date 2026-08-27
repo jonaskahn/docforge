@@ -48,10 +48,10 @@ This document is the human-readable projection of
 
 ## Flow (`flow`) writing craft
 
-Default to an evidence-backed `sequenceDiagram`; use a flowchart only when branch
-selection is the reader's primary question. Trace each step, branch, rule, and
-failure to an entry point, handler, test, or trace, and link adjacent facts to
-their owners rather than duplicating them.
+Start from the selected flow's `reader_question` and frozen
+`document_design`; there is no default diagram or heading sequence. Trace each
+step, branch, rule, and failure to an entry point, handler, test, or trace, and
+link adjacent facts to their owners rather than duplicating them.
 
 Name the flow as a reader-recognizable outcome, not a function name. The file
 slug and `display_name` in `.docforge/flow-index.json` must match that outcome
@@ -63,6 +63,11 @@ Work from the deep pack at `.docforge/flow-analysis.json` (and the row's
 `evidence` in `.docforge/flow-index.json`), which already carries the ordered
 steps with their locators, the branches, the rules, and the failures. Do not
 re-derive the step order by grep — that is what the pack exists to prevent.
+The row must have `analysis_state: ready`, and the analysis card must have a
+selected decision, before writing starts. Load
+[`flow-deep-dive.md`](../../references/flows/flow-deep-dive.md) for
+characteristic modules, decomposition boundaries, research provenance, and
+diagram selection.
 
 **A step is one hop with a `file:line` grounding**, not a paraphrase of a
 subsystem. "Content is indexed into Elasticsearch" naming only a file is a
@@ -73,99 +78,38 @@ step's prose, which names the actor and the action (see
 Where the pack marks a step `evidence: "source"` rather than `"graph"`, cite
 the file you read it in.
 
-Open with what the flow produces and who depends on it, then state the guarantee
-before any mechanism. Number the happy path in plain language, one step per action,
-one idea per sentence. Put branches immediately after the step that creates them,
-not gathered at the end; a branch orphaned from its trigger step reads as a separate
-flow. Add a visual once the flow passes about four steps or has any branch, within
-the central complexity budget. Split interactions that exceed that budget into linked
-sub-flows. End with failures and recovery, keeping shared business rules linked
-rather than duplicated.
+Open with what initiates the flow, who depends on it, and its guarantee before
+any mechanism. Then expand the headings in `document_design.section_order` in
+that exact order. Section names are evidence-specific: a request flow may need
+"Authorization and commit boundary", an event consumer may need "Delivery,
+acknowledgement, and replay", and a lifecycle flow may need "Guarded state
+transitions". Do not normalize those back into a shared seven-heading shell.
 
-A worked example of everything below is
-[`flow.standard.example.md`](../shared/exemplars/flow.standard.example.md), with
-its folded counterpart at
-[`flow.compact.example.md`](../shared/exemplars/flow.compact.example.md). Read
-them when a field's intent is unclear; they are craft references, not templates.
+Keep branches, waits, loops, parallel splits, joins, and recovery next to the
+step that creates them unless the analysis card deliberately assigns a distinct
+section to answer a different reader question. Use every selected module and
+diagram question, surface every evidence gap, and delete template-shaped filler.
 
-## Section-to-altitude mapping
+## Adaptive depth and diagrams
 
-The contract's `## Must present` `At` column names the altitude; this maps it
-onto this type's actual section names: L0 is the opening paragraph and
-`**Guarantee:**`; L1 is `## Trigger and actors` and `## Happy path` with its
-diagram; L2 is `## Branches and rules`, `## Failure and recovery`, and
-`## Observability`; L3 is `## Outcome`, `## Why it works this way`, and the
-`Related` footer.
+L0 is always the opening and guarantee. L1 carries the core causal path and
+terminal outcomes. L2 carries the evidenced decisions, waits, concurrency,
+failure, recovery, and characteristic-specific modules needed to operate or
+change the flow. L3 is reserved for evidenced constraints or decision records.
+The card decides which headings carry those altitudes.
 
-The guarantee appears twice on purpose — once at L0 so a reader who stops at
-the top is still correct, once in full under `## Outcome`. That is the only
-licensed repetition in the document.
-
-The happy path names steps; it never explains one. A step that needs a
-paragraph of conditions has a branch, and the branch belongs in
-`## Branches and rules` with its own sub-heading. The primary diagram is an L1
-obligation for the same reason: it carries the happy path, never annotated
-branch outcomes.
-
-Group the happy path under milestone sub-headings only once it passes about six
-steps — a milestone is a point at which the work is durably further along, not
-an arbitrary split. Below six steps, number the steps flat.
-
-## Failure categories
-
-Failure modes come in kinds, and a flow document that names only the kind it
-happened to trip over has not analyzed the flow. Walk the evidence for each of
-these and write up the ones it supports:
-
-- a decision this flow makes and rejects;
-- an external event it waits for that does not arrive as expected;
-- a response that never comes within its timeout;
-- an interruption while a step is running;
-- a cancellation that can arrive at almost any point.
-
-Delete the categories the evidence does not support; never invent one to
-complete the set. A technical retry the caller never observes is mechanism, not
-a failure mode — it belongs under **Immediate response**, never as its own
-entry. The distinction is what keeps this section about what a reader must
-handle rather than about what the framework does on its own.
-
-## Evidence-gated sections
-
-`**Data in play:**`, `**Timing and limits:**`, `## Observability`, and
-`## Why it works this way` are deleted when the repository does not evidence
-them. Deleting is the correct outcome, not a gap — an estimated timeout or a
-reconstructed rationale is worse than a shorter document. In particular:
-
-- `## Observability` names the signal and its healthy value; the runbook owns
-  what to do when the signal is bad.
-- `## Why it works this way` links the decision record when one exists and adds
-  at most one sentence naming the force it settled. Prose without a decision
-  record is allowed only for a constraint visible in the repository — a pin, a
-  documented limit, a code comment, a migration commit.
-
-## Illustration
-
-- **Form:** one **primary** form answering the flow's main question — Mermaid
-  `sequenceDiagram` for "in what order do the actors talk to each other",
-  `flowchart` for "what are the branches and where do they go", `journey` for
-  "how did the experience feel across the process for a given actor". Pick one
-  primary form; a second diagram is permitted only when it answers a
-  *different* question, and only in its own section: the ASCII
-  trigger-to-outcome fan-out under `## Outcome` when the flow has two or more
-  terminal outcomes. Never two diagrams of the same shape restating each other.
-- **Renders:** for a flowchart, each gateway and its outcomes, labeled with the condition
-  that selects them; for a sequence diagram, the actors as participants and each call as a
-  labeled arrow, in the order they actually occur; for a journey, the steps grouped into
-  sections by phase, each step scored 1-5 with the actor who experiences it.
-- **Trigger:** once the happy path passes about four steps, or as soon as any branch exists —
-  per [`illustration.md`](../../references/illustration.md)'s deep-dive budget.
+Render only the forms named in `document_design.diagrams`: sequence for actor
+ordering, flowchart for gateways/fan-out/rejoin, state diagram for lifecycle
+transitions, and structural text for a distinct terminal-outcome or timing
+question. Each diagram must answer its recorded question; no flow receives a
+sequence diagram by convention.
 
 ## Composition and folders
 
-When several small endpoint or service operations share one domain, compose them
-into a single parent document with H2 sections instead of one stub each. Mark
-members in the flow index as `doc_role: member` with `composed_into` set to the
-parent id. Put related parents under `docs/flows/{family}/` when there are three
-or more documentable siblings (for example `docs/flows/email/notification.md`
-and `docs/flows/email/scheduled-reports.md`). Deferred candidates stay
-index-only — do not leave symbol-named scaffold stubs in the tree.
+Do not split or compose on naming similarity alone. Apply a decomposition only
+when its analysis proposal is approved and it identifies separate guarantees,
+entry boundaries, failure domains, or operational owners. Approved independent
+children are standalone rows with `parent_flow`; payload-only composed members
+remain `doc_role: member` with `composed_into`. A parent overview closes only
+after its child artifacts exist. Put a hierarchy under the approved
+`family_path`, and keep deferred candidates index-only without scaffold stubs.

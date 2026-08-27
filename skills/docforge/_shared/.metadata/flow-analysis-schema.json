@@ -1,0 +1,228 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Docforge Flow Analysis 3.0",
+  "type": "object",
+  "required": ["schemaVersion", "source", "generated_at", "flows", "workers", "audit"],
+  "properties": {
+    "schemaVersion": {"const": 3},
+    "source": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string"},
+    "research_policy": {"enum": ["official-primary", "official-only", "off", null]},
+    "workers": {
+      "type": "object",
+      "required": ["evidence", "proposals"],
+      "properties": {
+        "evidence": {"type": "integer", "minimum": 1},
+        "proposals": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "audit": {
+      "type": "object",
+      "required": ["status", "verdict", "report"],
+      "properties": {
+        "status": {"enum": ["pending", "passed", "failed"]},
+        "verdict": {"enum": ["PASS", "FAIL", null]},
+        "report": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "flows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "analysis_state"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^flow-[a-z0-9][a-z0-9-]*$"},
+          "name": {"type": "string", "minLength": 1},
+          "reader_question": {"type": "string"},
+          "parent_flow": {"type": ["string", "null"]},
+          "analysis_state": {"enum": ["not-analyzed", "legacy-needs-analysis", "analyzing", "ready", "audited"]},
+          "decision": {"enum": ["proposed", "selected", "declined"]},
+          "legacy_evidence": {"type": "object"},
+          "characteristics": {
+            "type": "array",
+            "items": {"enum": ["request-command", "event-message", "scheduled-batch", "lifecycle-stateful", "streaming-interactive", "fan-out-orchestration", "resource-lifecycle"]}
+          },
+          "trigger": {
+            "type": "object",
+            "required": ["kind", "signature"],
+            "properties": {
+              "kind": {"enum": ["http", "queue", "schedule", "cli", "ui", "internal"]},
+              "signature": {"type": "string"},
+              "preconditions": {"type": ["string", "null"]}
+            },
+            "additionalProperties": false
+          },
+          "guarantee": {"type": "string", "minLength": 1},
+          "terminal_outcomes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["condition", "outcome"],
+              "properties": {
+                "condition": {"type": "string"},
+                "outcome": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "actors": {
+            "type": "object",
+            "required": ["initiator", "visible", "hidden"],
+            "properties": {
+              "initiator": {"type": "string"},
+              "visible": {"type": "array", "items": {"type": "string"}},
+              "hidden": {"type": "array", "items": {"type": "string"}}
+            },
+            "additionalProperties": false
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["order", "name", "actor", "file", "evidence"],
+              "properties": {
+                "order": {"type": "integer", "minimum": 1},
+                "name": {"type": "string"},
+                "actor": {"type": "string"},
+                "file": {"type": "string"},
+                "line": {"type": ["integer", "null"]},
+                "symbol": {"type": ["string", "null"]},
+                "nodeId": {"type": ["string", "null"]},
+                "evidence": {"enum": ["graph", "source"]},
+                "boundary_crossing": {"type": "boolean"},
+                "async_handoff": {"type": "boolean"},
+                "state_change": {"type": ["string", "null"]},
+                "inputs": {"type": ["string", "null"]},
+                "outputs": {"type": ["string", "null"]}
+              },
+              "additionalProperties": false
+            }
+          },
+          "flow_patterns": {
+            "type": "object",
+            "properties": {
+              "decisions": {"type": "array", "items": {"type": "object"}},
+              "event_waits": {"type": "array", "items": {"type": "object"}},
+              "loops": {"type": "array", "items": {"type": "object"}},
+              "parallel_work": {"type": "array", "items": {"type": "object"}},
+              "joins": {"type": "array", "items": {"type": "object"}}
+            },
+            "additionalProperties": false
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "evidence"],
+              "properties": {
+                "name": {"enum": ["state", "transaction", "consistency", "idempotency", "ordering", "deduplication", "timing", "backpressure", "security", "observability", "recovery", "compensation", "residual-state"]},
+                "evidence": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["category", "name", "file"],
+              "properties": {
+                "category": {"enum": ["decision-rejected", "awaited-event-timeout", "timeout", "interruption", "cancellation"]},
+                "name": {"type": "string"},
+                "file": {"type": "string"},
+                "line": {"type": ["integer", "null"]},
+                "immediate_response": {"type": ["string", "null"]},
+                "residual_state": {"type": ["string", "null"]},
+                "recovery": {"type": ["string", "null"]}
+              },
+              "additionalProperties": false
+            }
+          },
+          "document_design": {
+            "type": "object",
+            "required": ["section_order", "diagrams"],
+            "properties": {
+              "section_order": {"type": "array", "items": {"type": "string"}},
+              "diagrams": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["form", "section", "question"],
+                  "properties": {
+                    "form": {"enum": ["sequenceDiagram", "flowchart", "stateDiagram-v2", "text"]},
+                    "section": {"type": "string"},
+                    "question": {"type": "string"}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "evidence_gaps": {"type": "array", "items": {"type": "string"}},
+          "conflicts": {"type": "array", "items": {"type": "string"}},
+          "external_research_questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["question", "why_repo_cannot_answer", "expected_sources"],
+              "properties": {
+                "question": {"type": "string"},
+                "why_repo_cannot_answer": {"type": "string"},
+                "expected_sources": {"type": "array", "items": {"type": "string"}}
+              },
+              "additionalProperties": false
+            }
+          },
+          "decomposition_proposals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "rationale", "entry_boundary"],
+              "properties": {
+                "id": {"type": "string"},
+                "name": {"type": "string"},
+                "rationale": {"type": "string"},
+                "entry_boundary": {"type": "string"},
+                "approved": {"type": "boolean"},
+                "proposed_flows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "name"],
+                    "properties": {
+                      "id": {"type": "string", "pattern": "^flow-[a-z0-9][a-z0-9-]*$"},
+                      "name": {"type": "string"},
+                      "reader_question": {"type": "string"},
+                      "guarantee": {"type": "string"},
+                      "family_path": {"type": "string"}
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {"analysis_state": {"const": "legacy-needs-analysis"}},
+              "required": ["analysis_state"]
+            },
+            "then": {},
+            "else": {
+              "required": ["reader_question", "characteristics", "trigger", "guarantee", "terminal_outcomes", "actors", "steps", "document_design"]
+            }
+          }
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

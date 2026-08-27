@@ -105,15 +105,45 @@ would collide. Use **payload-mode workers**:
   unless the user switches to standard layout. The pack gate must show this
   loss of depth before confirmation.
 
+### Parallel flow writing (standard layout)
+
+After `flow_analysis decide` and `flow_index apply-analysis`, queue one writer
+per selected independent flow or sub-flow. A writer receives only its analysis
+card, catalog contract, deep-dive reference, source evidence, approved external
+sources, target path, and acceptance checks. Its section names, order, selected
+modules, and diagram forms come from `document_design`, never from a fixed flow
+shell or a sibling artifact.
+
+Writers edit only their assigned artifact. When selected targets exceed host
+slots, queue the excess; do not combine unrelated flows under a generic writer.
+Research workers fan out separately by deduplicated external question and
+return source payloads for serial provenance merging. Child sub-flows write and
+audit before their parent overview closes. Shared indexes, manifest state,
+flow-index updates, provenance sidecars, summaries, and links remain serial
+orchestrator operations.
+
+Composed member flows may use independent payload workers when useful. Their
+parent writer or the orchestrator performs one deterministic merge into the
+single owning artifact.
+
+### Parallel flow writing (compact layout)
+
+Compact layout still runs the complete v3 analysis and cold-card review. Give
+each selected flow an independent summary-payload worker; workers do not edit
+`docs/flows.md`. The orchestrator validates and merges concise adaptive
+sections deterministically, while retaining `.docforge/flow-analysis.json` as
+the complete pack for later expansion to standard layout.
+
 For the next document in `write_order` (serial mode):
 
 0. Immediately before materializing it, show the current structure summary
    (or "tree unchanged since the displayed checkpoint") and a compact
    **execution card**: path, reader, owned topics, evidence query, links to
    owning documents, and acceptance checks. Include an **illustration
-   brief** — one line per declared `illustration_views` entry (its form,
-   its section, and the reader question it answers), the instruction's
-   `## Illustration` trigger, and the per-illustration budget — plus the
+   brief** — for flows, one line per `document_design.diagrams` entry; for
+   other types, one line per catalog `illustration_views` entry (its form,
+   section, and reader question), the instruction's illustration trigger,
+   and the per-illustration budget — plus the
    group's **voice** line. Count follows those declared obligations, never
    document length. Derive it from the
    manifest and the document's route
@@ -339,6 +369,28 @@ wave, followed by fresh cold audits and a repeated pack audit. Architecture
 groups cannot complete without a passing pack audit — the whole-tree gate
 also refuses a completed architecture group whose ledger audit is not
 `passed`.
+
+### Flow-pack audit
+
+After the per-document cold auditors finish, run one cross-flow, artifact-only
+pack audit before completing the flow group. It verifies:
+
+- every guarantee agrees with all terminal outcomes;
+- every analyzed step, decision, branch, wait, join, and rejoin is represented;
+- residual state, replay safety, recovery, and compensation are explained or
+  explicitly gapped;
+- parent and child ownership is exclusive, with parents closed after children;
+- actors, events, boundaries, and canonical names agree across flows;
+- external semantics comply with the selected research policy and resolve
+  through provenance `external_sources` and section `external_refs`;
+- conflicts and evidence gaps remain explicit; and
+- no artifact passes with a copied heading shell, generic failure bullets, or
+  other template-shaped filler.
+
+Record the result with `flow_analysis audit --repo <repo> --verdict PASS|FAIL
+--report <path>`. A failure returns affected artifacts to `needs_review`, then
+runs a fresh writer/auditor wave and repeats the pack audit. The flow group
+cannot complete while the ledger audit is not `passed`.
 
 ## Bottom-up README closeout
 

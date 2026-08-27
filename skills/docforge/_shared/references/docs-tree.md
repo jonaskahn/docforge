@@ -195,7 +195,7 @@ and the selection/write-back mechanics in
 stub `docs/flows/{slug}.md` files for main-priority standalone placeholders.
 Deferred-priority candidates remain discoverable as matrix rows until
 promoted. Written flow documents carry a one-paragraph `summary` in the
-index (schema 1.2), rendered in the matrix's `Flow summaries` section.
+index (schema 1.3), rendered in the matrix's `Flow summaries` section.
 
 In compact layout the matrix and the deep dives share one file, `docs/flows.md`
 — the matrix is its `## Flow candidate matrix` section and each deep dive is a

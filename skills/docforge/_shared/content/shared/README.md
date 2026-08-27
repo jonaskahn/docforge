@@ -24,8 +24,9 @@ Contracts, instructions, and templates referenced across document groups or by t
 
 ## Exemplars
 
-The files under `exemplars/` show what the flow and architecture templates
-produce when filled well, in both layouts. They are craft references, never
+The files under `exemplars/` show one evidence-specific flow design and the
+architecture templates when filled well, in both layouts. Flow headings are
+illustrative, never reusable structure. They are craft references, never
 generated artifacts and never templates — no catalog record points at them, and
 `query_catalog --route` never returns one.
 

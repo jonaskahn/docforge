@@ -21,6 +21,9 @@ parity directly.
   provenance defects, provenance codec, and metadata migration.
 - `test_graph_and_flows.py` — graph-provider precheck/selection and
   flow-index harvest/revise/organize/render.
+- `test_flow_analysis.py` — v3 prepare/import/decide/status/validate/audit
+  parity, legacy migration, reference/cycle rejection, adaptive designs, and
+  flow-index 1.3 decomposition application.
 - `test_routing.py` — `--category`/`--route` resolution, unknown-id/group
   exit codes, and legacy-mode field-leak guards.
 - `test_cli_parity.py` — same command, same fixture, across Python and Node;

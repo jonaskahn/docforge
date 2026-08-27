@@ -1,7 +1,7 @@
 {
   "id": "flow",
   "type": "flow",
-  "summary": "Trigger, actors, ordered steps, branches, rules, failures, outcome",
+  "summary": "Evidence-specific trigger-to-outcome deep dive with adaptive modules and diagrams",
   "contract_file": "content/flows/flow.contract.md",
   "path": "docs/flows/{slug}.md",
   "group": "flows",
@@ -24,25 +24,13 @@
   "write_order": 22,
   "provenance_mode": "sections",
   "audit_profile": "flow",
-  "dominant_form": "sequenceDiagram",
+  "dominant_form": null,
   "model_depth": {
     "mermaid": "annotated"
   },
-  "contract_revision": "3.0.0",
+  "contract_revision": "3.1.0",
+  "requires_analysis": true,
   "template_file": "content/flows/flow.template.md",
   "compact_group": "flows_compact",
-  "compact_order": 52,
-  "illustration_views": [
-    {
-      "form": "sequenceDiagram",
-      "section": "Happy path",
-      "question": "in what order do the actors interact to reach the outcome"
-    },
-    {
-      "form": "text",
-      "section": "Outcome",
-      "question": "which terminal outcomes does this single trigger fan out to",
-      "required": false
-    }
-  ]
+  "compact_order": 52
 }

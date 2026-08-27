@@ -443,7 +443,7 @@ class FlowIndexTests(unittest.TestCase):
                     elif row.get("priority") == "deferred" or row.get("doc_role") == "index_only":
                         self.assertFalse(stub.is_file(), stub)
                 self.assertEqual(stub_count, 1)
-                self.assertEqual(revised["version"], "1.2")
+                self.assertEqual(revised["version"], "1.3")
 
                 render = run(runtime, "flow_index", "render", "--repo", str(repo))
                 self.assertEqual(render.returncode, 0, render.stderr)
@@ -501,7 +501,7 @@ class FlowIndexTests(unittest.TestCase):
                 )
                 self.assertEqual(harvest.returncode, 0, harvest.stderr)
                 index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(index["version"], "1.2")
+                self.assertEqual(index["version"], "1.3")
                 slugs = {row["slug"] for row in index["flows"]}
                 self.assertIn("highlight-save", slugs)
                 self.assertIn("content-save", slugs)
@@ -625,7 +625,7 @@ class FlowIndexTests(unittest.TestCase):
                 )
                 self.assertEqual(harvest.returncode, 0, harvest.stderr)
                 index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(index["version"], "1.2")
+                self.assertEqual(index["version"], "1.3")
                 self.assertEqual(index["summary"]["written"], 0)
                 main_row = next(row for row in index["flows"] if row["priority"] == "main")
                 deferred_row = next(row for row in index["flows"] if row["priority"] == "deferred")
@@ -642,7 +642,7 @@ class FlowIndexTests(unittest.TestCase):
                 )
                 self.assertEqual(revised.returncode, 0, revised.stderr)
                 upgraded = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(upgraded["version"], "1.2")
+                self.assertEqual(upgraded["version"], "1.3")
                 self.assertIn("written", upgraded["summary"])
 
                 # Promote the deferred row through the selection gate.
@@ -750,7 +750,7 @@ class FlowIndexTests(unittest.TestCase):
                 )
                 self.assertEqual(imported.returncode, 0, imported.stderr)
                 index = json.loads((repo / ".docforge/flow-index.json").read_text(encoding="utf-8"))
-                self.assertEqual(index["version"], "1.2")
+                self.assertEqual(index["version"], "1.3")
                 self.assertEqual(index["summary"]["total"], 2)
                 self.assertEqual(index["summary"]["main"], 1)
                 self.assertEqual(index["summary"]["deferred"], 1)

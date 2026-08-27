@@ -559,6 +559,11 @@ function applyOrgDefaults(row) {
   }
   if (!("family" in row)) row.family = null;
   if (!("composed_into" in row)) row.composed_into = null;
+  if (!("parent_flow" in row)) row.parent_flow = null;
+  if (!("analysis_state" in row)) {
+    row.analysis_state = row.status === "documented" || Boolean(row.written)
+      ? "ready" : "not-analyzed";
+  }
   if (!["standalone", "member", "index_only"].includes(row.doc_role)) {
     row.doc_role = priority === "main" ? "standalone" : "index_only";
   }
@@ -605,7 +610,10 @@ function priorByKey(existing) {
   return new Map((existing.flows || []).filter((row) => row && typeof row === "object").map((row) => [rowKey(row), row]));
 }
 function applyReviseStatuses(rows, prior) {
-  const orgKeys = ["display_name", "family", "doc_role", "composed_into", "doc_path"];
+  const orgKeys = [
+    "display_name", "family", "doc_role", "composed_into", "doc_path",
+    "parent_flow", "analysis_state",
+  ];
   const carryKeys = ["summary", "written_at"];
   for (const row of rows) {
     const previous = prior.get(rowKey(row));
@@ -632,7 +640,7 @@ function applyReviseStatuses(rows, prior) {
     for (const key of orgKeys) {
       if (key in previous && previous[key] != null) {
         row[key] = previous[key];
-      } else if (key in previous && ["family", "composed_into", "doc_path"].includes(key)) {
+      } else if (key in previous && ["family", "composed_into", "doc_path", "parent_flow"].includes(key)) {
         row[key] = previous[key];
       }
     }
@@ -1132,7 +1140,7 @@ function maybeWriteCommunities(repo, exportPath) {
 function parseArgs(argv) {
   if (!argv.length || argv.includes("-h") || argv.includes("--help")) return { help: true };
   const command = argv[0];
-  if (!["harvest", "revise", "render", "organize", "update", "import"].includes(command)) {
+  if (!["harvest", "revise", "render", "organize", "update", "import", "apply-analysis"].includes(command)) {
     throw new Error(`unknown command: ${command}`);
   }
   let index = 1;
@@ -1152,6 +1160,7 @@ function parseArgs(argv) {
   else if (command === "organize" && organizeCommand === "apply") allowed = new Set(["repo", "organization"]);
   else if (command === "update") allowed = new Set(["repo", "id", "priority", "status", "summary", "written"]);
   else if (command === "import") allowed = new Set(["repo", "analysis", "main-limit"]);
+  else if (command === "apply-analysis") allowed = new Set(["repo"]);
   else allowed = new Set(["repo", "main-limit"]);
   // main_limit: null — the scale-aware default (budgets.js) applies unless an
   // explicit value was passed; the integer check below only runs when it was.
@@ -1195,6 +1204,7 @@ function usage() {
     "       flow_index.js organize apply --repo <path> --organization <json>",
     "       flow_index.js update --repo <path> --id <flow-id> [--priority main|deferred] [--status main|deferred|placeholder|skipped] [--summary <text>] [--written]",
     "       flow_index.js import --repo <path> --analysis <flow-analysis.json> [--main-limit <n>]",
+    "       flow_index.js apply-analysis --repo <path>",
   ].join("\n"));
 }
 /** ` — scale <class>` when the manifest names a class, else `` — so the
@@ -1251,6 +1261,19 @@ function cmdRevise(args) {
   }
   let finalRows = finalize(rows, args.main_limit, args.repo);
   finalRows = applyReviseStatuses(finalRows, prior);
+  // Approved decomposition children are analysis-owned and will not be
+  // rediscovered by provider harvest. Keep them until an explicit decision
+  // retires them.
+  const presentIds = new Set(finalRows.map((row) => row.id));
+  if (existing) {
+    for (const previous of existing.flows || []) {
+      if (previous && typeof previous === "object" && previous.parent_flow && !presentIds.has(previous.id)) {
+        applyOrgDefaults(previous);
+        finalRows.push(previous);
+        presentIds.add(previous.id);
+      }
+    }
+  }
   const stubs = ensureStubs(args.repo, finalRows);
   const pruned = pruneOrphanStubs(args.repo, finalRows);
   const target = writeIndex(args.repo, finalRows, sources);
@@ -1726,6 +1749,116 @@ function cmdImport(args) {
   console.log(`Deep pack kept at ${pack} — the flow writer reads it instead of re-deriving.`);
   return 0;
 }
+
+function proposalChildren(proposal) {
+  if (Array.isArray(proposal.proposed_flows) && proposal.proposed_flows.length) {
+    return proposal.proposed_flows.filter((child) => child && typeof child === "object");
+  }
+  const id = String(proposal.id || "");
+  if (id.startsWith("flow-")) {
+    return [{
+      id,
+      name: proposal.name || id,
+      reader_question: proposal.reader_question || "",
+      guarantee: proposal.guarantee || "",
+    }];
+  }
+  return [];
+}
+
+function analysisChildRow(parentRow, parentFlow, proposal, child) {
+  const childId = String(child.id);
+  const childSlug = childId.replace(/^flow-/, "") || slugify(String(child.name || childId));
+  const familyPath = String(child.family_path || parentRow.slug || "").replace(/^\/+|\/+$/g, "");
+  const priority = parentRow.priority === "deferred" ? "deferred" : "main";
+  const entry = parentRow.entry_ref || {};
+  const parentEvidence = parentRow.evidence || [];
+  let provider = parentEvidence.length && parentEvidence[0] && parentEvidence[0].provider
+    ? parentEvidence[0].provider : "codegraph";
+  if (!["gitnexus", "understand-anything", "codegraph"].includes(provider)) provider = "codegraph";
+  const boundary = String(proposal.entry_boundary || child.reader_question || childId);
+  return {
+    id: childId,
+    name: String(child.name || childId),
+    display_name: String(child.name || childId),
+    slug: childSlug,
+    family: familyPath || null,
+    doc_role: priority === "main" ? "standalone" : "index_only",
+    composed_into: null,
+    doc_path: priority === "main" ? defaultDocPath(childSlug, familyPath) : null,
+    parent_flow: parentFlow.id,
+    analysis_state: "not-analyzed",
+    entry_ref: {
+      kind: entry.kind || "internal",
+      signature: boundary,
+      filePath: entry.filePath || null,
+      symbol: entry.symbol || null,
+    },
+    area: parentRow.area || null,
+    evidence: [{
+      provider,
+      artifact: ANALYSIS_PACK_REL.split(path.sep).join("/"),
+      parentFlow: parentFlow.id,
+      proposalId: proposal.id,
+      rationale: proposal.rationale,
+      guarantee: child.guarantee,
+    }],
+    confidence: "candidate",
+    reach: { steps: 0, boundaries: 0, churn: 0 },
+    rank: Number(parentRow.rank || 0),
+    priority,
+    status: "placeholder",
+  };
+}
+
+function cmdApplyAnalysis(args) {
+  let analysis;
+  let index;
+  try {
+    analysis = readJson(path.join(args.repo, ANALYSIS_PACK_REL));
+    index = upgradeIndex(readJson(path.join(args.repo, INDEX_REL)));
+  } catch (error) {
+    return fail(error.message, 2);
+  }
+  const analysisVersion = analysis.schemaVersion === undefined ? 1 : analysis.schemaVersion;
+  if (![1, 2, 3].includes(analysisVersion)) {
+    return fail("flow analysis must use schemaVersion 1, 2, or 3", 2);
+  }
+  const rows = (index.flows || []).filter((row) => row && typeof row === "object");
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  let updated = 0;
+  let added = 0;
+  const legacy = analysisVersion === 1 || analysisVersion === 2;
+  for (const flow of analysis.flows || []) {
+    if (!flow || typeof flow !== "object") continue;
+    const flowId = flow.id || flow.flowId;
+    const row = byId.get(flowId);
+    if (!row) continue;
+    row.analysis_state = legacy || flow.analysis_state === "legacy-needs-analysis"
+      ? "legacy-needs-analysis" : "ready";
+    row.parent_flow = flow.parent_flow || null;
+    if (flow.name) {
+      row.name = String(flow.name);
+      row.display_name = String(flow.name);
+    }
+    updated += 1;
+    if (legacy) continue;
+    for (const proposal of flow.decomposition_proposals || []) {
+      if (!proposal || typeof proposal !== "object" || proposal.approved !== true) continue;
+      for (const child of proposalChildren(proposal)) {
+        const childId = child.id;
+        if (!childId || byId.has(childId)) continue;
+        const childRow = analysisChildRow(row, flow, proposal, child);
+        rows.push(childRow);
+        byId.set(childId, childRow);
+        added += 1;
+      }
+    }
+  }
+  const target = writeIndex(args.repo, rows, [...(index.sources || [])]);
+  console.log(`Applied analysis: ${updated} flows updated, ${added} sub-flows added. (${target})`);
+  return 0;
+}
 function cmdRender(args) {
   const index = readJson(path.join(args.repo, INDEX_REL));
   for (const row of index.flows || []) {
@@ -1761,6 +1894,7 @@ function main() {
     if (args.command === "revise") return cmdRevise(args);
     if (args.command === "update") return cmdUpdate(args);
     if (args.command === "import") return cmdImport(args);
+    if (args.command === "apply-analysis") return cmdApplyAnalysis(args);
     if (args.command === "organize") {
       if (args.organize_command === "emit") return cmdOrganizeEmit(args);
       return cmdOrganizeApply(args);
