@@ -654,7 +654,7 @@ documents, never the whole architecture corpus:
 Agent-context isolation never changes with scope. Outputs remain
 self-contained and zero-reference whether revised alone, alongside
 human-facing documentation, or after the selected area set changes. The
-catalog contract revision `2.27.0` therefore rewrites any older routed or
+catalog contract revision `2.28.0` therefore rewrites any older routed or
 importing form through steps 1a and 1b without a conversion prompt.
 Standard and compact layout switches remain content-preserving under the
 normal split/merge mechanics.

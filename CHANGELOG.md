@@ -1,7 +1,27 @@
 # Changelog
 
-## Unreleased
+## 2.28.0
 
+- **Prompt-surface revision: contradictions resolved, gates consolidated.**
+  A prompt audit of the skill's own instruction files found the same rule
+  duplicated across the always-loaded surface, with copies that had drifted
+  into direct contradictions. Resolved against the runtime as ground truth:
+  stale schema facts corrected (`3.9` → current manifest, flow-index
+  `1.2`/`1.3` → `1.4`, provenance `2.1` → `2.2`, `rules.md`'s supported
+  provenance set now includes `2.2`), the `--vendor` id list aligned with the
+  catalog, and the byte-identical duplicated paragraph in `validation.md`
+  removed. Root-cause fix: `ownership.md` now assigns an owner to the five
+  control files (`rules.md`, `flags.md`, `help.md`, `retrieval.md`,
+  `ownership.md`), and `flags.md` carries the single **flag → gate matrix** —
+  the one authoritative list of what `--auto-accept` does not waive, now
+  including the architecture-pack and agent-context selection gates that three
+  drifted copies had dropped. `help.md` no longer restates the waiver list,
+  and `docforge/SKILL.md` delegates its flag table instead of carrying a
+  partial one. Question flow: the root-README `migrate`/`skip`/`rewrite`
+  choice and the unmanaged-doc triage move into intake Turn 2 (both already
+  answerable from the discovery brief) instead of becoming separate later
+  stops; the graph provider and research policy are each decided once per run
+  rather than re-asked at the plan checkpoint.
 - **Adaptive, deep flow documentation (2.27.0).** Flow generation now freezes
   a schema-v3 `.docforge/flow-analysis.json` card per candidate, with
   evidence-specific characteristics, ordered source-located steps, runtime
