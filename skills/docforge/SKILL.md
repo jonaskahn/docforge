@@ -48,14 +48,19 @@ one session engine first; see
 
 ## `/docforge`
 
-| Flag | Effect |
-|---|---|
-| *(none)* | Interactive intake, asked in two turns (Turn 1: goal + documentation layout; Turn 2: tier, profiles, audience, graph source, execution mode) → [`./_shared/workflows/intake.md`](./_shared/workflows/intake.md). Flow documents are confirmed later, at the **write-start flow gate** — a mandatory user selection `--auto-accept` never waives. Architecture deep dives are confirmed at the **architecture-pack gate** ([`./_shared/workflows/planning.md`](./_shared/workflows/planning.md)) — likewise mandatory, never waived by `--auto-accept` |
-| `--plan-only` | See [`./_shared/flags.md`](./_shared/flags.md) |
-| `--auto-accept` | See [`./_shared/flags.md`](./_shared/flags.md) |
-| `--research <mode>` | Authorize external web research (`official-primary` recommended, `official-only`, or `off`). Without it, material external questions are shown and confirmed at the plan checkpoint before any web access; `--auto-accept` never grants web access implicitly |
-| `--no-dashboard` | Skip the automatic dashboard build/serve at run completion (see [`./_shared/flags.md`](./_shared/flags.md)) |
-| `--help` | Print this command's purpose and full parameter reference — [`./_shared/help.md`](./_shared/help.md) — then stop; run no workflow |
+Flags and their waiver rules are owned by
+[`./_shared/flags.md`](./_shared/flags.md) — including the flag → gate matrix
+that lists every gate `--auto-accept` does not waive. `--help` prints the full
+parameter reference from [`./_shared/help.md`](./_shared/help.md) and stops.
+
+With no flag: interactive intake, asked in two turns (Turn 1: goal +
+documentation layout + target readers + vendor fan-out; Turn 2: tier,
+profiles, audience, graph source, execution mode) → [`./_shared/workflows/intake.md`](./_shared/workflows/intake.md).
+Flow documents are confirmed later, at the **write-start flow gate**.
+Architecture deep dives are confirmed at the **architecture-pack gate**
+([`./_shared/workflows/planning.md`](./_shared/workflows/planning.md)), and
+agent documents at the **agent-context selection gate** — all mandatory
+selection gates, never waived by `--auto-accept`.
 
 A task with tier/profile already given skips answered intake questions and
 goes to [`./_shared/workflows/planning.md`](./_shared/workflows/planning.md),

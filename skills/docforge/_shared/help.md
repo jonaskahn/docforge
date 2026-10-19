@@ -15,9 +15,9 @@ equivalent Python/Node tools.
 |---|---|
 | *(none)* | Interactive intake → plan → write, then validate and (unless skipped) auto-serve the dashboard. Flow documents are confirmed at the write-start flow gate (mandatory user selection — never auto-accepted), not at intake |
 | `--plan-only` | Analyze and show the plan / dry-run tree; do not write or re-ground document bodies |
-| `--auto-accept` | Display plans/trees/results, then continue without routine conversational pauses (never waives side-effect gates: provider install, graph build, manifest init, file archive/delete, or the flow selection gate) |
+| `--auto-accept` | Display plans/trees/results, then continue without routine conversational pauses. Never waives a side-effect gate or a mandatory selection gate — the authoritative list is [`flags.md`](flags.md) "Flag → gate matrix" |
 | `--no-dashboard` | Skip the automatic dashboard build/serve at run completion — suppresses both the forced serve and, in compact layout, the dashboard offer; render later with `/docforge-dashboard` |
-| `--vendor <id>` | Repeatable: emit shim context files for the named AI coding-agent vendor(s) in addition to Claude. Accepted ids: `codex`, `cursor`, `copilot`, `windsurf`, `aider`, `gemini`. Omitting the flag produces no additional shims (Claude-only output is unchanged) |
+| `--vendor <id>` | Repeatable: emit shim context files for the named AI coding-agent vendor(s) in addition to Claude. Accepted ids: `claude`, `codex`, `cursor`, `copilot`, `windsurf`, `aider`, `gemini`. Omitting the flag produces no additional shims (Claude-only output is unchanged) |
 | `--research <mode>` | Authorize external web research for this run. Modes: `official-primary` (recommended; standards + official docs + primary research), `official-only`, `off`. An explicit flag is prior user confirmation; without it, material external questions are shown and confirmed before any web access, and `--auto-accept` never grants web access implicitly. `--plan-only` records the policy but defers research to a writing run |
 | `--help` | Show this reference and stop |
 
@@ -35,13 +35,14 @@ metadata only (no scope question, no writing).
 
 | Parameter | Meaning |
 |---|---|
-| *(none)* | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (dry-run preview first, apply only when needed); no scope question, no detection, no writing, no dashboard |
+| *(none)* | Metadata-only: migrate/upgrade the manifest metadata via `migrate_metadata.{py,js}` (dry-run preview first, then apply — unconditional and idempotent, a clean no-op when already current); no scope question, no detection, no writing, no dashboard |
 | `flow` | Full flow pipeline — flow mode question (re-analyze vs reuse) → harvest → organize → analyze → **mandatory flow selection gate** (add/remove/update, never auto-accepted) → write → summary write-back |
 | `<area>` | Scoped revise of one catalog group — `root`, `product`, `architecture`, `engineering`, `operations`, `reference`, `security`, `contributing`, `records`, `portfolio`, `agent-context`, plus aliases (`arch`, `ops`, `ref`, `sec`, `adr`, `agents`, …), listed by `query_catalog --groups`. An unknown area is an error, never a full-tree fallback. `flow`/`flows` is reserved for the flow pipeline and is not an area. |
 | `all` | Full-tree revise, including the flow mode question and the flow selection gate — unless the invocation also states a task clause (e.g. `all "add more diagrams"`), which narrows the run to a targeted revise and closes every gate the task does not name |
 | *(a stated task clause)* | Targeted revise: a task clause names an operation on document content ("add more diagrams", "fix the broken links") rather than a change to documented scope, and closes every gate it does not name — profiles, tier, layout, audiences, and the flow index stay baseline facts unless the task's own evidence makes one of them material. See [`workflows/revision.md`](workflows/revision.md) "Revise objective" |
-| `--plan-only` | Revise analysis only (migrate, staleness, detect/catalog, dry-run tree) — narrower under a task clause, since detect/catalog and the audience prompt only run when the task's gates are actually open; no body writes |
-| `--auto-accept` | Same as `/docforge` — display, then continue without routine pauses; side-effect gates stay |
+| `--plan-only` | Revise analysis only (migrate, staleness, detect/catalog, the suitable-missing-audiences prompt, the flow gate when the scope re-harvests flows, dry-run tree / structure update) — narrower under a task clause, since detect/catalog and the audience prompt only run when the task's gates are actually open; no body writes, but the flow index and its main-standalone stubs are metadata and are written |
+| `--auto-accept` | Same as `/docforge` — display, then continue without routine pauses; side-effect gates and the mandatory selection gates stay (authoritative list: [`flags.md`](flags.md) "Flag → gate matrix") |
+| `--research <mode>` | Authorize external web research for this run. Same modes as `/docforge`. Without it, revise preserves unchanged external references and marks claims needing revalidation as `needs_review` |
 | `--no-dashboard` | Skip the automatic dashboard build/serve at run completion — suppresses both the forced serve and, in compact layout, the dashboard offer |
 | `--help` | Show this reference and stop |
 

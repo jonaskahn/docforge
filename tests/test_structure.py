@@ -606,8 +606,11 @@ class SkillContentTests(unittest.TestCase):
         self.assertIn("flow index not re-derived on this run", prose)
         self.assertIn("belongs to *writing a flow document*", prose)
         flags = (SHARED_ROOT / "flags.md").read_text(encoding="utf-8")
+        # flags.md now owns the waiver list as a gate matrix; the targeted-revise
+        # carve-out is stated once, in the same matrix note.
+        self.assertIn("Flow selection gate", flags)
         self.assertIn(
-            "never reaches the pipeline in the first place, so there is no gate there to waive",
+            "never reaches the flow pipeline, so there is no gate there to\nwaive",
             flags,
         )
 
@@ -1034,7 +1037,11 @@ class SkillContentTests(unittest.TestCase):
 
         flags = (SHARED_ROOT / "flags.md").read_text(encoding="utf-8")
         self.assertIn("--research <mode>", flags)
-        self.assertIn("Never waives the architecture-pack gate", flags)
+        # The waiver list lives once, in flags.md's gate matrix -- this is the
+        # single owner the four drifted copies were consolidated into.
+        self.assertIn("## Flag → gate matrix", flags)
+        self.assertIn("Architecture-pack gate", flags)
+        self.assertIn("Agent-context selection gate", flags)
 
     def test_working_depth_and_subsystem_contracts_are_wired(self) -> None:
         """The working target depth and the subsystem deep-dive records are

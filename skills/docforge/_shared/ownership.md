@@ -1,5 +1,32 @@
 # Canonical ownership
 
+## Control files
+
+The always-loaded files below are the ones every entrypoint reads. Their
+content is the most duplicated surface in the package, so each rule has
+exactly one owner and every other file links to it.
+
+| File | Owns |
+|---|---|
+| `rules.md` | Safety boundaries, code-graph precondition, provider sufficiency, the untrusted-data boundary, completion requirement |
+| `flags.md` | Every flag's meaning, and the **flag → gate matrix** — the single authoritative list of what `--auto-accept` does not waive |
+| `help.md` | The per-entrypoint `--help` text. Summarizes flags; never redefines one — `flags.md` owns them |
+| `retrieval.md` | The catalog retrieval protocol |
+| `ownership.md` | This file: which file owns which rule |
+
+A flag's effect appears in `flags.md`; a per-entrypoint restatement in
+`help.md` or a `SKILL.md` must link here rather than carry its own wording.
+
+**The one sanctioned exception.** Each `SKILL.md` restates the path-anchoring
+rule, the working-copy override, and the untrusted-data boundary in full
+rather than linking. This is deliberate: they are the rules that keep an
+untrusted working repository from supplying the scripts the skill executes, so
+they must be present in the file a host loads on its own, before any cartridge
+link is followed. `tests/test_structure.py` enforces their presence in every
+entrypoint. Do not collapse them into links.
+
+## Policy and content owners
+
 - [`references/docs-tree.md`](references/docs-tree.md): paths, naming, tiers,
   placement.
 - [`content/README.md`](content/README.md): the universal contract,
