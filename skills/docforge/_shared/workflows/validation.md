@@ -45,13 +45,6 @@ another) and `cross-topic-pointer` ("see also", "as described in", …)
 defects — the same isolation guarantees the seven separate topic views
 enforce, applied to the single-file projection.
 
-When the compact layout is active (`docs/agents.md` exists), the
-whole-tree gate also runs `lint_compact_topics.{py,js}` against it,
-rejecting `cross-topic-mention` (one section's topic name appearing in
-another) and `cross-topic-pointer` ("see also", "as described in", …)
-defects — the same isolation guarantees the seven separate topic views
-enforce, applied to the single-file projection.
-
 Unmanaged docs (`project.unmanaged_docs`) and everything under
 `docs/_archive/` (or `docs-portfolio/_archive/`) are known, never findings:
 the audit's `unexpected` check skips them, and the gate neither requires

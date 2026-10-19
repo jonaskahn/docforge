@@ -51,16 +51,18 @@ kernel.
 The kernel and the .agents/rules/<layer>.md files are the source of truth and
 are always emitted regardless of vendor selection. Vendor shims are thin
 per-vendor pointers that reference the kernel (and, where supported, the
-rules directory). The intake multi-select chooses which shims to write; the
-default set is claude, codex. The full set of supported vendors is claude,
-codex, cursor, copilot, windsurf, aider, gemini.
+rules directory). The intake multi-select chooses which shims to write; with
+no pick, no shims are written and the Claude outputs (`AGENTS.md`,
+`CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json`) are the whole
+agent-context set. The full set of supported vendors is claude, codex,
+cursor, copilot, windsurf, aider, gemini.
 
 Each vendor's shim is the smallest artifact that lets that vendor's agent
 find the kernel. Adding a new vendor requires a contracts/vendors/<vendor>-shim.md,
 a templates/vendors/<vendor>.md, and a vendor-shim catalog record. The kernel
 records gain an empty selection.selectors.vendors array by default; the
-runtime intersects the catalog's vendor list with the intake-picked (or
---vendors-picked) set before materializing shims.
+runtime intersects the catalog's vendor list with the `--vendor` set before
+materializing shims.
 
 Architecture, patterns, and both kernels use `code_graph`; testing and both
 kernels use manifests. Conventions is selected only when a conventions source

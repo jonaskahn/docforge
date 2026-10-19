@@ -146,9 +146,9 @@ artifact-only audit pass ([`workflows/writing.md`](workflows/writing.md)),
 and the whole tree passes `scaffold_docs --audit` plus the cross-document
 quality gate ([`workflows/validation.md`](workflows/validation.md),
 [`references/quality-bar.md`](references/quality-bar.md)). A **run** is
-complete only when the whole-tree gate passes and — unless the invocation
-included `--plan-only` or `--no-dashboard`, or the manifest's
-`project.scale.layout` is `compact` and the offered dashboard was declined —
-the dashboard has been started
-and its URL reported in the final response
+complete only when the whole-tree gate passes and the dashboard step has been
+honored — started and its URL reported in the final response, or, in compact
+layout, offered with the user's answer recorded. Only `--plan-only` and
+`--no-dashboard` remove that obligation; in every layout an unstated
+dashboard is never silently skipped
 ([`workflows/validation.md`](workflows/validation.md) "Dashboard auto-serve").

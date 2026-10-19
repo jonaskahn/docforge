@@ -53,6 +53,8 @@ Always put the command/subcommand before flags (e.g.
 | `hash_evidence` | Stamp `git_blob` / `git_blob_normalized` / `range_blob` for one source |
 | `migrate_metadata` | Idempotent metadata / provenance upgrade |
 | `flow_index` | Harvest / revise / organize / render flow matrix |
+| `flow_analysis` | Adaptive deep flow pack: `prepare` / `import` / `decide` / `status` / `validate` / `audit` |
+| `flow_preflight` | Persistent runtime-surface topology ledger: `prepare` / `import` / `status` / `validate` |
 | `derive_flow_graph` | Provisional flow-graph prepare/write |
 | `architecture_plan` | Architecture-pack ledger: `prepare` / `import` / `decide` / `status` / `validate` / `audit` |
 | `diagnose_graphs` | Multi-provider graph readiness report |

@@ -669,10 +669,10 @@ class SkillContentTests(unittest.TestCase):
         )
         self.assertIn("A finding this run introduced always blocks it.", prose)
         self.assertIn(
-            "keeps the existing exit-zero requirement unchanged", prose
+            "A structural run keeps the exit-zero requirement.", prose
         )
         self.assertIn(
-            "follows the existing blocked-findings contract", prose
+            "**Dashboard completion follows the blocked-findings contract.**", prose
         )
         validation = (SHARED_ROOT / "workflows" / "validation.md").read_text(encoding="utf-8")
         vprose = compact_whitespace(validation)
@@ -1105,8 +1105,9 @@ class SkillContentTests(unittest.TestCase):
         reported; both entrypoints carry the completion contract, not just
         the validation workflow."""
         rules = (SHARED_ROOT / "rules.md").read_text(encoding="utf-8")
-        self.assertIn("the dashboard has been started\nand its URL reported", rules)
-        self.assertIn("`--plan-only` or `--no-dashboard`", rules)
+        self.assertIn("started and its URL reported in the final response", rules)
+        self.assertIn("`--plan-only` and\n`--no-dashboard`", rules)
+        self.assertIn("never silently skipped", rules)
         revision = (SHARED_ROOT / "workflows" / "revision.md").read_text(encoding="utf-8")
         self.assertIn("## Completion", revision)
         self.assertIn("whole-tree gate and the dashboard auto-serve step exactly as a fresh-start", revision)

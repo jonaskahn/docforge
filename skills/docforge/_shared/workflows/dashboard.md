@@ -299,12 +299,17 @@ When `start`/`export` (or `scan`) report problems, the agent must:
 
 - Never write outside `<repo>/.docforge/dashboard/` except the metadata
   reconciliation of `docs/` provenance (the folder sidecars — the
-  dashboard's required input) and the `.docforge/.gitignore` rule.
+  dashboard's required input) and the `.docforge/.gitignore` rule. The
+  dashboard is a disposable view; anything it leaves in the repository
+  outlives it.
 - Never touch the repository's `package.json`, lockfiles, or workspace
-  configuration.
+  configuration — the dashboard keeps its own under
+  `<repo>/.docforge/dashboard/`, so a view of the docs can never change
+  how the project builds.
 - Never delete `node_modules` or the app shell for an ordinary content
   refresh; only generated content is replaced atomically (staged,
-  validated, then swapped).
+  validated, then swapped). A failed rebuild must leave the previous
+  working site intact.
 - Re-running with an unchanged signature performs no content writes.
 
 ## Capability inventory

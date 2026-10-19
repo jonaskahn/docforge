@@ -463,7 +463,7 @@ Revise uses the same two-turn split as a fresh start
 ([`intake.md`](intake.md) "Turn structure" owns the exact per-turn
 contents and pack rules). **A task clause changes which questions each
 turn actually contains** — see [Revise objective](#revise-objective)
-below — never the two-turn shape itself.
+above — never the two-turn shape itself.
 
 **Scope** (Turn 1) — `flow`, `<area>`, or `all` (pre-checked from
 invocation; asked only for natural-language revise requests, never for a bare `/docforge-revise`).
@@ -989,17 +989,17 @@ Baseline findings are reported with the scope that would fix them; they
 never block a targeted run. A finding this run introduced always blocks
 it. `scaffold_docs --audit` prints findings grouped by category with
 each group sorted, so a plain text diff of the two runs is the
-introduced-findings set — no JSON mode needed. This absorbs the G6
-question too: an untriaged foreign doc lands in the `unexpected`
+introduced-findings set — no JSON mode needed. An untriaged foreign doc
+lands in the `unexpected`
 finding, a **baseline** finding, so it is reported, never blocking. A
-structural run keeps the existing exit-zero requirement unchanged.
+structural run keeps the exit-zero requirement.
 
-**Dashboard completion follows the existing blocked-findings contract.**
-Any blocking finding (`broken_link`, `route_plan`, `invalid_mermaid`)
+**Dashboard completion follows the blocked-findings contract.** Any blocking
+finding (`broken_link`, `route_plan`, `invalid_mermaid`)
 stops `dashboard start` before build ([`dashboard.md`](dashboard.md)
-"Scan: you should revise again"). No new rule is needed: present the
+"Scan: you should revise again"): present the
 full findings list, tell the user they should revise again, recommend
-the scoped revise, and ask whether to run it now — exactly as that
-section already prescribes. A targeted run whose dashboard is blocked by
+the scoped revise, and ask whether to run it now. A targeted run whose
+dashboard is blocked by
 a **baseline** finding still satisfies completion via that contract; the
 dashboard offer/started-URL requirement applies unchanged.

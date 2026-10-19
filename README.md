@@ -68,7 +68,7 @@ vendor shims for Codex / Cursor / Copilot / Windsurf / Aider / Gemini
 | | |
 |---|---|
 | `/docforge` | intake → plan → write |
-| `/docforge --plan-only` | plan / dry-run only, nothing written |
+| `/docforge --plan-only` | plan / dry-run only, no document bodies written |
 
 **`/docforge-revise`** — keep it current. Re-grounds what drifted; a bare
 run only syncs manifest metadata, no questions asked.
