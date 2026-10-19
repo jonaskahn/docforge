@@ -10,7 +10,7 @@ single-document update / refresh.
 **Revise** is a structural refresh of the plan and tree, not a blob-only
 touch-up. A revise run (all, area, or flow) applies every step the
 invocation opens. With no stated task clause that is every step below
-that falls in scope, unchanged from today; a stated task clause narrows
+that falls in scope; a stated task clause narrows
 this — see [Revise objective](#revise-objective) below:
 
 1. **Update obsolete documents** — sync provenance and re-ground every
@@ -194,12 +194,12 @@ A revise request carries a task clause when it names an operation on
 | Names… | Reads as | Examples |
 |---|---|---|
 | An operation on document content | **Task clause** → targeted revise | "add more diagrams", "fix the broken links", "bring the docs to the current template", "re-ground the stale sections", "tighten the wording in architecture" |
-| A change to documented scope | **No task clause** → structural revise (unchanged from today) | A tier, a technology, layout, audiences, target readers, which flows are documented, whole document types, "re-scan", "re-detect", "revise everything" |
+| A change to documented scope | **No task clause** → structural revise | A tier, a technology, layout, audiences, target readers, which flows are documented, whole document types, "re-scan", "re-detect", "revise everything" |
 
 - **Both present** → structural revise (the superset); the named task
   runs inside it.
 - **Neither** (a bare scope argument, e.g. `/docforge-revise all`) →
-  structural, unchanged from today.
+  structural.
 - **Ambiguous** → ask **one** single-select in Turn 1 — *"Just `<task>`,
   or a full structural refresh?"* — never the full question pack.
 
@@ -352,12 +352,12 @@ Two consequences:
 ### A targeted revise asks at most two things
 
 1. **Execution mode** — skipped when `--plan-only` / `--auto-accept` was
-   given, exactly as today.
+   given.
 2. **Confirmation of the annotated plan tree** — see "Annotated plan
    tree" above. `update (illustration)`, `update (sources)`, `update
-   (links)`, and `update (connections)` extend that tree's existing
-   agent-overlay convention for a targeted run and need no runtime
-   change.
+   (links)`, and `update (connections)` are agent-side reason overlays
+   on that tree's base `update` action for a targeted run, the same way
+   `rewrite (template)` is.
 
 Plus, only when the set cannot be resolved, **one** "which documents?"
 question (Named-set tasks above).

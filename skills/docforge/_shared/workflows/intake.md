@@ -499,7 +499,7 @@ baseline facts at the top of the pack, never as controls.
 A stated task clause closes every gate it does not name — the exact gate
 table, and how a task clause is recognized, is owned by
 [`revision.md`](revision.md) "Revise objective"; everything below is the
-no-task-clause (structural) behavior that stays unchanged.
+no-task-clause (structural) behavior.
 
 For `/docforge-revise flow` / `<area>` / `all`, or any revise that
 rediscovers docs: stop and ask before any scope decision, detection, or

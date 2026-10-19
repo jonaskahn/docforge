@@ -111,11 +111,9 @@ under `--auto-accept`. Never seed an example artifact to stand in
 for discovery.
 
 **Decisions and concepts are harvested the same way, not left to chance.**
-They were the one dynamic family with no discovery step: their
-`discovered_decision` / `discovered_concept` conditions have no mechanical
-evaluator, so a run that never looked produced a `decisions/` and `concepts/`
-folder holding nothing but an index explaining its own emptiness. Run the
-harvest during repository inspection, before the plan gate:
+Their `discovered_decision` / `discovered_concept` conditions have no
+mechanical evaluator, so this harvest is their only discovery step. Run it
+during repository inspection, before the plan gate:
 
 ```sh
 python3 runtime/cli/python/harvest_candidates.py --repo <repo>
