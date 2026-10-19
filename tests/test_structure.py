@@ -1198,7 +1198,12 @@ class SkillContentTests(unittest.TestCase):
         # wording lives in workflows/dashboard.md (asserted above).
         self.assertIn("## Preflight gates", thin)
         self.assertIn("**Legacy manifest**", thin)
-        self.assertIn("auto-migrated to 3.9 automatically, never a stop-and-ask", thin)
+        # The thin entrypoint states the auto-migration behavior without
+        # pinning a schema number -- the current version is owned by
+        # validation.md and had already drifted once (it read 3.9 while the
+        # runtime and workflows/dashboard.md said 3.10).
+        self.assertIn("auto-migrated to the current schema automatically", thin)
+        self.assertNotRegex(thin, r"auto-migrated to \d+\.\d+")
         self.assertIn("never migrate", thin)
         self.assertNotIn("three-option gate", thin)
         self.assertNotIn("Legacy manifest gate (v1.1)", thin)

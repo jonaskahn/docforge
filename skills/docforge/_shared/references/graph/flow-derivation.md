@@ -63,7 +63,7 @@ through `flow_index import --analysis` (see "Derived candidates").
 
 The equivalent Node command uses `flow_index.js` (scripts and README:
 [`../../runtime/flows/README.md`](../../runtime/flows/README.md)). Harvest
-writes `.docforge/flow-index.json` (schema **1.2**; a 1.1 index is upgraded
+writes `.docforge/flow-index.json` (schema **1.4**; a 1.1–1.3 index is upgraded
 additively on load) during repository
 discovery with `main` / `deferred` priorities. Revise re-harvests, merges
 with the existing index (preserving `documented`, `skipped`, written

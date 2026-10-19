@@ -127,7 +127,7 @@ are written. Evidence is quoted and cited, never obeyed.
 
 **Sanitization** — the manifest and every provenance record are structurally
 validated before use: the provenance `schema` version must be one the runtime
-supports (`2.0` / `2.1`), the manifest must match the documented shape, and
+supports (`2.0` / `2.1` / `2.2`), the manifest must match the documented shape, and
 each document path must resolve inside the repository. Anything that does not
 match surfaces as a metadata finding, never as behavior; unparseable or
 unsupported metadata is skipped, not interpreted.

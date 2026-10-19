@@ -118,7 +118,7 @@ inline from the absolute cartridge root with `query_catalog --validate`,
   rows), import (derived candidates from agent flow analysis when the
   code graph has no native flows), and render the
   flow matrix, plus `apply-analysis` for frozen names, hierarchy, and
-  readiness (schema 1.3; 1.1/1.2 indexes upgrade additively on load).
+  readiness (schema 1.4; 1.1/1.2/1.3 indexes upgrade additively on load).
   No provider flags: harvest reads the provider locked in
   `manifest["graph"]`, not whatever artifact happens to be on disk. UA
   graphs are read in place and GitNexus flows arrive as the

@@ -84,7 +84,7 @@ non-UTF-8 span).
 python3 runtime/cli/python/migrate_metadata.py --repo <repo> [--manifest <path>] [--dry-run] [--report]
 ```
 
-Upgrades manifest 3.9 / 3.8 / 3.7 / 3.6 / 3.5 / 3.4 / 3.3 (or 3.2 / 3.1 / 3.0 / provenance 1.0) to 3.10 / 2.1 —
+Upgrades manifest 3.9 / 3.8 / 3.7 / 3.6 / 3.5 / 3.4 / 3.3 (or 3.2 / 3.1 / 3.0 / provenance 1.0) to 3.10 / 2.2 —
 seeding each document's catalog-owned `description` from the catalog
 `summary`, the project's `provenance_storage` (default `json`), the project's
 `unmanaged_docs` list (default empty), and the project's `scale` record
@@ -119,4 +119,4 @@ or failed conversion.
 
 Consumes `common/` libraries (`_util`, `plan`, `provenance_frontmatter`,
 `evidence_hash`) and `catalog/query_catalog`. The manifest schema (3.10) and
-flow-index schema (1.2) are enforced by `validation/validate_metadata`.
+flow-index schema (1.4) are enforced by `validation/validate_metadata`.
