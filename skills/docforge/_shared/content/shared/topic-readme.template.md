@@ -10,7 +10,7 @@ _Last reviewed: {{YYYY-MM-DD}}_
 {{One or two sentences: what this is and why it exists. Plain language. No code.}}
 
 > {{⚠ **Notice:** any warning, hard constraint, or irreversible behaviour a reader must
-> know before going further. Every critical notice lives HERE, never only in a deep-dive.
+> know before going further. Every critical notice lives here, never only in a deep-dive.
 > Delete this block if there is genuinely nothing to flag.}}
 
 ## What it does, and why (L0)

@@ -5,7 +5,7 @@ _Last reviewed: {{YYYY-MM-DD}}_
 > Depth for one reader. The plain overview and every critical notice live in
 > [README.md](README.md); this file adds detail, it does not repeat the overview.
 
-{{Write only what THIS reader needs and no other file already owns. Describe logic and
+{{Write only what this reader needs and no other file already owns. Describe logic and
 behaviour in prose. Reference files/modules by path; never paste code, never link a line
 number, never hang a claim on an internal symbol a refactor would rename.}}
 
