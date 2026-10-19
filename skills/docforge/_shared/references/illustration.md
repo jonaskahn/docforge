@@ -164,14 +164,14 @@ the type's writing-craft instruction. `dominant_form` names the primary form;
 question it answers. A written document must carry a diagram of each declared
 view's form — the mechanical gate reports `illustration-coverage` when one is
 missing, on a fresh run and on revise alike, and it checks the *form*, so an
-ASCII layout tree no longer satisfies a declared `sequenceDiagram`.
+ASCII layout tree does not satisfy a declared `sequenceDiagram`.
 
 A view may carry its own `depth`, which bounds that view alone. A high-level
 container diagram is budgeted at working depth even though its document is
 orientation depth, because the container view of a real system does not fit in
 five elements and dropping it is worse than sizing it correctly.
 
-This file still owns which forms exist, when each fits, and the budgets; the
+This file owns which forms exist, when each fits, and the budgets; the
 declaration only names the views, never overrides them.
 
 Split any illustration that exceeds its bound into linked views with one stated

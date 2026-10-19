@@ -93,7 +93,7 @@ node runtime/cli/js/graph_source_gitnexus_reader.js --repo <repo> --interchange
 or by emitting the same shape from the GitNexus MCP/cypher interface
 ([`graph-source-gitnexus.md`](graph-source-gitnexus.md)). Harvest discovers it
 automatically; there is no CLI flag. When a GitNexus index is ready and the
-interchange is absent, `flow_index harvest` now **fails naming this command**
+interchange is absent, `flow_index harvest` **fails naming this command**
 rather than silently skipping a native flow source.
 
 The interchange carries `Route`, `Process`, and `Community` properties.
@@ -198,7 +198,7 @@ v2 requires `trigger.kind`, `outcome`, and a `file` on every step; import
 refuses the pack otherwise and writes nothing.
 
 `import` builds `entry_ref` from `entryPoint` — signature and file from the
-same place, so the two can no longer disagree — sets `confidence: confirmed`
+same place, so the two always agree — sets `confidence: confirmed`
 only when **every** step carries a graph `nodeId` (so an LLM-only flow never
 outranks a graph-derived one), derives `reach.boundaries` from the distinct
 top-level directories the steps span, and copies steps, branches, rules,

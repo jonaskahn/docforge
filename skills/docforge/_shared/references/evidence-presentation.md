@@ -83,8 +83,8 @@ Three rules keep the result honest:
   elsewhere in this document is this file's own notation for describing
   syntax — never the literal thing to write into a document.
 
-Agent-context outputs are **unchanged and must stay unchanged**: bare durable
-paths, no links, no URLs, no line numbers
+Agent-context outputs use bare durable paths: no links, no URLs, no line
+numbers
 ([`profiles/audience-coding-agents.md`](profiles/audience-coding-agents.md)).
 Audiences whose routed `source_evidence` is `provenance-only` — security
 reviewers among them — receive no source links at all.
