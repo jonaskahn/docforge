@@ -94,7 +94,8 @@ function findNestedRepos(root, excludes) {
     }
   }
   walk(root);
-  return found;
+  // Filesystem traversal order varies by platform; match the Python path order.
+  return found.sort();
 }
 
 function readManifestTier(repoPath) {

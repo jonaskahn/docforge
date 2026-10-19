@@ -74,7 +74,8 @@ def find_nested_repos(root: Path, excludes: set) -> list:
             continue
         if has_own_git(dirpath):
             found.append(dirpath)
-    return found
+    # Filesystem traversal order varies by platform; match the JS path order.
+    return sorted(found, key=str)
 
 
 def read_manifest_tier(repo_path: Path) -> str | None:
