@@ -633,7 +633,7 @@ class SkillContentTests(unittest.TestCase):
             "whole-tree gate",
             "Dashboard auto-serve",
             "untrusted-repository-data",
-            "Plan-tree confirmation",
+            "Plan-tree display",
             "Flow-index write-back",
         ):
             self.assertIn(invariant, revision)

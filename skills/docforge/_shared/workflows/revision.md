@@ -117,10 +117,12 @@ this — see [Revise objective](#revise-objective) below:
    exactly as owned in
    [`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
    documents"; the archive move is a file operation, so it is separately
-   approved and never runs under `--auto-accept`. Already-recorded paths
+   approved and never runs under `--auto-accept`. On a structural revise the
+   per-file keep/archive ask joins Turn 2 of the question pack, alongside the
+   root-README choice ([`intake.md`](intake.md) "Existing-file actions") —
+   not a separate stop after it. Already-recorded paths
    are baseline facts: never re-asked, never added to the plan, scaffold,
-   or manifest. The proposals join this revise's confirmation summary
-   (below). **A targeted revise (Revise objective) reports only the
+   or manifest. **A targeted revise (Revise objective) reports only the
    count** of untriaged foreign files — G6 in that section's gate table —
    and does not open the per-file triage; the count is a baseline
    finding, never blocking (see Completion below).
@@ -295,7 +297,8 @@ are stated honestly rather than as one uniform mechanism:
 
 **Named-set tasks** — no runtime finding can express the request, so the
 user's words name the set (an area, or specific documents). If neither a
-selector nor a name resolves it, ask one question: **which documents?**
+selector nor a name resolves it, ask the one question in "A targeted revise
+asks at most three things" below.
 
 | Task | Why it cannot be computed |
 |---|---|
@@ -349,7 +352,7 @@ Two consequences:
   so this is a real manifest write. Say so in the confirmation, before
   running it.
 
-### A targeted revise asks at most two things
+### A targeted revise asks at most three things
 
 1. **Execution mode** — skipped when `--plan-only` / `--auto-accept` was
    given.
@@ -433,7 +436,10 @@ incomplete. The user's call, stated, never decided for them.
 5. Dashboard auto-serve, including the compact-layout offer and the
    blocked-findings contract.
 6. The untrusted-repository-data boundary.
-7. Plan-tree confirmation before writing.
+7. Plan-tree display before writing — the tree is always shown; the pause
+   on it follows the execution mode ([`planning.md`](planning.md) "Pre-write
+   structure checkpoint"). The architecture pack confirmed at that same
+   checkpoint is never waived.
 8. Separately-approved retirement / unmanaged-archive **moves** — never
    under `--auto-accept`.
 9. Flow-index write-back for any flow document written.

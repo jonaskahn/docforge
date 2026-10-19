@@ -129,7 +129,7 @@ Intake asks its scope questions in exactly two turns.
 | Turn | Asks | Why it is separate |
 |---|---|---|
 | 1 — Direction | Goal or action (Scope, on revise), Documentation layout, Target readers (fresh start only), and Flow mode (revise, flow-touching scopes only) | Layout fixes the shape of the tree that every later answer describes; the reader pick decides whether the agent-context group is generated at all; flow mode decides how much of the flow index is re-derived before anything is sized |
-| 2 — Scope | Tier, repository profiles, output audience, graph source, execution mode | These describe the content *inside* the tree Turn 1 fixed |
+| 2 — Scope | Tier, repository profiles, output audience, graph source, execution mode, existing-file actions (root README, unmanaged docs) | These describe the content *inside* the tree Turn 1 fixed; the file actions are answerable from the discovery brief's own inspection, so they belong in the same pack rather than a later stop |
 
 Pack rules:
 
@@ -494,6 +494,38 @@ baseline facts at the top of the pack, never as controls.
    - Never apply execution mode on silent defaults. Reply omits mode →
      one mode-only follow-up.
 
+9. **Existing-file actions.** The discovery brief already read the repository,
+   so the two file-level choices its inspection produces are asked here, in
+   Turn 2, instead of becoming separate stops later. Both are file-affecting
+   and neither is waived by `--auto-accept`.
+
+   - **Root `README.md`,** only when a non-trivial one already exists
+     (substantial user-facing content, not an empty stub). Show exactly
+     **migrate** / **skip** / **rewrite**, each with its consequence
+     ([`../references/docs-tree.md`](../references/docs-tree.md) "Root
+     `README.md` special case"). A stub or placeholder may be shown with
+     `rewrite` as the recommended option after stating that assessment.
+     Skip the control when no qualifying `README.md` exists.
+   - **Unmanaged documents,** only when the brief found foreign `.md` /
+     `.mdx` files under `docs/` with no manifest entry. One row per file:
+     **Keep self-managed** (recommended) or **Archive** to
+     `docs/_archive/<year>/` ([`../references/docs-tree.md`](../references/docs-tree.md)
+     "Unmanaged documents"). Already-recorded paths are baseline facts —
+     never re-asked. Keep the row list in this same pack; do not split it
+     across turns.
+
+   Rules:
+
+   - Report the choices as facts in the confirmation summary, and apply them
+     with `manage_manifest.{py,js}` (`unmanaged add|archive`, and the
+     root-README plan action) after confirmation — never before.
+   - Either decision may be deferred: a user who declines to decide keeps the
+     file untouched and the run proceeds, exactly as a `skip`. Never block
+     confirmation on it, and never archive or overwrite silently.
+   - The archive move is a file operation, so it stays separately approved
+     even after a Turn-2 answer (per the
+     [flag → gate matrix](../flags.md#flag--gate-matrix)).
+
 ### Revise: which dimensions each turn actually asks
 
 A stated task clause closes every gate it does not name — the exact gate
@@ -547,6 +579,10 @@ carries Scope, Layout, and Flow mode; Turn 2 carries the rest.
 - **Output audience** (Turn 2): asked only when there are suitable
   missing audiences or a user-requested change. No delta → state
   current audiences as unchanged.
+- **Existing-file actions** (Turn 2): the root-README choice and the
+  unmanaged-doc per-file triage, when a structural revise finds either
+  ([`revision.md`](revision.md) step 7). A targeted revise reports the
+  unmanaged count only (G6) and never opens the per-file triage.
 
 Resolve:
 
@@ -719,8 +755,11 @@ effects:
   documents; on `/docforge-revise`, the structure update / dry-run tree
   is shown.
 - `--auto-accept` and `--no-dashboard`: no intake-specific effect beyond
-  [`../flags.md`](../flags.md). `--auto-accept` never grants web access —
-  research consent is always explicit.
+  [`../flags.md`](../flags.md). It does not reach the intake questions
+  themselves — the confirmation summary below is still awaited, and the
+  [flag → gate matrix](../flags.md#flag--gate-matrix) lists every gate it
+  does not waive. It never grants web access: research consent is always
+  explicit.
 - `--research <official-primary|official-only|off>`: authorizes external web
   research for the architecture planning phase. Without it, the plan
   checkpoint shows material external questions and asks before any web

@@ -68,13 +68,13 @@ Rules:
   are evidence: propose keep, migrate, merge, archive, or delete decisions
   and obtain explicit approval before moving or removing them. A
   non-trivial repo-root `README.md` already exists → never announce
-  overwrite; require an explicit migrate / skip / rewrite choice (see
-  Existing-doc actions below).
+  overwrite; the mandatory migrate / skip / rewrite choice is asked in
+  intake Turn 2 and restated in Existing-doc actions below.
 - While inventorying, also detect **unmanaged documents** and run their
   triage exactly as owned in
   [`../references/docs-tree.md`](../references/docs-tree.md) "Unmanaged
-  documents". Its results surface in the plan presentation's Existing-doc
-  actions below.
+  documents". Their triage is asked in intake Turn 2 and restated in the plan
+  presentation's Existing-doc actions below.
 
 ## Select scope
 
@@ -312,6 +312,13 @@ classes, and why repository evidence cannot answer them — and recommend
 `official-primary`. `--plan-only` records the selected research policy in the
 ledger but defers actual web research until a writing run.
 
+**One policy per run.** The architecture pack and the flow pack each record a
+`--research-policy`, but they record the *same* run-level decision, made once
+here: whichever policy is confirmed at this checkpoint carries to the flow
+gate, and the flow gate re-presents it only if the invocation supplied none
+and the user has since changed their answer. Never ask for a second,
+independent policy.
+
 Research workers follow the source hierarchy: standards bodies and normative
 specifications first, then official framework/platform/protocol/vendor
 documentation, then primary research papers; secondary sources serve only to
@@ -395,21 +402,19 @@ Present a human-readable plan before writing. It must contain:
    graph now, which wait for `flow_graph`, and whether flow evidence will
    be native or Docforge-derived. Call flow evidence **native** only when
    Understand Anything's domain graph or GitNexus Process nodes are READY;
-   name that one provider (or ask which is primary if both native-flow
-   sources are ready). If the selected code graph is CodeGraph-only (or any
+   name the provider chosen at intake (already locked in the manifest — never
+   ask again here). If the selected code graph is CodeGraph-only (or any
    ready code graph with no native flow capability), say **Docforge-derived
    (provisional)** — never "Native flow source: CodeGraph" and never
    "Understand Anything + GitNexus" unless both were actually READY and the
    user chose both for corroboration.
 6. **Existing-doc actions** — keep/migrate/merge/archive/delete proposals
    for ordinary paths, with destructive or moving actions still awaiting
-   separate approval, plus the **Unmanaged documents** triage from the
-   inspection pass (per foreign file: `Keep self-managed (recommended)` /
-   `Archive`). For
-   an existing repo-root `README.md` that is non-trivial / valuable
-   (substantial user-facing content, not an empty stub), present exactly
-   **migrate** / **skip** / **rewrite** and wait for confirmation before
-   any write to that path:
+   separate approval. The root-README three-way choice and the unmanaged-doc
+   triage were already answered in intake Turn 2
+   ([`intake.md`](intake.md) "Existing-file actions"); **restate the confirmed
+   answers here as facts** rather than asking again. Derive each from the
+   intake answer:
    - **migrate** — reshape into the `root_readme` contract/template;
      preserve purpose, audience, install/quickstart, and other key facts
      from the file;
@@ -417,14 +422,21 @@ Present a human-readable plan before writing. It must contain:
      over it this run (mark that catalog path skipped);
    - **rewrite** — replace with the Docforge `root_readme` template from
      fresh graph/repo evidence.
-   Never announce "Docforge will overwrite" as a fait accompli. Stub or
-   placeholder READMEs may default to rewrite after stating that
-   assessment. `--auto-accept` never silently overwrites a valuable root
-   README — this three-way choice remains mandatory.
+   Never announce "Docforge will overwrite" as a fait accompli. If intake
+   never asked (a run that skipped Turn 2, or a file that appeared since),
+   ask it here once instead — the choice is mandatory either way, and
+   `--auto-accept` never silently overwrites a valuable root README.
 
 This presentation is the plan gate; a bare list of filenames is
-insufficient. Confirm it unless `--auto-accept` is present. Under
-`--auto-accept`, display the same plan and continue. `--plan-only` continues
+insufficient. Its two halves differ, and only one of them pauses:
+
+- **The plan tree** — display it always; under `--auto-accept` continue
+  without waiting.
+- **The architecture pack** — when the run has architecture documents
+  selected, this same checkpoint also confirms the pack, and that half is
+  never waived ([Architecture-pack gate](#architecture-pack-gate)).
+
+`--plan-only` continues
 through the flow gate below and then stops: it scaffolds no document bodies
 and re-grounds nothing, but the flow index and its main-standalone stubs are
 metadata and are written, so the final tree carries a real flow-document
